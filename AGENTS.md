@@ -1,0 +1,47 @@
+# AGENTS.md — JotInput (Japanese On-device Text Input) Agent Instructions
+
+Always follow the policies and rules in [`GEMINI.md`](GEMINI.md) and review the architectural history and post-mortems in [`docs/findings_and_decisions.md`](docs/findings_and_decisions.md).
+
+## 📱 Mandatory Dual-Target Deployment & Verification
+
+Whenever any code, resource, or configuration change is made to the Android app:
+1. **Deploy to BOTH connected targets**:
+   - **ARCVM (ChromeOS Android container)**: e.g., `arc:5555`
+   - **Physical Phone (Pixel 10 Pro via USB or Wi-Fi)**: e.g., `<device-serial>` or `<device-ip>:<port>`
+2. Run [`./deploy.sh`](deploy.sh) and confirm in `adb -s <device> logcat` that `MainActivity` launches and the ReazonSpeech model (`AsrManager`) loads cleanly on **both** devices.
+3. For any UI or IME window change, verify visual behavior (`screencap`) and window/inset geometry (`dumpsys window windows`) on the physical phone. Never silently skip a target.
+
+## 💾 Custom Dictionary Persistence Contract
+- Keep the custom dictionary empty by default on fresh installs.
+- Never erase or overwrite `context.filesDir/custom_dictionary.json` across app updates or schema changes.
+
+## 📦 Model & Lexicon Decoupling Contract (Mandatory Download-Only Architecture)
+- **Strict Prohibition on Bundling Models or Dictionaries in APK**:
+  - Never place model files (ONNX, GGUF, TFLite, etc.) or large dictionary files (`.tsv`, `.bin`, `.txt`, etc.) inside `app/src/main/assets/` or APK resources.
+  - The APK must remain lightweight (containing only compiled bytecode, layout/drawables, and native `.so` libraries; target size $\le 90\text{ MB}$).
+- **Storage-First & On-Demand Download Pattern**:
+  - Any future models (ASR, SLM, VAD, etc.) and dictionaries must be loaded from device storage (`context.getExternalFilesDir(null)` or `context.filesDir`).
+  - Implement on-demand network downloaders over HTTPS with progress reporting and UI controls in `MainActivity` for any new model or lexicon asset.
+- **Local Testing & Deployment Contract**:
+  - Developer/test asset copies must reside under `tools/models/`, `tools/mozc_dict/`, or `app/src/test/resources/` (and large binaries must be excluded in `.gitignore`).
+  - [`./deploy.sh`](deploy.sh) must automatically check target device storage and provision absent model/lexicon files to app external storage so dual-target deployment and verification succeed seamlessly without bloating the APK.
+
+## 🚫 Anti-Anecdotal Tuning Policy (No Ad-Hoc Cost Modifications)
+- **Strict Prohibition on Anecdotal Cost Hacking**: Never manually alter word costs, insert arbitrary words into `registerCanonicalVocabulary()`, or add ad-hoc penalty entries based purely on isolated, anecdotal conversion observations (e.g. manually hacking `うみ` or `いなか` costs).
+- **Corpus-Driven Principle**: Lexical costs and dictionary frequencies must be derived systematically from corpus statistics (e.g., Mozc OSS corpus-trained CRF weights or systematic dictionary rebuilds).
+- **Language Model Over Hand Tuning**: Semantic disambiguation and contextual choice must be handled through principled language modeling (SLM re-ranking) and systematic dictionary generation, never through hand-coded unigram cost patches.
+
+## 🎯 Top-Line Quality Contract: Voice Punctuation & Instant Sentence Boundary Non-Regression
+- **Mandatory 100% Test Pass**: In any code change touching ASR, VAD, punctuation, or IME, always run `./gradlew testDebugUnitTest` and ensure [`JapanesePunctuationEvaluationTest`](app/src/test/java/com/example/myasr/JapanesePunctuationEvaluationTest.kt) passes 100% (67+ unit tests).
+- **No False-Positive Degradation**: Never weaken vocabulary protection rules for spoken punctuation commands (e.g. 天気, 天然, 満点, 交差点, 重点, 10点, まるで, 一丸, 日の丸, ですから, ますます).
+- **Latency & Pause-Free Commit Budget**: Keep micro-pause flush threshold $\le 200\text{ms}$ and continuous sentence pacing $\le 2400\text{ms}$ so sentence boundaries commit without forcing users to pause.
+- **Reference Spec**: Refer to [`docs/punctuation_and_voice_boundary_evaluation_criteria.md`](docs/punctuation_and_voice_boundary_evaluation_criteria.md) for full evaluation axes and criteria.
+
+## ✨ UI Simplicity & Progressive Disclosure Contract (Mandatory)
+- **4-Card Top-Level Cap (`MainActivity`)**: Keep [`activity_main.xml`](app/src/main/res/layout/activity_main.xml) strictly structured into at most **4 top-level cards**:
+  1. **Card 1 (Hero: Setup, Status & Quick Test)**: Unified status badges, IME enable/switch buttons, Custom Dictionary button, and immediate test field (`etKeyboardTest`).
+  2. **Card 2 (Core Everyday Settings)**: At most 4–5 everyday user preferences (Keyboard Height, QWERTY Number Row, Streaming Voice Input, AI Rerank Engine selector). Hide child sub-selectors (`View.GONE`) when a parent feature toggle is OFF.
+  3. **Card 3 (Unified Dictionary & Model Data Management)**: One-tap recommended download for dictionaries and connection matrix, with individual dictionary/asset rows placed inside the collapsible `layoutDictDetailsContainer` (collapsed by default).
+  4. **Card 4 (Collapsible Advanced & Developer Tools)**: Place all hyperparameter tuning knobs ($\alpha$ slider, Context-Free toggle, Mandatory toggle, Debug badges) inside `layoutAdvancedContent` (collapsed by default).
+- **Optimal Defaults Over UI Knobs**: When a parameter is proven optimal via cross-validation or corpus evaluation, apply it as the default constant in code rather than adding new visible controls to the primary UI.
+- **Zero Dead UI Resources**: Immediately delete obsolete layouts or classes when refactoring UI flows. Refer to [`docs/ui_design_and_simplicity_guidelines.md`](docs/ui_design_and_simplicity_guidelines.md) before adding any UI element.

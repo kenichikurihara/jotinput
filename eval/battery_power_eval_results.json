@@ -1,0 +1,324 @@
+[
+  {
+    "name": "1. リランクなし (OFF: Mozc Viterbi + 2D連接行列のみ)",
+    "engine": "none",
+    "workload": "miss",
+    "iters": 500,
+    "voltage_v": 4.246,
+    "app": {
+      "engine": "none",
+      "workload": "miss",
+      "conversions": 500,
+      "slmApplied": 0,
+      "wallTotalMs": 765,
+      "cpuTotalMs": 985,
+      "wallPerConvMs": 1.53,
+      "cpuPerConvMs": 1.97,
+      "basePerConvMs": 1.5151128659999993,
+      "rerankPerConvMs": 0,
+      "currentStartUa": -17968,
+      "currentEndUa": -1562,
+      "chargeDeltaUah": 0
+    },
+    "batterystats": {
+      "uid_total_mah": 0.121,
+      "uid_cpu_mah": 0.0926,
+      "global_cpu_mah": 0.19,
+      "global_screen_mah": 0.0285,
+      "usr_cpu_ms": 34020567.0,
+      "krn_cpu_ms": 6840114.0,
+      "cluster_times_ms": {
+        "little_c0": 23,
+        "mid_c1": 83,
+        "mid_high_c2": 48,
+        "prime_c3": 530
+      },
+      "uid_screen_mah": 0.0285
+    },
+    "derived": {
+      "uid_cpu_mah_total": 0.0926,
+      "mah_per_conv": 0.0001852,
+      "mah_per_1000_conv": 0.1852,
+      "pct_of_4497mah_per_1000_conv": 0.004118301089615299,
+      "joules_total": 1.283436,
+      "joules_per_conv": 0.002566872,
+      "mwh_per_1000_conv": 0.71302
+    }
+  },
+  {
+    "name": "2. Qwen2.5-0.5B (KVキャッシュHit: 同一文脈連続入力)",
+    "engine": "local_slm",
+    "workload": "hit",
+    "iters": 500,
+    "voltage_v": 4.245,
+    "app": {
+      "engine": "local_slm",
+      "workload": "hit",
+      "conversions": 500,
+      "slmApplied": 500,
+      "wallTotalMs": 12516,
+      "cpuTotalMs": 44565,
+      "wallPerConvMs": 25.032,
+      "cpuPerConvMs": 89.13,
+      "basePerConvMs": 1.1644041739999995,
+      "rerankPerConvMs": 23.85731687999998,
+      "currentStartUa": -14062,
+      "currentEndUa": 4687,
+      "chargeDeltaUah": 0
+    },
+    "batterystats": {
+      "uid_total_mah": 3.2,
+      "uid_cpu_mah": 3.02,
+      "global_cpu_mah": 3.39,
+      "global_screen_mah": 0.179,
+      "usr_cpu_ms": 32862547.0,
+      "krn_cpu_ms": 35880598.0,
+      "cluster_times_ms": {
+        "little_c0": 8303,
+        "mid_c1": 20600,
+        "mid_high_c2": 3834,
+        "prime_c3": 12009
+      },
+      "uid_screen_mah": 0.179
+    },
+    "derived": {
+      "uid_cpu_mah_total": 3.02,
+      "mah_per_conv": 0.00604,
+      "mah_per_1000_conv": 6.04,
+      "pct_of_4497mah_per_1000_conv": 0.13431176339782075,
+      "joules_total": 41.857200000000006,
+      "joules_per_conv": 0.08371440000000001,
+      "mwh_per_1000_conv": 23.254
+    }
+  },
+  {
+    "name": "3. Qwen2.5-0.5B (実タイピング: 1文脈につき5打鍵=Hit率80%)",
+    "engine": "local_slm",
+    "workload": "typing",
+    "iters": 250,
+    "voltage_v": 4.246,
+    "app": {
+      "engine": "local_slm",
+      "workload": "typing",
+      "conversions": 250,
+      "slmApplied": 250,
+      "wallTotalMs": 12110,
+      "cpuTotalMs": 39177,
+      "wallPerConvMs": 48.44,
+      "cpuPerConvMs": 156.708,
+      "basePerConvMs": 8.001061351999997,
+      "rerankPerConvMs": 40.40473066,
+      "currentStartUa": 1562,
+      "currentEndUa": 1562,
+      "chargeDeltaUah": 0
+    },
+    "batterystats": {
+      "uid_total_mah": 3.02,
+      "uid_cpu_mah": 2.85,
+      "global_cpu_mah": 3.09,
+      "global_screen_mah": 0.165,
+      "usr_cpu_ms": 51757862.0,
+      "krn_cpu_ms": 57180953.0,
+      "cluster_times_ms": {
+        "little_c0": 5629,
+        "mid_c1": 19177,
+        "mid_high_c2": 3760,
+        "prime_c3": 11147
+      },
+      "uid_screen_mah": 0.165
+    },
+    "derived": {
+      "uid_cpu_mah_total": 2.85,
+      "mah_per_conv": 0.0114,
+      "mah_per_1000_conv": 11.4,
+      "pct_of_4497mah_per_1000_conv": 0.25350233488992663,
+      "joules_total": 39.501000000000005,
+      "joules_per_conv": 0.158004,
+      "mwh_per_1000_conv": 43.89
+    }
+  },
+  {
+    "name": "4. Qwen2.5-0.5B (KVキャッシュMiss: 毎回新規文脈で確定)",
+    "engine": "local_slm",
+    "workload": "miss",
+    "iters": 200,
+    "voltage_v": 4.246,
+    "app": {
+      "engine": "local_slm",
+      "workload": "miss",
+      "conversions": 200,
+      "slmApplied": 200,
+      "wallTotalMs": 21007,
+      "cpuTotalMs": 78274,
+      "wallPerConvMs": 105.035,
+      "cpuPerConvMs": 391.37,
+      "basePerConvMs": 1.6934586049999998,
+      "rerankPerConvMs": 103.31296671500002,
+      "currentStartUa": -7812,
+      "currentEndUa": 7812,
+      "chargeDeltaUah": 0
+    },
+    "batterystats": {
+      "uid_total_mah": 4.64,
+      "uid_cpu_mah": 4.37,
+      "global_cpu_mah": 4.77,
+      "global_screen_mah": 0.272,
+      "usr_cpu_ms": 76087.0,
+      "krn_cpu_ms": 33300555.0,
+      "cluster_times_ms": {
+        "little_c0": 8237,
+        "mid_c1": 41543,
+        "mid_high_c2": 8901,
+        "prime_c3": 19391
+      },
+      "uid_screen_mah": 0.272
+    },
+    "derived": {
+      "uid_cpu_mah_total": 4.37,
+      "mah_per_conv": 0.02185,
+      "mah_per_1000_conv": 21.85,
+      "pct_of_4497mah_per_1000_conv": 0.4858794752056927,
+      "joules_total": 60.568200000000004,
+      "joules_per_conv": 0.302841,
+      "mwh_per_1000_conv": 84.1225
+    }
+  },
+  {
+    "name": "5. Qwen2.5-1.5B (KVキャッシュHit: 同一文脈連続入力)",
+    "engine": "local_slm_1_5b",
+    "workload": "hit",
+    "iters": 300,
+    "voltage_v": 4.246,
+    "app": {
+      "engine": "local_slm_1_5b",
+      "workload": "hit",
+      "conversions": 300,
+      "slmApplied": 300,
+      "wallTotalMs": 12049,
+      "cpuTotalMs": 42728,
+      "wallPerConvMs": 40.163333333333334,
+      "cpuPerConvMs": 142.42666666666668,
+      "basePerConvMs": 1.2592288433333325,
+      "rerankPerConvMs": 38.89464153333336,
+      "currentStartUa": -14843,
+      "currentEndUa": 0,
+      "chargeDeltaUah": 0
+    },
+    "batterystats": {
+      "uid_total_mah": 1.86,
+      "uid_cpu_mah": 1.71,
+      "global_cpu_mah": 1.86,
+      "global_screen_mah": 0.159,
+      "usr_cpu_ms": 15520258.0,
+      "krn_cpu_ms": 22860381.0,
+      "cluster_times_ms": {
+        "little_c0": 3861,
+        "mid_c1": 22973,
+        "mid_high_c2": 6759,
+        "prime_c3": 7870
+      },
+      "uid_screen_mah": 0.159
+    },
+    "derived": {
+      "uid_cpu_mah_total": 1.71,
+      "mah_per_conv": 0.0057,
+      "mah_per_1000_conv": 5.7,
+      "pct_of_4497mah_per_1000_conv": 0.12675116744496331,
+      "joules_total": 23.7006,
+      "joules_per_conv": 0.079002,
+      "mwh_per_1000_conv": 21.945
+    }
+  },
+  {
+    "name": "6. Qwen2.5-1.5B (実タイピング: 1文脈につき5打鍵=Hit率80%)",
+    "engine": "local_slm_1_5b",
+    "workload": "typing",
+    "iters": 150,
+    "voltage_v": 4.246,
+    "app": {
+      "engine": "local_slm_1_5b",
+      "workload": "typing",
+      "conversions": 150,
+      "slmApplied": 150,
+      "wallTotalMs": 10755,
+      "cpuTotalMs": 38270,
+      "wallPerConvMs": 71.7,
+      "cpuPerConvMs": 255.13333333333333,
+      "basePerConvMs": 5.685948126666666,
+      "rerankPerConvMs": 65.99008754,
+      "currentStartUa": -2343,
+      "currentEndUa": -2343,
+      "chargeDeltaUah": 0
+    },
+    "batterystats": {
+      "uid_total_mah": 1.6,
+      "uid_cpu_mah": 1.45,
+      "global_cpu_mah": 1.73,
+      "global_screen_mah": 0.15,
+      "usr_cpu_ms": 49296821.0,
+      "krn_cpu_ms": 25260421.0,
+      "cluster_times_ms": {
+        "little_c0": 2629,
+        "mid_c1": 22318,
+        "mid_high_c2": 3936,
+        "prime_c3": 8958
+      },
+      "uid_screen_mah": 0.15
+    },
+    "derived": {
+      "uid_cpu_mah_total": 1.45,
+      "mah_per_conv": 0.009666666666666667,
+      "mah_per_1000_conv": 9.666666666666668,
+      "pct_of_4497mah_per_1000_conv": 0.2149581202283004,
+      "joules_total": 20.096999999999998,
+      "joules_per_conv": 0.13398,
+      "mwh_per_1000_conv": 37.21666666666667
+    }
+  },
+  {
+    "name": "7. Qwen2.5-1.5B (KVキャッシュMiss: 毎回新規文脈で確定)",
+    "engine": "local_slm_1_5b",
+    "workload": "miss",
+    "iters": 100,
+    "voltage_v": 4.246,
+    "app": {
+      "engine": "local_slm_1_5b",
+      "workload": "miss",
+      "conversions": 100,
+      "slmApplied": 100,
+      "wallTotalMs": 17142,
+      "cpuTotalMs": 65118,
+      "wallPerConvMs": 171.42,
+      "cpuPerConvMs": 651.18,
+      "basePerConvMs": 2.095693740000001,
+      "rerankPerConvMs": 169.29213455000001,
+      "currentStartUa": -14843,
+      "currentEndUa": -9375,
+      "chargeDeltaUah": 0
+    },
+    "batterystats": {
+      "uid_total_mah": 2.73,
+      "uid_cpu_mah": 2.51,
+      "global_cpu_mah": 2.79,
+      "global_screen_mah": 0.222,
+      "usr_cpu_ms": 63827.0,
+      "krn_cpu_ms": 21540359.0,
+      "cluster_times_ms": {
+        "little_c0": 3423,
+        "mid_c1": 37116,
+        "mid_high_c2": 8096,
+        "prime_c3": 16630
+      },
+      "uid_screen_mah": 0.222
+    },
+    "derived": {
+      "uid_cpu_mah_total": 2.51,
+      "mah_per_conv": 0.025099999999999997,
+      "mah_per_1000_conv": 25.099999999999998,
+      "pct_of_4497mah_per_1000_conv": 0.5581498776962419,
+      "joules_total": 34.788599999999995,
+      "joules_per_conv": 0.347886,
+      "mwh_per_1000_conv": 96.63499999999999
+    }
+  }
+]

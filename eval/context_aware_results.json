@@ -1,0 +1,286 @@
+{
+  "summary": {
+    "baseline": {
+      "TP": 459,
+      "FN": 391,
+      "TN": 150,
+      "FP": 0,
+      "precision": 1.0,
+      "recall": 0.54,
+      "accuracy": 0.609,
+      "f1": 0.7013,
+      "fpr": 0.0,
+      "avg_cer": 0.0665,
+      "category_accuracy": {
+        "people_names": 0.232,
+        "homophones": 0.924,
+        "place_names": 0.7933,
+        "tech_terms": 0.255,
+        "negative_control": 1.0
+      },
+      "category_cer": {
+        "people_names": 0.073,
+        "homophones": 0.0198,
+        "place_names": 0.0506,
+        "tech_terms": 0.1483,
+        "negative_control": 0.0404
+      }
+    },
+    "fixed_hotwords": {
+      "TP": 505,
+      "FN": 345,
+      "TN": 150,
+      "FP": 0,
+      "precision": 1.0,
+      "recall": 0.5941,
+      "accuracy": 0.655,
+      "f1": 0.7454,
+      "fpr": 0.0,
+      "avg_cer": 0.0682,
+      "category_accuracy": {
+        "people_names": 0.292,
+        "homophones": 0.948,
+        "place_names": 0.8467,
+        "tech_terms": 0.34,
+        "negative_control": 1.0
+      },
+      "category_cer": {
+        "people_names": 0.0837,
+        "homophones": 0.0183,
+        "place_names": 0.051,
+        "tech_terms": 0.1443,
+        "negative_control": 0.0413
+      }
+    },
+    "hybrid_no_context": {
+      "TP": 685,
+      "FN": 165,
+      "TN": 150,
+      "FP": 0,
+      "precision": 1.0,
+      "recall": 0.8059,
+      "accuracy": 0.835,
+      "f1": 0.8925,
+      "fpr": 0.0,
+      "avg_cer": 0.0468,
+      "category_accuracy": {
+        "people_names": 0.668,
+        "homophones": 0.956,
+        "place_names": 0.8867,
+        "tech_terms": 0.73,
+        "negative_control": 1.0
+      },
+      "category_cer": {
+        "people_names": 0.0411,
+        "homophones": 0.0173,
+        "place_names": 0.0477,
+        "tech_terms": 0.0941,
+        "negative_control": 0.0413
+      }
+    },
+    "context_aware_hybrid": {
+      "TP": 718,
+      "FN": 132,
+      "TN": 150,
+      "FP": 0,
+      "precision": 1.0,
+      "recall": 0.8447,
+      "accuracy": 0.868,
+      "f1": 0.9158,
+      "fpr": 0.0,
+      "avg_cer": 0.0442,
+      "category_accuracy": {
+        "people_names": 0.76,
+        "homophones": 0.96,
+        "place_names": 0.8867,
+        "tech_terms": 0.775,
+        "negative_control": 1.0
+      },
+      "category_cer": {
+        "people_names": 0.0357,
+        "homophones": 0.0169,
+        "place_names": 0.0477,
+        "tech_terms": 0.0887,
+        "negative_control": 0.0413
+      }
+    }
+  },
+  "sample_comparisons": [
+    {
+      "id": "item_0001",
+      "category": "people_names",
+      "target": "渡邊",
+      "reading": "わたなべ",
+      "context_before": "先ほど人事部から来期のプロジェクト体制に関する連絡がありました。以前お世話になった渡邊さんの件ですが、",
+      "ground_truth": "来週から渡邊さんが新しいプロジェクトのリーダーを務めます。",
+      "baseline": "来週から渡辺さんが新しいプロジェクトのリーダーを務めます",
+      "hybrid_no_context": "来週から渡邊さんが新しいプロジェクトのリーダーを務めます",
+      "context_aware": "来週から渡邊さんが新しいプロジェクトのリーダーを務めます"
+    },
+    {
+      "id": "item_0002",
+      "category": "people_names",
+      "target": "渡邉",
+      "reading": "わたなべ",
+      "context_before": "新メンバーのオンボーディング計画について調整を行っています。以前お世話になった渡邉さんの件ですが、",
+      "ground_truth": "営業部の渡邉さんから資料を受け取りました。",
+      "baseline": "営業部の渡部さんから資料を受け取りました",
+      "hybrid_no_context": "営業部の渡邉さんから資料を受け取りました",
+      "context_aware": "営業部の渡邉さんから資料を受け取りました"
+    },
+    {
+      "id": "item_0003",
+      "category": "people_names",
+      "target": "渡部",
+      "reading": "わたなべ",
+      "context_before": "新メンバーのオンボーディング計画について調整を行っています。以前お世話になった渡部さんの件ですが、",
+      "ground_truth": "本日の会議は渡部さんの進行で進められます。",
+      "baseline": "本日の会議は渡部さんの進行で進められます",
+      "hybrid_no_context": "本日の会議は渡部さんの進行で進められます",
+      "context_aware": "本日の会議は渡部さんの進行で進められます"
+    },
+    {
+      "id": "item_0004",
+      "category": "people_names",
+      "target": "斉藤",
+      "reading": "さいとう",
+      "context_before": "お疲れ様です。本日のチームミーティングの議事録をまとめました。以前お世話になった斉藤さんの件ですが、",
+      "ground_truth": "斉藤さんに昨日の議事録を確認していただきました。",
+      "baseline": "齋藤さんに昨日の議事録を確認して頂きました",
+      "hybrid_no_context": "斉藤さんに昨日の議事録を確認して頂きました",
+      "context_aware": "斉藤さんに昨日の議事録を確認して頂きました"
+    },
+    {
+      "id": "item_0251",
+      "category": "homophones",
+      "target": "貴社",
+      "reading": "きしゃ",
+      "context_before": "平素は格別のご高配を賜り厚く御礼申し上げます。今後の協業案件に関しまして、",
+      "ground_truth": "貴社の益々のご発展を心よりお祈り申し上げます。",
+      "baseline": "記者のますますのご発展を心よりお祈り申し上げます",
+      "hybrid_no_context": "記者のますますのご発展を心よりお祈り申し上げます",
+      "context_aware": "貴社のますますのご発展を心よりお祈り申し上げます"
+    },
+    {
+      "id": "item_0252",
+      "category": "homophones",
+      "target": "異動",
+      "reading": "いどう",
+      "context_before": "４月１日付の組織改編に伴う社内辞令が発令されました。各部署における役職者やメンバーの",
+      "ground_truth": "来月の人事異動で新しい部署へ配属される予定です。",
+      "baseline": "来月の人事異動で新しい部署へ配属される予定です",
+      "hybrid_no_context": "来月の人事異動で新しい部署へ配属される予定です",
+      "context_aware": "来月の人事異動で新しい部署へ配属される予定です"
+    },
+    {
+      "id": "item_0253",
+      "category": "homophones",
+      "target": "体制",
+      "reading": "たいせい",
+      "context_before": "平素より格別のご支援を賜り心より感謝申し上げます。今回の案件に関しまして、",
+      "ground_truth": "全社一丸となって推進体制を強化することに決定しました。",
+      "baseline": "全社一丸となって推進体制を強化することに決定しました",
+      "hybrid_no_context": "全社一丸となって推進体制を強化することに決定しました",
+      "context_aware": "全社一丸となって推進体制を強化することに決定しました"
+    },
+    {
+      "id": "item_0254",
+      "category": "homophones",
+      "target": "関心",
+      "reading": "かんしん",
+      "context_before": "平素より格別のご支援を賜り心より感謝申し上げます。今回の案件に関しまして、",
+      "ground_truth": "環境問題に対する社会の関心が急速に高まっています。",
+      "baseline": "環境問題に対する社会の関心が急速に高まっています",
+      "hybrid_no_context": "環境問題に対する社会の関心が急速に高まっています",
+      "context_aware": "環境問題に対する社会の関心が急速に高まっています"
+    },
+    {
+      "id": "item_0651",
+      "category": "tech_terms",
+      "target": "ReazonSpeech",
+      "reading": "れいぞんすぴーち",
+      "context_before": "クラウドとオンデバイスのハイブリッド構成を検討しています。プライバシーを最優先に考慮し、",
+      "ground_truth": "超高精度のオンデバイス音声認識を実現するためにReazonSpeechのモデルを採用しました。",
+      "baseline": "聴講精度のオンデバイス音声認識を実現するためにリーズンスピーチのモデルを採用しました",
+      "hybrid_no_context": "聴講精度のオンデバイス音声認識を実現するためにリーズンスピーチのモデルを採用しました",
+      "context_aware": "聴講精度のオンデバイス音声認識を実現するためにリーズンスピーチのモデルを採用しました"
+    },
+    {
+      "id": "item_0652",
+      "category": "tech_terms",
+      "target": "Kubernetes",
+      "reading": "くーばねてぃす",
+      "context_before": "Androidアプリのパフォーマンス改善タスクに取り組んでいます。アプリの軽量化のため、",
+      "ground_truth": "クラウド上で数千のコンテナを自律的にオーケストレーションするためにKubernetesクラスタを構築しました。",
+      "baseline": "クラウド上で数千のコンテナを自律的にオーケストレーションするためにクバネティスクラスターを構築しました",
+      "hybrid_no_context": "クラウド上で数千のコンテナを自律的にオーケストレーションするためにクバネティスクラスターを構築しました",
+      "context_aware": "クラウド上で数千のコンテナを自律的にオーケストレーションするためにクバネティスクラスターを構築しました"
+    },
+    {
+      "id": "item_0653",
+      "category": "tech_terms",
+      "target": "PyTorch",
+      "reading": "ぱいとーち",
+      "context_before": "Androidアプリのパフォーマンス改善タスクに取り組んでいます。アプリの軽量化のため、",
+      "ground_truth": "最先端の深層学習モデルの研究開発と分散トレーニングにPyTorchの最新バージョンを使用しています。",
+      "baseline": "最先端の深層学習モデルの研究開発と分散トレーニングにパイ投地の最新バージョンを使用しています",
+      "hybrid_no_context": "最先端の深層学習モデルの研究開発と分散トレーニングにPyTorchの最新バージョンを使用しています",
+      "context_aware": "最先端の深層学習モデルの研究開発と分散トレーニングにPyTorchの最新バージョンを使用しています"
+    },
+    {
+      "id": "item_0654",
+      "category": "tech_terms",
+      "target": "PostgreSQL",
+      "reading": "ぽすぐれすきゅーえる",
+      "context_before": "次世代の機械学習基盤のアーキテクチャ設計を行っています。エッジ推論の実行速度を測定し、",
+      "ground_truth": "大規模なトランザクションと複雑なデータクエリを高速に処理するためにPostgreSQLをプライマリDBに選定しました。",
+      "baseline": "大規模なトランザクションと複雑なデータクエリを高速に処理するためにポストグレスQLをプライマリーデシベルに選定しました",
+      "hybrid_no_context": "大規模なトランザクションと複雑なデータクエリを高速に処理するためにポストグレスQLをプライマリーデシベルに選定しました",
+      "context_aware": "大規模なトランザクションと複雑なデータクエリを高速に処理するためにポストグレスQLをプライマリーデシベルに選定しました"
+    },
+    {
+      "id": "item_0501",
+      "category": "place_names",
+      "target": "十三",
+      "reading": "じゅうそう",
+      "context_before": "次の訪問先企業の所在地とアクセス方法を確認しています。地図アプリでルートを検索したところ、",
+      "ground_truth": "阪急電車に乗って十三駅で乗り換えて梅田へ向かいました。",
+      "baseline": "阪急電車に乗って十三駅で乗り換えて梅田へ向かいました",
+      "hybrid_no_context": "阪急電車に乗って十三駅で乗り換えて梅田へ向かいました",
+      "context_aware": "阪急電車に乗って十三駅で乗り換えて梅田へ向かいました"
+    },
+    {
+      "id": "item_0502",
+      "category": "place_names",
+      "target": "雑色",
+      "reading": "ぞうしき",
+      "context_before": "週末の小旅行のプランを立てています。観光名所や美味しいお店が集まる",
+      "ground_truth": "京急本線の雑色駅の周辺には昔ながらの商店街が広がっています。",
+      "baseline": "京急本線の雑色駅の周辺には昔ながらの商店街が広がっています",
+      "hybrid_no_context": "京急本線の雑色駅の周辺には昔ながらの商店街が広がっています",
+      "context_aware": "京急本線の雑色駅の周辺には昔ながらの商店街が広がっています"
+    },
+    {
+      "id": "item_0503",
+      "category": "place_names",
+      "target": "特牛",
+      "reading": "こっとい",
+      "context_before": "次の訪問先企業の所在地とアクセス方法を確認しています。地図アプリでルートを検索したところ、",
+      "ground_truth": "山陰本線の難読駅として知られる特牛駅を観光で訪れました。",
+      "baseline": "山陰本線の難読駅として知られる骨董駅を観光で訪れました",
+      "hybrid_no_context": "山陰本線の難読駅として知られる骨董駅を観光で訪れました",
+      "context_aware": "山陰本線の難読駅として知られる骨董駅を観光で訪れました"
+    },
+    {
+      "id": "item_0504",
+      "category": "place_names",
+      "target": "放出",
+      "reading": "はなてん",
+      "context_before": "来週の地方出張の交通スケジュールと移動ルートを共有いたします。最寄り駅の",
+      "ground_truth": "おおさか東線の放出駅周辺は近年住宅街として再開発が進んでいます。",
+      "baseline": "大阪東千の放出駅周辺は近年住宅街として再開発が進んでいます",
+      "hybrid_no_context": "大阪東千の放出駅周辺は近年住宅街として再開発が進んでいます",
+      "context_aware": "大阪東千の放出駅周辺は近年住宅街として再開発が進んでいます"
+    }
+  ]
+}
