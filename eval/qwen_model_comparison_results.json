@@ -1,0 +1,2374 @@
+{
+  "qwen2.5-0.5b": {
+    "model": "Qwen2.5-0.5B-Instruct (469MB)",
+    "suite1_homophone": {
+      "total": 50,
+      "baseline_top1": 0.46,
+      "baseline_top3": 0.94,
+      "slm_top1": 0.76,
+      "slm_top3": 0.84,
+      "avg_lat_ms": 91.07379999999999
+    },
+    "suite2_collocation": {
+      "total": 50,
+      "baseline_top1": 0.76,
+      "baseline_top3": 0.84,
+      "slm_top1": 0.44,
+      "slm_top3": 0.74,
+      "avg_lat_ms": 15.0778
+    },
+    "combined_top1": 0.6,
+    "overall_avg_lat_ms": 53.0758,
+    "overall_p50_lat_ms": 23.53,
+    "overall_p95_lat_ms": 112.04,
+    "suite1_details": [
+      {
+        "context": "新幹線を使って新大阪へ",
+        "reading": "いどう",
+        "targets": [
+          "移動"
+        ],
+        "baseline_top": "移動",
+        "baseline_rank": 1,
+        "slm_top": "異動",
+        "slm_rank": 2,
+        "lat_ms": 89.79
+      },
+      {
+        "context": "東京駅から新幹線で新大阪まで",
+        "reading": "いどう",
+        "targets": [
+          "移動"
+        ],
+        "baseline_top": "移動",
+        "baseline_rank": 1,
+        "slm_top": "移動",
+        "slm_rank": 1,
+        "lat_ms": 113.2
+      },
+      {
+        "context": "四半期の定期的な人事",
+        "reading": "いどう",
+        "targets": [
+          "異動"
+        ],
+        "baseline_top": "移動",
+        "baseline_rank": 2,
+        "slm_top": "異動",
+        "slm_rank": 1,
+        "lat_ms": 78.66
+      },
+      {
+        "context": "本社から地方支社への人事",
+        "reading": "いどう",
+        "targets": [
+          "異動"
+        ],
+        "baseline_top": "移動",
+        "baseline_rank": 2,
+        "slm_top": "異動",
+        "slm_rank": 1,
+        "lat_ms": 88.71
+      },
+      {
+        "context": "来月の組織改編による人事",
+        "reading": "いどう",
+        "targets": [
+          "異動"
+        ],
+        "baseline_top": "移動",
+        "baseline_rank": 2,
+        "slm_top": "異動",
+        "slm_rank": 1,
+        "lat_ms": 92.56
+      },
+      {
+        "context": "日経新聞社の敏腕",
+        "reading": "きしゃ",
+        "targets": [
+          "記者"
+        ],
+        "baseline_top": "記者",
+        "baseline_rank": 1,
+        "slm_top": "記者",
+        "slm_rank": 1,
+        "lat_ms": 88.41
+      },
+      {
+        "context": "事件の現場を取材する",
+        "reading": "きしゃ",
+        "targets": [
+          "記者"
+        ],
+        "baseline_top": "記者",
+        "baseline_rank": 1,
+        "slm_top": "記者",
+        "slm_rank": 1,
+        "lat_ms": 75.74
+      },
+      {
+        "context": "平素は格別のお引き立てを賜り",
+        "reading": "きしゃ",
+        "targets": [
+          "貴社"
+        ],
+        "baseline_top": "記者",
+        "baseline_rank": 2,
+        "slm_top": "機車",
+        "slm_rank": 4,
+        "lat_ms": 112.04
+      },
+      {
+        "context": "何卒よろしくお願い申し上げます",
+        "reading": "きしゃ",
+        "targets": [
+          "貴社"
+        ],
+        "baseline_top": "記者",
+        "baseline_rank": 2,
+        "slm_top": "機車",
+        "slm_rank": 7,
+        "lat_ms": 91.44
+      },
+      {
+        "context": "アンケートにご協力いただき、ご",
+        "reading": "かいとう",
+        "targets": [
+          "回答"
+        ],
+        "baseline_top": "回答",
+        "baseline_rank": 1,
+        "slm_top": "回答",
+        "slm_rank": 1,
+        "lat_ms": 96.46
+      },
+      {
+        "context": "お客様からの問い合わせに対する",
+        "reading": "かいとう",
+        "targets": [
+          "回答"
+        ],
+        "baseline_top": "回答",
+        "baseline_rank": 1,
+        "slm_top": "回答",
+        "slm_rank": 1,
+        "lat_ms": 51.96
+      },
+      {
+        "context": "期末試験の数学の模範",
+        "reading": "かいとう",
+        "targets": [
+          "解答"
+        ],
+        "baseline_top": "回答",
+        "baseline_rank": 3,
+        "slm_top": "解答",
+        "slm_rank": 1,
+        "lat_ms": 93.41
+      },
+      {
+        "context": "入試問題の正解と詳しい",
+        "reading": "かいとう",
+        "targets": [
+          "解答"
+        ],
+        "baseline_top": "回答",
+        "baseline_rank": 3,
+        "slm_top": "解答",
+        "slm_rank": 1,
+        "lat_ms": 97.61
+      },
+      {
+        "context": "宇宙の真理を探究する自然",
+        "reading": "かがく",
+        "targets": [
+          "科学"
+        ],
+        "baseline_top": "科学",
+        "baseline_rank": 1,
+        "slm_top": "科学",
+        "slm_rank": 1,
+        "lat_ms": 76.11
+      },
+      {
+        "context": "最新のテクノロジーと先端",
+        "reading": "かがく",
+        "targets": [
+          "科学"
+        ],
+        "baseline_top": "科学",
+        "baseline_rank": 1,
+        "slm_top": "科学",
+        "slm_rank": 1,
+        "lat_ms": 96.36
+      },
+      {
+        "context": "高分子材料や合成樹脂などの有機",
+        "reading": "かがく",
+        "targets": [
+          "化学"
+        ],
+        "baseline_top": "科学",
+        "baseline_rank": 2,
+        "slm_top": "化学",
+        "slm_rank": 1,
+        "lat_ms": 96.41
+      },
+      {
+        "context": "実験室で薬品を調合する",
+        "reading": "かがく",
+        "targets": [
+          "化学"
+        ],
+        "baseline_top": "科学",
+        "baseline_rank": 2,
+        "slm_top": "か学",
+        "slm_rank": 4,
+        "lat_ms": 111.64
+      },
+      {
+        "context": "政府が推進する経済",
+        "reading": "せいさく",
+        "targets": [
+          "政策"
+        ],
+        "baseline_top": "制作",
+        "baseline_rank": 3,
+        "slm_top": "政策",
+        "slm_rank": 1,
+        "lat_ms": 91.51
+      },
+      {
+        "context": "金融緩和と財政",
+        "reading": "せいさく",
+        "targets": [
+          "政策"
+        ],
+        "baseline_top": "制作",
+        "baseline_rank": 3,
+        "slm_top": "政策",
+        "slm_rank": 1,
+        "lat_ms": 66.32
+      },
+      {
+        "context": "自動車工場での高精度な金属部品の",
+        "reading": "せいさく",
+        "targets": [
+          "製作"
+        ],
+        "baseline_top": "制作",
+        "baseline_rank": 2,
+        "slm_top": "製策",
+        "slm_rank": 3,
+        "lat_ms": 109.08
+      },
+      {
+        "context": "アニメーションスタジオによる劇場版映画の",
+        "reading": "せいさく",
+        "targets": [
+          "制作"
+        ],
+        "baseline_top": "制作",
+        "baseline_rank": 1,
+        "slm_top": "制作",
+        "slm_rank": 1,
+        "lat_ms": 110.06
+      },
+      {
+        "context": "天地を神が",
+        "reading": "そうぞう",
+        "targets": [
+          "創造"
+        ],
+        "baseline_top": "想像",
+        "baseline_rank": 2,
+        "slm_top": "層増",
+        "slm_rank": 4,
+        "lat_ms": 51.37
+      },
+      {
+        "context": "新たな価値を",
+        "reading": "そうぞう",
+        "targets": [
+          "創造"
+        ],
+        "baseline_top": "想像",
+        "baseline_rank": 2,
+        "slm_top": "創造",
+        "slm_rank": 1,
+        "lat_ms": 61.27
+      },
+      {
+        "context": "未来の豊かな生活を自由に",
+        "reading": "そうぞう",
+        "targets": [
+          "想像"
+        ],
+        "baseline_top": "想像",
+        "baseline_rank": 1,
+        "slm_top": "創像",
+        "slm_rank": 6,
+        "lat_ms": 95.46
+      },
+      {
+        "context": "思いもよらない出来事を",
+        "reading": "想像",
+        "targets": [
+          "想像"
+        ],
+        "baseline_top": "",
+        "baseline_rank": -1,
+        "slm_top": "",
+        "slm_rank": -1,
+        "lat_ms": 0.0
+      },
+      {
+        "context": "数学の定理を論理的に",
+        "reading": "しょうめい",
+        "targets": [
+          "証明"
+        ],
+        "baseline_top": "証明",
+        "baseline_rank": 1,
+        "slm_top": "証明",
+        "slm_rank": 1,
+        "lat_ms": 84.53
+      },
+      {
+        "context": "身元や住所を公的に",
+        "reading": "しょうめい",
+        "targets": [
+          "証明"
+        ],
+        "baseline_top": "証明",
+        "baseline_rank": 1,
+        "slm_top": "証明",
+        "slm_rank": 1,
+        "lat_ms": 75.65
+      },
+      {
+        "context": "部屋を明るく照らすLEDの",
+        "reading": "しょうめい",
+        "targets": [
+          "照明"
+        ],
+        "baseline_top": "証明",
+        "baseline_rank": 2,
+        "slm_top": "照明",
+        "slm_rank": 1,
+        "lat_ms": 105.25
+      },
+      {
+        "context": "劇場や舞台の華やかな",
+        "reading": "しょうめい",
+        "targets": [
+          "照明"
+        ],
+        "baseline_top": "証明",
+        "baseline_rank": 2,
+        "slm_top": "証明",
+        "slm_rank": 3,
+        "lat_ms": 84.88
+      },
+      {
+        "context": "上司からの明確な業務",
+        "reading": "しじ",
+        "targets": [
+          "指示"
+        ],
+        "baseline_top": "指示",
+        "baseline_rank": 1,
+        "slm_top": "指示",
+        "slm_rank": 1,
+        "lat_ms": 67.31
+      },
+      {
+        "context": "現場の作業員に対して具体的な",
+        "reading": "しじ",
+        "targets": [
+          "指示"
+        ],
+        "baseline_top": "指示",
+        "baseline_rank": 1,
+        "slm_top": "指示",
+        "slm_rank": 1,
+        "lat_ms": 84.25
+      },
+      {
+        "context": "総選挙で特定の政党を強く",
+        "reading": "しじ",
+        "targets": [
+          "支持"
+        ],
+        "baseline_top": "指示",
+        "baseline_rank": 2,
+        "slm_top": "支持",
+        "slm_rank": 1,
+        "lat_ms": 105.45
+      },
+      {
+        "context": "若者層からの圧倒的な",
+        "reading": "しじ",
+        "targets": [
+          "支持"
+        ],
+        "baseline_top": "指示",
+        "baseline_rank": 2,
+        "slm_top": "支持",
+        "slm_rank": 1,
+        "lat_ms": 83.94
+      },
+      {
+        "context": "予定通りスムーズに司会がプログラムの",
+        "reading": "しんこう",
+        "targets": [
+          "進行"
+        ],
+        "baseline_top": "進行",
+        "baseline_rank": 1,
+        "slm_top": "進行",
+        "slm_rank": 1,
+        "lat_ms": 109.51
+      },
+      {
+        "context": "病気の早期発見と悪化の",
+        "reading": "しんこう",
+        "targets": [
+          "進行"
+        ],
+        "baseline_top": "進行",
+        "baseline_rank": 1,
+        "slm_top": "進行",
+        "slm_rank": 1,
+        "lat_ms": 109.27
+      },
+      {
+        "context": "伝統工芸と地方経済の",
+        "reading": "しんこう",
+        "targets": [
+          "振興"
+        ],
+        "baseline_top": "進行",
+        "baseline_rank": 4,
+        "slm_top": "振興",
+        "slm_rank": 1,
+        "lat_ms": 112.34
+      },
+      {
+        "context": "観光資源を活用した地域",
+        "reading": "しんこう",
+        "targets": [
+          "振興"
+        ],
+        "baseline_top": "進行",
+        "baseline_rank": 4,
+        "slm_top": "振興",
+        "slm_rank": 1,
+        "lat_ms": 96.31
+      },
+      {
+        "context": "他国の内政問題に対して不当に",
+        "reading": "かんしょう",
+        "targets": [
+          "干渉"
+        ],
+        "baseline_top": "鑑賞",
+        "baseline_rank": 3,
+        "slm_top": "間賞",
+        "slm_rank": 8,
+        "lat_ms": 85.48
+      },
+      {
+        "context": "プライベートな領域に過度に",
+        "reading": "かんしょう",
+        "targets": [
+          "干渉"
+        ],
+        "baseline_top": "鑑賞",
+        "baseline_rank": 3,
+        "slm_top": "感性",
+        "slm_rank": 7,
+        "lat_ms": 93.25
+      },
+      {
+        "context": "上野の美術館で名画や美術品を",
+        "reading": "かんしょう",
+        "targets": [
+          "鑑賞"
+        ],
+        "baseline_top": "鑑賞",
+        "baseline_rank": 1,
+        "slm_top": "鑑賞",
+        "slm_rank": 1,
+        "lat_ms": 122.76
+      },
+      {
+        "context": "クラシック音楽の美しい旋律を",
+        "reading": "かんしょう",
+        "targets": [
+          "鑑賞"
+        ],
+        "baseline_top": "鑑賞",
+        "baseline_rank": 1,
+        "slm_top": "感性",
+        "slm_rank": 2,
+        "lat_ms": 93.19
+      },
+      {
+        "context": "少子高齢化によって日本の総人口が",
+        "reading": "げんしょう",
+        "targets": [
+          "減少"
+        ],
+        "baseline_top": "減少",
+        "baseline_rank": 1,
+        "slm_top": "減少",
+        "slm_rank": 1,
+        "lat_ms": 111.05
+      },
+      {
+        "context": "売上高や利益が前年比で大幅に",
+        "reading": "げんしょう",
+        "targets": [
+          "減少"
+        ],
+        "baseline_top": "減少",
+        "baseline_rank": 1,
+        "slm_top": "減少",
+        "slm_rank": 1,
+        "lat_ms": 110.29
+      },
+      {
+        "context": "雨上がりの空に二重の虹がかかる自然",
+        "reading": "げんしょう",
+        "targets": [
+          "現象"
+        ],
+        "baseline_top": "減少",
+        "baseline_rank": 2,
+        "slm_top": "現象",
+        "slm_rank": 1,
+        "lat_ms": 111.87
+      },
+      {
+        "context": "物理学における特異な",
+        "reading": "げんしょう",
+        "targets": [
+          "現象"
+        ],
+        "baseline_top": "減少",
+        "baseline_rank": 2,
+        "slm_top": "現象",
+        "slm_rank": 1,
+        "lat_ms": 76.38
+      },
+      {
+        "context": "新薬の服用による抜群の治療",
+        "reading": "こうか",
+        "targets": [
+          "効果"
+        ],
+        "baseline_top": "効果",
+        "baseline_rank": 1,
+        "slm_top": "効果",
+        "slm_rank": 1,
+        "lat_ms": 98.15
+      },
+      {
+        "context": "宣伝や広告による絶大な販売",
+        "reading": "こうか",
+        "targets": [
+          "効果"
+        ],
+        "baseline_top": "効果",
+        "baseline_rank": 1,
+        "slm_top": "効果",
+        "slm_rank": 1,
+        "lat_ms": 123.38
+      },
+      {
+        "context": "高級ブランドの宝石や非常に",
+        "reading": "こうか",
+        "targets": [
+          "高価"
+        ],
+        "baseline_top": "効果",
+        "baseline_rank": 2,
+        "slm_top": "高価",
+        "slm_rank": 1,
+        "lat_ms": 75.58
+      },
+      {
+        "context": "明るくて周囲に優しい",
+        "reading": "せいかく",
+        "targets": [
+          "性格"
+        ],
+        "baseline_top": "正確",
+        "baseline_rank": 2,
+        "slm_top": "性格",
+        "slm_rank": 1,
+        "lat_ms": 92.65
+      },
+      {
+        "context": "精密な時計と狂いのない極めて",
+        "reading": "せいかく",
+        "targets": [
+          "正確"
+        ],
+        "baseline_top": "正確",
+        "baseline_rank": 1,
+        "slm_top": "正確",
+        "slm_rank": 1,
+        "lat_ms": 105.39
+      }
+    ],
+    "suite2_details": [
+      {
+        "reading": "うみのまわりに",
+        "targets": [
+          "海の周りに",
+          "海のまわりに"
+        ],
+        "baseline_top": "海の周りに",
+        "baseline_rank": 1,
+        "slm_top": "生みの周りに",
+        "slm_rank": 2,
+        "lat_ms": 23.53
+      },
+      {
+        "reading": "いなかだよ",
+        "targets": [
+          "田舎だよ"
+        ],
+        "baseline_top": "田舎だよ",
+        "baseline_rank": 1,
+        "slm_top": "位中だよ",
+        "slm_rank": 4,
+        "lat_ms": 16.9
+      },
+      {
+        "reading": "きょうはいいてんき",
+        "targets": [
+          "今日はいい天気",
+          "今日は良い天気"
+        ],
+        "baseline_top": "今日は良い天気",
+        "baseline_rank": 1,
+        "slm_top": "今日は良い天気",
+        "slm_rank": 1,
+        "lat_ms": 16.68
+      },
+      {
+        "reading": "さぎょうちゅうですので",
+        "targets": [
+          "作業中ですので"
+        ],
+        "baseline_top": "作業中ですので",
+        "baseline_rank": 1,
+        "slm_top": "作業中ですので",
+        "slm_rank": 1,
+        "lat_ms": 16.65
+      },
+      {
+        "reading": "つとめております",
+        "targets": [
+          "努めております"
+        ],
+        "baseline_top": "努めております",
+        "baseline_rank": 1,
+        "slm_top": "努めております",
+        "slm_rank": 1,
+        "lat_ms": 16.76
+      },
+      {
+        "reading": "おもっているのに",
+        "targets": [
+          "思っているのに"
+        ],
+        "baseline_top": "思っているのに",
+        "baseline_rank": 1,
+        "slm_top": "思って入るのに",
+        "slm_rank": 2,
+        "lat_ms": 16.86
+      },
+      {
+        "reading": "ちゅうがたばすです",
+        "targets": [
+          "中型バスです"
+        ],
+        "baseline_top": "中型バスです",
+        "baseline_rank": 1,
+        "slm_top": "中型バスです",
+        "slm_rank": 1,
+        "lat_ms": 16.72
+      },
+      {
+        "reading": "かぐとうかいぼうしの",
+        "targets": [
+          "家具倒壊防止の"
+        ],
+        "baseline_top": "家具倒壊防止の",
+        "baseline_rank": 1,
+        "slm_top": "家具倒壊防止の",
+        "slm_rank": 1,
+        "lat_ms": 16.78
+      },
+      {
+        "reading": "むかっている",
+        "targets": [
+          "向かっている"
+        ],
+        "baseline_top": "向かっている",
+        "baseline_rank": 1,
+        "slm_top": "向っている",
+        "slm_rank": 3,
+        "lat_ms": 16.97
+      },
+      {
+        "reading": "むかってる",
+        "targets": [
+          "向かってる"
+        ],
+        "baseline_top": "向かってる",
+        "baseline_rank": 1,
+        "slm_top": "向かってる",
+        "slm_rank": 1,
+        "lat_ms": 16.88
+      },
+      {
+        "reading": "まってる",
+        "targets": [
+          "待ってる"
+        ],
+        "baseline_top": "待ってる",
+        "baseline_rank": 1,
+        "slm_top": "魔ッてる",
+        "slm_rank": 2,
+        "lat_ms": 0.87
+      },
+      {
+        "reading": "しってる",
+        "targets": [
+          "知ってる"
+        ],
+        "baseline_top": "知ってる",
+        "baseline_rank": 1,
+        "slm_top": "知ってる",
+        "slm_rank": 1,
+        "lat_ms": 16.82
+      },
+      {
+        "reading": "やってる",
+        "targets": [
+          "やってる"
+        ],
+        "baseline_top": "やッてる",
+        "baseline_rank": -1,
+        "slm_top": "やッてる",
+        "slm_rank": -1,
+        "lat_ms": 16.86
+      },
+      {
+        "reading": "はしってる",
+        "targets": [
+          "走ってる"
+        ],
+        "baseline_top": "走ってる",
+        "baseline_rank": 1,
+        "slm_top": "は知ってる",
+        "slm_rank": 2,
+        "lat_ms": 0.84
+      },
+      {
+        "reading": "みてる",
+        "targets": [
+          "見てる"
+        ],
+        "baseline_top": "見てる",
+        "baseline_rank": 1,
+        "slm_top": "観てる",
+        "slm_rank": 4,
+        "lat_ms": 0.82
+      },
+      {
+        "reading": "もってる",
+        "targets": [
+          "持ってる"
+        ],
+        "baseline_top": "持ってる",
+        "baseline_rank": 1,
+        "slm_top": "以てる",
+        "slm_rank": 2,
+        "lat_ms": 0.84
+      },
+      {
+        "reading": "でんわしています",
+        "targets": [
+          "電話しています"
+        ],
+        "baseline_top": "電話して今す",
+        "baseline_rank": 5,
+        "slm_top": "電話して今す",
+        "slm_rank": 5,
+        "lat_ms": 17.0
+      },
+      {
+        "reading": "よろしくおねがいします",
+        "targets": [
+          "よろしくお願いします",
+          "よろしくお願い致します"
+        ],
+        "baseline_top": "宜しくお願いします",
+        "baseline_rank": 2,
+        "slm_top": "宜しくお願いします",
+        "slm_rank": 3,
+        "lat_ms": 17.01
+      },
+      {
+        "reading": "ありがとうございます",
+        "targets": [
+          "ありがとうございます"
+        ],
+        "baseline_top": "有難う御座います",
+        "baseline_rank": -1,
+        "slm_top": "有り難うございます",
+        "slm_rank": -1,
+        "lat_ms": 17.42
+      },
+      {
+        "reading": "あめのひに",
+        "targets": [
+          "雨の日に",
+          "雨のひに"
+        ],
+        "baseline_top": "雨のひに",
+        "baseline_rank": 1,
+        "slm_top": "雨のひに",
+        "slm_rank": 1,
+        "lat_ms": 16.78
+      },
+      {
+        "reading": "かわのながれ",
+        "targets": [
+          "川の流れ"
+        ],
+        "baseline_top": "側の流れ",
+        "baseline_rank": 3,
+        "slm_top": "側の流れ",
+        "slm_rank": 3,
+        "lat_ms": 16.84
+      },
+      {
+        "reading": "やまのうえに",
+        "targets": [
+          "山の上に"
+        ],
+        "baseline_top": "山の上に",
+        "baseline_rank": 1,
+        "slm_top": "山野上に",
+        "slm_rank": 2,
+        "lat_ms": 16.83
+      },
+      {
+        "reading": "ほんをよむ",
+        "targets": [
+          "本を読む",
+          "ほんを読む"
+        ],
+        "baseline_top": "ほんを読む",
+        "baseline_rank": 1,
+        "slm_top": "ホンを読む",
+        "slm_rank": 4,
+        "lat_ms": 16.86
+      },
+      {
+        "reading": "みずをのむ",
+        "targets": [
+          "水を飲む"
+        ],
+        "baseline_top": "水を飲む",
+        "baseline_rank": 1,
+        "slm_top": "水を飲む",
+        "slm_rank": 1,
+        "lat_ms": 16.95
+      },
+      {
+        "reading": "くるまにのる",
+        "targets": [
+          "車に乗る"
+        ],
+        "baseline_top": "車に乗る",
+        "baseline_rank": 1,
+        "slm_top": "車にのる",
+        "slm_rank": 3,
+        "lat_ms": 17.0
+      },
+      {
+        "reading": "いえにかえる",
+        "targets": [
+          "家に帰る"
+        ],
+        "baseline_top": "家に帰る",
+        "baseline_rank": 1,
+        "slm_top": "家に帰る",
+        "slm_rank": 1,
+        "lat_ms": 16.93
+      },
+      {
+        "reading": "あさごはんをたべる",
+        "targets": [
+          "朝ご飯を食べる",
+          "朝ごはんを食べる"
+        ],
+        "baseline_top": "朝ご飯を食べる",
+        "baseline_rank": 1,
+        "slm_top": "朝ご飯を食べる",
+        "slm_rank": 1,
+        "lat_ms": 17.02
+      },
+      {
+        "reading": "ひるごはんをたべる",
+        "targets": [
+          "昼ご飯を食べる",
+          "昼ごはんを食べる"
+        ],
+        "baseline_top": "昼ご飯を食べる",
+        "baseline_rank": 1,
+        "slm_top": "昼ご飯を食べる",
+        "slm_rank": 1,
+        "lat_ms": 16.23
+      },
+      {
+        "reading": "ばんごはんをたべる",
+        "targets": [
+          "晩ご飯を食べる",
+          "晩ごはんを食べる"
+        ],
+        "baseline_top": "番ご飯を食べる",
+        "baseline_rank": -1,
+        "slm_top": "番ご飯を食べる",
+        "slm_rank": -1,
+        "lat_ms": 16.87
+      },
+      {
+        "reading": "おちゃをのむ",
+        "targets": [
+          "お茶を飲む"
+        ],
+        "baseline_top": "お茶を飲む",
+        "baseline_rank": 1,
+        "slm_top": "お茶を飲む",
+        "slm_rank": 1,
+        "lat_ms": 16.71
+      },
+      {
+        "reading": "てがみをかく",
+        "targets": [
+          "手紙を書く"
+        ],
+        "baseline_top": "手紙を書く",
+        "baseline_rank": 1,
+        "slm_top": "手紙を書く",
+        "slm_rank": 1,
+        "lat_ms": 16.86
+      },
+      {
+        "reading": "えきにつく",
+        "targets": [
+          "駅に着く"
+        ],
+        "baseline_top": "駅につく",
+        "baseline_rank": 4,
+        "slm_top": "駅につく",
+        "slm_rank": 3,
+        "lat_ms": 16.66
+      },
+      {
+        "reading": "でんしゃにのる",
+        "targets": [
+          "電車に乗る"
+        ],
+        "baseline_top": "電車に乗る",
+        "baseline_rank": 1,
+        "slm_top": "電車に乗る",
+        "slm_rank": 1,
+        "lat_ms": 16.93
+      },
+      {
+        "reading": "かいぎがおわる",
+        "targets": [
+          "会議が終わる"
+        ],
+        "baseline_top": "会議がお悪",
+        "baseline_rank": -1,
+        "slm_top": "会議がお悪",
+        "slm_rank": -1,
+        "lat_ms": 17.05
+      },
+      {
+        "reading": "しごとがはじまる",
+        "targets": [
+          "仕事が始まる"
+        ],
+        "baseline_top": "仕事が始まる",
+        "baseline_rank": 1,
+        "slm_top": "仕事画始まる",
+        "slm_rank": 2,
+        "lat_ms": 16.93
+      },
+      {
+        "reading": "あたまがいたい",
+        "targets": [
+          "頭が痛い"
+        ],
+        "baseline_top": "頭が痛い",
+        "baseline_rank": 1,
+        "slm_top": "頭が痛い",
+        "slm_rank": 1,
+        "lat_ms": 16.62
+      },
+      {
+        "reading": "おなかがすいた",
+        "targets": [
+          "お腹が空いた"
+        ],
+        "baseline_top": "お腹が空いた",
+        "baseline_rank": 1,
+        "slm_top": "お腹が空いた",
+        "slm_rank": 1,
+        "lat_ms": 17.41
+      },
+      {
+        "reading": "めをあける",
+        "targets": [
+          "目を開ける"
+        ],
+        "baseline_top": "目を開ける",
+        "baseline_rank": 1,
+        "slm_top": "めを開ける",
+        "slm_rank": 5,
+        "lat_ms": 16.77
+      },
+      {
+        "reading": "はるがきた",
+        "targets": [
+          "春が来た"
+        ],
+        "baseline_top": "春が来た",
+        "baseline_rank": 1,
+        "slm_top": "治が来た",
+        "slm_rank": 5,
+        "lat_ms": 0.9
+      },
+      {
+        "reading": "なつのうみ",
+        "targets": [
+          "夏の海"
+        ],
+        "baseline_top": "なつの海",
+        "baseline_rank": 2,
+        "slm_top": "なつの海",
+        "slm_rank": 5,
+        "lat_ms": 16.98
+      },
+      {
+        "reading": "あきのかぜ",
+        "targets": [
+          "秋の風"
+        ],
+        "baseline_top": "あきの風",
+        "baseline_rank": -1,
+        "slm_top": "あきの風",
+        "slm_rank": -1,
+        "lat_ms": 0.88
+      },
+      {
+        "reading": "ふゆのゆき",
+        "targets": [
+          "冬の雪"
+        ],
+        "baseline_top": "冬の雪",
+        "baseline_rank": 1,
+        "slm_top": "冬の雪",
+        "slm_rank": 1,
+        "lat_ms": 16.89
+      },
+      {
+        "reading": "いぬのさんぽ",
+        "targets": [
+          "犬の散歩"
+        ],
+        "baseline_top": "犬の散歩",
+        "baseline_rank": 1,
+        "slm_top": "犬の散歩",
+        "slm_rank": 1,
+        "lat_ms": 16.73
+      },
+      {
+        "reading": "ねこのこえ",
+        "targets": [
+          "猫の声"
+        ],
+        "baseline_top": "猫の声",
+        "baseline_rank": 1,
+        "slm_top": "猫の声",
+        "slm_rank": 1,
+        "lat_ms": 16.83
+      },
+      {
+        "reading": "とりがなく",
+        "targets": [
+          "鳥が鳴く"
+        ],
+        "baseline_top": "鳥が泣く",
+        "baseline_rank": 2,
+        "slm_top": "鳥が泣く",
+        "slm_rank": 2,
+        "lat_ms": 16.58
+      },
+      {
+        "reading": "そらをみる",
+        "targets": [
+          "空を見る"
+        ],
+        "baseline_top": "空を見る",
+        "baseline_rank": 1,
+        "slm_top": "空を観る",
+        "slm_rank": 3,
+        "lat_ms": 16.74
+      },
+      {
+        "reading": "うたをうたう",
+        "targets": [
+          "歌を歌う"
+        ],
+        "baseline_top": "歌を歌う",
+        "baseline_rank": 1,
+        "slm_top": "歌を歌う",
+        "slm_rank": 1,
+        "lat_ms": 16.65
+      },
+      {
+        "reading": "みちをあるく",
+        "targets": [
+          "道を歩く"
+        ],
+        "baseline_top": "道を歩く",
+        "baseline_rank": 1,
+        "slm_top": "路を歩く",
+        "slm_rank": 2,
+        "lat_ms": 17.05
+      },
+      {
+        "reading": "まちをあるく",
+        "targets": [
+          "街を歩く",
+          "町を歩く"
+        ],
+        "baseline_top": "街を歩く",
+        "baseline_rank": 1,
+        "slm_top": "街を歩く",
+        "slm_rank": 1,
+        "lat_ms": 17.33
+      },
+      {
+        "reading": "ほんをかう",
+        "targets": [
+          "本を買う"
+        ],
+        "baseline_top": "ほんを買う",
+        "baseline_rank": -1,
+        "slm_top": "ほんを買う",
+        "slm_rank": -1,
+        "lat_ms": 16.87
+      }
+    ]
+  },
+  "qwen2.5-1.5b": {
+    "model": "Qwen2.5-1.5B-Instruct (1117MB)",
+    "suite1_homophone": {
+      "total": 50,
+      "baseline_top1": 0.46,
+      "baseline_top3": 0.94,
+      "slm_top1": 0.84,
+      "slm_top3": 0.96,
+      "avg_lat_ms": 153.0892
+    },
+    "suite2_collocation": {
+      "total": 50,
+      "baseline_top1": 0.76,
+      "baseline_top3": 0.84,
+      "slm_top1": 0.5,
+      "slm_top3": 0.78,
+      "avg_lat_ms": 38.669000000000004
+    },
+    "combined_top1": 0.67,
+    "overall_avg_lat_ms": 95.8791,
+    "overall_p50_lat_ms": 91.21,
+    "overall_p95_lat_ms": 182.71,
+    "suite1_details": [
+      {
+        "context": "新幹線を使って新大阪へ",
+        "reading": "いどう",
+        "targets": [
+          "移動"
+        ],
+        "baseline_top": "移動",
+        "baseline_rank": 1,
+        "slm_top": "移動",
+        "slm_rank": 1,
+        "lat_ms": 140.0
+      },
+      {
+        "context": "東京駅から新幹線で新大阪まで",
+        "reading": "いどう",
+        "targets": [
+          "移動"
+        ],
+        "baseline_top": "移動",
+        "baseline_rank": 1,
+        "slm_top": "移動",
+        "slm_rank": 1,
+        "lat_ms": 171.65
+      },
+      {
+        "context": "四半期の定期的な人事",
+        "reading": "いどう",
+        "targets": [
+          "異動"
+        ],
+        "baseline_top": "移動",
+        "baseline_rank": 2,
+        "slm_top": "異動",
+        "slm_rank": 1,
+        "lat_ms": 132.59
+      },
+      {
+        "context": "本社から地方支社への人事",
+        "reading": "いどう",
+        "targets": [
+          "異動"
+        ],
+        "baseline_top": "移動",
+        "baseline_rank": 2,
+        "slm_top": "異動",
+        "slm_rank": 1,
+        "lat_ms": 137.64
+      },
+      {
+        "context": "来月の組織改編による人事",
+        "reading": "いどう",
+        "targets": [
+          "異動"
+        ],
+        "baseline_top": "移動",
+        "baseline_rank": 2,
+        "slm_top": "異動",
+        "slm_rank": 1,
+        "lat_ms": 175.03
+      },
+      {
+        "context": "日経新聞社の敏腕",
+        "reading": "きしゃ",
+        "targets": [
+          "記者"
+        ],
+        "baseline_top": "記者",
+        "baseline_rank": 1,
+        "slm_top": "記者",
+        "slm_rank": 1,
+        "lat_ms": 144.95
+      },
+      {
+        "context": "事件の現場を取材する",
+        "reading": "きしゃ",
+        "targets": [
+          "記者"
+        ],
+        "baseline_top": "記者",
+        "baseline_rank": 1,
+        "slm_top": "記者",
+        "slm_rank": 1,
+        "lat_ms": 132.09
+      },
+      {
+        "context": "平素は格別のお引き立てを賜り",
+        "reading": "きしゃ",
+        "targets": [
+          "貴社"
+        ],
+        "baseline_top": "記者",
+        "baseline_rank": 2,
+        "slm_top": "貴社",
+        "slm_rank": 1,
+        "lat_ms": 169.54
+      },
+      {
+        "context": "何卒よろしくお願い申し上げます",
+        "reading": "きしゃ",
+        "targets": [
+          "貴社"
+        ],
+        "baseline_top": "記者",
+        "baseline_rank": 2,
+        "slm_top": "機車",
+        "slm_rank": 3,
+        "lat_ms": 148.39
+      },
+      {
+        "context": "アンケートにご協力いただき、ご",
+        "reading": "かいとう",
+        "targets": [
+          "回答"
+        ],
+        "baseline_top": "回答",
+        "baseline_rank": 1,
+        "slm_top": "回答",
+        "slm_rank": 1,
+        "lat_ms": 164.2
+      },
+      {
+        "context": "お客様からの問い合わせに対する",
+        "reading": "かいとう",
+        "targets": [
+          "回答"
+        ],
+        "baseline_top": "回答",
+        "baseline_rank": 1,
+        "slm_top": "回答",
+        "slm_rank": 1,
+        "lat_ms": 92.87
+      },
+      {
+        "context": "期末試験の数学の模範",
+        "reading": "かいとう",
+        "targets": [
+          "解答"
+        ],
+        "baseline_top": "回答",
+        "baseline_rank": 3,
+        "slm_top": "解答",
+        "slm_rank": 1,
+        "lat_ms": 155.45
+      },
+      {
+        "context": "入試問題の正解と詳しい",
+        "reading": "かいとう",
+        "targets": [
+          "解答"
+        ],
+        "baseline_top": "回答",
+        "baseline_rank": 3,
+        "slm_top": "解答",
+        "slm_rank": 1,
+        "lat_ms": 149.95
+      },
+      {
+        "context": "宇宙の真理を探究する自然",
+        "reading": "かがく",
+        "targets": [
+          "科学"
+        ],
+        "baseline_top": "科学",
+        "baseline_rank": 1,
+        "slm_top": "科学",
+        "slm_rank": 1,
+        "lat_ms": 131.55
+      },
+      {
+        "context": "最新のテクノロジーと先端",
+        "reading": "かがく",
+        "targets": [
+          "科学"
+        ],
+        "baseline_top": "科学",
+        "baseline_rank": 1,
+        "slm_top": "科学",
+        "slm_rank": 1,
+        "lat_ms": 162.0
+      },
+      {
+        "context": "高分子材料や合成樹脂などの有機",
+        "reading": "かがく",
+        "targets": [
+          "化学"
+        ],
+        "baseline_top": "科学",
+        "baseline_rank": 2,
+        "slm_top": "化学",
+        "slm_rank": 1,
+        "lat_ms": 160.56
+      },
+      {
+        "context": "実験室で薬品を調合する",
+        "reading": "かがく",
+        "targets": [
+          "化学"
+        ],
+        "baseline_top": "科学",
+        "baseline_rank": 2,
+        "slm_top": "科学",
+        "slm_rank": 2,
+        "lat_ms": 172.0
+      },
+      {
+        "context": "政府が推進する経済",
+        "reading": "せいさく",
+        "targets": [
+          "政策"
+        ],
+        "baseline_top": "制作",
+        "baseline_rank": 3,
+        "slm_top": "政策",
+        "slm_rank": 1,
+        "lat_ms": 155.47
+      },
+      {
+        "context": "金融緩和と財政",
+        "reading": "せいさく",
+        "targets": [
+          "政策"
+        ],
+        "baseline_top": "制作",
+        "baseline_rank": 3,
+        "slm_top": "政策",
+        "slm_rank": 1,
+        "lat_ms": 122.85
+      },
+      {
+        "context": "自動車工場での高精度な金属部品の",
+        "reading": "せいさく",
+        "targets": [
+          "製作"
+        ],
+        "baseline_top": "制作",
+        "baseline_rank": 2,
+        "slm_top": "製策",
+        "slm_rank": 2,
+        "lat_ms": 172.98
+      },
+      {
+        "context": "アニメーションスタジオによる劇場版映画の",
+        "reading": "せいさく",
+        "targets": [
+          "制作"
+        ],
+        "baseline_top": "制作",
+        "baseline_rank": 1,
+        "slm_top": "制作",
+        "slm_rank": 1,
+        "lat_ms": 175.15
+      },
+      {
+        "context": "天地を神が",
+        "reading": "そうぞう",
+        "targets": [
+          "創造"
+        ],
+        "baseline_top": "想像",
+        "baseline_rank": 2,
+        "slm_top": "創像",
+        "slm_rank": 3,
+        "lat_ms": 98.55
+      },
+      {
+        "context": "新たな価値を",
+        "reading": "そうぞう",
+        "targets": [
+          "創造"
+        ],
+        "baseline_top": "想像",
+        "baseline_rank": 2,
+        "slm_top": "創造",
+        "slm_rank": 1,
+        "lat_ms": 106.05
+      },
+      {
+        "context": "未来の豊かな生活を自由に",
+        "reading": "そうぞう",
+        "targets": [
+          "想像"
+        ],
+        "baseline_top": "想像",
+        "baseline_rank": 1,
+        "slm_top": "創造",
+        "slm_rank": 4,
+        "lat_ms": 151.44
+      },
+      {
+        "context": "思いもよらない出来事を",
+        "reading": "想像",
+        "targets": [
+          "想像"
+        ],
+        "baseline_top": "",
+        "baseline_rank": -1,
+        "slm_top": "",
+        "slm_rank": -1,
+        "lat_ms": 0.0
+      },
+      {
+        "context": "数学の定理を論理的に",
+        "reading": "しょうめい",
+        "targets": [
+          "証明"
+        ],
+        "baseline_top": "証明",
+        "baseline_rank": 1,
+        "slm_top": "証明",
+        "slm_rank": 1,
+        "lat_ms": 139.0
+      },
+      {
+        "context": "身元や住所を公的に",
+        "reading": "しょうめい",
+        "targets": [
+          "証明"
+        ],
+        "baseline_top": "証明",
+        "baseline_rank": 1,
+        "slm_top": "証明",
+        "slm_rank": 1,
+        "lat_ms": 131.21
+      },
+      {
+        "context": "部屋を明るく照らすLEDの",
+        "reading": "しょうめい",
+        "targets": [
+          "照明"
+        ],
+        "baseline_top": "証明",
+        "baseline_rank": 2,
+        "slm_top": "照明",
+        "slm_rank": 1,
+        "lat_ms": 171.89
+      },
+      {
+        "context": "劇場や舞台の華やかな",
+        "reading": "しょうめい",
+        "targets": [
+          "照明"
+        ],
+        "baseline_top": "証明",
+        "baseline_rank": 2,
+        "slm_top": "照明",
+        "slm_rank": 1,
+        "lat_ms": 138.32
+      },
+      {
+        "context": "上司からの明確な業務",
+        "reading": "しじ",
+        "targets": [
+          "指示"
+        ],
+        "baseline_top": "指示",
+        "baseline_rank": 1,
+        "slm_top": "指示",
+        "slm_rank": 1,
+        "lat_ms": 118.78
+      },
+      {
+        "context": "現場の作業員に対して具体的な",
+        "reading": "しじ",
+        "targets": [
+          "指示"
+        ],
+        "baseline_top": "指示",
+        "baseline_rank": 1,
+        "slm_top": "指示",
+        "slm_rank": 1,
+        "lat_ms": 139.48
+      },
+      {
+        "context": "総選挙で特定の政党を強く",
+        "reading": "しじ",
+        "targets": [
+          "支持"
+        ],
+        "baseline_top": "指示",
+        "baseline_rank": 2,
+        "slm_top": "支持",
+        "slm_rank": 1,
+        "lat_ms": 171.67
+      },
+      {
+        "context": "若者層からの圧倒的な",
+        "reading": "しじ",
+        "targets": [
+          "支持"
+        ],
+        "baseline_top": "指示",
+        "baseline_rank": 2,
+        "slm_top": "支持",
+        "slm_rank": 1,
+        "lat_ms": 144.76
+      },
+      {
+        "context": "予定通りスムーズに司会がプログラムの",
+        "reading": "しんこう",
+        "targets": [
+          "進行"
+        ],
+        "baseline_top": "進行",
+        "baseline_rank": 1,
+        "slm_top": "進行",
+        "slm_rank": 1,
+        "lat_ms": 182.71
+      },
+      {
+        "context": "病気の早期発見と悪化の",
+        "reading": "しんこう",
+        "targets": [
+          "進行"
+        ],
+        "baseline_top": "進行",
+        "baseline_rank": 1,
+        "slm_top": "進行",
+        "slm_rank": 1,
+        "lat_ms": 177.04
+      },
+      {
+        "context": "伝統工芸と地方経済の",
+        "reading": "しんこう",
+        "targets": [
+          "振興"
+        ],
+        "baseline_top": "進行",
+        "baseline_rank": 4,
+        "slm_top": "振興",
+        "slm_rank": 1,
+        "lat_ms": 173.98
+      },
+      {
+        "context": "観光資源を活用した地域",
+        "reading": "しんこう",
+        "targets": [
+          "振興"
+        ],
+        "baseline_top": "進行",
+        "baseline_rank": 4,
+        "slm_top": "振興",
+        "slm_rank": 1,
+        "lat_ms": 151.72
+      },
+      {
+        "context": "他国の内政問題に対して不当に",
+        "reading": "かんしょう",
+        "targets": [
+          "干渉"
+        ],
+        "baseline_top": "鑑賞",
+        "baseline_rank": 3,
+        "slm_top": "干渉",
+        "slm_rank": 1,
+        "lat_ms": 144.46
+      },
+      {
+        "context": "プライベートな領域に過度に",
+        "reading": "かんしょう",
+        "targets": [
+          "干渉"
+        ],
+        "baseline_top": "鑑賞",
+        "baseline_rank": 3,
+        "slm_top": "感性",
+        "slm_rank": 2,
+        "lat_ms": 152.44
+      },
+      {
+        "context": "上野の美術館で名画や美術品を",
+        "reading": "かんしょう",
+        "targets": [
+          "鑑賞"
+        ],
+        "baseline_top": "鑑賞",
+        "baseline_rank": 1,
+        "slm_top": "鑑賞",
+        "slm_rank": 1,
+        "lat_ms": 195.47
+      },
+      {
+        "context": "クラシック音楽の美しい旋律を",
+        "reading": "かんしょう",
+        "targets": [
+          "鑑賞"
+        ],
+        "baseline_top": "鑑賞",
+        "baseline_rank": 1,
+        "slm_top": "感性",
+        "slm_rank": 3,
+        "lat_ms": 154.27
+      },
+      {
+        "context": "少子高齢化によって日本の総人口が",
+        "reading": "げんしょう",
+        "targets": [
+          "減少"
+        ],
+        "baseline_top": "減少",
+        "baseline_rank": 1,
+        "slm_top": "減少",
+        "slm_rank": 1,
+        "lat_ms": 182.42
+      },
+      {
+        "context": "売上高や利益が前年比で大幅に",
+        "reading": "げんしょう",
+        "targets": [
+          "減少"
+        ],
+        "baseline_top": "減少",
+        "baseline_rank": 1,
+        "slm_top": "減少",
+        "slm_rank": 1,
+        "lat_ms": 172.86
+      },
+      {
+        "context": "雨上がりの空に二重の虹がかかる自然",
+        "reading": "げんしょう",
+        "targets": [
+          "現象"
+        ],
+        "baseline_top": "減少",
+        "baseline_rank": 2,
+        "slm_top": "現象",
+        "slm_rank": 1,
+        "lat_ms": 174.06
+      },
+      {
+        "context": "物理学における特異な",
+        "reading": "げんしょう",
+        "targets": [
+          "現象"
+        ],
+        "baseline_top": "減少",
+        "baseline_rank": 2,
+        "slm_top": "現象",
+        "slm_rank": 1,
+        "lat_ms": 109.5
+      },
+      {
+        "context": "新薬の服用による抜群の治療",
+        "reading": "こうか",
+        "targets": [
+          "効果"
+        ],
+        "baseline_top": "効果",
+        "baseline_rank": 1,
+        "slm_top": "効果",
+        "slm_rank": 1,
+        "lat_ms": 162.93
+      },
+      {
+        "context": "宣伝や広告による絶大な販売",
+        "reading": "こうか",
+        "targets": [
+          "効果"
+        ],
+        "baseline_top": "効果",
+        "baseline_rank": 1,
+        "slm_top": "効果",
+        "slm_rank": 1,
+        "lat_ms": 196.82
+      },
+      {
+        "context": "高級ブランドの宝石や非常に",
+        "reading": "こうか",
+        "targets": [
+          "高価"
+        ],
+        "baseline_top": "効果",
+        "baseline_rank": 2,
+        "slm_top": "高価",
+        "slm_rank": 1,
+        "lat_ms": 159.87
+      },
+      {
+        "context": "明るくて周囲に優しい",
+        "reading": "せいかく",
+        "targets": [
+          "性格"
+        ],
+        "baseline_top": "正確",
+        "baseline_rank": 2,
+        "slm_top": "性格",
+        "slm_rank": 1,
+        "lat_ms": 209.1
+      },
+      {
+        "context": "精密な時計と狂いのない極めて",
+        "reading": "せいかく",
+        "targets": [
+          "正確"
+        ],
+        "baseline_top": "正確",
+        "baseline_rank": 1,
+        "slm_top": "正確",
+        "slm_rank": 1,
+        "lat_ms": 276.75
+      }
+    ],
+    "suite2_details": [
+      {
+        "reading": "うみのまわりに",
+        "targets": [
+          "海の周りに",
+          "海のまわりに"
+        ],
+        "baseline_top": "海の周りに",
+        "baseline_rank": 1,
+        "slm_top": "海の周りに",
+        "slm_rank": 1,
+        "lat_ms": 64.41
+      },
+      {
+        "reading": "いなかだよ",
+        "targets": [
+          "田舎だよ"
+        ],
+        "baseline_top": "田舎だよ",
+        "baseline_rank": 1,
+        "slm_top": "位中だよ",
+        "slm_rank": 4,
+        "lat_ms": 47.96
+      },
+      {
+        "reading": "きょうはいいてんき",
+        "targets": [
+          "今日はいい天気",
+          "今日は良い天気"
+        ],
+        "baseline_top": "今日は良い天気",
+        "baseline_rank": 1,
+        "slm_top": "今日はいい天気",
+        "slm_rank": 1,
+        "lat_ms": 46.05
+      },
+      {
+        "reading": "さぎょうちゅうですので",
+        "targets": [
+          "作業中ですので"
+        ],
+        "baseline_top": "作業中ですので",
+        "baseline_rank": 1,
+        "slm_top": "作業中ですので",
+        "slm_rank": 1,
+        "lat_ms": 40.09
+      },
+      {
+        "reading": "つとめております",
+        "targets": [
+          "努めております"
+        ],
+        "baseline_top": "努めております",
+        "baseline_rank": 1,
+        "slm_top": "努めております",
+        "slm_rank": 1,
+        "lat_ms": 42.43
+      },
+      {
+        "reading": "おもっているのに",
+        "targets": [
+          "思っているのに"
+        ],
+        "baseline_top": "思っているのに",
+        "baseline_rank": 1,
+        "slm_top": "思って入るのに",
+        "slm_rank": 2,
+        "lat_ms": 40.13
+      },
+      {
+        "reading": "ちゅうがたばすです",
+        "targets": [
+          "中型バスです"
+        ],
+        "baseline_top": "中型バスです",
+        "baseline_rank": 1,
+        "slm_top": "中型バスです",
+        "slm_rank": 1,
+        "lat_ms": 42.71
+      },
+      {
+        "reading": "かぐとうかいぼうしの",
+        "targets": [
+          "家具倒壊防止の"
+        ],
+        "baseline_top": "家具倒壊防止の",
+        "baseline_rank": 1,
+        "slm_top": "家具倒壊防止の",
+        "slm_rank": 1,
+        "lat_ms": 41.59
+      },
+      {
+        "reading": "むかっている",
+        "targets": [
+          "向かっている"
+        ],
+        "baseline_top": "向かっている",
+        "baseline_rank": 1,
+        "slm_top": "向かっている",
+        "slm_rank": 1,
+        "lat_ms": 41.5
+      },
+      {
+        "reading": "むかってる",
+        "targets": [
+          "向かってる"
+        ],
+        "baseline_top": "向かってる",
+        "baseline_rank": 1,
+        "slm_top": "向かってる",
+        "slm_rank": 1,
+        "lat_ms": 41.81
+      },
+      {
+        "reading": "まってる",
+        "targets": [
+          "待ってる"
+        ],
+        "baseline_top": "待ってる",
+        "baseline_rank": 1,
+        "slm_top": "待ってる",
+        "slm_rank": 1,
+        "lat_ms": 1.29
+      },
+      {
+        "reading": "しってる",
+        "targets": [
+          "知ってる"
+        ],
+        "baseline_top": "知ってる",
+        "baseline_rank": 1,
+        "slm_top": "知ってる",
+        "slm_rank": 1,
+        "lat_ms": 41.4
+      },
+      {
+        "reading": "やってる",
+        "targets": [
+          "やってる"
+        ],
+        "baseline_top": "やッてる",
+        "baseline_rank": -1,
+        "slm_top": "やッてる",
+        "slm_rank": -1,
+        "lat_ms": 42.45
+      },
+      {
+        "reading": "はしってる",
+        "targets": [
+          "走ってる"
+        ],
+        "baseline_top": "走ってる",
+        "baseline_rank": 1,
+        "slm_top": "は知ってる",
+        "slm_rank": 2,
+        "lat_ms": 1.19
+      },
+      {
+        "reading": "みてる",
+        "targets": [
+          "見てる"
+        ],
+        "baseline_top": "見てる",
+        "baseline_rank": 1,
+        "slm_top": "観てる",
+        "slm_rank": 2,
+        "lat_ms": 1.18
+      },
+      {
+        "reading": "もってる",
+        "targets": [
+          "持ってる"
+        ],
+        "baseline_top": "持ってる",
+        "baseline_rank": 1,
+        "slm_top": "守ってる",
+        "slm_rank": 3,
+        "lat_ms": 1.22
+      },
+      {
+        "reading": "でんわしています",
+        "targets": [
+          "電話しています"
+        ],
+        "baseline_top": "電話して今す",
+        "baseline_rank": 5,
+        "slm_top": "電話して今す",
+        "slm_rank": 5,
+        "lat_ms": 41.69
+      },
+      {
+        "reading": "よろしくおねがいします",
+        "targets": [
+          "よろしくお願いします",
+          "よろしくお願い致します"
+        ],
+        "baseline_top": "宜しくお願いします",
+        "baseline_rank": 2,
+        "slm_top": "宜しくお願いします",
+        "slm_rank": 3,
+        "lat_ms": 41.9
+      },
+      {
+        "reading": "ありがとうございます",
+        "targets": [
+          "ありがとうございます"
+        ],
+        "baseline_top": "有難う御座います",
+        "baseline_rank": -1,
+        "slm_top": "有り難うございます",
+        "slm_rank": -1,
+        "lat_ms": 41.56
+      },
+      {
+        "reading": "あめのひに",
+        "targets": [
+          "雨の日に",
+          "雨のひに"
+        ],
+        "baseline_top": "雨のひに",
+        "baseline_rank": 1,
+        "slm_top": "雨のひに",
+        "slm_rank": 1,
+        "lat_ms": 41.72
+      },
+      {
+        "reading": "かわのながれ",
+        "targets": [
+          "川の流れ"
+        ],
+        "baseline_top": "側の流れ",
+        "baseline_rank": 3,
+        "slm_top": "側の流れ",
+        "slm_rank": 3,
+        "lat_ms": 42.17
+      },
+      {
+        "reading": "やまのうえに",
+        "targets": [
+          "山の上に"
+        ],
+        "baseline_top": "山の上に",
+        "baseline_rank": 1,
+        "slm_top": "山野上に",
+        "slm_rank": 2,
+        "lat_ms": 42.48
+      },
+      {
+        "reading": "ほんをよむ",
+        "targets": [
+          "本を読む",
+          "ほんを読む"
+        ],
+        "baseline_top": "ほんを読む",
+        "baseline_rank": 1,
+        "slm_top": "ホンを読む",
+        "slm_rank": 3,
+        "lat_ms": 41.54
+      },
+      {
+        "reading": "みずをのむ",
+        "targets": [
+          "水を飲む"
+        ],
+        "baseline_top": "水を飲む",
+        "baseline_rank": 1,
+        "slm_top": "水を飲む",
+        "slm_rank": 1,
+        "lat_ms": 41.69
+      },
+      {
+        "reading": "くるまにのる",
+        "targets": [
+          "車に乗る"
+        ],
+        "baseline_top": "車に乗る",
+        "baseline_rank": 1,
+        "slm_top": "車にのる",
+        "slm_rank": 3,
+        "lat_ms": 41.79
+      },
+      {
+        "reading": "いえにかえる",
+        "targets": [
+          "家に帰る"
+        ],
+        "baseline_top": "家に帰る",
+        "baseline_rank": 1,
+        "slm_top": "いえに帰る",
+        "slm_rank": 3,
+        "lat_ms": 41.57
+      },
+      {
+        "reading": "あさごはんをたべる",
+        "targets": [
+          "朝ご飯を食べる",
+          "朝ごはんを食べる"
+        ],
+        "baseline_top": "朝ご飯を食べる",
+        "baseline_rank": 1,
+        "slm_top": "朝ご飯を食べる",
+        "slm_rank": 1,
+        "lat_ms": 41.43
+      },
+      {
+        "reading": "ひるごはんをたべる",
+        "targets": [
+          "昼ご飯を食べる",
+          "昼ごはんを食べる"
+        ],
+        "baseline_top": "昼ご飯を食べる",
+        "baseline_rank": 1,
+        "slm_top": "昼ご飯を食べる",
+        "slm_rank": 1,
+        "lat_ms": 41.73
+      },
+      {
+        "reading": "ばんごはんをたべる",
+        "targets": [
+          "晩ご飯を食べる",
+          "晩ごはんを食べる"
+        ],
+        "baseline_top": "番ご飯を食べる",
+        "baseline_rank": -1,
+        "slm_top": "番ご飯を食べる",
+        "slm_rank": -1,
+        "lat_ms": 42.75
+      },
+      {
+        "reading": "おちゃをのむ",
+        "targets": [
+          "お茶を飲む"
+        ],
+        "baseline_top": "お茶を飲む",
+        "baseline_rank": 1,
+        "slm_top": "お茶を飲む",
+        "slm_rank": 1,
+        "lat_ms": 41.91
+      },
+      {
+        "reading": "てがみをかく",
+        "targets": [
+          "手紙を書く"
+        ],
+        "baseline_top": "手紙を書く",
+        "baseline_rank": 1,
+        "slm_top": "手紙を書く",
+        "slm_rank": 1,
+        "lat_ms": 41.77
+      },
+      {
+        "reading": "えきにつく",
+        "targets": [
+          "駅に着く"
+        ],
+        "baseline_top": "駅につく",
+        "baseline_rank": 4,
+        "slm_top": "駅につく",
+        "slm_rank": 3,
+        "lat_ms": 41.3
+      },
+      {
+        "reading": "でんしゃにのる",
+        "targets": [
+          "電車に乗る"
+        ],
+        "baseline_top": "電車に乗る",
+        "baseline_rank": 1,
+        "slm_top": "電車に乗る",
+        "slm_rank": 1,
+        "lat_ms": 41.56
+      },
+      {
+        "reading": "かいぎがおわる",
+        "targets": [
+          "会議が終わる"
+        ],
+        "baseline_top": "会議がお悪",
+        "baseline_rank": -1,
+        "slm_top": "会議がお悪",
+        "slm_rank": -1,
+        "lat_ms": 41.58
+      },
+      {
+        "reading": "しごとがはじまる",
+        "targets": [
+          "仕事が始まる"
+        ],
+        "baseline_top": "仕事が始まる",
+        "baseline_rank": 1,
+        "slm_top": "仕事画始まる",
+        "slm_rank": 2,
+        "lat_ms": 91.21
+      },
+      {
+        "reading": "あたまがいたい",
+        "targets": [
+          "頭が痛い"
+        ],
+        "baseline_top": "頭が痛い",
+        "baseline_rank": 1,
+        "slm_top": "頭が痛い",
+        "slm_rank": 1,
+        "lat_ms": 45.53
+      },
+      {
+        "reading": "おなかがすいた",
+        "targets": [
+          "お腹が空いた"
+        ],
+        "baseline_top": "お腹が空いた",
+        "baseline_rank": 1,
+        "slm_top": "お腹が空いた",
+        "slm_rank": 1,
+        "lat_ms": 44.06
+      },
+      {
+        "reading": "めをあける",
+        "targets": [
+          "目を開ける"
+        ],
+        "baseline_top": "目を開ける",
+        "baseline_rank": 1,
+        "slm_top": "めを開ける",
+        "slm_rank": 5,
+        "lat_ms": 41.07
+      },
+      {
+        "reading": "はるがきた",
+        "targets": [
+          "春が来た"
+        ],
+        "baseline_top": "春が来た",
+        "baseline_rank": 1,
+        "slm_top": "明が来た",
+        "slm_rank": 3,
+        "lat_ms": 1.29
+      },
+      {
+        "reading": "なつのうみ",
+        "targets": [
+          "夏の海"
+        ],
+        "baseline_top": "なつの海",
+        "baseline_rank": 2,
+        "slm_top": "なつの海",
+        "slm_rank": 4,
+        "lat_ms": 41.38
+      },
+      {
+        "reading": "あきのかぜ",
+        "targets": [
+          "秋の風"
+        ],
+        "baseline_top": "あきの風",
+        "baseline_rank": -1,
+        "slm_top": "あきの風",
+        "slm_rank": -1,
+        "lat_ms": 1.23
+      },
+      {
+        "reading": "ふゆのゆき",
+        "targets": [
+          "冬の雪"
+        ],
+        "baseline_top": "冬の雪",
+        "baseline_rank": 1,
+        "slm_top": "冬の雪",
+        "slm_rank": 1,
+        "lat_ms": 40.84
+      },
+      {
+        "reading": "いぬのさんぽ",
+        "targets": [
+          "犬の散歩"
+        ],
+        "baseline_top": "犬の散歩",
+        "baseline_rank": 1,
+        "slm_top": "犬の散歩",
+        "slm_rank": 1,
+        "lat_ms": 41.89
+      },
+      {
+        "reading": "ねこのこえ",
+        "targets": [
+          "猫の声"
+        ],
+        "baseline_top": "猫の声",
+        "baseline_rank": 1,
+        "slm_top": "猫の声",
+        "slm_rank": 1,
+        "lat_ms": 41.69
+      },
+      {
+        "reading": "とりがなく",
+        "targets": [
+          "鳥が鳴く"
+        ],
+        "baseline_top": "鳥が泣く",
+        "baseline_rank": 2,
+        "slm_top": "鳥が泣く",
+        "slm_rank": 2,
+        "lat_ms": 41.73
+      },
+      {
+        "reading": "そらをみる",
+        "targets": [
+          "空を見る"
+        ],
+        "baseline_top": "空を見る",
+        "baseline_rank": 1,
+        "slm_top": "空を観る",
+        "slm_rank": 5,
+        "lat_ms": 41.97
+      },
+      {
+        "reading": "うたをうたう",
+        "targets": [
+          "歌を歌う"
+        ],
+        "baseline_top": "歌を歌う",
+        "baseline_rank": 1,
+        "slm_top": "歌を歌う",
+        "slm_rank": 1,
+        "lat_ms": 42.67
+      },
+      {
+        "reading": "みちをあるく",
+        "targets": [
+          "道を歩く"
+        ],
+        "baseline_top": "道を歩く",
+        "baseline_rank": 1,
+        "slm_top": "道を歩く",
+        "slm_rank": 1,
+        "lat_ms": 44.06
+      },
+      {
+        "reading": "まちをあるく",
+        "targets": [
+          "街を歩く",
+          "町を歩く"
+        ],
+        "baseline_top": "街を歩く",
+        "baseline_rank": 1,
+        "slm_top": "街を歩く",
+        "slm_rank": 1,
+        "lat_ms": 41.6
+      },
+      {
+        "reading": "ほんをかう",
+        "targets": [
+          "本を買う"
+        ],
+        "baseline_top": "ほんを買う",
+        "baseline_rank": -1,
+        "slm_top": "ほんを買う",
+        "slm_rank": -1,
+        "lat_ms": 41.68
+      }
+    ]
+  }
+}

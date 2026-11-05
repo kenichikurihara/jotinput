@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Google Material Brand Colors (Light Mode) -->
+    <color name="primary">#1A73E8</color> <!-- Google Blue 600 -->
+    <color name="primary_dark">#1557B0</color> <!-- Google Blue 700 -->
+ <!-- Google Blue 100 -->
+    <color name="on_primary">#FFFFFF</color>
+
+    <!-- Semantic Status Colors -->
+    <color name="accent_red">#D93025</color> <!-- Google Red 600 -->
+ <!-- Google Red 50 -->
+
+ <!-- Google Green 600 -->
+ <!-- Google Green 50 -->
+
+    <!-- Surfaces & Backgrounds -->
+    <color name="background">#F8F9FA</color> <!-- Google Material Clean Light Background -->
+    <color name="surface">#FFFFFF</color> <!-- Google Surface (Cards) -->
+ <!-- Google Grey 100 -->
+    <color name="input_background">#FFFFFF</color>
+    <color name="border">#DADCE0</color> <!-- Google Outline / Card Border -->
+
+    <!-- Typography -->
+    <color name="text_primary">#202124</color> <!-- Google Dark Grey 900 -->
+    <color name="text_secondary">#5F6368</color> <!-- Google Medium Grey 700 -->
+    <color name="text_muted">#80868B</color> <!-- Google Light Grey 600 -->
+
+    <!-- Status Badges -->
+    <color name="badge_info_bg">#E8F0FE</color> <!-- Google Blue 50 -->
+    <color name="badge_info_text">#1967D2</color> <!-- Google Blue 700 -->
+    <color name="badge_success_bg">#E6F4EA</color> <!-- Google Green 50 -->
+    <color name="badge_success_text">#137333</color> <!-- Google Green 700 -->
+    <color name="badge_neutral_bg">#F1F3F4</color> <!-- Google Grey 100 -->
+    <color name="badge_neutral_text">#5F6368</color> <!-- Google Grey 700 -->
+
+    <!-- Keyboard (Gboard Light Style) -->
+    <color name="keyboard_background">#ECEFF1</color>
+    <color name="key_text">#202124</color>
+    <color name="action_key_ripple">#1557B0</color>
+    <color name="voice_toggle_idle_text">#FFFFFF</color>
+    <color name="voice_toggle_recording_text">#FFFFFF</color>
+    <color name="recording_key_ripple">#C5221F</color>
+
+    <!-- Candidate Strip (Gboard Light Style) -->
+    <color name="candidate_text">#202124</color>
+    <color name="candidate_pill_bg">#FFFFFF</color>
+    <color name="candidate_pill_border">#DADCE0</color>
+    <color name="candidate_pill_ripple">#DADCE0</color>
+    <color name="candidate_empty_text">#5F6368</color>
+
+</resources>

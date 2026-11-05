@@ -1,0 +1,64 @@
+package com.example.myasr
+
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageButton
+import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.switchmaterial.SwitchMaterial
+
+class DictionaryAdapter(
+    private var items: List<DictionaryEntry>,
+    private val onItemClick: (DictionaryEntry) -> Unit,
+    private val onToggle: (DictionaryEntry) -> Unit,
+    private val onDelete: (DictionaryEntry) -> Unit
+) : RecyclerView.Adapter<DictionaryAdapter.ViewHolder>() {
+
+    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val tvWord: TextView = itemView.findViewById(R.id.tvWord)
+        val tvPriorityBadge: TextView = itemView.findViewById(R.id.tvPriorityBadge)
+        val tvReading: TextView = itemView.findViewById(R.id.tvReading)
+        val switchEnabled: SwitchMaterial = itemView.findViewById(R.id.switchEnabled)
+        val btnDelete: ImageButton = itemView.findViewById(R.id.btnDelete)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_dictionary_entry, parent, false)
+        return ViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val entry = items[position]
+
+        holder.itemView.setOnClickListener {
+            onItemClick(entry)
+        }
+
+        holder.tvWord.text = entry.word
+        holder.tvPriorityBadge.text = entry.priority.displayName
+        if (entry.isEnglishOnlyEntry) {
+            holder.tvReading.text = "英語 (English)"
+        } else {
+            val katakana = JapaneseKanaUtils.hiraganaToKatakana(entry.reading)
+            holder.tvReading.text = "よみ: ${entry.reading} ($katakana)"
+        }
+
+        holder.switchEnabled.setOnCheckedChangeListener(null)
+        holder.switchEnabled.isChecked = entry.isEnabled
+        holder.switchEnabled.setOnCheckedChangeListener { _, _ ->
+            onToggle(entry)
+        }
+
+        holder.btnDelete.setOnClickListener {
+            onDelete(entry)
+        }
+    }
+
+    override fun getItemCount(): Int = items.size
+
+    fun updateData(newItems: List<DictionaryEntry>) {
+        items = newItems
+        notifyDataSetChanged()
+    }
+}

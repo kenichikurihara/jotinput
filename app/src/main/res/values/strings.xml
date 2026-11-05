@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">JotInput</string>
+    <string name="download_model">Download ReazonSpeech Model (~160MB)</string>
+    <string name="ime_name">JotInput Voice Keyboard</string>
+    <string name="ime_subtype_japanese">日本語音声入力</string>
+    <string name="keyboard_mic_permission_needed">音声入力にはマイクの権限が必要です</string>
+    <string name="oss_licenses_button">ライセンスと権利表記 (Licenses &amp; Attributions)</string>
+    <string name="oss_licenses_dialog_title">オープンソースライセンス (Third-Party Licenses)</string>
+    <string name="error_asr_timeout">音声認識がタイムアウトしました (3秒超過)</string>
+    <string name="error_mic_init_failed">マイクの初期化に失敗しました。他のアプリがマイクを使用中の可能性があります。</string>
+    <string name="error_model_not_initialized">音声認識モデルの初期化に失敗しました。アプリを再起動してください。</string>
+    <string name="hint_no_speech_detected">音声が認識されませんでした。もう一度お話しください。</string>
+</resources>

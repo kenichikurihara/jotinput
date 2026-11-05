@@ -1,0 +1,168 @@
+{
+  "metadata": {
+    "dataset": "eval/futo_swipe/swipe_eval_1000.jsonl",
+    "total_samples": 1000,
+    "total_wall_clock_sec": 116.44,
+    "beam_width": 100
+  },
+  "spatial_baseline": {
+    "top1_accuracy": 89.0,
+    "top3_accuracy": 92.4,
+    "top5_accuracy": 92.8,
+    "latency_mean_ms": 57.59,
+    "latency_p50_ms": 54.82,
+    "latency_p95_ms": 99.41
+  },
+  "context_aware": {
+    "top1_accuracy": 90.3,
+    "top3_accuracy": 92.7,
+    "top5_accuracy": 92.8,
+    "latency_mean_ms": 58.82,
+    "latency_p50_ms": 56.11,
+    "latency_p95_ms": 101.12
+  },
+  "comparison": {
+    "top1_delta_pct": 1.3,
+    "top3_delta_pct": 0.3,
+    "improved_count": 22,
+    "degraded_count": 9,
+    "net_gain": 13
+  },
+  "sample_improvements": [
+    {
+      "id": 21,
+      "target": "chicago",
+      "context": "ebert of the",
+      "spatial_top1": "chick",
+      "context_top1": "chicago"
+    },
+    {
+      "id": 47,
+      "target": "met",
+      "context": "ive never",
+      "spatial_top1": "meet",
+      "context_top1": "met"
+    },
+    {
+      "id": 54,
+      "target": "its",
+      "context": "the time of",
+      "spatial_top1": "it's",
+      "context_top1": "its"
+    },
+    {
+      "id": 89,
+      "target": "team",
+      "context": "the belgium national",
+      "spatial_top1": "teak",
+      "context_top1": "team"
+    },
+    {
+      "id": 174,
+      "target": "england",
+      "context": "wilkinson remained in",
+      "spatial_top1": "england's",
+      "context_top1": "england"
+    },
+    {
+      "id": 265,
+      "target": "glass",
+      "context": "mechanization of the",
+      "spatial_top1": "glad",
+      "context_top1": "glass"
+    },
+    {
+      "id": 316,
+      "target": "preach",
+      "context": "john and they",
+      "spatial_top1": "peach",
+      "context_top1": "preach"
+    },
+    {
+      "id": 334,
+      "target": "wooden",
+      "context": "also has a",
+      "spatial_top1": "widen",
+      "context_top1": "wooden"
+    },
+    {
+      "id": 411,
+      "target": "our",
+      "context": "former leader of",
+      "spatial_top1": "or",
+      "context_top1": "our"
+    },
+    {
+      "id": 578,
+      "target": "its",
+      "context": "a revival in",
+      "spatial_top1": "it's",
+      "context_top1": "its"
+    }
+  ],
+  "sample_degradations": [
+    {
+      "id": 81,
+      "target": "daring",
+      "context": "also managed royal",
+      "spatial_top1": "daring",
+      "context_top1": "dating"
+    },
+    {
+      "id": 149,
+      "target": "camps",
+      "context": "gives seminars and",
+      "spatial_top1": "camps",
+      "context_top1": "campus"
+    },
+    {
+      "id": 395,
+      "target": "county",
+      "context": "mud archons its",
+      "spatial_top1": "county",
+      "context_top1": "country"
+    },
+    {
+      "id": 472,
+      "target": "son",
+      "context": "a united",
+      "spatial_top1": "son",
+      "context_top1": "soon"
+    },
+    {
+      "id": 584,
+      "target": "bands",
+      "context": "soon became the",
+      "spatial_top1": "bands",
+      "context_top1": "band's"
+    },
+    {
+      "id": 631,
+      "target": "rock",
+      "context": "pirates he presented",
+      "spatial_top1": "rock",
+      "context_top1": "rick"
+    },
+    {
+      "id": 665,
+      "target": "rise",
+      "context": "the canyon walls",
+      "spatial_top1": "rise",
+      "context_top1": "rose"
+    },
+    {
+      "id": 736,
+      "target": "were",
+      "context": "there were a",
+      "spatial_top1": "were",
+      "context_top1": "we're"
+    },
+    {
+      "id": 864,
+      "target": "torah",
+      "context": "dealing with the",
+      "spatial_top1": "torah",
+      "context_top1": "total"
+    }
+  ]
+}

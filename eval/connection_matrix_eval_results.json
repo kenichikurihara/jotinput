@@ -1,0 +1,1221 @@
+{
+  "timestamp": "2026-10-27T21:39:26+0900",
+  "phrase_benchmark": {
+    "total_items": 50,
+    "without_matrix": {
+      "top1_accuracy": 4.0,
+      "top3_recall": 6.0,
+      "mrr": 0.04666666666666667,
+      "latency_ms": 0.17515793995698914
+    },
+    "with_matrix": {
+      "top1_accuracy": 76.0,
+      "top3_recall": 86.0,
+      "mrr": 0.8156666666666667,
+      "latency_ms": 0.24220658175181597
+    },
+    "delta": {
+      "top1_improvement": 72.0,
+      "top3_improvement": 80.0,
+      "mrr_improvement": 0.769
+    },
+    "detailed_results": [
+      {
+        "reading": "うみのまわりに",
+        "expected": [
+          "海の周りに",
+          "海のまわりに"
+        ],
+        "without_matrix": {
+          "top1": "生みのまわりに",
+          "rank": -1,
+          "candidates": [
+            "生みのまわりに",
+            "生みノまわりに",
+            "うみノまわりに"
+          ]
+        },
+        "with_matrix": {
+          "top1": "海の周りに",
+          "rank": 1,
+          "candidates": [
+            "海の周りに",
+            "生みの周りに",
+            "うみの周りに"
+          ]
+        }
+      },
+      {
+        "reading": "いなかだよ",
+        "expected": [
+          "田舎だよ"
+        ],
+        "without_matrix": {
+          "top1": "いな化だよ",
+          "rank": -1,
+          "candidates": [
+            "いな化だよ",
+            "い無かだよ",
+            "いなかだ良"
+          ]
+        },
+        "with_matrix": {
+          "top1": "田舎だよ",
+          "rank": 1,
+          "candidates": [
+            "田舎だよ",
+            "位中だよ",
+            "医中だよ"
+          ]
+        }
+      },
+      {
+        "reading": "きょうはいいてんき",
+        "expected": [
+          "今日はいい天気",
+          "今日は良い天気"
+        ],
+        "without_matrix": {
+          "top1": "きょうはイイてんき",
+          "rank": -1,
+          "candidates": [
+            "きょうはイイてんき",
+            "きょうはイイてん期",
+            "きょうはイイてん記"
+          ]
+        },
+        "with_matrix": {
+          "top1": "今日はいい天気",
+          "rank": 1,
+          "candidates": [
+            "今日はいい天気",
+            "今日は良い天気"
+          ]
+        }
+      },
+      {
+        "reading": "さぎょうちゅうですので",
+        "expected": [
+          "作業中ですので"
+        ],
+        "without_matrix": {
+          "top1": "さぎょう厨デスので",
+          "rank": -1,
+          "candidates": [
+            "さぎょう厨デスので",
+            "さぎょう厨ですので",
+            "さぎょう厨デすので"
+          ]
+        },
+        "with_matrix": {
+          "top1": "作業中ですので",
+          "rank": 1,
+          "candidates": [
+            "作業中ですので",
+            "作業虫ですので",
+            "作業チュウですので"
+          ]
+        }
+      },
+      {
+        "reading": "つとめております",
+        "expected": [
+          "努めております"
+        ],
+        "without_matrix": {
+          "top1": "つと目ております",
+          "rank": -1,
+          "candidates": [
+            "つと目ております",
+            "つと目て折ます",
+            "つと目手おります"
+          ]
+        },
+        "with_matrix": {
+          "top1": "努めております",
+          "rank": 1,
+          "candidates": [
+            "努めております",
+            "務めております"
+          ]
+        }
+      },
+      {
+        "reading": "おもっているのに",
+        "expected": [
+          "思っているのに"
+        ],
+        "without_matrix": {
+          "top1": "おもっているノに",
+          "rank": -1,
+          "candidates": [
+            "おもっているノに"
+          ]
+        },
+        "with_matrix": {
+          "top1": "思っているのに",
+          "rank": 1,
+          "candidates": [
+            "思っているのに",
+            "思って居るのに",
+            "思って入るのに"
+          ]
+        }
+      },
+      {
+        "reading": "ちゅうがたばすです",
+        "expected": [
+          "中型バスです"
+        ],
+        "without_matrix": {
+          "top1": "厨がたばすデス",
+          "rank": -1,
+          "candidates": [
+            "厨がたばすデス",
+            "厨がたばすです",
+            "厨がたばすデす"
+          ]
+        },
+        "with_matrix": {
+          "top1": "中型バスです",
+          "rank": 1,
+          "candidates": [
+            "中型バスです",
+            "中型バスデス",
+            "虫型バスです"
+          ]
+        }
+      },
+      {
+        "reading": "かぐとうかいぼうしの",
+        "expected": [
+          "家具倒壊防止の"
+        ],
+        "without_matrix": {
+          "top1": "か具とうかい某しの",
+          "rank": -1,
+          "candidates": [
+            "か具とうかい某しの",
+            "か具とうかい某しノ",
+            "か具とうかい某死の"
+          ]
+        },
+        "with_matrix": {
+          "top1": "家具東海防止の",
+          "rank": 2,
+          "candidates": [
+            "家具東海防止の",
+            "家具倒壊防止の",
+            "家具塔会防止の"
+          ]
+        }
+      },
+      {
+        "reading": "むかっている",
+        "expected": [
+          "向かっている"
+        ],
+        "without_matrix": {
+          "top1": "無かっている",
+          "rank": -1,
+          "candidates": [
+            "無かっている",
+            "無化っている",
+            "無かっ手いる"
+          ]
+        },
+        "with_matrix": {
+          "top1": "向かっている",
+          "rank": 1,
+          "candidates": [
+            "向かっている",
+            "向っている",
+            "向かって入る"
+          ]
+        }
+      },
+      {
+        "reading": "むかってる",
+        "expected": [
+          "向かってる"
+        ],
+        "without_matrix": {
+          "top1": "無かってる",
+          "rank": -1,
+          "candidates": [
+            "無かってる",
+            "無化ってる",
+            "無かっ手る"
+          ]
+        },
+        "with_matrix": {
+          "top1": "向かってる",
+          "rank": 1,
+          "candidates": [
+            "向かってる",
+            "向ってる",
+            "無買ってる"
+          ]
+        }
+      },
+      {
+        "reading": "まってる",
+        "expected": [
+          "待ってる"
+        ],
+        "without_matrix": {
+          "top1": "待ってる",
+          "rank": 1,
+          "candidates": [
+            "待ってる",
+            "間ってる",
+            "間っ手る"
+          ]
+        },
+        "with_matrix": {
+          "top1": "待ってる",
+          "rank": 1,
+          "candidates": [
+            "待ってる",
+            "舞ってる",
+            "まッてる"
+          ]
+        }
+      },
+      {
+        "reading": "しってる",
+        "expected": [
+          "知ってる"
+        ],
+        "without_matrix": {
+          "top1": "死ってる",
+          "rank": -1,
+          "candidates": [
+            "死ってる",
+            "しっ手る",
+            "死っ手る"
+          ]
+        },
+        "with_matrix": {
+          "top1": "知ってる",
+          "rank": 1,
+          "candidates": [
+            "知ってる",
+            "氏ッてる",
+            "氏ってる"
+          ]
+        }
+      },
+      {
+        "reading": "やってる",
+        "expected": [
+          "やってる"
+        ],
+        "without_matrix": {
+          "top1": "やっ手る",
+          "rank": -1,
+          "candidates": [
+            "やっ手る"
+          ]
+        },
+        "with_matrix": {
+          "top1": "やッてる",
+          "rank": -1,
+          "candidates": [
+            "やッてる",
+            "屋ッてる",
+            "やっテル"
+          ]
+        }
+      },
+      {
+        "reading": "はしってる",
+        "expected": [
+          "走ってる"
+        ],
+        "without_matrix": {
+          "top1": "は死ってる",
+          "rank": -1,
+          "candidates": [
+            "は死ってる",
+            "はしっ手る",
+            "は死っ手る"
+          ]
+        },
+        "with_matrix": {
+          "top1": "走ってる",
+          "rank": 1,
+          "candidates": [
+            "走ってる",
+            "は知ってる",
+            "派知ってる"
+          ]
+        }
+      },
+      {
+        "reading": "みてる",
+        "expected": [
+          "見てる"
+        ],
+        "without_matrix": {
+          "top1": "み手る",
+          "rank": -1,
+          "candidates": [
+            "み手る",
+            "未てる",
+            "未手る"
+          ]
+        },
+        "with_matrix": {
+          "top1": "見てる",
+          "rank": 1,
+          "candidates": [
+            "見てる",
+            "観てる",
+            "診てる"
+          ]
+        }
+      },
+      {
+        "reading": "もってる",
+        "expected": [
+          "持ってる"
+        ],
+        "without_matrix": {
+          "top1": "もっ手る",
+          "rank": -1,
+          "candidates": [
+            "もっ手る"
+          ]
+        },
+        "with_matrix": {
+          "top1": "持ってる",
+          "rank": 1,
+          "candidates": [
+            "持ってる",
+            "保ってる",
+            "盛ってる"
+          ]
+        }
+      },
+      {
+        "reading": "でんわしています",
+        "expected": [
+          "電話しています"
+        ],
+        "without_matrix": {
+          "top1": "でんわ死ています",
+          "rank": -1,
+          "candidates": [
+            "でんわ死ています",
+            "でンわしています",
+            "でンわ死ています"
+          ]
+        },
+        "with_matrix": {
+          "top1": "電話して射ます",
+          "rank": 5,
+          "candidates": [
+            "電話して射ます",
+            "電話して医ます",
+            "電話指定ます"
+          ]
+        }
+      },
+      {
+        "reading": "よろしくおねがいします",
+        "expected": [
+          "よろしくお願いします",
+          "よろしくお願い致します"
+        ],
+        "without_matrix": {
+          "top1": "よろしくお願いします",
+          "rank": 1,
+          "candidates": [
+            "よろしくお願いします",
+            "よろしくお願い死ます",
+            "よろ死くお願いします"
+          ]
+        },
+        "with_matrix": {
+          "top1": "宜しくお願いします",
+          "rank": 2,
+          "candidates": [
+            "宜しくお願いします",
+            "よろしくお願いします"
+          ]
+        }
+      },
+      {
+        "reading": "ありがとうございます",
+        "expected": [
+          "ありがとうございます"
+        ],
+        "without_matrix": {
+          "top1": "ありがとうゴザイマス",
+          "rank": -1,
+          "candidates": [
+            "ありがとうゴザイマス",
+            "ありがとうゴザイます"
+          ]
+        },
+        "with_matrix": {
+          "top1": "有難う御座います",
+          "rank": -1,
+          "candidates": [
+            "有難う御座います",
+            "有り難うございます",
+            "有難うございます"
+          ]
+        }
+      },
+      {
+        "reading": "あめのひに",
+        "expected": [
+          "雨の日に",
+          "雨のひに"
+        ],
+        "without_matrix": {
+          "top1": "あ目の被に",
+          "rank": -1,
+          "candidates": [
+            "あ目の被に",
+            "あ目ノ被に",
+            "あ目之被に"
+          ]
+        },
+        "with_matrix": {
+          "top1": "雨のひに",
+          "rank": 1,
+          "candidates": [
+            "雨のひに",
+            "雨の日に",
+            "雨の費に"
+          ]
+        }
+      },
+      {
+        "reading": "かわのながれ",
+        "expected": [
+          "川の流れ"
+        ],
+        "without_matrix": {
+          "top1": "かわノながれ",
+          "rank": -1,
+          "candidates": [
+            "かわノながれ",
+            "化わのながれ",
+            "化わノながれ"
+          ]
+        },
+        "with_matrix": {
+          "top1": "側の流れ",
+          "rank": 3,
+          "candidates": [
+            "側の流れ",
+            "皮の流れ",
+            "川の流れ"
+          ]
+        }
+      },
+      {
+        "reading": "やまのうえに",
+        "expected": [
+          "山の上に"
+        ],
+        "without_matrix": {
+          "top1": "や間のうえに",
+          "rank": -1,
+          "candidates": [
+            "や間のうえに",
+            "や間ノうえに"
+          ]
+        },
+        "with_matrix": {
+          "top1": "山の上に",
+          "rank": 1,
+          "candidates": [
+            "山の上に",
+            "山の上2",
+            "山の上似"
+          ]
+        }
+      },
+      {
+        "reading": "ほんをよむ",
+        "expected": [
+          "本を読む",
+          "ほんを読む"
+        ],
+        "without_matrix": {
+          "top1": "ほんをよ無",
+          "rank": -1,
+          "candidates": [
+            "ほんをよ無",
+            "ほんヲよ無",
+            "ホンをよ無"
+          ]
+        },
+        "with_matrix": {
+          "top1": "ほんを読む",
+          "rank": 1,
+          "candidates": [
+            "ほんを読む",
+            "ホンを読む",
+            "ホンをよむ"
+          ]
+        }
+      },
+      {
+        "reading": "みずをのむ",
+        "expected": [
+          "水を飲む"
+        ],
+        "without_matrix": {
+          "top1": "みずをの無",
+          "rank": -1,
+          "candidates": [
+            "みずをの無",
+            "みずをノ無",
+            "みずヲの無"
+          ]
+        },
+        "with_matrix": {
+          "top1": "水を飲む",
+          "rank": 1,
+          "candidates": [
+            "水を飲む",
+            "水をのむ",
+            "水を呑む"
+          ]
+        }
+      },
+      {
+        "reading": "くるまにのる",
+        "expected": [
+          "車に乗る"
+        ],
+        "without_matrix": {
+          "top1": "くる間にのる",
+          "rank": -1,
+          "candidates": [
+            "くる間にのる",
+            "くる間にノる"
+          ]
+        },
+        "with_matrix": {
+          "top1": "車に乗る",
+          "rank": 1,
+          "candidates": [
+            "車に乗る",
+            "クルマに乗る",
+            "車にのる"
+          ]
+        }
+      },
+      {
+        "reading": "いえにかえる",
+        "expected": [
+          "家に帰る"
+        ],
+        "without_matrix": {
+          "top1": "いえに変える",
+          "rank": -1,
+          "candidates": [
+            "いえに変える",
+            "いえに代える",
+            "いえに換える"
+          ]
+        },
+        "with_matrix": {
+          "top1": "家に帰る",
+          "rank": 1,
+          "candidates": [
+            "家に帰る",
+            "家に買える",
+            "家に還る"
+          ]
+        }
+      },
+      {
+        "reading": "あさごはんをたべる",
+        "expected": [
+          "朝ご飯を食べる",
+          "朝ごはんを食べる"
+        ],
+        "without_matrix": {
+          "top1": "あさごはんヲたべる",
+          "rank": -1,
+          "candidates": [
+            "あさごはんヲたべる",
+            "あさごはンをたべる",
+            "あさごはンヲたべる"
+          ]
+        },
+        "with_matrix": {
+          "top1": "朝ご飯を食べる",
+          "rank": 1,
+          "candidates": [
+            "朝ご飯を食べる",
+            "朝ごはんを食べる"
+          ]
+        }
+      },
+      {
+        "reading": "ひるごはんをたべる",
+        "expected": [
+          "昼ご飯を食べる",
+          "昼ごはんを食べる"
+        ],
+        "without_matrix": {
+          "top1": "被るごはんをたべる",
+          "rank": -1,
+          "candidates": [
+            "被るごはんをたべる",
+            "被るごはんヲたべる",
+            "被るごはンをたべる"
+          ]
+        },
+        "with_matrix": {
+          "top1": "昼ご飯を食べる",
+          "rank": 1,
+          "candidates": [
+            "昼ご飯を食べる",
+            "昼ごはんを食べる"
+          ]
+        }
+      },
+      {
+        "reading": "ばんごはんをたべる",
+        "expected": [
+          "晩ご飯を食べる",
+          "晩ごはんを食べる"
+        ],
+        "without_matrix": {
+          "top1": "ばンごはんをたべる",
+          "rank": -1,
+          "candidates": [
+            "ばンごはんをたべる",
+            "ばンごはんヲたべる",
+            "ばんごはんヲたべる"
+          ]
+        },
+        "with_matrix": {
+          "top1": "番ご飯を食べる",
+          "rank": -1,
+          "candidates": [
+            "番ご飯を食べる",
+            "版ご飯を食べる"
+          ]
+        }
+      },
+      {
+        "reading": "おちゃをのむ",
+        "expected": [
+          "お茶を飲む"
+        ],
+        "without_matrix": {
+          "top1": "おちゃをの無",
+          "rank": -1,
+          "candidates": [
+            "おちゃをの無",
+            "おちゃをノ無",
+            "おちゃヲの無"
+          ]
+        },
+        "with_matrix": {
+          "top1": "お茶を飲む",
+          "rank": 1,
+          "candidates": [
+            "お茶を飲む",
+            "お茶をのむ",
+            "お茶を呑む"
+          ]
+        }
+      },
+      {
+        "reading": "てがみをかく",
+        "expected": [
+          "手紙を書く"
+        ],
+        "without_matrix": {
+          "top1": "てがみを各",
+          "rank": -1,
+          "candidates": [
+            "てがみを各",
+            "てがみヲ各",
+            "てがみヲかく"
+          ]
+        },
+        "with_matrix": {
+          "top1": "手紙を書く",
+          "rank": 1,
+          "candidates": [
+            "手紙を書く",
+            "手紙を描く",
+            "手紙を各"
+          ]
+        }
+      },
+      {
+        "reading": "えきにつく",
+        "expected": [
+          "駅に着く"
+        ],
+        "without_matrix": {
+          "top1": "駅につく",
+          "rank": -1,
+          "candidates": [
+            "駅につく",
+            "え期につく",
+            "え記につく"
+          ]
+        },
+        "with_matrix": {
+          "top1": "駅につく",
+          "rank": 4,
+          "candidates": [
+            "駅につく",
+            "液につく",
+            "駅に付く"
+          ]
+        }
+      },
+      {
+        "reading": "でんしゃにのる",
+        "expected": [
+          "電車に乗る"
+        ],
+        "without_matrix": {
+          "top1": "でんしゃにノる",
+          "rank": -1,
+          "candidates": [
+            "でんしゃにノる",
+            "でンしゃにのる",
+            "でンしゃにノる"
+          ]
+        },
+        "with_matrix": {
+          "top1": "電車に乗る",
+          "rank": 1,
+          "candidates": [
+            "電車に乗る",
+            "電車にのる",
+            "電車に載る"
+          ]
+        }
+      },
+      {
+        "reading": "かいぎがおわる",
+        "expected": [
+          "会議が終わる"
+        ],
+        "without_matrix": {
+          "top1": "かい技が終わる",
+          "rank": -1,
+          "candidates": [
+            "かい技が終わる",
+            "会技が終わる"
+          ]
+        },
+        "with_matrix": {
+          "top1": "会議がお悪",
+          "rank": -1,
+          "candidates": [
+            "会議がお悪",
+            "会議が追わる",
+            "会議が負わる"
+          ]
+        }
+      },
+      {
+        "reading": "しごとがはじまる",
+        "expected": [
+          "仕事が始まる"
+        ],
+        "without_matrix": {
+          "top1": "しごとがはじ間る",
+          "rank": -1,
+          "candidates": [
+            "しごとがはじ間る",
+            "死ごとがはじ間る"
+          ]
+        },
+        "with_matrix": {
+          "top1": "仕事が始まる",
+          "rank": 1,
+          "candidates": [
+            "仕事が始まる",
+            "仕事がはじまる"
+          ]
+        }
+      },
+      {
+        "reading": "あたまがいたい",
+        "expected": [
+          "頭が痛い"
+        ],
+        "without_matrix": {
+          "top1": "あた間がいたい",
+          "rank": -1,
+          "candidates": [
+            "あた間がいたい",
+            "あた間垓たい",
+            "あた間外たい"
+          ]
+        },
+        "with_matrix": {
+          "top1": "頭が痛い",
+          "rank": 1,
+          "candidates": [
+            "頭が痛い",
+            "頭がいたい",
+            "頭外帯"
+          ]
+        }
+      },
+      {
+        "reading": "おなかがすいた",
+        "expected": [
+          "お腹が空いた"
+        ],
+        "without_matrix": {
+          "top1": "おな化がすいた",
+          "rank": -1,
+          "candidates": [
+            "おな化がすいた",
+            "御なかがすいた",
+            "お無かがすいた"
+          ]
+        },
+        "with_matrix": {
+          "top1": "お腹が空いた",
+          "rank": 1,
+          "candidates": [
+            "お腹が空いた",
+            "お腹がすいた",
+            "お腹が吹田"
+          ]
+        }
+      },
+      {
+        "reading": "めをあける",
+        "expected": [
+          "目を開ける"
+        ],
+        "without_matrix": {
+          "top1": "目をあける",
+          "rank": 3,
+          "candidates": [
+            "目をあける",
+            "目ヲあける",
+            "目を開ける"
+          ]
+        },
+        "with_matrix": {
+          "top1": "目を開ける",
+          "rank": 1,
+          "candidates": [
+            "目を開ける",
+            "目をあける",
+            "目を空ける"
+          ]
+        }
+      },
+      {
+        "reading": "はるがきた",
+        "expected": [
+          "春が来た"
+        ],
+        "without_matrix": {
+          "top1": "はるが期た",
+          "rank": -1,
+          "candidates": [
+            "はるが期た",
+            "はるが記た"
+          ]
+        },
+        "with_matrix": {
+          "top1": "春が来た",
+          "rank": 1,
+          "candidates": [
+            "春が来た",
+            "ハルが来た",
+            "治が来た"
+          ]
+        }
+      },
+      {
+        "reading": "なつのうみ",
+        "expected": [
+          "夏の海"
+        ],
+        "without_matrix": {
+          "top1": "なつの生み",
+          "rank": -1,
+          "candidates": [
+            "なつの生み",
+            "なつノ生み",
+            "なつノうみ"
+          ]
+        },
+        "with_matrix": {
+          "top1": "なつの海",
+          "rank": 2,
+          "candidates": [
+            "なつの海",
+            "夏の海",
+            "ナツの海"
+          ]
+        }
+      },
+      {
+        "reading": "あきのかぜ",
+        "expected": [
+          "秋の風"
+        ],
+        "without_matrix": {
+          "top1": "あきノかぜ",
+          "rank": -1,
+          "candidates": [
+            "あきノかぜ",
+            "あ期のかぜ",
+            "あ期ノかぜ"
+          ]
+        },
+        "with_matrix": {
+          "top1": "秋の風",
+          "rank": 1,
+          "candidates": [
+            "秋の風",
+            "あきの風",
+            "章の風"
+          ]
+        }
+      },
+      {
+        "reading": "ふゆのゆき",
+        "expected": [
+          "冬の雪"
+        ],
+        "without_matrix": {
+          "top1": "冬のゆき",
+          "rank": -1,
+          "candidates": [
+            "冬のゆき",
+            "冬ノゆき",
+            "冬之ゆき"
+          ]
+        },
+        "with_matrix": {
+          "top1": "冬の雪",
+          "rank": 1,
+          "candidates": [
+            "冬の雪",
+            "冬のユキ",
+            "ふゆの雪"
+          ]
+        }
+      },
+      {
+        "reading": "いぬのさんぽ",
+        "expected": [
+          "犬の散歩"
+        ],
+        "without_matrix": {
+          "top1": "いぬのさンぽ",
+          "rank": -1,
+          "candidates": [
+            "いぬのさンぽ",
+            "いぬノさンぽ",
+            "いぬノさんぽ"
+          ]
+        },
+        "with_matrix": {
+          "top1": "犬の散歩",
+          "rank": 1,
+          "candidates": [
+            "犬の散歩",
+            "犬の3歩",
+            "犬之散歩"
+          ]
+        }
+      },
+      {
+        "reading": "ねこのこえ",
+        "expected": [
+          "猫の声"
+        ],
+        "without_matrix": {
+          "top1": "ねこノこえ",
+          "rank": -1,
+          "candidates": [
+            "ねこノこえ",
+            "ねこ之こえ",
+            "ねこの声"
+          ]
+        },
+        "with_matrix": {
+          "top1": "猫の声",
+          "rank": 1,
+          "candidates": [
+            "猫の声",
+            "猫の超え",
+            "ねこの声"
+          ]
+        }
+      },
+      {
+        "reading": "とりがなく",
+        "expected": [
+          "鳥が鳴く"
+        ],
+        "without_matrix": {
+          "top1": "とりが無く",
+          "rank": -1,
+          "candidates": [
+            "とりが無く",
+            "とりがな区"
+          ]
+        },
+        "with_matrix": {
+          "top1": "鳥が泣く",
+          "rank": 2,
+          "candidates": [
+            "鳥が泣く",
+            "鳥が鳴く",
+            "取りが泣く"
+          ]
+        }
+      },
+      {
+        "reading": "そらをみる",
+        "expected": [
+          "空を見る"
+        ],
+        "without_matrix": {
+          "top1": "そらヲみる",
+          "rank": -1,
+          "candidates": [
+            "そらヲみる",
+            "そらを未る",
+            "そらヲ未る"
+          ]
+        },
+        "with_matrix": {
+          "top1": "空を見る",
+          "rank": 1,
+          "candidates": [
+            "空を見る",
+            "空を観る",
+            "宇を見る"
+          ]
+        }
+      },
+      {
+        "reading": "うたをうたう",
+        "expected": [
+          "歌を歌う"
+        ],
+        "without_matrix": {
+          "top1": "うたヲうたう",
+          "rank": -1,
+          "candidates": [
+            "うたヲうたう"
+          ]
+        },
+        "with_matrix": {
+          "top1": "歌を歌う",
+          "rank": 1,
+          "candidates": [
+            "歌を歌う",
+            "歌をうたう",
+            "歌を謳う"
+          ]
+        }
+      },
+      {
+        "reading": "みちをあるく",
+        "expected": [
+          "道を歩く"
+        ],
+        "without_matrix": {
+          "top1": "み地をあるく",
+          "rank": -1,
+          "candidates": [
+            "み地をあるく",
+            "み地ヲあるく",
+            "み地をある区"
+          ]
+        },
+        "with_matrix": {
+          "top1": "道を歩く",
+          "rank": 1,
+          "candidates": [
+            "道を歩く",
+            "みちを歩く",
+            "満ちを歩く"
+          ]
+        }
+      },
+      {
+        "reading": "まちをあるく",
+        "expected": [
+          "街を歩く",
+          "町を歩く"
+        ],
+        "without_matrix": {
+          "top1": "町をあるく",
+          "rank": -1,
+          "candidates": [
+            "町をあるく",
+            "町ヲあるく",
+            "町をある区"
+          ]
+        },
+        "with_matrix": {
+          "top1": "街を歩く",
+          "rank": 1,
+          "candidates": [
+            "街を歩く",
+            "まちを歩く",
+            "町を歩く"
+          ]
+        }
+      },
+      {
+        "reading": "ほんをかう",
+        "expected": [
+          "本を買う"
+        ],
+        "without_matrix": {
+          "top1": "ほんヲかう",
+          "rank": -1,
+          "candidates": [
+            "ほんヲかう",
+            "ホンをかう",
+            "ホンヲかう"
+          ]
+        },
+        "with_matrix": {
+          "top1": "ほんを買う",
+          "rank": -1,
+          "candidates": [
+            "ほんを買う",
+            "ホンを買う",
+            "ほんを飼う"
+          ]
+        }
+      }
+    ]
+  },
+  "mozc_benchmark": {
+    "total_items": 613,
+    "without_matrix_pass": 58,
+    "without_matrix_pct": 9.461663947797716,
+    "with_matrix_pass": 201,
+    "with_matrix_pct": 32.78955954323002,
+    "delta_pct": 23.327895595432302,
+    "delta_items": 143
+  }
+}

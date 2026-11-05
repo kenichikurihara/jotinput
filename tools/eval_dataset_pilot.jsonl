@@ -1,0 +1,50 @@
+{"id": "p001", "domain": "dialogue", "category": "conjugation_boundary", "context_prev": "Mozcは私の直感と挙動が", "input_yomi": "ことなります", "ground_truth": "異なります", "alternatives": ["ことなります", "事成ります", "言成ります"]}
+{"id": "p002", "domain": "dialogue", "category": "conjugation_boundary", "context_prev": "一般的な仕様とは", "input_yomi": "ことなり", "ground_truth": "異なり", "alternatives": ["ことなり", "事なり", "言なり"]}
+{"id": "p003", "domain": "business", "category": "conjugation_boundary", "context_prev": "来週より担当者が変更される", "input_yomi": "ことになりました", "ground_truth": "ことになりました", "alternatives": ["事になりました", "異になりました"]}
+{"id": "p004", "domain": "dialogue", "category": "conjugation_boundary", "context_prev": "私の意見としてはそう", "input_yomi": "おもいます", "ground_truth": "思います", "alternatives": ["おもいます", "重います", "想います"]}
+{"id": "p005", "domain": "dialogue", "category": "conjugation_boundary", "context_prev": "別の角度からも", "input_yomi": "かんがえます", "ground_truth": "考えます", "alternatives": ["かんがえます", "勘が得ます"]}
+{"id": "p006", "domain": "dialogue", "category": "conjugation_boundary", "context_prev": "季節の移り変わりによって気温が", "input_yomi": "かわります", "ground_truth": "変わります", "alternatives": ["代わります", "替わります", "かわります"]}
+{"id": "p007", "domain": "business", "category": "conjugation_boundary", "context_prev": "担当者が急病のため", "input_yomi": "かわります", "ground_truth": "代わります", "alternatives": ["変わります", "替わります", "かわります"]}
+{"id": "p008", "domain": "dialogue", "category": "conjugation_boundary", "context_prev": "古くなった電池を新しいものに", "input_yomi": "かわります", "ground_truth": "替えます", "alternatives": ["変えます", "代えます", "かえます"]}
+{"id": "p009", "domain": "dialogue", "category": "conjugation_boundary", "context_prev": "これからも努力を", "input_yomi": "つづけます", "ground_truth": "続けます", "alternatives": ["つづけます", "続け増す"]}
+{"id": "p010", "domain": "dialogue", "category": "conjugation_boundary", "context_prev": "計算の手順をうっかり", "input_yomi": "まちがえます", "ground_truth": "間違えます", "alternatives": ["まちがえます", "間違う得ます"]}
+{"id": "p011", "domain": "business", "category": "homophone_disambiguation", "context_prev": "来月から営業部への", "input_yomi": "いどう", "ground_truth": "異動", "alternatives": ["移動", "居留", "威道"]}
+{"id": "p012", "domain": "business", "category": "homophone_disambiguation", "context_prev": "新幹線を使って大阪へ", "input_yomi": "いどう", "ground_truth": "移動", "alternatives": ["異動", "居留", "威道"]}
+{"id": "p013", "domain": "business", "category": "homophone_disambiguation", "context_prev": "日経新聞の敏腕", "input_yomi": "きしゃ", "ground_truth": "記者", "alternatives": ["貴社", "汽車", "帰社"]}
+{"id": "p014", "domain": "business", "category": "homophone_disambiguation", "context_prev": "ますますご清栄のこととお慶び申し上げます。", "input_yomi": "きしゃ", "ground_truth": "貴社", "alternatives": ["記者", "汽車", "帰社"]}
+{"id": "p015", "domain": "dialogue", "category": "homophone_disambiguation", "context_prev": "煙を吐いて走る昔ながらの", "input_yomi": "きしゃ", "ground_truth": "汽車", "alternatives": ["記者", "貴社", "帰社"]}
+{"id": "p016", "domain": "business", "category": "homophone_disambiguation", "context_prev": "外出先での打ち合わせを終えて", "input_yomi": "きしゃ", "ground_truth": "帰社", "alternatives": ["記者", "貴社", "汽車"]}
+{"id": "p017", "domain": "general", "category": "homophone_disambiguation", "context_prev": "最新の人工知能技術に強い", "input_yomi": "かんしん", "ground_truth": "関心", "alternatives": ["感心", "歓心", "寒心"]}
+{"id": "p018", "domain": "general", "category": "homophone_disambiguation", "context_prev": "彼の素晴らしい礼儀正しさにとても", "input_yomi": "かんしん", "ground_truth": "感心", "alternatives": ["関心", "歓心", "寒心"]}
+{"id": "p019", "domain": "general", "category": "homophone_disambiguation", "context_prev": "上司の機嫌をとって", "input_yomi": "かんしん", "ground_truth": "歓心", "alternatives": ["関心", "感心", "寒心"]}
+{"id": "p020", "domain": "business", "category": "homophone_disambiguation", "context_prev": "緊急時に迅速に対応できる", "input_yomi": "たいせい", "ground_truth": "態勢", "alternatives": ["体制", "大勢", "体勢"]}
+{"id": "p021", "domain": "general", "category": "homophone_disambiguation", "context_prev": "民主主義を支える強固な社会", "input_yomi": "たいせい", "ground_truth": "体制", "alternatives": ["態勢", "大勢", "体勢"]}
+{"id": "p022", "domain": "general", "category": "homophone_disambiguation", "context_prev": "転倒しないように低く構えた", "input_yomi": "たいせい", "ground_truth": "体勢", "alternatives": ["体制", "態勢", "大勢"]}
+{"id": "p023", "domain": "general", "category": "homophone_disambiguation", "context_prev": "一部の反対があっても", "input_yomi": "たいせい", "ground_truth": "大勢", "alternatives": ["態勢", "体制", "体勢"]}
+{"id": "p024", "domain": "general", "category": "homophone_disambiguation", "context_prev": "築地で仕入れた新鮮な魚が並ぶ", "input_yomi": "しじょう", "ground_truth": "市場", "alternatives": ["史上", "詩情", "死条"]}
+{"id": "p025", "domain": "business", "category": "homophone_disambiguation", "context_prev": "ニューヨーク株式", "input_yomi": "しじょう", "ground_truth": "市場", "alternatives": ["史上", "詩情", "死条"]}
+{"id": "p026", "domain": "general", "category": "homophone_disambiguation", "context_prev": "オリンピックで金メダルを獲得し", "input_yomi": "しじょうさいこう", "ground_truth": "史上最高", "alternatives": ["市場最高", "詩情最高"]}
+{"id": "p027", "domain": "business", "category": "homophone_disambiguation", "context_prev": "アンケートへのご協力ありがとうございました。いただいた", "input_yomi": "かいとう", "ground_truth": "回答", "alternatives": ["解答", "解凍", "解党"]}
+{"id": "p028", "domain": "education", "category": "homophone_disambiguation", "context_prev": "数学の試験問題に対する正しい", "input_yomi": "かいとう", "ground_truth": "解答", "alternatives": ["回答", "解凍", "解党"]}
+{"id": "p029", "domain": "general", "category": "homophone_disambiguation", "context_prev": "冷凍保存したお肉をレンジで", "input_yomi": "かいとう", "ground_truth": "解凍", "alternatives": ["回答", "解答", "解党"]}
+{"id": "p030", "domain": "business", "category": "homophone_disambiguation", "context_prev": "長年にわたる両国間の領土問題について平和的な", "input_yomi": "こうしょう", "ground_truth": "交渉", "alternatives": ["高尚", "考証", "公称"]}
+{"id": "p031", "domain": "general", "category": "homophone_disambiguation", "context_prev": "古典文学や茶道を嗜む", "input_yomi": "こうしょう", "ground_truth": "高尚", "alternatives": ["交渉", "考証", "公称"]}
+{"id": "p032", "domain": "academic", "category": "homophone_disambiguation", "context_prev": "歴史的な史料に基づいて厳密な時代", "input_yomi": "こうしょう", "ground_truth": "考証", "alternatives": ["交渉", "高尚", "公称"]}
+{"id": "p033", "domain": "business", "category": "homophone_disambiguation", "context_prev": "事故の目撃者から事故直後の", "input_yomi": "じょうきょう", "ground_truth": "状況", "alternatives": ["上京", "情強", "状景"]}
+{"id": "p034", "domain": "dialogue", "category": "homophone_disambiguation", "context_prev": "大学進学をきっかけに田舎から", "input_yomi": "じょうきょう", "ground_truth": "上京", "alternatives": ["状況", "情強", "情境"]}
+{"id": "p035", "domain": "politics", "category": "homophone_disambiguation", "context_prev": "内閣が発表した新たな少子化対策の基本", "input_yomi": "せいさく", "ground_truth": "政策", "alternatives": ["制作", "製作", "生作"]}
+{"id": "p036", "domain": "art", "category": "homophone_disambiguation", "context_prev": "ハリウッドで公開される超大作映画の", "input_yomi": "せいさく", "ground_truth": "制作", "alternatives": ["政策", "製作", "製策"]}
+{"id": "p037", "domain": "manufacturing", "category": "homophone_disambiguation", "context_prev": "町工場で精密な機械部品を", "input_yomi": "せいさく", "ground_truth": "製作", "alternatives": ["政策", "制作", "製策"]}
+{"id": "p038", "domain": "business", "category": "business_honorific", "context_prev": "操作方法が不明なため、詳しく", "input_yomi": "ごきょうじ", "ground_truth": "ご教示", "alternatives": ["ご教授", "五教示", "ご教時"]}
+{"id": "p039", "domain": "academic", "category": "business_honorific", "context_prev": "東京大学名誉", "input_yomi": "きょうじゅ", "ground_truth": "教授", "alternatives": ["教示", "狂樹", "亨寿"]}
+{"id": "p040", "domain": "business", "category": "business_honorific", "context_prev": "今後とも変わらぬお引き立てを賜りますよう", "input_yomi": "よろしくおねがいします", "ground_truth": "よろしくお願いします", "alternatives": ["よろしくおねがいします", "宜しくお願いします", "よろしくお願い致す"]}
+{"id": "p041", "domain": "dialogue", "category": "colloquial", "context_prev": "週末暇だから映画でも", "input_yomi": "みようかな", "ground_truth": "見ようかな", "alternatives": ["みようかな", "見用加奈", "観ようかな"]}
+{"id": "p042", "domain": "dialogue", "category": "colloquial", "context_prev": "お腹が空いたのでラーメンを", "input_yomi": "たべにいこう", "ground_truth": "食べに行こう", "alternatives": ["たべにいこう", "食べに移行", "多部に行こう"]}
+{"id": "p043", "domain": "tech", "category": "compound_noun", "context_prev": "軽量なオープンソースの", "input_yomi": "にほんごにゅうりょく", "ground_truth": "日本語入力", "alternatives": ["日本五入力", "にほんごにゅうりょく", "日本語紐力"]}
+{"id": "p044", "domain": "tech", "category": "compound_noun", "context_prev": "スマートフォン上で高速に動く", "input_yomi": "おんでばいす", "ground_truth": "オンデバイス", "alternatives": ["おんでばいす", "音デバイス", "オンデヴァイス"]}
+{"id": "p045", "domain": "dialogue", "category": "conjugation_boundary", "context_prev": "急ぎの用件ですので、折り返し", "input_yomi": "れんらくください", "ground_truth": "連絡ください", "alternatives": ["れんらくください", "連絡下西", "連楽ください"]}
+{"id": "p046", "domain": "business", "category": "homophone_disambiguation", "context_prev": "会議室に集まり、次の四半期の目標について", "input_yomi": "とうぎ", "ground_truth": "討議", "alternatives": ["闘技", "党首", "答申"]}
+{"id": "p047", "domain": "general", "category": "homophone_disambiguation", "context_prev": "古代ローマのコロッセオで繰り広げられた剣闘士の", "input_yomi": "とうぎ", "ground_truth": "闘技", "alternatives": ["討議", "頭義", "党議"]}
+{"id": "p048", "domain": "business", "category": "homophone_disambiguation", "context_prev": "お見積もり金額をご確認いただき、ご承認の", "input_yomi": "けっさい", "ground_truth": "決済", "alternatives": ["決裁", "結社", "決裁"]}
+{"id": "p049", "domain": "business", "category": "homophone_disambiguation", "context_prev": "部長による稟議書の", "input_yomi": "けっさい", "ground_truth": "決裁", "alternatives": ["決済", "結社", "決細"]}
+{"id": "p050", "domain": "tech", "category": "conjugation_boundary", "context_prev": "モデルのパラメータ数を削減して推論速度を", "input_yomi": "あげます", "ground_truth": "上げます", "alternatives": ["あげます", "揚げます", "挙げます"]}

@@ -1,0 +1,55 @@
+Proprietary Software License
+
+Copyright (c) 2026. All rights reserved.
+
+NOTICE: This codebase and its associated assets are proprietary and confidential. 
+Unauthorized copying, duplication, transfer, modification, reverse engineering, 
+distribution, or public display of any portion of this software, in whole or in part, 
+via any medium, is strictly prohibited without explicit prior written authorization 
+from the copyright holder.
+
+--------------------------------------------------------------------------------
+THIRD-PARTY OPEN-SOURCE SOFTWARE & MODEL WEIGHTS NOTICE
+--------------------------------------------------------------------------------
+This application includes, bundles, or interfaces with third-party open-source 
+components and pre-trained neural network models licensed under the Apache 
+License, Version 2.0:
+
+1. ReazonSpeech Zipformer Transducer Model
+   - Copyright (c) Reazon Human Interaction Lab (Reazon Holdings, Inc.)
+   - License: Apache License, Version 2.0
+   - Upstream: https://github.com/reazon-research/ReazonSpeech
+
+2. sherpa-onnx (Offline Speech Recognition Engine)
+   - Copyright (c) 2022-2024 Next-gen Kaldi / K2 FSA Team
+   - License: Apache License, Version 2.0
+   - Upstream: https://github.com/k2-fsa/sherpa-onnx
+
+3. ONNX Model Packaging
+   - Distributed by Taisei Ozaki / DeL
+   - License: Apache License, Version 2.0
+   - Upstream: https://huggingface.co/DeL-TaiseiOzaki/sherpa-onnx-zipformer-ja-reazonspeech-2024-08-01
+
+4. llama.cpp / ggml
+   - Copyright (c) 2023-2026 The ggml authors
+   - License: MIT License
+   - Upstream: https://github.com/ggerganov/llama.cpp
+
+5. Mozc (Japanese Input Method Editor Engine & Lexicons)
+   - Copyright (c) 2010-2018 Google Inc.
+   - License: 3-Clause BSD License
+   - Upstream: https://github.com/google/mozc
+
+6. FUTO Swipe Neural Gesture Typing Technology
+   - Copyright (c) 2026 FUTO Holdings Inc.
+   - License: FUTO Model Weights License 1.0 (Attribution Required: "Powered by FUTO Swipe")
+   - Upstream: https://gitlab.futo.org/keyboard/swipe-library
+
+7. gl-keyboard-correction (English Spell Correction Engine)
+   - Distributed by Loke-60000
+   - License: Apache License, Version 2.0
+   - Upstream: https://huggingface.co/Loke-60000/gl-keyboard-correction
+
+The Apache License, Version 2.0 permits commercial use, modification, distribution, 
+and sublicensing, subject to the retention of copyright notices and license text as 
+set forth in the Apache License, Version 2.0 (see LICENSES/APACHE-2.0.txt).

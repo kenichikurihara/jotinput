@@ -1,0 +1,434 @@
+"""
+futo_swipe_pipeline.py
+
+Cleanroom, independent Python implementation of FUTO Swipe inference with ONNX Runtime.
+Contains:
+1. Trace Resampling (time linear interp to 60Hz -> length 64)
+2. QWERTY Geometry & Layout tensors
+3. Encoder (honorable_sturgeon) + Decoder (magic_macaw) forward passes
+4. Lexicon Trie & Length-normalized CTC Prefix Search
+5. ContextLM (hungry_jellyfish) Causal DFSMN state computation & log-prob scoring via wyhash-style hashing.
+"""
+
+import json
+import math
+import numpy as np
+import onnxruntime as ort
+import os
+import re
+
+# Constants
+FUTO_SWIPE_TIME_STEPS = 32
+FUTO_SWIPE_CLASS_COUNT = 27  # 26 letters + blank (index 26)
+FUTO_SWIPE_MAX_KEYS = 64
+FUTO_CONTEXT_LENGTH = 16
+FUTO_CONTEXT_DIM = 16
+FUTO_CONTEXT_VOCAB_SIZE = 32768
+FUTO_CONTEXT_HASHED_TOKEN_ID = 32768
+
+MASK_64 = (1 << 64) - 1
+CONSTANTS = [
+    0xa0761d6478bd642f,
+    0xe7037ed1a0b428db,
+    0x8ebc6af09c88c6e3,
+    0x589965cc75374cc3,
+]
+BUCKET_MULTIPLIERS = [
+    0x9e3779b97f4a7c15,
+    0x517cc1b727220a95,
+]
+
+def _mix(a: int, b: int) -> int:
+    a &= MASK_64
+    b &= MASK_64
+    prod = a * b
+    return (prod & MASK_64) ^ (prod >> 64)
+
+def futo_context_hash(word: str) -> int:
+    b = word.encode('utf-8')
+    n = len(b)
+
+    def read_u(start: int, width: int) -> int:
+        val = 0
+        for i in range(width):
+            val |= b[start + i] << (8 * i)
+        return val
+
+    state = _mix(CONSTANTS[0], CONSTANTS[1])
+    left = 0
+    right = 0
+
+    if n <= 16:
+        if n >= 4:
+            step = (n // 8) * 4
+            left = (read_u(0, 4) << 32) | read_u(step, 4)
+            right = (read_u(n - 4, 4) << 32) | read_u(n - 4 - step, 4)
+        elif n > 0:
+            left = (b[0] << 16) | (b[n // 2] << 8) | b[-1]
+    else:
+        lanes = [state, state, state]
+        offset = 0
+        if n > 48:
+            while offset + 48 <= n:
+                for lane in range(3):
+                    p = offset + lane * 16
+                    lanes[lane] = _mix(
+                        read_u(p, 8) ^ CONSTANTS[lane + 1],
+                        read_u(p + 8, 8) ^ lanes[lane],
+                    )
+                offset += 48
+        while offset + 16 <= n:
+            lanes[0] = _mix(
+                read_u(offset, 8) ^ CONSTANTS[1],
+                read_u(offset + 8, 8) ^ lanes[0],
+            )
+            offset += 16
+        state = (lanes[0] ^ lanes[1] ^ lanes[2]) if n > 48 else lanes[0]
+        left = read_u(n - 16, 8)
+        right = read_u(n - 8, 8)
+
+    return _mix(
+        CONSTANTS[1] ^ n,
+        _mix(left ^ CONSTANTS[1], right ^ state),
+    )
+
+def futo_context_buckets(word: str):
+    h = futo_context_hash(word)
+    return [
+        int(((h * mult) & MASK_64) >> 49)
+        for mult in BUCKET_MULTIPLIERS
+    ]
+
+def resample_trace(points):
+    """
+    points: list of dict {'x': float, 'y': float, 't': int (ms or us)}
+    Returns: np.ndarray shape (2, 64), float32
+    """
+    count = len(points)
+    t0 = points[0]['t']
+    times = np.array([(p['t'] - t0) for p in points], dtype=np.float64)
+    # If timestamps are in milliseconds, duration is in ms.
+    # Check if timestamps are microseconds:
+    if len(times) > 1 and times[-1] > 100000:
+        times /= 1000.0  # convert to ms
+
+    xs = np.array([p['x'] for p in points], dtype=np.float64)
+    ys = np.array([p['y'] for p in points], dtype=np.float64)
+
+    duration = times[-1]
+    if duration > 1e-3:
+        samples = max(2, int(round(duration / (1000.0 / 60.0))) + 1)
+        grid = np.linspace(0.0, duration, samples)
+        stage_x = np.interp(grid, times, xs)
+        stage_y = np.interp(grid, times, ys)
+    else:
+        stage_x = xs
+        stage_y = ys
+
+    positions = np.arange(len(stage_x), dtype=np.float64)
+    idx_grid = np.linspace(0.0, len(stage_x) - 1, 64)
+    resampled_x = np.interp(idx_grid, positions, stage_x).astype(np.float32)
+    resampled_y = np.interp(idx_grid, positions, stage_y).astype(np.float32)
+
+    return np.stack([resampled_x, resampled_y], axis=0) # shape (2, 64)
+
+def default_qwerty_layout():
+    """
+    Uniform QWERTY layout matching FUTO paper & validation.
+    Returns:
+      layout_keys: shape (64, 2) float32
+      layout_mask: shape (64,) bool
+    """
+    rows = ['qwertyuiop', 'asdfghjkl', 'zxcvbnm']
+    starts = [0.05, 0.10, 0.20]
+    key_centers = {}
+    for r_idx, (row, start) in enumerate(zip(rows, starts)):
+        for c_idx, ch in enumerate(row):
+            key_centers[ch] = (start + c_idx * 0.1, (r_idx + 0.5) / 3.0)
+
+    layout_keys = np.zeros((FUTO_SWIPE_MAX_KEYS, 2), dtype=np.float32)
+    for i in range(26):
+        ch = chr(ord('a') + i)
+        cx, cy = key_centers[ch]
+        layout_keys[i, 0] = cx
+        layout_keys[i, 1] = cy
+
+    layout_mask = np.zeros((FUTO_SWIPE_MAX_KEYS,), dtype=bool)
+    layout_mask[:26] = True
+    return layout_keys, layout_mask
+
+class LexiconNode:
+    __slots__ = ('text', 'last', 'children', 'surfaces', 'frequency')
+    def __init__(self, text: str, last: int):
+        self.text = text
+        self.last = last
+        self.children = {} # key: letter index 0..25 -> LexiconNode
+        self.surfaces = [] # list of (surface_str, freq_int)
+        self.frequency = 0
+
+class PrefixMass:
+    __slots__ = ('blank', 'letter', 'priority')
+    def __init__(self):
+        self.blank = -float('inf')
+        self.letter = -float('inf')
+        self.priority = -float('inf')
+
+    @property
+    def total(self):
+        return log_add(self.blank, self.letter)
+
+def log_add(a: float, b: float) -> float:
+    if a == -float('inf'): return b
+    if b == -float('inf'): return a
+    hi = max(a, b)
+    lo = min(a, b)
+    return hi + math.log(1.0 + math.exp(lo - hi))
+
+def add_lexicon_word(root: LexiconNode, surface: str, freq: int = 0):
+    key = re.sub(r"['\u2019]", "", surface.lower())
+    if not key.isalpha() or not key.isascii():
+        return False
+    node = root
+    for ch in key:
+        idx = ord(ch) - ord('a')
+        if idx not in node.children:
+            node.children[idx] = LexiconNode(node.text + ch, idx)
+        node = node.children[idx]
+
+    # Check existing
+    found = False
+    for i, (s, f) in enumerate(node.surfaces):
+        if s == surface:
+            node.surfaces[i] = (s, max(f, freq))
+            found = True
+            break
+    if not found:
+        node.surfaces.append((surface, freq))
+    node.frequency = max(node.frequency, freq)
+    return True
+
+def ctc_prefix_search(logits: np.ndarray, root: LexiconNode, beam: int = 100, gamma: float = 0.1902, beta: float = 1.2727):
+    """
+    logits: shape (32, 27) float32
+    """
+    steps, classes = logits.shape
+    blank = classes - 1
+    states = {root: PrefixMass()}
+    states[root].blank = 0.0
+
+    divisors = [max(1.0, float(i)) ** gamma for i in range(steps + 1)]
+
+    for t in range(steps):
+        next_states = {}
+        row = logits[t]
+
+        for node, old in states.items():
+            # Extend with blank
+            same = next_states.setdefault(node, PrefixMass())
+            same.blank = log_add(same.blank, old.total + row[blank])
+
+            # Repeat final letter
+            if node.last >= 0:
+                same.letter = log_add(same.letter, old.letter + row[node.last])
+
+            # Extend with children
+            for edge_idx, edge_node in node.children.items():
+                dest = next_states.setdefault(edge_node, PrefixMass())
+                prev = old.blank if edge_idx == node.last else old.total
+                dest.letter = log_add(dest.letter, prev + row[edge_idx])
+
+        # Priority calculation and pruning
+        ordered = list(next_states.items())
+        for node, p in ordered:
+            l = len(node.text)
+            div = divisors[min(l, steps)]
+            p.priority = p.total / div + beta * l
+
+        ordered.sort(key=lambda item: item[1].priority, reverse=True)
+        states = dict(ordered[:beam])
+
+    return states
+
+class FutoSwipeEngine:
+    def __init__(self, model_dir: str = 'tools/models/futo_swipe'):
+        self.model_dir = model_dir
+
+        # ONNX sessions
+        opts = ort.SessionOptions()
+        opts.intra_op_num_threads = 4
+        opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+
+        self.enc_sess = ort.InferenceSession(os.path.join(model_dir, 'encoder.onnx'), opts)
+        self.dec_sess = ort.InferenceSession(os.path.join(model_dir, 'decoder.onnx'), opts)
+        self.clm_sess = ort.InferenceSession(os.path.join(model_dir, 'context_lm.onnx'), opts)
+        self.emb_sess = ort.InferenceSession(os.path.join(model_dir, 'embeddings.onnx'), opts)
+
+        # Load embeddings outputs
+        emb_outs = self.emb_sess.run(None, {})
+        self.exact_embeddings = emb_outs[0]     # (32768, 16)
+        self.exact_biases = emb_outs[1]         # (32768,)
+        self.hashed_embeddings = emb_outs[2]    # (32768, 16)
+        self.hashed_biases = emb_outs[3]        # (32768,)
+
+        # Load vocabulary
+        vocab_file = os.path.join('tools/futo_swipe/vocab.txt')
+        with open(vocab_file, 'r', encoding='utf-8') as f:
+            self.vocabulary = [line.strip() for line in f if line.strip()]
+
+        self.exact_ids = {}
+        self.lowercase_ids = {}
+        for idx, w in enumerate(self.vocabulary[:32767]):
+            token_id = idx + 1  # 0 is padding
+            self.exact_ids[w] = token_id
+            self.lowercase_ids.setdefault(w.lower(), token_id)
+
+        # Load scoring weights
+        scoring_file = os.path.join('tools/futo_swipe/scoring.json')
+        with open(scoring_file, 'r', encoding='utf-8') as f:
+            scoring_data = json.load(f)
+
+        self.dec_weights = scoring_data["encoder:honorable_sturgeon decoder:magic_macaw"]
+        self.ctx_weights = scoring_data["encoder:honorable_sturgeon decoder:magic_macaw contextlm:hungry_jellyfish"]
+
+        # Default layout
+        self.layout_keys, self.layout_mask = default_qwerty_layout()
+
+        # Build Lexicon Trie
+        self.root = LexiconNode('', -1)
+        for w in self.vocabulary:
+            add_lexicon_word(self.root, w, 0)
+
+        self.context_cache = {}
+
+    def get_context_state(self, previous_words):
+        if not previous_words:
+            tokens = []
+        else:
+            tokens = previous_words[-FUTO_CONTEXT_LENGTH:]
+
+        key = "\x00".join(tokens)
+        if key in self.context_cache:
+            return self.context_cache[key]
+
+        token_ids = np.zeros((1, FUTO_CONTEXT_LENGTH), dtype=np.int64)
+        hash_buckets = np.zeros((1, FUTO_CONTEXT_LENGTH, 2), dtype=np.int64)
+
+        for i, word in enumerate(tokens):
+            w_id = self.exact_ids.get(word) or self.lowercase_ids.get(word.lower())
+            if w_id is not None:
+                token_ids[0, i] = w_id
+            else:
+                token_ids[0, i] = FUTO_CONTEXT_HASHED_TOKEN_ID
+                b0, b1 = futo_context_buckets(word)
+                hash_buckets[0, i, 0] = b0
+                hash_buckets[0, i, 1] = b1
+
+        out = self.clm_sess.run(None, {
+            'token_ids': token_ids,
+            'hash_buckets': hash_buckets
+        })
+        states = out[0] # (1, 16, 16)
+        offset = max(0, len(tokens) - 1)
+        state_vec = states[0, offset].astype(np.float32)
+        self.context_cache[key] = state_vec
+        return state_vec
+
+    def score_word_in_context(self, state_vec, word):
+        w_id = self.exact_ids.get(word) or self.lowercase_ids.get(word.lower())
+        if w_id is not None:
+            score = float(self.exact_biases[w_id])
+            score += float(np.dot(state_vec, self.exact_embeddings[w_id]))
+            return score
+        else:
+            buckets = futo_context_buckets(word)
+            score = 0.0
+            for b in buckets:
+                score += float(self.hashed_biases[b])
+                score += float(np.dot(state_vec, self.hashed_embeddings[b]))
+            return score
+
+    def decode(self, trajectory, previous_words=None, beam=100, max_candidates=5):
+        """
+        trajectory: list of dict {'x': float, 'y': float, 't': int}
+        previous_words: list of str or None. If None, decode without ContextLM.
+        """
+        # 1. Resample trajectory
+        features = resample_trace(trajectory) # (2, 64)
+        features = np.expand_dims(features, 0) # (1, 2, 64)
+
+        layout_k = np.expand_dims(self.layout_keys, 0) # (1, 64, 2)
+        layout_m = np.expand_dims(self.layout_mask, 0) # (1, 64)
+
+        # 2. Encoder forward
+        enc_out = self.enc_sess.run(None, {
+            'features': features,
+            'layout_keys': layout_k,
+            'layout_mask': layout_m
+        })
+        log_emissions = enc_out[0]  # (1, 32, 65)
+        coefficients = enc_out[1]   # (1, 32, 64)
+        intention = enc_out[2]      # (1, 32, 1)
+
+        # 3. Assemble combined decoder input: (1, 32, 92)
+        combined = np.zeros((1, FUTO_SWIPE_TIME_STEPS, 92), dtype=np.float32)
+        # letter scores (26)
+        combined[:, :, :26] = log_emissions[:, :, :26]
+        # blank score (1)
+        combined[:, :, 26] = log_emissions[:, :, 64]
+        # coefficients (64)
+        combined[:, :, 27:91] = coefficients[:, :, :64]
+        # intention (1)
+        combined[:, :, 91] = intention[:, :, 0]
+
+        # 4. Decoder forward
+        dec_out = self.dec_sess.run(None, {'features': combined})
+        refined_logits = dec_out[0][0] # (32, 27)
+
+        # 5. CTC prefix search
+        weights = self.dec_weights if previous_words is None else self.ctx_weights
+        states = ctc_prefix_search(
+            refined_logits,
+            self.root,
+            beam=beam,
+            gamma=weights['gamma_prune'],
+            beta=weights['beta_prune']
+        )
+
+        # 6. Candidate scoring & Rescoring
+        state_vec = None
+        if previous_words is not None:
+            state_vec = self.get_context_state(previous_words)
+
+        gamma = weights['gamma']
+        beta = weights['beta']
+        lam = weights['lambda']
+        alpha = weights['alpha'] if state_vec is not None else 0.0
+
+        candidates = []
+        for node, mass in states.items():
+            if not node.surfaces:
+                continue
+            l = len(node.text)
+            base_score = mass.total / (l ** gamma) + beta * l
+
+            for surface, freq in node.surfaces:
+                total_s = base_score + lam * freq
+                if state_vec is not None:
+                    ctx_score = self.score_word_in_context(state_vec, surface)
+                    total_s += alpha * ctx_score
+                candidates.append((surface, total_s))
+
+        candidates.sort(key=lambda x: x[1], reverse=True)
+
+        # Deduplicate
+        seen = set()
+        deduped = []
+        for word, score in candidates:
+            lower = word.lower()
+            if lower not in seen:
+                seen.add(lower)
+                deduped.append((word, score))
+            if len(deduped) >= max_candidates:
+                break
+
+        return deduped
