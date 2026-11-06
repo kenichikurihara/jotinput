@@ -54,6 +54,10 @@ android {
         jvmTarget = "1.8"
     }
 
+    androidResources {
+        noCompress += listOf("bin")
+    }
+
     // Assets are kept external to maintain lightweight APK (~86 MB vs ~261 MB)
     testOptions {
         unitTests.isReturnDefaultValues = true

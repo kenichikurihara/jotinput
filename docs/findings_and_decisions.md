@@ -1750,4 +1750,30 @@ Users regularly need to type domain-specific English words, technical proper nou
 - **Unit Test Suite**: [`UnifiedEnglishDictionaryTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/UnifiedEnglishDictionaryTest.kt) passing 100% (167/167 unit tests in test suite).
 - **Deployment**: Verified on both Pixel 10 Pro and ARCVM via `./deploy.sh`.
 
+---
+
+## ADR-017: Mozc Bigram Connection Matrix APK Bundling and Continuous Remote Sync Policy
+
+### 1. Context & Motivation
+1. **Fallback Degradation Without Connection Matrix**:
+   - Investigation into phrase ranking (e.g. `あとで` yielding `あとデ` or `あと出` instead of `後で`) revealed that when the 2D bigram grammatical connection cost matrix is uninitialized (e.g. fresh install before external download or during headless tests), unigram word costs dominate, promoting ungrammatical fragments.
+   - When the connection matrix is loaded, the $2672 \times 2672$ transition scores immediately rectify morphological segmentation.
+2. **Size Budget Feasibility**:
+   - The compiled 16-bit binary connection matrix (`connection_data.bin`) is only 14.28 MB (7,139,584 transitions).
+   - Bundling this single infrastructure asset directly in `app/src/main/assets/mozc/connection_data.bin` keeps the debug APK under 100 MB (well within the updated $\le 110\text{ MB}$ cap), while guaranteeing 100% stable morphological transition scores out-of-the-box with zero initial setup friction.
+
+### 2. Architecture & Design Decisions
+1. **Bundled Asset Provisioning with Zero-Heap Memory-Mapping**:
+   - Placed `connection_data.bin` into `app/src/main/assets/mozc/connection_data.bin`.
+   - Added `androidResources { noCompress += listOf("bin") }` in `app/build.gradle.kts`.
+   - Updated `ConnectionDataManager.kt` to automatically extract the bundled asset into internal files on first launch (if not already present), allowing `ConnectionMatrix.kt` to perform immediate zero-copy `FileChannel.map` (< 2ms load time, 0MB JVM heap overhead).
+2. **Updated Model & Lexicon Decoupling Contract**:
+   - Explicitly amended [`AGENTS.md`](file:///home/kenichikurihara/repos/myasr/AGENTS.md) and [`GEMINI.md`](file:///home/kenichikurihara/repos/myasr/GEMINI.md) to permit and require bundling the 14.28 MB Connection Matrix in APK assets, while strictly keeping neural models (ASR, SLM, VAD) and multi-million-word dictionaries (SudachiDict, Wikipedia, Place/Personal names) on-demand external downloads.
+3. **Continuous Remote Git Push Contract**:
+   - Mandated that all future verified features, bug fixes, asset updates, and documentations must be committed and pushed immediately to the remote GitHub repository (`origin/main`).
+
+### 3. Verification & Compliance
+- **Unit Test Pass**: All 167+ unit tests in `./gradlew testDebugUnitTest` pass with 100% success.
+- **Dual-Target Verified**: Deployed and verified on both ChromeOS ARCVM (`arc:5555`) and physical Pixel 10 Pro (`192.168.86.46:43343`), with logcat confirming successful memory mapping of 7,139,584 transitions.
+
 
