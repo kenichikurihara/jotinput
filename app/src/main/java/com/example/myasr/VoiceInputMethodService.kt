@@ -1026,7 +1026,7 @@ class VoiceInputMethodService : InputMethodService() {
             val userCandidates = EnglishDictionaryUtils.suggestFromUserDictionary(rawWord, activeEntries, maxCandidates = 4)
 
             val suggestions = if (rawWord.length >= 2 && spellEngine.isReady()) {
-                spellEngine.suggestTypo(rawWord, maxCandidates = 4)
+                spellEngine.suggestTypo(rawWord, maxCandidates = 5)
             } else {
                 emptyList()
             }
@@ -1060,22 +1060,34 @@ class VoiceInputMethodService : InputMethodService() {
                 }
             }
 
-            // 3. Include raw typed word so user can keep exact typing
-            if (!orderedCandidates.contains(rawWord)) {
-                orderedCandidates.add(rawWord)
-            }
-
-            // 4. Adapt typo suggestions to capitalized form if sentence start or proper noun
-            for (sug in suggestions) {
-                val adaptedSug = if (capResult.type == EnglishCapitalizationAnalyzer.CapitalizationType.SENTENCE_START ||
+            // Adapt typo & completion suggestions to capitalized form if sentence start or proper noun
+            val adaptedSuggestions = suggestions.map { sug ->
+                if (capResult.type == EnglishCapitalizationAnalyzer.CapitalizationType.SENTENCE_START ||
                     capResult.type == EnglishCapitalizationAnalyzer.CapitalizationType.PROPER_NOUN
                 ) {
                     sug.replaceFirstChar { it.uppercase() }
                 } else {
                     sug
                 }
-                if (!orderedCandidates.contains(adaptedSug)) {
-                    orderedCandidates.add(adaptedSug)
+            }
+
+            // 3. Top-1 completion/typo candidate (e.g. examp -> example) before rawWord if not exact
+            if (adaptedSuggestions.isNotEmpty()) {
+                val topSug = adaptedSuggestions[0]
+                if (!orderedCandidates.contains(topSug)) {
+                    orderedCandidates.add(topSug)
+                }
+            }
+
+            // 4. Include raw typed word so user can keep exact typing
+            if (!orderedCandidates.contains(rawWord)) {
+                orderedCandidates.add(rawWord)
+            }
+
+            // 5. Remaining completion and typo suggestions
+            for (sug in adaptedSuggestions) {
+                if (!orderedCandidates.contains(sug)) {
+                    orderedCandidates.add(sug)
                 }
             }
 
@@ -1094,6 +1106,7 @@ class VoiceInputMethodService : InputMethodService() {
                         source = if (isFromUser) "user_english" else "english_typo"
                     )
                 }
+                Log.i(TAG, "English completion candidates for '$rawWord': ${candidates.map { it.surface }}")
                 withContext(Dispatchers.Main) {
                     if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
                         updateDebugSlmBadge(badge)

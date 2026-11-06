@@ -44,6 +44,21 @@ class EnglishSpellEngineTest {
     }
 
     @Test
+    fun testLongWordCompletionCandidateCreation() {
+        // Test example completion: examp -> example
+        val cand = ConversionCandidate(
+            surface = "example",
+            reading = "examp",
+            isPrediction = false,
+            source = "english_typo"
+        )
+        assertEquals("example", cand.surface)
+        assertEquals("examp", cand.reading)
+        assertTrue(cand.surface.length > cand.reading.length)
+        assertTrue(cand.surface.startsWith(cand.reading))
+    }
+
+    @Test
     fun testCandidateGecCreation() {
         val cand = ConversionCandidate(
             surface = "I can't believe it's already Friday.",

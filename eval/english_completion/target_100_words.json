@@ -1,0 +1,1052 @@
+[
+  {
+    "rank": 1,
+    "target": "which",
+    "length": 5,
+    "primary_prefix": "whi",
+    "prefixes": [
+      "whi",
+      "whic"
+    ]
+  },
+  {
+    "rank": 2,
+    "target": "first",
+    "length": 5,
+    "primary_prefix": "fir",
+    "prefixes": [
+      "fir",
+      "firs"
+    ]
+  },
+  {
+    "rank": 3,
+    "target": "their",
+    "length": 5,
+    "primary_prefix": "the",
+    "prefixes": [
+      "the",
+      "thei"
+    ]
+  },
+  {
+    "rank": 4,
+    "target": "other",
+    "length": 5,
+    "primary_prefix": "oth",
+    "prefixes": [
+      "oth",
+      "othe"
+    ]
+  },
+  {
+    "rank": 5,
+    "target": "after",
+    "length": 5,
+    "primary_prefix": "aft",
+    "prefixes": [
+      "aft",
+      "afte"
+    ]
+  },
+  {
+    "rank": 6,
+    "target": "years",
+    "length": 5,
+    "primary_prefix": "yea",
+    "prefixes": [
+      "yea",
+      "year"
+    ]
+  },
+  {
+    "rank": 7,
+    "target": "would",
+    "length": 5,
+    "primary_prefix": "wou",
+    "prefixes": [
+      "wou",
+      "woul"
+    ]
+  },
+  {
+    "rank": 8,
+    "target": "during",
+    "length": 6,
+    "primary_prefix": "duri",
+    "prefixes": [
+      "dur",
+      "duri",
+      "durin"
+    ]
+  },
+  {
+    "rank": 9,
+    "target": "going",
+    "length": 5,
+    "primary_prefix": "goi",
+    "prefixes": [
+      "goi",
+      "goin"
+    ]
+  },
+  {
+    "rank": 10,
+    "target": "where",
+    "length": 5,
+    "primary_prefix": "whe",
+    "prefixes": [
+      "whe",
+      "wher"
+    ]
+  },
+  {
+    "rank": 11,
+    "target": "between",
+    "length": 7,
+    "primary_prefix": "betwe",
+    "prefixes": [
+      "betw",
+      "betwe",
+      "betwee"
+    ]
+  },
+  {
+    "rank": 12,
+    "target": "there",
+    "length": 5,
+    "primary_prefix": "the",
+    "prefixes": [
+      "the",
+      "ther"
+    ]
+  },
+  {
+    "rank": 13,
+    "target": "about",
+    "length": 5,
+    "primary_prefix": "abo",
+    "prefixes": [
+      "abo",
+      "abou"
+    ]
+  },
+  {
+    "rank": 14,
+    "target": "became",
+    "length": 6,
+    "primary_prefix": "beca",
+    "prefixes": [
+      "bec",
+      "beca",
+      "becam"
+    ]
+  },
+  {
+    "rank": 15,
+    "target": "later",
+    "length": 5,
+    "primary_prefix": "lat",
+    "prefixes": [
+      "lat",
+      "late"
+    ]
+  },
+  {
+    "rank": 16,
+    "target": "under",
+    "length": 5,
+    "primary_prefix": "und",
+    "prefixes": [
+      "und",
+      "unde"
+    ]
+  },
+  {
+    "rank": 17,
+    "target": "being",
+    "length": 5,
+    "primary_prefix": "bei",
+    "prefixes": [
+      "bei",
+      "bein"
+    ]
+  },
+  {
+    "rank": 18,
+    "target": "including",
+    "length": 9,
+    "primary_prefix": "includi",
+    "prefixes": [
+      "includ",
+      "includi",
+      "includin"
+    ]
+  },
+  {
+    "rank": 19,
+    "target": "through",
+    "length": 7,
+    "primary_prefix": "throu",
+    "prefixes": [
+      "thro",
+      "throu",
+      "throug"
+    ]
+  },
+  {
+    "rank": 20,
+    "target": "before",
+    "length": 6,
+    "primary_prefix": "befo",
+    "prefixes": [
+      "bef",
+      "befo",
+      "befor"
+    ]
+  },
+  {
+    "rank": 21,
+    "target": "called",
+    "length": 6,
+    "primary_prefix": "call",
+    "prefixes": [
+      "cal",
+      "call",
+      "calle"
+    ]
+  },
+  {
+    "rank": 22,
+    "target": "could",
+    "length": 5,
+    "primary_prefix": "cou",
+    "prefixes": [
+      "cou",
+      "coul"
+    ]
+  },
+  {
+    "rank": 23,
+    "target": "people",
+    "length": 6,
+    "primary_prefix": "peop",
+    "prefixes": [
+      "peo",
+      "peop",
+      "peopl"
+    ]
+  },
+  {
+    "rank": 24,
+    "target": "second",
+    "length": 6,
+    "primary_prefix": "seco",
+    "prefixes": [
+      "sec",
+      "seco",
+      "secon"
+    ]
+  },
+  {
+    "rank": 25,
+    "target": "until",
+    "length": 5,
+    "primary_prefix": "unt",
+    "prefixes": [
+      "unt",
+      "unti"
+    ]
+  },
+  {
+    "rank": 26,
+    "target": "while",
+    "length": 5,
+    "primary_prefix": "whi",
+    "prefixes": [
+      "whi",
+      "whil"
+    ]
+  },
+  {
+    "rank": 27,
+    "target": "against",
+    "length": 7,
+    "primary_prefix": "again",
+    "prefixes": [
+      "agai",
+      "again",
+      "agains"
+    ]
+  },
+  {
+    "rank": 28,
+    "target": "number",
+    "length": 6,
+    "primary_prefix": "numb",
+    "prefixes": [
+      "num",
+      "numb",
+      "numbe"
+    ]
+  },
+  {
+    "rank": 29,
+    "target": "population",
+    "length": 10,
+    "primary_prefix": "populati",
+    "prefixes": [
+      "populat",
+      "populati",
+      "populatio"
+    ]
+  },
+  {
+    "rank": 30,
+    "target": "season",
+    "length": 6,
+    "primary_prefix": "seas",
+    "prefixes": [
+      "sea",
+      "seas",
+      "seaso"
+    ]
+  },
+  {
+    "rank": 31,
+    "target": "several",
+    "length": 7,
+    "primary_prefix": "sever",
+    "prefixes": [
+      "seve",
+      "sever",
+      "severa"
+    ]
+  },
+  {
+    "rank": 32,
+    "target": "these",
+    "length": 5,
+    "primary_prefix": "the",
+    "prefixes": [
+      "the",
+      "thes"
+    ]
+  },
+  {
+    "rank": 33,
+    "target": "early",
+    "length": 5,
+    "primary_prefix": "ear",
+    "prefixes": [
+      "ear",
+      "earl"
+    ]
+  },
+  {
+    "rank": 34,
+    "target": "family",
+    "length": 6,
+    "primary_prefix": "fami",
+    "prefixes": [
+      "fam",
+      "fami",
+      "famil"
+    ]
+  },
+  {
+    "rank": 35,
+    "target": "series",
+    "length": 6,
+    "primary_prefix": "seri",
+    "prefixes": [
+      "ser",
+      "seri",
+      "serie"
+    ]
+  },
+  {
+    "rank": 36,
+    "target": "album",
+    "length": 5,
+    "primary_prefix": "alb",
+    "prefixes": [
+      "alb",
+      "albu"
+    ]
+  },
+  {
+    "rank": 37,
+    "target": "based",
+    "length": 5,
+    "primary_prefix": "bas",
+    "prefixes": [
+      "bas",
+      "base"
+    ]
+  },
+  {
+    "rank": 38,
+    "target": "released",
+    "length": 8,
+    "primary_prefix": "releas",
+    "prefixes": [
+      "relea",
+      "releas",
+      "release"
+    ]
+  },
+  {
+    "rank": 39,
+    "target": "since",
+    "length": 5,
+    "primary_prefix": "sin",
+    "prefixes": [
+      "sin",
+      "sinc"
+    ]
+  },
+  {
+    "rank": 40,
+    "target": "state",
+    "length": 5,
+    "primary_prefix": "sta",
+    "prefixes": [
+      "sta",
+      "stat"
+    ]
+  },
+  {
+    "rank": 41,
+    "target": "began",
+    "length": 5,
+    "primary_prefix": "beg",
+    "prefixes": [
+      "beg",
+      "bega"
+    ]
+  },
+  {
+    "rank": 42,
+    "target": "century",
+    "length": 7,
+    "primary_prefix": "centu",
+    "prefixes": [
+      "cent",
+      "centu",
+      "centur"
+    ]
+  },
+  {
+    "rank": 43,
+    "target": "following",
+    "length": 9,
+    "primary_prefix": "followi",
+    "prefixes": [
+      "follow",
+      "followi",
+      "followin"
+    ]
+  },
+  {
+    "rank": 44,
+    "target": "found",
+    "length": 5,
+    "primary_prefix": "fou",
+    "prefixes": [
+      "fou",
+      "foun"
+    ]
+  },
+  {
+    "rank": 45,
+    "target": "located",
+    "length": 7,
+    "primary_prefix": "locat",
+    "prefixes": [
+      "loca",
+      "locat",
+      "locate"
+    ]
+  },
+  {
+    "rank": 46,
+    "target": "around",
+    "length": 6,
+    "primary_prefix": "arou",
+    "prefixes": [
+      "aro",
+      "arou",
+      "aroun"
+    ]
+  },
+  {
+    "rank": 47,
+    "target": "because",
+    "length": 7,
+    "primary_prefix": "becau",
+    "prefixes": [
+      "beca",
+      "becau",
+      "becaus"
+    ]
+  },
+  {
+    "rank": 48,
+    "target": "government",
+    "length": 10,
+    "primary_prefix": "governme",
+    "prefixes": [
+      "governm",
+      "governme",
+      "governmen"
+    ]
+  },
+  {
+    "rank": 49,
+    "target": "group",
+    "length": 5,
+    "primary_prefix": "gro",
+    "prefixes": [
+      "gro",
+      "grou"
+    ]
+  },
+  {
+    "rank": 50,
+    "target": "large",
+    "length": 5,
+    "primary_prefix": "lar",
+    "prefixes": [
+      "lar",
+      "larg"
+    ]
+  },
+  {
+    "rank": 51,
+    "target": "music",
+    "length": 5,
+    "primary_prefix": "mus",
+    "prefixes": [
+      "mus",
+      "musi"
+    ]
+  },
+  {
+    "rank": 52,
+    "target": "named",
+    "length": 5,
+    "primary_prefix": "nam",
+    "prefixes": [
+      "nam",
+      "name"
+    ]
+  },
+  {
+    "rank": 53,
+    "target": "often",
+    "length": 5,
+    "primary_prefix": "oft",
+    "prefixes": [
+      "oft",
+      "ofte"
+    ]
+  },
+  {
+    "rank": 54,
+    "target": "system",
+    "length": 6,
+    "primary_prefix": "syst",
+    "prefixes": [
+      "sys",
+      "syst",
+      "syste"
+    ]
+  },
+  {
+    "rank": 55,
+    "target": "three",
+    "length": 5,
+    "primary_prefix": "thr",
+    "prefixes": [
+      "thr",
+      "thre"
+    ]
+  },
+  {
+    "rank": 56,
+    "target": "place",
+    "length": 5,
+    "primary_prefix": "pla",
+    "prefixes": [
+      "pla",
+      "plac"
+    ]
+  },
+  {
+    "rank": 57,
+    "target": "along",
+    "length": 5,
+    "primary_prefix": "alo",
+    "prefixes": [
+      "alo",
+      "alon"
+    ]
+  },
+  {
+    "rank": 58,
+    "target": "built",
+    "length": 5,
+    "primary_prefix": "bui",
+    "prefixes": [
+      "bui",
+      "buil"
+    ]
+  },
+  {
+    "rank": 59,
+    "target": "career",
+    "length": 6,
+    "primary_prefix": "care",
+    "prefixes": [
+      "car",
+      "care",
+      "caree"
+    ]
+  },
+  {
+    "rank": 60,
+    "target": "former",
+    "length": 6,
+    "primary_prefix": "form",
+    "prefixes": [
+      "for",
+      "form",
+      "forme"
+    ]
+  },
+  {
+    "rank": 61,
+    "target": "include",
+    "length": 7,
+    "primary_prefix": "inclu",
+    "prefixes": [
+      "incl",
+      "inclu",
+      "includ"
+    ]
+  },
+  {
+    "rank": 62,
+    "target": "local",
+    "length": 5,
+    "primary_prefix": "loc",
+    "prefixes": [
+      "loc",
+      "loca"
+    ]
+  },
+  {
+    "rank": 63,
+    "target": "small",
+    "length": 5,
+    "primary_prefix": "sma",
+    "prefixes": [
+      "sma",
+      "smal"
+    ]
+  },
+  {
+    "rank": 64,
+    "target": "still",
+    "length": 5,
+    "primary_prefix": "sti",
+    "prefixes": [
+      "sti",
+      "stil"
+    ]
+  },
+  {
+    "rank": 65,
+    "target": "those",
+    "length": 5,
+    "primary_prefix": "tho",
+    "prefixes": [
+      "tho",
+      "thos"
+    ]
+  },
+  {
+    "rank": 66,
+    "target": "major",
+    "length": 5,
+    "primary_prefix": "maj",
+    "prefixes": [
+      "maj",
+      "majo"
+    ]
+  },
+  {
+    "rank": 67,
+    "target": "member",
+    "length": 6,
+    "primary_prefix": "memb",
+    "prefixes": [
+      "mem",
+      "memb",
+      "membe"
+    ]
+  },
+  {
+    "rank": 68,
+    "target": "members",
+    "length": 7,
+    "primary_prefix": "membe",
+    "prefixes": [
+      "memb",
+      "membe",
+      "member"
+    ]
+  },
+  {
+    "rank": 69,
+    "target": "public",
+    "length": 6,
+    "primary_prefix": "publ",
+    "prefixes": [
+      "pub",
+      "publ",
+      "publi"
+    ]
+  },
+  {
+    "rank": 70,
+    "target": "single",
+    "length": 6,
+    "primary_prefix": "sing",
+    "prefixes": [
+      "sin",
+      "sing",
+      "singl"
+    ]
+  },
+  {
+    "rank": 71,
+    "target": "station",
+    "length": 7,
+    "primary_prefix": "stati",
+    "prefixes": [
+      "stat",
+      "stati",
+      "statio"
+    ]
+  },
+  {
+    "rank": 72,
+    "target": "within",
+    "length": 6,
+    "primary_prefix": "with",
+    "prefixes": [
+      "wit",
+      "with",
+      "withi"
+    ]
+  },
+  {
+    "rank": 73,
+    "target": "another",
+    "length": 7,
+    "primary_prefix": "anoth",
+    "prefixes": [
+      "anot",
+      "anoth",
+      "anothe"
+    ]
+  },
+  {
+    "rank": 74,
+    "target": "company",
+    "length": 7,
+    "primary_prefix": "compa",
+    "prefixes": [
+      "comp",
+      "compa",
+      "compan"
+    ]
+  },
+  {
+    "rank": 75,
+    "target": "death",
+    "length": 5,
+    "primary_prefix": "dea",
+    "prefixes": [
+      "dea",
+      "deat"
+    ]
+  },
+  {
+    "rank": 76,
+    "target": "different",
+    "length": 9,
+    "primary_prefix": "differe",
+    "prefixes": [
+      "differ",
+      "differe",
+      "differen"
+    ]
+  },
+  {
+    "rank": 77,
+    "target": "however",
+    "length": 7,
+    "primary_prefix": "howev",
+    "prefixes": [
+      "howe",
+      "howev",
+      "howeve"
+    ]
+  },
+  {
+    "rank": 78,
+    "target": "original",
+    "length": 8,
+    "primary_prefix": "origin",
+    "prefixes": [
+      "origi",
+      "origin",
+      "origina"
+    ]
+  },
+  {
+    "rank": 79,
+    "target": "published",
+    "length": 9,
+    "primary_prefix": "publish",
+    "prefixes": [
+      "publis",
+      "publish",
+      "publishe"
+    ]
+  },
+  {
+    "rank": 80,
+    "target": "received",
+    "length": 8,
+    "primary_prefix": "receiv",
+    "prefixes": [
+      "recei",
+      "receiv",
+      "receive"
+    ]
+  },
+  {
+    "rank": 81,
+    "target": "served",
+    "length": 6,
+    "primary_prefix": "serv",
+    "prefixes": [
+      "ser",
+      "serv",
+      "serve"
+    ]
+  },
+  {
+    "rank": 82,
+    "target": "again",
+    "length": 5,
+    "primary_prefix": "aga",
+    "prefixes": [
+      "aga",
+      "agai"
+    ]
+  },
+  {
+    "rank": 83,
+    "target": "become",
+    "length": 6,
+    "primary_prefix": "beco",
+    "prefixes": [
+      "bec",
+      "beco",
+      "becom"
+    ]
+  },
+  {
+    "rank": 84,
+    "target": "history",
+    "length": 7,
+    "primary_prefix": "histo",
+    "prefixes": [
+      "hist",
+      "histo",
+      "histor"
+    ]
+  },
+  {
+    "rank": 85,
+    "target": "included",
+    "length": 8,
+    "primary_prefix": "includ",
+    "prefixes": [
+      "inclu",
+      "includ",
+      "include"
+    ]
+  },
+  {
+    "rank": 86,
+    "target": "order",
+    "length": 5,
+    "primary_prefix": "ord",
+    "prefixes": [
+      "ord",
+      "orde"
+    ]
+  },
+  {
+    "rank": 87,
+    "target": "power",
+    "length": 5,
+    "primary_prefix": "pow",
+    "prefixes": [
+      "pow",
+      "powe"
+    ]
+  },
+  {
+    "rank": 88,
+    "target": "service",
+    "length": 7,
+    "primary_prefix": "servi",
+    "prefixes": [
+      "serv",
+      "servi",
+      "servic"
+    ]
+  },
+  {
+    "rank": 89,
+    "target": "students",
+    "length": 8,
+    "primary_prefix": "studen",
+    "prefixes": [
+      "stude",
+      "studen",
+      "student"
+    ]
+  },
+  {
+    "rank": 90,
+    "target": "third",
+    "length": 5,
+    "primary_prefix": "thi",
+    "prefixes": [
+      "thi",
+      "thir"
+    ]
+  },
+  {
+    "rank": 91,
+    "target": "water",
+    "length": 5,
+    "primary_prefix": "wat",
+    "prefixes": [
+      "wat",
+      "wate"
+    ]
+  },
+  {
+    "rank": 92,
+    "target": "children",
+    "length": 8,
+    "primary_prefix": "childr",
+    "prefixes": [
+      "child",
+      "childr",
+      "childre"
+    ]
+  },
+  {
+    "rank": 93,
+    "target": "among",
+    "length": 5,
+    "primary_prefix": "amo",
+    "prefixes": [
+      "amo",
+      "amon"
+    ]
+  },
+  {
+    "rank": 94,
+    "target": "average",
+    "length": 7,
+    "primary_prefix": "avera",
+    "prefixes": [
+      "aver",
+      "avera",
+      "averag"
+    ]
+  },
+  {
+    "rank": 95,
+    "target": "building",
+    "length": 8,
+    "primary_prefix": "buildi",
+    "prefixes": [
+      "build",
+      "buildi",
+      "buildin"
+    ]
+  },
+  {
+    "rank": 96,
+    "target": "every",
+    "length": 5,
+    "primary_prefix": "eve",
+    "prefixes": [
+      "eve",
+      "ever"
+    ]
+  },
+  {
+    "rank": 97,
+    "target": "final",
+    "length": 5,
+    "primary_prefix": "fin",
+    "prefixes": [
+      "fin",
+      "fina"
+    ]
+  },
+  {
+    "rank": 98,
+    "target": "given",
+    "length": 5,
+    "primary_prefix": "giv",
+    "prefixes": [
+      "giv",
+      "give"
+    ]
+  },
+  {
+    "rank": 99,
+    "target": "moved",
+    "length": 5,
+    "primary_prefix": "mov",
+    "prefixes": [
+      "mov",
+      "move"
+    ]
+  },
+  {
+    "rank": 100,
+    "target": "example",
+    "length": 7,
+    "primary_prefix": "examp",
+    "prefixes": [
+      "exam",
+      "examp",
+      "exampl"
+    ]
+  }
+]

@@ -277,6 +277,7 @@ public:
         std::lock_guard<std::mutex> lock(mutex_);
         word_to_count_ = base_word_to_count_;
         deletes_dict_ = base_deletes_dict_;
+        prefix_dict_ = base_prefix_dict_;
         user_words_ = user_words;
 
         for (const auto& uw : user_words) {
@@ -291,6 +292,19 @@ public:
             for (const auto& d : dels) {
                 deletes_dict_[d].push_back(w_lower);
             }
+
+            // Also register in prefix_dict_ at the front
+            int L = static_cast<int>(w_lower.length());
+            for (int p_len = 2; p_len <= std::min(L, 10); ++p_len) {
+                std::string p = w_lower.substr(0, p_len);
+                auto& p_list = prefix_dict_[p];
+                if (std::find(p_list.begin(), p_list.end(), w_lower) == p_list.end()) {
+                    p_list.insert(p_list.begin(), w_lower);
+                    if (p_list.size() > 14) {
+                        p_list.pop_back();
+                    }
+                }
+            }
         }
         LOGI("Synced %zu user spell words.", user_words.size());
     }
@@ -301,19 +315,31 @@ public:
 
         std::string typed_lower = word;
         std::transform(typed_lower.begin(), typed_lower.end(), typed_lower.begin(), ::tolower);
+        int m = static_cast<int>(typed_lower.length());
 
         std::unordered_set<std::string> cands;
+
+        // 1. Direct Prefix Completion candidates (e.g. examp -> example)
+        auto p_it = prefix_dict_.find(typed_lower);
+        if (p_it != prefix_dict_.end()) {
+            for (const auto& w : p_it->second) {
+                cands.insert(w);
+            }
+        }
+
+        // 2. Exact match
         if (word_to_count_.find(typed_lower) != word_to_count_.end()) {
             cands.insert(typed_lower);
         }
 
-        // Also explicitly check all user words as candidates for typo robustness
+        // 3. Explicitly check user words
         for (const auto& uw : user_words_) {
             std::string w_lower = uw.surface;
             std::transform(w_lower.begin(), w_lower.end(), w_lower.begin(), ::tolower);
             cands.insert(w_lower);
         }
 
+        // 4. SymSpell 2-deletes for typos
         auto deletes = GetDeletes(typed_lower, 2);
         for (const auto& d : deletes) {
             if (word_to_count_.find(d) != word_to_count_.end()) {
@@ -327,6 +353,21 @@ public:
             }
         }
 
+        // 5. Fuzzy prefix matches (for 1-char typo during typing long word)
+        if (m >= 4) {
+            auto deletes1 = GetDeletes(typed_lower, 1);
+            for (const auto& d : deletes1) {
+                auto fp_it = prefix_dict_.find(d);
+                if (fp_it != prefix_dict_.end()) {
+                    int taken = 0;
+                    for (const auto& w : fp_it->second) {
+                        cands.insert(w);
+                        if (++taken >= 4) break;
+                    }
+                }
+            }
+        }
+
         struct ScoredCandidate {
             std::string word;
             float score;
@@ -336,12 +377,28 @@ public:
         for (const auto& w : cands) {
             auto it = word_to_count_.find(w);
             if (it == word_to_count_.end()) continue;
-            float cost = EditAndSpatialCost(typed_lower, w);
-            float max_cost = (w.length() >= 7) ? 3.6f : 3.0f;
-            if (cost <= max_cost) {
-                float log_freq = std::log(static_cast<float>(it->second.count + 1));
-                float score = log_freq - 2.8f * cost;
+
+            int n = static_cast<int>(w.length());
+            float log_freq = std::log(static_cast<float>(it->second.count + 1));
+
+            if (w.rfind(typed_lower, 0) == 0 && n > m) {
+                // Pure prefix completion
+                float len_diff = static_cast<float>(n - m);
+                float cov_ratio = static_cast<float>(m) / n;
+                float score = log_freq - 0.45f * len_diff + 2.0f * cov_ratio;
                 scored.push_back({it->second.surface, score});
+            } else if (w == typed_lower) {
+                // Exact word match
+                float score = log_freq + 1.0f;
+                scored.push_back({it->second.surface, score});
+            } else {
+                // Spatial edit distance for typos
+                float cost = EditAndSpatialCost(typed_lower, w);
+                float max_cost = (n >= 7) ? 3.6f : 3.0f;
+                if (cost <= max_cost) {
+                    float score = log_freq - 2.8f * cost;
+                    scored.push_back({it->second.surface, score});
+                }
             }
         }
 
@@ -477,6 +534,7 @@ private:
 
         word_to_count_.clear();
         deletes_dict_.clear();
+        prefix_dict_.clear();
 
         std::string line;
         int rank = 0;
@@ -497,12 +555,24 @@ private:
                 for (const auto& d : dels) {
                     deletes_dict_[d].push_back(w_lower);
                 }
+
+                // Register in prefix_dict_ (length 2 to min(L, 10))
+                int L = static_cast<int>(w_lower.length());
+                for (int p_len = 2; p_len <= std::min(L, 10); ++p_len) {
+                    std::string p = w_lower.substr(0, p_len);
+                    auto& p_list = prefix_dict_[p];
+                    if (p_list.size() < 12) {
+                        p_list.push_back(w_lower);
+                    }
+                }
             }
             rank++;
         }
         base_word_to_count_ = word_to_count_;
         base_deletes_dict_ = deletes_dict_;
-        LOGI("Loaded %zu words and %zu delete index entries.", word_to_count_.size(), deletes_dict_.size());
+        base_prefix_dict_ = prefix_dict_;
+        LOGI("Loaded %zu words, %zu delete index entries, %zu prefix entries.",
+             word_to_count_.size(), deletes_dict_.size(), prefix_dict_.size());
     }
 
     std::vector<std::string> GetDeletes(const std::string& word, int max_edit_distance) {
@@ -564,6 +634,8 @@ private:
     std::unordered_map<std::string, WordInfo> base_word_to_count_;
     std::unordered_map<std::string, std::vector<std::string>> deletes_dict_;
     std::unordered_map<std::string, std::vector<std::string>> base_deletes_dict_;
+    std::unordered_map<std::string, std::vector<std::string>> prefix_dict_;
+    std::unordered_map<std::string, std::vector<std::string>> base_prefix_dict_;
     std::vector<UserSpellWord> user_words_;
     std::mutex mutex_;
 };

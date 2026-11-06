@@ -139,7 +139,7 @@ for DEV in $DEVICES; do
         if [ "$DEV_SPELL_ENC" != "exists" ]; then
             echo "  -> Provisioning English Spelling Correction models to storage..."
             adb -s "$DEV" shell "mkdir -p /sdcard/Android/data/com.example.myasr/files/english_spelling" || true
-            for SPFILE in gec-encoder-int8.onnx gec-decoder-int8.onnx spm_unigram.bin; do
+            for SPFILE in gec-encoder-int8.onnx gec-decoder-int8.onnx spm_unigram.bin vocab.txt; do
                 if [ -f "$REPO_DIR/tools/models/english_spelling/$SPFILE" ]; then
                     adb -s "$DEV" push "$REPO_DIR/tools/models/english_spelling/$SPFILE" "/sdcard/Android/data/com.example.myasr/files/english_spelling/$SPFILE"
                 fi
