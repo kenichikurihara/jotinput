@@ -16,12 +16,13 @@ Whenever any code, resource, or configuration change is made to the Android app:
 - Never erase or overwrite `context.filesDir/custom_dictionary.json` across app updates or schema changes.
 
 ## 📦 Model & Lexicon Decoupling Contract (Mandatory Download-Only Architecture)
-- **Strict Prohibition on Bundling Models or Dictionaries in APK**:
-  - Never place model files (ONNX, GGUF, TFLite, etc.) or large dictionary files (`.tsv`, `.bin`, `.txt`, etc.) inside `app/src/main/assets/` or APK resources.
-  - The APK must remain lightweight (containing only compiled bytecode, layout/drawables, and native `.so` libraries; target size $\le 90\text{ MB}$).
-- **Storage-First & On-Demand Download Pattern**:
-  - Any future models (ASR, SLM, VAD, etc.) and dictionaries must be loaded from device storage (`context.getExternalFilesDir(null)` or `context.filesDir`).
-  - Implement on-demand network downloaders over HTTPS with progress reporting and UI controls in `MainActivity` for any new model or lexicon asset.
+- **Strict Prohibition on Bundling Heavy Models or Large Word Dictionaries in APK**:
+  - Never place neural model files (ONNX, GGUF, TFLite, etc.) or multi-million-word dictionary files (SudachiDict, Wikipedia, etc.) inside `app/src/main/assets/` or APK resources.
+  - **Connection Matrix Bundling Permitted**: The Mozc 2D bigram grammatical connection cost matrix (`connection_data.bin`, ~14.28 MB) is permitted and required to be bundled in `app/src/main/assets/mozc/connection_data.bin` to guarantee 100% stable morphological transition scores out-of-the-box.
+  - The APK must remain compact (containing compiled bytecode, layout/drawables, native `.so` libraries, and the ~14.28 MB connection matrix; target size $\le 110\text{ MB}$).
+- **Storage-First & On-Demand Download Pattern for Models and Multi-Dictionaries**:
+  - Neural models (ASR, SLM, VAD, etc.) and large lexical dictionaries (SudachiDict, Wikipedia, Place/Personal names) must be loaded from device storage (`context.getExternalFilesDir(null)` or `context.filesDir`).
+  - Implement on-demand network downloaders over HTTPS with progress reporting and UI controls in `MainActivity` for large external lexicon assets.
 - **Local Testing & Deployment Contract**:
   - Developer/test asset copies must reside under `tools/models/`, `tools/mozc_dict/`, or `app/src/test/resources/` (and large binaries must be excluded in `.gitignore`).
   - [`./deploy.sh`](deploy.sh) must automatically check target device storage and provision absent model/lexicon files to app external storage so dual-target deployment and verification succeed seamlessly without bloating the APK.
@@ -45,3 +46,8 @@ Whenever any code, resource, or configuration change is made to the Android app:
   4. **Card 4 (Collapsible Advanced & Developer Tools)**: Place all hyperparameter tuning knobs ($\alpha$ slider, Context-Free toggle, Mandatory toggle, Debug badges) inside `layoutAdvancedContent` (collapsed by default).
 - **Optimal Defaults Over UI Knobs**: When a parameter is proven optimal via cross-validation or corpus evaluation, apply it as the default constant in code rather than adding new visible controls to the primary UI.
 - **Zero Dead UI Resources**: Immediately delete obsolete layouts or classes when refactoring UI flows. Refer to [`docs/ui_design_and_simplicity_guidelines.md`](docs/ui_design_and_simplicity_guidelines.md) before adding any UI element.
+
+## 🚀 Remote Repository Synchronization Policy (Mandatory)
+- **Continuous Remote Git Push**:
+  - Whenever any new feature, bug fix, asset addition, or documentation change is completed and verified, **always commit and push changes to the remote GitHub repository (`origin/main`)**.
+  - Never leave completed feature increments or tested fixes unpushed on the local branch.

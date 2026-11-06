@@ -108,17 +108,47 @@ class ConnectionDataManager(private val context: Context) {
     private var cachedMatrix: ConnectionMatrix? = null
 
     fun isInstalled(): Boolean {
-        return binaryFile.exists() && binaryFile.length() >= 14_000_000L
+        if (binaryFile.exists() && binaryFile.length() >= 14_000_000L) {
+            return true
+        }
+        return try {
+            context.assets.list("mozc")?.contains(BINARY_FILENAME) == true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun getInstalledSizeBytes(): Long {
-        return if (binaryFile.exists()) binaryFile.length() else 0L
+        if (binaryFile.exists()) return binaryFile.length()
+        return try {
+            context.assets.openFd("mozc/$BINARY_FILENAME").length
+        } catch (e: Exception) {
+            if (isInstalled()) 14_279_174L else 0L
+        }
     }
 
     @Synchronized
     fun getConnectionMatrix(): ConnectionMatrix? {
         if (cachedMatrix != null) return cachedMatrix
-        if (isInstalled()) {
+        if (!binaryFile.exists() || binaryFile.length() < 14_000_000L) {
+            // Provision bundled ConnectionMatrix from APK assets on first launch
+            try {
+                context.assets.open("mozc/$BINARY_FILENAME").use { input ->
+                    val tempFile = File(mozcDir, "$BINARY_FILENAME.tmp")
+                    tempFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                    if (!tempFile.renameTo(binaryFile)) {
+                        tempFile.copyTo(binaryFile, overwrite = true)
+                        tempFile.delete()
+                    }
+                    Log.i(TAG, "Bundled ConnectionMatrix provisioned from assets to ${binaryFile.absolutePath} (${binaryFile.length()} bytes)")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Bundled ConnectionMatrix asset provision skipped or unavailable: ${e.message}")
+            }
+        }
+        if (binaryFile.exists() && binaryFile.length() >= 14_000_000L) {
             cachedMatrix = ConnectionMatrix.loadFromBinaryFile(binaryFile)
         }
         return cachedMatrix
