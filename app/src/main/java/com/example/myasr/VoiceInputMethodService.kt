@@ -994,6 +994,7 @@ class VoiceInputMethodService : InputMethodService() {
         val rawWord = lastWordMatch?.value ?: ""
 
         if (rawWord.isEmpty()) {
+            updateDebugSlmBadge(null)
             candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
             return
         }
@@ -1009,6 +1010,7 @@ class VoiceInputMethodService : InputMethodService() {
 
         // For very short words (length < 2), only show candidates if capitalization or acronym applies (e.g. "i" -> "I")
         if (rawWord.length < 2 && capResult.primaryCandidate == null) {
+            updateDebugSlmBadge(null)
             candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
             return
         }
@@ -1094,11 +1096,13 @@ class VoiceInputMethodService : InputMethodService() {
                 }
                 withContext(Dispatchers.Main) {
                     if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
-                        candidateStripView?.setCandidates(candidates, debugBadge = badge)
+                        updateDebugSlmBadge(badge)
+                        candidateStripView?.setCandidates(candidates)
                     }
                 }
             } else {
                 withContext(Dispatchers.Main) {
+                    updateDebugSlmBadge(null)
                     candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                 }
             }
