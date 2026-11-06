@@ -16,6 +16,8 @@ class MmapDictionaryTest {
         val binFile = listOf(
             File("tools/mozc_dict/system_dictionary.bin"),
             File("app/src/test/resources/mozc/system_dictionary.bin"),
+            File("src/test/resources/mozc/system_dictionary.bin"),
+            File("../app/src/test/resources/mozc/system_dictionary.bin"),
             File("../tools/mozc_dict/system_dictionary.bin")
         ).firstOrNull { it.exists() && it.length() > 64 }
 

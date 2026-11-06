@@ -1,0 +1,15 @@
+#!/bin/bash
+# Pre-push hook to guarantee CI passes before pushing to remote
+set -e
+
+echo "🚀 [Pre-push Hook] Verifying unit tests before pushing to remote..."
+
+if ! ./gradlew testDebugUnitTest --quiet; then
+  echo ""
+  echo "❌ [Pre-push Hook Failed] Unit tests failed! Push is blocked to prevent remote CI failures."
+  echo "👉 Run './gradlew testDebugUnitTest' to inspect failure details."
+  exit 1
+fi
+
+echo "✅ [Pre-push Hook] All unit tests passed! Proceeding with git push."
+exit 0

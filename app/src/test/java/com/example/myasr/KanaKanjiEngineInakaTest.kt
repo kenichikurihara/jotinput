@@ -25,6 +25,9 @@ class KanaKanjiEngineInakaTest {
 
         val binFile = listOf(
             File("/tmp/connection_data.bin"),
+            File("app/src/main/assets/mozc/connection_data.bin"),
+            File("src/main/assets/mozc/connection_data.bin"),
+            File("../app/src/main/assets/mozc/connection_data.bin"),
             File("tools/mozc_dict/connection_data.bin"),
             File("../tools/mozc_dict/connection_data.bin")
         ).firstOrNull { it.exists() && it.length() > 1000 }
