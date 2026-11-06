@@ -72,7 +72,7 @@ flowchart TD
     end
     
     F & G & H & I --> J["Candidate Merger & Deduplicator"]
-    J --> K["CandidateStripView\n(setCandidates with debugBadge='CAPS' or 'SPELL')"]
+    J --> K["CandidateStripView\n(setCandidates & debug bar badge='CAPS' or 'SPELL')"]
     K --> L["User Taps Candidate -> EditorBridge.deleteSurroundingText & commitText"]
 ```
 

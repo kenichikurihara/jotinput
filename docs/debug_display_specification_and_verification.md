@@ -4,7 +4,7 @@
 
 本機能は、JotInput の IME（音声およびフリック入力）において、リアルタイムの推論状態や内部処理状況を視覚的に確認するための汎用的な「デバッグ表示」オプションです。
 
-最新仕様では、**本オプションが ON の際に、オンデバイス SLM（Qwen2.5-0.5B / AiCore 等）による候補再ランキング（SLMリランク）が実際に適用された場合、候補バーではなくデバッグバー（コンテクストバー）内のバッジ `tvDebugSlmBadge`（`[SLM]`, `[1.5B]`, `[n1]`, `[n2]` 等）に表示**されます。
+最新仕様では、**本オプションが ON の際に、オンデバイス SLM（Qwen2.5-0.5B / AiCore 等）による候補再ランキング（SLMリランク）や QWERTY 英字入力時のスペル訂正・大文字化（SPELL / CAPS / USER）が適用された場合、候補バーではなくデバッグバー（コンテクストバー）内のバッジ `tvDebugSlmBadge`（`[SLM]`, `[1.5B]`, `[n1]`, `[n2]`, `[SPELL]`, `[CAPS]`, `[USER]` 等）に表示**されます。
 従来の候補バー先頭へのダミーチップ挿入方式から、候補領域の幅を圧迫せず、入力・変換候補の視認性と操作性を妨げないデバッグバー統合型へと改善されました。
 
 今後、他のデバッグ情報（Viterbi ビーム探索状態、ASR ストリーミング状態、音響モデル信頼度スコア等）を本オプションに集約・拡張できる汎用的な設計となっています。
@@ -24,12 +24,14 @@
 ### 2.2 表示仕様
 1. **トリガー条件**:
    - `debug_display` が ON
-   - かつ、文字入力時の変換候補生成時（または確定後の次句予測時）に、オンデバイス SLM（`LlmReranker` / `AiCoreReranker`）によるスコアリング・並び替えが**実際に実行・適用**された場合。
-   - ※SLMモデル未ロード時、エラー時、単一候補時など SLM スコアリングがスキップされた場合は非表示（`View.GONE`）。
+   - かつ、以下のいずれかのエンジン処理が適用された場合:
+     1. **かな・漢字変換時**: オンデバイス SLM（`LlmReranker` / `AiCoreReranker`）によるスコアリング・並び替えが実行・適用された場合（バッジ: `SLM`, `1.5B`, `n1`, `n2`）。
+     2. **QWERTY 英語入力時**: `updateEnglishTypoAndSpellingCandidates()` によりスペル訂正や大文字化が適用された場合（バッジ: `SPELL`, `CAPS`, `USER`）。
+   - ※SLMモデル未ロード時、エラー時、単一候補時など SLM スコアリングがスキップされた場合や候補なし時は非表示（`View.GONE`）。
    - 新規文字入力開始、候補クリア、確定（コミット）、または選択移動時は即座に非表示（`View.GONE`）。
 2. **バッジの外観と配置**:
    - 配置: デバッグコンテクストバー（`contextBarContainer`）内、`tvContextBadge`（例: `CTX: 12字`）の直後、`tvContextContent`（文脈テキスト）の直前。
-   - テキスト: 稼働中エンジンの識別バッジ（例: `SLM`, `1.5B`, `n1`, `n2`）
+   - テキスト: 稼働中エンジンの識別バッジ（例: `SLM`, `1.5B`, `n1`, `n2`, `SPELL`, `CAPS`, `USER`）
    - スタイル: 角丸 4dp ピル形状背景（`@drawable/badge_background`）
    - 文字色: アクセントカラー（`@color/primary`、視認性の高いブルー）
 3. **候補バーへの完全非干渉 (Zero Candidate Strip Interference)**:
@@ -56,13 +58,14 @@
 
 ### 3.4 `CandidateStripView.kt`
 - `setCandidates(candidates: List<ConversionCandidate>, debugBadge: String? = null)`
-  - `debugBadge` が指定された場合、候補列の先頭に非クリッカブルな `TextView`（`isClickable = false`）を挿入。
+  - `debugBadge` が指定された場合、後方互換性のため候補列先頭に非クリッカブルな `TextView`（`isClickable = false`）を挿入可能。
   - `currentCandidates` には純粋な `candidates` のみを保持。
 
 ### 3.5 `VoiceInputMethodService.kt`
 - デバッグバー（`contextBarContainer`）内に `tvDebugSlmBadge` をバインド。
-- `updateDebugSlmBadge(badge: String?)` ヘルパーにより、`isDebugDisplayEnabled` かつ SLM リランク適用時（`slmUsed == true`）に該当エンジンのバッジ名を表示。
-- フリック入力の候補リランク非同期処理（`updateCandidates`）および確定後の次句予測処理（`showNextPhrasePredictions`）において、SLM リランク完了時に `updateDebugSlmBadge(engineType.badgeLabel)` を実行し、候補バー（`candidateStripView`）には純粋な候補リストのみを描画。
+- `updateDebugSlmBadge(badge: String?)` ヘルパーにより、`isDebugDisplayEnabled` かつバッジが指定されている場合にデバッグバーの該当バッジ名を表示。
+- フリック入力の候補リランク非同期処理（`updateCandidates`）および確定後の次句予測処理（`showNextPhrasePredictions`）において、SLM リランク完了時に `updateDebugSlmBadge(engineType.badgeLabel)` を実行。
+- QWERTY 英語入力時のスペル訂正・大文字化候補提示（`updateEnglishTypoAndSpellingCandidates`）において、デバッグバーに `updateDebugSlmBadge(badge)`（`SPELL` / `CAPS` / `USER`）を表示し、候補バー（`candidateStripView`）には純粋な候補リストのみを描画。
 - 候補リセット時や空ステータス描画時（`showEmptyStatus`）には自動で `tvDebugSlmBadge` が非表示（`View.GONE`）に同期。
 
 ### 3.6 `MainActivity.kt` & `activity_main.xml`

@@ -69,7 +69,20 @@ class DebugDisplayTest {
         assertTrue(vis2)
         assertEquals("n2", text2)
 
-        // When debug display is enabled but SLM is not used (or reset)
+        // When debug display is enabled and English QWERTY spell/caps/user badge is present
+        val (visSpell, textSpell) = resolveDebugBadgeVisibility(isDebug = true, badge = "SPELL")
+        assertTrue(visSpell)
+        assertEquals("SPELL", textSpell)
+
+        val (visCaps, textCaps) = resolveDebugBadgeVisibility(isDebug = true, badge = "CAPS")
+        assertTrue(visCaps)
+        assertEquals("CAPS", textCaps)
+
+        val (visUser, textUser) = resolveDebugBadgeVisibility(isDebug = true, badge = "USER")
+        assertTrue(visUser)
+        assertEquals("USER", textUser)
+
+        // When debug display is enabled but SLM/Spell is not used (or reset)
         val (vis3, _) = resolveDebugBadgeVisibility(isDebug = true, badge = null)
         assertFalse(vis3)
 
