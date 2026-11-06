@@ -502,3 +502,184 @@ struct SpanProposal {
 | **Stage 1（即時実現可能）**<br>**Frozen 汎用多言語 SLM**<br>(`Qwen2.5-0.5B-Instruct` 既存モデル) | モデル重みは一切変更せず、オフライン構築した `unified_token_fst.bin`（約 6〜10 MB）と `UnifiedConstrainedBeamDecoder` を組み合わせる。 | **再学習コスト 0**。現在端末に入っている `qwen2.5-0.5b-instruct-q4_k_m.gguf` をそのまま使い、日本語フリックと英語 QWERTY の両方を LM-First 化できる。 |
 | **Stage 2（さらなる高精度・高速化）**<br>**Bilingual IME-Distilled SLM**<br>(150M〜350M 蒸留モデル または Qwen2.5 への LoRA Merge) | 日英のチャット・SNS・ビジネス短文・口語表現コーパス上でモデル自体の次トークン分布をキャリブレーション（Continual Pre-training / LoRA Merge）する。 | 汎用 LLM が持つ「長文・論文調バイアス」や「プロンプト記号への確率漏洩」を除去し、**モバイル日常入力（口語日本語＋カジュアル/ビジネス英語）での Top-1 予測精度を最大化**しつつ、モデルサイズを半分以下（推論速度 2 倍）に圧縮できる。 |
 
+---
+
+## 9. ユーザー辞書（Custom Dictionary）完全リスペクト詳細設計：LM-First 下での絶対優先・長文埋め込み・日英横断統合
+
+JotInput の最重要契約の一つである **Custom Dictionary Contract（ADR-004 / ADR-005 / ADR-011 / ADR-016）** を、LM-First アーキテクチャにおいてこれまで以上に強力かつ自然に満たすための詳細設計を定義します。
+
+---
+
+### 9.1 なぜ LM-First では従来の「リスト先頭への単純プリペンド」だけでは不十分なのか？
+
+従来の `LlmReranker.kt`（ADR-011）では、`candidates.filter { it.source == "user" }` をリランク対象から外して先頭（Index 0）に固定するだけで十分でした。しかし、**LM-First（言語モデル自身がトークン列を自己回帰生成する方式）** においては、以下の **3 つの本質的課題** が発生します。
+
+1. **課題 U-1：ユーザー登録語の BPE 細分化と内部遷移サプライザル爆発（Multi-Token Surprisal Collapse）**
+   - ユーザーが登録する単語（例：`栗原`、`ReazonSpeech`、`JotInput`、`氣志團`、`kubectl`）は、その性質上、一般的なコーパスでは低頻度な固有名詞・専門用語・社内コードネーム・造語です。
+   - これらを SLM の BPE トークナイザ（`llama_tokenize`）にかけると、複数個のサブワードやバイトトークンに細分化されます：
+     - `"栗原"` $\to$ `["栗", "原"]`（2 トークン）
+     - `"ReazonSpeech"` $\to$ `["Re", "azon", "Spe", "ech"]`（4 トークン）
+     - `"JotInput"` $\to$ `["J", "ot", "Input"]`（3 トークン）
+   - もしビーム探索中にこれらのトークン列をそのまま SLM に評価させると、`"Re"` の後に `"azon"` が続く確率 $P_{\text{LM}}(\text{"azon"} \mid \text{"Re"})$ や `"栗"` の後に `"原"` が続く確率が極めて低いため、負対数尤度（NLL）が **$30 \sim 50\text{ nats}$** に達し、長文の途中でビームから即座に枝刈り（Evict）されてしまいます。
+2. **課題 U-2：長文・連続文節入力（`くりはらさんにれんらくする`）における保護喪失**
+   - ユーザーが `「くりはら」` だけで変換せず、助詞や後続文節まで続けて `「くりはらさんにれんらくする」` や `「れいぞんすぴーちをじっそうした」` と一気に入力した場合、入力全体はユーザー辞書と完全一致しません。
+   - そのため、単なる「全文一致時の Slot-0 固定」では長文中のユーザー登録語を守ることができません。
+3. **課題 U-3：同音・同プレフィックスに複数のユーザー登録語がある場合の文脈調停**
+   - たとえばユーザーが同じ読み `「きしゃ」` に対して `「貴社」`（標準）と `「記者」`（標準）の両方を登録していたり、同じプレフィックス `「reazon」` に対して `「ReazonSpeech」` と `「Reazon Holdings」` を登録している場合、**「一般語よりは両方とも絶対に上位に出しつつ、ユーザー登録語同士の間では SLM の文脈判断で最適な方を 1 位にしたい」** という要求が生じます。
+
+---
+
+### 9.2 解決アーキテクチャ：2 層オーバーレイ FST（Static Mmap FST ＋ Dynamic User Overlay FST）
+
+読み取り専用のシステム辞書 FST（`unified_token_fst.bin`）を再ビルドすることなく、[`DictionaryActivity`](file:///home/kenichikurihara/repos/myasr/app/src/main/java/com/example/myasr/DictionaryActivity.kt) での追加・編集・ON/OFF・削除を **$< 0.5\text{ms}$ で即座に LM-First デコーダへ反映する「Dynamic User Overlay FST」** を C++ ネイティブ層（`libmyasr_llm.so`）に設けます。
+
+```mermaid
+flowchart TD
+    subgraph Storage["永続化契約 (ADR-005)"]
+        JSON["context.filesDir/custom_dictionary.json\n(アプリ更新・スキーマ変更時も絶対保持)"]
+    end
+
+    subgraph Sync["AsrApp.syncAllUserDictionaries() (< 0.5ms)"]
+        Entries["有効エントリ抽出 (isEnabled == true)\n・word (表記: '栗原', 'ReazonSpeech')\n・reading (読み: 'くりはら', 'reazonspeech')\n・priority (LOW=1.5, NORMAL=3.0, HIGH=4.5)"]
+    end
+
+    subgraph NativeOverlay["Dynamic User Overlay FST (libmyasr_llm.so In-Memory)"]
+        direction LR
+        Tokenize["1. llama_tokenize(vocab, word)\n登録表記を BPE トークン列 t_1..t_M に事前変換"]
+        JaOverlay["2. JaUserOverlayTrie\n・かな読み ('くりはら', 'れいぞんすぴーち') を登録\n・英字表記を持つ場合は英字プレフィックス ('reazon') も自動登録"]
+        EnOverlay["3. EnUserOverlayTrie\n・小文字正規化キー ('reazonspeech', 'antigravity') を登録\n・SymSpell 削除近傍 & 空間ガウス許容エッジを自動生成"]
+        Tokenize --> JaOverlay & EnOverlay
+    end
+
+    subgraph Decoder["UnifiedConstrainedBeamDecoder (LM-First Engine)"]
+        Step["各デコードステップ pos において\n① Dynamic User Overlay FST (最優先)\n② Static Mmap FST (システム語彙)\nの両方から SpanProposal を収集・統合"]
+    end
+
+    JSON --> Sync --> Tokenize
+    JaOverlay & EnOverlay --> Step
+```
+
+#### 動的同期とバイリンガル自動相互展開（ADR-016 完全継承）
+ユーザーが `DictionaryActivity` で 1 件のエントリを登録すると、C++ の `SyncUserDictionary()` はそのエントリを以下のように自動展開します：
+
+| ユーザーの登録パターン | `JaUserOverlayTrie`（日本語フリック・ローマ字用）への登録 | `EnUserOverlayTrie`（英語 QWERTY タップ・スワイプ用）への登録 |
+| :--- | :--- | :--- |
+| **① 純日本語エントリ**<br>よみ: `くりはら` / 書き: `栗原` | 読み `"くりはら"` $\to$ `tokens("栗原")` | （登録なし） |
+| **② 純英語エントリ（読みのみ入力）**<br>よみ/書き: `Antigravity` | かな転写推論（任意）＋ 英字キー `"antigravity"` $\to$ `tokens("Antigravity")` | キー `"antigravity"` $\to$ `tokens("Antigravity")`（大文字表記保持） |
+| **③ 日英バイリンガルエントリ**<br>よみ: `れいぞんすぴーち` / 書き: `ReazonSpeech` | 読み `"れいぞんすぴーち"` $\to$ `tokens("ReazonSpeech")` | `hasEnglishSurface == true` により **自動登録**：<br>キー `"reazonspeech"` $\to$ `tokens("ReazonSpeech")` |
+
+---
+
+### 9.3 革新アルゴリズム：「単語内サプライザル封じ込め（Intra-Word Surprisal Clamping）」と「KV キャッシュ文脈バトンタッチ」
+
+長文の途中（例：`「くりはらさんにれんらくする」` や `「昨日れいぞんすぴーちをためした」`）にユーザー登録語が現れた際、**「① ユーザー登録語自体は SLM の低確率ペナルティで絶対に落とさず、② しかもその直後の助詞や動詞（`さんに`、`を試した`）を選ぶ際には SLM にそのユーザー語の意味・文脈を 100% 活用させる」** という両立を実現するアルゴリズムを設計します。
+
+#### メカニズム：2 フェーズ評価（Clamped Entry Evaluation + Authentic KV Context Injection）
+
+仮説枝 $b$ の現在位置 `pos` から、ユーザー辞書エントリ $e = (\text{word}, \text{reading}, \text{priority})$ のトークン列 $\mathbf{t}_e = (t_1, t_2, \dots, t_M)$ が提案されたとします。
+
+1. **Phase A：実際のトークン列 $\mathbf{t}_e$ を `llama_decode` に通して KV キャッシュを正しく進める**
+   - たとえば `entry.word = "栗原"` なら `["栗", "原"]`、`entry.word = "ReazonSpeech"` なら `["Re", "azon", "Spe", "ech"]` をそのまま `llama_batch` に投入し、その枝の KV キャッシュに **本物のトークン表現** を書き込みます。
+   - **なぜ本物のトークンを KV キャッシュに入れるのか？**
+     - `"栗原"` が KV キャッシュに入ると、SLM の Self-Attention はそれが「日本人の姓（人名）」であることを即座に認識します。その結果、続く `「さんに」「氏が」「先生に」` などの人名接尾辞・敬称の予測確率が劇的に跳ね上がります！
+     - 同様に `"ReazonSpeech"` が KV キャッシュに入ると、SLM はそれが「英語の固有名詞・ソフトウェア名」であることを認識し、続く `「を実装した」「のモデル」「で認識する」` などの技術文脈の予測精度が最大化されます。
+
+2. **Phase B：スコア加算時には、細分化トークンの生 NLL ではなく「正規化アンカー尤度＋Priority ブースト」を使用する（Intra-Word Surprisal Clamping）**
+   - `"Re"` $\to$ `"azon"` $\to$ `"Spe"` $\to$ `"ech"` の 4 トークン合計の生対数確率 $\sum_{j=1}^M \log P_{\text{LM}}(t_j \mid C, t_{<j})$（例：$-38.5$）をそのままビームスコアに加算してしまうと、1 トークンの一般語に負けてしまいます。
+   - そこで、同じ未消費スパン $[i, i + |r_e|)$ におけるシステム辞書の最良候補（Top-1 System Competitor）の言語モデル対数確率を $\mathcal{L}_{\text{sys\_best}}(C)$ としたとき、ユーザー辞書枝の実効言語モデルスコア $\mathcal{L}_{\text{user}}^{\text{eff}}(e \mid C)$ を次式で定義します：
+
+$$\mathcal{L}_{\text{user}}^{\text{eff}}(e \mid C) = \underbrace{\max\Bigl( \mathcal{L}_{\text{sys\_best}}(C),\; \log P_{\text{LM}}(\mathbf{t}_e \mid C) \Bigr)}_{\text{① システム最良候補以上のベースライン保証 (Clamped Floor)}} + \underbrace{\gamma \cdot \text{PriorityScore}(e)}_{\text{② Priority による確定優位ブースト}} + \underbrace{\epsilon \cdot \frac{\log P_{\text{LM}}(\mathbf{t}_e \mid C)}{M}}_{\text{③ 同音ユーザー語間の文脈タイブレーク項}}$$
+
+   - 各項の役割：
+     - **① Clamped Floor $\max(\mathcal{L}_{\text{sys\_best}}, \log P_{\text{LM}})$**: どんなに珍しい造語や 5 トークンに割れる英単語であっても、同じ読みスパンのシステム最良語（例：`「くりはら」` に対する一般語や分割パス）に **言語モデルスコアの時点で絶対に負けない下限（Floor）** を保証します。
+     - **② Priority Boost $\gamma \cdot \text{PriorityScore}(e)$**: `Priority.LOW` ($1.5$), `Priority.NORMAL` ($3.0$), `Priority.HIGH` ($4.5$) に応じた正のブースト（例：$\gamma = 3.0 \implies +4.5, +9.0, +13.5\text{ nats}$）を加算し、長文ビーム探索の最後まで確実に第 1 位グループに生き残らせます。
+     - **③ Contextual Tie-Breaker $\epsilon \cdot \frac{\log P_{\text{LM}}(\mathbf{t}_e \mid C)}{M}$** ($\epsilon = 0.05$):
+       もしユーザーが同じ読み（例：`「きしゃ」`）に **同じ Priority** で `「貴社」` と `「記者」` の 2 つをユーザー登録していた場合、①と②は同点になりますが、この微小な第 3 項によって **「文脈がビジネスメール（『御社・貴社』）なら『貴社』が 1 位・『記者』が 2 位、報道文脈なら『記者』が 1 位・『貴社』が 2 位」** という、LM-First ならではのインテリジェントな順序付けが自動的に機能します！
+
+```mermaid
+sequenceDiagram
+    participant User as ユーザー入力: "くりはらさんにれんらく"
+    participant Overlay as JaUserOverlayTrie
+    participant SysFST as Static JaPhoneticFST
+    participant Decoder as UnifiedConstrainedBeamDecoder (SLM)
+
+    User->>Overlay: Span [0..4] "くりはら" 照会
+    Overlay-->>Decoder: UserProposal: "栗原" (tokens=["栗","原"], prio=NORMAL(3.0))
+    User->>SysFST: Span [0..4] "くりはら" 照会
+    SysFST-->>Decoder: SysProposals: "栗腹" (L_sys = -14.2), "クリア" ...
+
+    Note over Decoder: 【Step 1: スパン [0..4] "くりはら" の評価】<br/>1. "栗原" の生NLLは -24.8 だが、Clamped Floor により<br/>   max(-14.2, -24.8) + 3.0*3.0 = -5.2 にブースト（圧倒的1位！）<br/>2. KVキャッシュには本物のトークン ["栗", "原"] を書き込む。
+
+    User->>SysFST: Span [4..11] "さんにれんらく" 照会
+    Note over Decoder: 【Step 2: スパン [4..11] の評価】<br/>KVキャッシュ内の ["栗", "原"] (人名) を SLM が参照し、<br/>後続の ["さんに", "連絡"] の確率 P_LM("さんに連絡" | C, "栗原") が最大化！
+    Decoder-->>User: 第1候補: "栗原さんに連絡" (長文一発変換成功!)
+```
+
+---
+
+### 9.4 全 6 シナリオにおけるユーザー辞書の動作仕様マトリクス
+
+LM-First アーキテクチャにおいて、ユーザー辞書登録語がどのようにリスペクトされるかを 6 つの具体的シナリオで整理します。
+
+| シナリオ | 入力例（登録語：`栗原` [くりはら], `ReazonSpeech` [れいぞんすぴーち], `Antigravity`） | LM-First デコーダでの処理と候補ストリップ出力 |
+| :--- | :--- | :--- |
+| **① 単体完全一致**<br>(Exact Match) | フリックで `くりはら`<br>QWERTY で `antigravity`（小文字） | **Hard Slot-0 絶縁保護（ADR-011）**:<br>SLM スコア計算を待つまでもなく、UI スレッド同期パス（$< 0.2\text{ms}$）および非同期 LM パスの両方で **`栗原` / `Antigravity` を第 1 候補（Index 0、`[USER]` バッジ付き）に絶対固定**。 |
+| **② 前方一致（プレフィックス予測）**<br>(Prefix Completion) | フリックで `れいぞ`（3文字）<br>QWERTY で `antig`（5文字） | 入力長 $\ge 2$（かな）または $\ge 3$（英字）で `UserOverlayTrie` のプレフィックス枝が発火。<br>完全一致候補の直後（または他に完全一致がなければ **第 1 候補**）に **`ReazonSpeech` / `Antigravity`** を即座に予測提示し、残り文字の打鍵を省略可能にする。 |
+| **③ 長文・連続文節内の埋め込み**<br>(Mid-Sentence Embedding) | `くりはらさんにれんらくする`<br>`れいぞんすぴーちをじっそうした` | 9.3 節の **Intra-Word Surprisal Clamping + KV バトンタッチ** により、全文候補の第 1 位に **`栗原さんに連絡する` / `ReazonSpeechを実装した`** を生成。同時に短文節候補枠にも **`栗原` / `ReazonSpeech`** を配置し、部分確定（Partial Commit）にも対応。 |
+| **④ 誤フリック・QWERTY タイポ補正**<br>(Typo & Spatial Recovery) | フリック誤打: `くゆはら`（`り`$\to$`ゆ`）<br>QWERTY 誤打: `reazonspech`, `kurihata` | 観測モデル $P_{\text{Obs}}(\text{Touch} \mid \text{UserEntry})$ が 1〜2 文字の空間ガウス近傍・編集距離マッチを検出し、さらに `Priority` ブーストが加算されるため、**タイプミス状態からでも一般語を抑えて `栗原` / `ReazonSpeech` / `Kurihara` がコレクション候補 1 位に浮上**。 |
+| **⑤ QWERTY スワイプ入力**<br>(Neural Swipe Early-Fusion) | QWERTY 上で `a-n-t-i-g-r-a-v-i-t-y` や `j-o-t-i-n-p-u-t` とスワイプ | `FutoSwipeEngine` の Trie 同期に加え、Early-Fusion される SLM 側でも当該ユーザー語に $+\beta_{\text{user}}$ が付与されるため、未知語・CamelCase 語であっても **スワイプ完了と同時に登録通りの大文字小文字表記で Top-1 確定**。 |
+| **⑥ 確定直後の次文節予測**<br>(Next-Phrase Hotword Biasing) | ユーザーが `「新しい」` を確定した直後、または `「Reazon」` まで打った直後 | 次文節予測（`PredictNextPhrases`）において、有効なユーザー辞書エントリの先頭トークン群に動的ロジットバイアスを付与。さらに、一度文中で使われたユーザー語は KV キャッシュ内の Self-Attention 自己相関（Induction Head）によって、同一チャット・文書内の 2 回目以降の出現時に自動で超高確率予測される。 |
+
+---
+
+### 9.5 ユーザー登録語の品詞・接続タグ（`conn_tag`）自動推論ロジック
+
+日本語の長文中でユーザー登録語（例：`栗原`、`ReazonSpeech`、`エモい`、`ググる`）に助詞や活用語尾が正しく接続できるよう、ユーザーが難しい品詞設定を手動入力しなくても、`SyncUserDictionary()` 時に表記と読みの末尾パターンから `conn_tag` を自動設定します（Progressive Disclosure 原則の遵守）：
+
+1. **デフォルト（95% 以上のケース）：`CONN_USER_UNIVERSAL_NOUN`（汎用固有名詞・サ変接続可能）**
+   - すべての格助詞・係助詞（`は, が, を, に, へ, と, から, より, で, の, も`）、接尾辞（`さん, 様, 氏, くん, 的, 化, 用, 向け`）、判定詞（`だ, です, でした`）、およびサ変動詞化（`する, した, して, します, できる`）との接続をすべて許可（コスト 0）します。
+   - これにより、ユーザーが `「デプロイ」` や `「ReazonSpeech」` を単語登録するだけで、`「デプロイする」「デプロイした」「ReazonSpeechの」` がすべて文法的に合法なパスとして繋がります。
+2. **形容詞・動詞語尾の自動検出**:
+   - 表記と読みが同じ送り仮名（例：`〜い` のイ形容詞 `エモい`、または `〜る` の五段/一段動詞 `ググる`）で終わる場合は、基本形だけでなく語幹（`エモ` + `かった/くない`、`ググ` + `った/って/ります`）の活用遷移エッジも `JaUserOverlayTrie` に自動生成します。
+
+---
+
+### 9.6 C++ 拡張データ構造（任意長 BPE トークン対応版 `UserDictionaryOverlay`）
+
+8.3 節の `SpanProposal` を拡張し、システム辞書の短トークン（1〜3 個 Inline 格納）だけでなく、ユーザー辞書の長大な複合語・英単語・フレーズ（最大 16 トークン）もヒープアロケーションなしで高速に扱える構造体を定義します。
+
+```cpp
+// ユーザー辞書 1 エントリのコンパイル済みネイティブ表現
+struct CompiledUserEntry {
+  std::string id;                      // UUID
+  std::string surface;                 // 出力表記 (例: "栗原", "ReazonSpeech")
+  std::string reading;                 // 正規化読み/キー (例: "くりはら", "reazonspeech")
+  std::vector<llama_token> bpe_tokens; // 事前トークナイズ済み BPE トークン列 (M = 1..16)
+  float priority_score;                // LOW: 1.5f, NORMAL: 3.0f, HIGH: 4.5f
+  uint8_t conn_tag;                    // 自動推論された右結合タグ (CONN_USER_UNIVERSAL_NOUN 等)
+  bool is_japanese;
+  bool has_english_surface;
+};
+
+// UnifiedConstrainedBeamDecoder が扱う統合提案構造体
+struct SpanProposal {
+  union {
+    uint32_t inline_tokens[3];         // システム辞書用 (num_tokens <= 3, Zero-Heap)
+    const llama_token* ext_tokens_ptr; // ユーザー辞書等の長トークン列参照 (num_tokens > 3)
+  };
+  uint8_t  num_tokens;                 // BPE トークン数 (1..16)
+  uint8_t  consumed_units;             // 消費した入力かな文字数 または QWERTY タップ数
+  uint8_t  conn_tag;                   // 右結合状態タグ
+  bool     is_user_dict;               // true の場合、Clamped Floor + Priority Boost を適用
+  float    user_priority;              // 0.0f (system) or 1.5f / 3.0f / 4.5f (user)
+  float    obs_logprob;                // 観測対数尤度 (完全一致 = 0.0f, タイポ/近傍 < 0.0f)
+  const CompiledUserEntry* user_entry; // ユーザー辞書エントリへのポインタ (デバッグ・バッジ表示用)
+};
+```
+
+#### まとめ：このユーザー辞書設計が達成すること
+1. **永続性と即時性の完全両立**: `context.filesDir/custom_dictionary.json` の永続化契約（ADR-005）を 100% 守りつつ、変更時は $< 0.5\text{ms}$ でインメモリ Overlay FST に即時反映される。
+2. **単体でも長文中でも 100% の優先保証**: 単体入力時は Slot-0 絶縁保護、長文入力時は Intra-Word Surprisal Clamping によって、SLM が知らない固有名詞や 4〜5 トークンに割れる英単語でも絶対に一般語に埋もれない。
+3. **SLM の文脈知能とのシナジー**: ユーザー登録語の本物の BPE トークンを KV キャッシュに流し込むことで、**「ユーザー登録語そのものは辞書で確実に守り、その前後の助詞・動詞・文脈つながりは SLM が賢く推論する」** という、ルールベースとニューラル言語モデルの最良の融合を実現する。
+
+
