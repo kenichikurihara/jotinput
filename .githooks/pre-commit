@@ -14,6 +14,7 @@ if [ -f app/src/test/resources/mozc/system_dictionary.bin ] && [ ! -f tools/mozc
 fi
 
 # 2. Run unit tests
+echo "Running unit tests (testDebugUnitTest)..."
 if ! ./gradlew testDebugUnitTest --quiet; then
   echo ""
   echo "❌ [Pre-commit Hook Failed] Unit tests failed! Commit is blocked to ensure GitHub CI stays green."
@@ -21,5 +22,14 @@ if ! ./gradlew testDebugUnitTest --quiet; then
   exit 1
 fi
 
-echo "✅ [Pre-commit Hook] All unit tests passed! Proceeding with commit."
+# 3. Verify assembleDebug to guarantee native compilation and packaging pass
+echo "Running build check (assembleDebug)..."
+if ! ./gradlew assembleDebug --quiet; then
+  echo ""
+  echo "❌ [Pre-commit Hook Failed] assembleDebug failed! Commit is blocked to ensure GitHub CI stays green."
+  echo "👉 Run './gradlew assembleDebug' to inspect build failure details."
+  exit 1
+fi
+
+echo "✅ [Pre-commit Hook] All unit tests and build checks passed! Proceeding with commit."
 exit 0
