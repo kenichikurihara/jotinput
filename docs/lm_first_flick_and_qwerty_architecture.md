@@ -682,4 +682,170 @@ struct SpanProposal {
 2. **単体でも長文中でも 100% の優先保証**: 単体入力時は Slot-0 絶縁保護、長文入力時は Intra-Word Surprisal Clamping によって、SLM が知らない固有名詞や 4〜5 トークンに割れる英単語でも絶対に一般語に埋もれない。
 3. **SLM の文脈知能とのシナジー**: ユーザー登録語の本物の BPE トークンを KV キャッシュに流し込むことで、**「ユーザー登録語そのものは辞書で確実に守り、その前後の助詞・動詞・文脈つながりは SLM が賢く推論する」** という、ルールベースとニューラル言語モデルの最良の融合を実現する。
 
+---
+
+## 10. 新設定 UI 設計：デザインシステム（4-Card Top-Level Cap & Progressive Disclosure）への完全統合
+
+新機能の導入時に設定画面が際限なく肥大化するのを防ぐため、[`docs/ui_design_and_simplicity_guidelines.md`](docs/ui_design_and_simplicity_guidelines.md) および `AGENTS.md` / `GEMINI.md` に定義された **UI 設計原則（UI Simplicity Contract）** に厳格に準拠した設定 UI を設計します。
+
+---
+
+### 10.1 UI 設計における 3 つの厳格な制約（Design System Constraints）
+
+1. **4-Card Top-Level Cap の死守**:
+   [`activity_main.xml`](app/src/main/res/layout/activity_main.xml) のトップレベルカードは絶対に増やさず、既存の **4 枚のカード** の中に新設定を完全に収めます。
+2. **最適デフォルト優先（Optimal Defaults Over UI Knobs）**:
+   コーパス検証や実機測定で最適値が証明できるパラメータ（例：`ACTION_DOWN` 時の投機的プリフェッチ、探索ビーム幅 $B=8$、ユーザー辞書の Intra-Word Surprisal Clamping）は、**コード内の最適定数として適用し、メイン画面のスイッチとして露出させません**。
+3. **段階的開示（Progressive Disclosure）と Zero Dead UI**:
+   親機能が OFF の時は関連する子セレクタを `View.GONE` で完全に非表示にします。また、開発者向け・実験用のチューニングノブはすべて **Card 4（折りたたみ詳細設定）** に格納します。
+
+---
+
+### 10.2 既存 4 カードへの新設定マッピングと画面レイアウト構造
+
+```mermaid
+flowchart TD
+    subgraph Card1["Card 1: セットアップ＆テスト (Hero Card)"]
+        BadgeRow["ステータスバッジ行:\n[IME: 有効] [音声: 導入済] [単語: 42語] [AI: LM-First]"]
+        TestBox["即時テスト欄 (etKeyboardTest)\n・フリックかな漢字変換・QWERTYタイポ補正・ユーザー辞書を即テスト"]
+    end
+
+    subgraph Card2["Card 2: 基本設定 (Core Everyday Settings — 最大4〜5項目)"]
+        H["1. キーボードの高さ (80%〜120%)"]
+        QNum["2. 英語QWERTY数字行 (1〜0) 表示"]
+        QSwipe["3. 英語QWERTY スワイプ入力 (FUTO Swipe)"]
+        Stream["4. リアルタイム音声ストリーミング入力"]
+        AiToggle["5. AI 変換エンジン (LM-First / 文脈補正) [Switch: ON]"]
+        
+        subgraph AiSelector["展開される子セレクタ (layoutAiEngineSelector: 親ON時のみ表示)"]
+            ModeRadio["● 言語モデル主導 (LM-First: かな漢字・QWERTY一括) ★推奨\n  ○ Qwen2.5-0.5B (469MB • 高速・省電力標準)\n  ○ Qwen2.5-1.5B (1.1GB • 高精度)\n○ 従来互換 (Viterbi辞書優先 ＋ 後段AIリランク)\n  ○ Gemini Nano 2 / Nano 1 / Qwen2.5"]
+        end
+        AiToggle -->|"ON時のみ展開\n(OFF時は View.GONE)"| AiSelector
+    end
+
+    subgraph Card3["Card 3: 辞書・言語データ管理 (Unified Data Management)"]
+        OneTap["【一括ボタン】推奨拡張辞書＆AIインデックスを一括取得\n(Mozc 400万語 ＋ unified_token_fst.bin 8MB を一発完了)"]
+        CollapseDict["[折りたたみ] 個別の辞書・インデックスを管理 ▼"]
+        DetailItems["・SudachiDict / Wikipedia / 地名 / 人名 ...\n・日英共通 統合音韻・正書法インデックス (unified_token_fst.bin: 8MB)\n  [再取得] [削除]"]
+        OneTap --> CollapseDict --> DetailItems
+    end
+
+    subgraph Card4["Card 4: 詳細設定・開発者ツール (Collapsible Advanced Tools — デフォルト非表示 ▼)"]
+        AdvHeader["[ヘッダー] 詳細設定・開発者ツール ▼"]
+        AdvContent["【内部に格納される開発者・実験用パラメータ】\n・投機的先行デコード (ACTION_DOWN prefetch): [ON/OFF]\n・探索ビーム幅 B スライダー (4 〜 16, デフォルト: 8)\n・観測尤度重み λ スライダー (0.5 〜 2.0, デフォルト: 1.0)\n・デバッグ表示バッジ ([LM-1st] / [USER] / [PRE-FETCH]): [ON/OFF]\n・文頭コンテキストフリー推論: [ON/OFF]\n・SLM強制再ランキング: [ON/OFF]"]
+        AdvHeader --> AdvContent
+    end
+```
+
+---
+
+### 10.3 各カードの詳細 UI 仕様
+
+#### Card 1：セットアップ＆テスト（Hero Card）
+- **ステータスバッジ（`tvSlmStatusBadge`）の更新**:
+  - `AICORE_NANO_2` / `LOCAL_SLM_0_5B` かつ LM-First モード有効時：
+    `[AI: LM-First (0.5B)]`（緑色バッジ `@color/badge_active_bg`）
+  - 従来互換リランクモード時：
+    `[AI: リランク (0.5B)]`（青色バッジ）
+  - モデル未導入時 / OFF 時：
+    `[AI: オフ (Viterbi)]`（灰色バッジ `@color/badge_neutral_bg`）
+- **即時テストボックス（`etKeyboardTest`）**:
+  - 設定変更後、アプリを切り替えることなくその場でフリック入力（`けっか` $\to$ `結果`、`さくじょ` $\to$ `削除`、長文 `こういてきでしたか`）や QWERTY タイポ・大文字化（`reazonspech` $\to$ `ReazonSpeech`）を即座に試打確認可能。
+
+---
+
+#### Card 2：基本設定（Core Everyday Settings）
+Card 2 に常時露出する設定項目は、日常的にユーザーが好みに応じて切り替える **5 項目のみ** に厳密に制限します。
+
+##### 項目 5：`AI 変換エンジン (LM-First / 文脈補正)`（新規 UI 仕様）
+- **親スイッチ**: `switchAiEngineEnabled`（デフォルト: **ON**）
+  - ラベルタイトル: **「AI 変換エンジン (LM-First / 文脈補正)」**
+  - 説明サブテキスト: **「言語モデルが前後の文脈からかな漢字変換・英字タイポを直接生成・補正」**
+  - 親スイッチが **OFF** の場合：
+    - 下部の `layoutAiEngineSelector` を完全に `View.GONE` で非表示化。
+    - 入力エンジンはメモリ・CPU 消費ゼロの軽量フォールバック（`MmapDictionary` ＋ `connection_data.bin` による Mozc Viterbi 単体探索）として動作。
+  - 親スイッチが **ON** の場合：
+    - 直下に `layoutAiEngineSelector`（薄い背景コンテナ）をアニメーション展開。
+
+##### 子セレクタ：`layoutAiEngineSelector`
+ユーザーに内部実装の専門用語（「ビーム探索」「BPE トークナイザ」等）を意識させず、実用的な選択肢を分かりやすく提示します：
+
+```xml
+<!-- UI レイアウト構成イメージ -->
+<RadioGroup
+    android:id="@+id/rgAiEngineMode"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <!-- Option 1: LM-First (推奨・モダン) -->
+    <RadioButton
+        android:id="@+id/rbModeLmFirst05B"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:checked="true"
+        android:text="言語モデル直接生成 (LM-First 0.5B) ★推奨\n・かな漢字変換・予測補完・タイポ補正を一括高速処理 (省電力)"
+        android:textSize="12sp" />
+
+    <!-- Option 2: LM-First 高精度 -->
+    <RadioButton
+        android:id="@+id/rbModeLmFirst15B"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="言語モデル直接生成 (LM-First 1.5B 高精度)\n・長文・複雑な専門用語に強い大容量モデル"
+        android:textSize="12sp" />
+
+    <!-- Option 3: 従来互換 (Viterbi + AIリランク) -->
+    <RadioButton
+        android:id="@+id/rbModeHybridRerank"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="辞書優先 ＋ 後段AIリランク (従来互換)\n・Mozc辞書候補の上位をAIで並べ替え (Gemini Nano / Qwen)"
+        android:textSize="12sp" />
+</RadioGroup>
+```
+
+---
+
+#### Card 3：辞書・言語データ管理（Unified Data Management）
+新設される `unified_token_fst.bin`（約 8MB）の追加に伴い、ダウンロード導線を以下のように整理します：
+
+1. **一括ダウンロード（One-Tap Pipeline）への完全統合**:
+   - カードトップの **「推奨拡張辞書を一括ダウンロード (約400万語)」** ボタンを **「推奨辞書・AIデータの一括ダウンロード」** に拡張。
+   - タップ 1 回で、Mozc 辞書群・連接コスト行列に加えて、LM-First 動作に必要な `unified_token_fst.bin` もバックグラウンドでまとめて取得。ユーザーが「何が足りないか」を気にする必要をなくします。
+2. **個別管理折りたたみ（`layoutDictDetailsContainer`）内への追加**:
+   - `「個別の拡張辞書を管理 ▼」` を開いたリスト内に、以下の 1 行を追加：
+     - **行タイトル**: `日英共通 統合音韻・正書法インデックス (unified_token_fst.bin)`
+     - **バッジ**: `8.2 MB` / `導入済`（または `未導入`）
+     - **アクション**: `再ダウンロード` / `削除` ボタン。
+
+---
+
+#### Card 4：詳細設定・開発者ツール（Collapsible Advanced Tools）
+一般ユーザーが触る必要のないハイパーパラメータは、すべて **Card 4（デフォルト折りたたみ `layoutAdvancedContent`）** 内に配置します。
+
+| パラメータ | UI コントロール | デフォルト値 | 説明 |
+| :--- | :--- | :---: | :--- |
+| **投機的先行デコード<br>(Speculative Prefetch)** | `SwitchMaterial` | **ON** | 指を画面に触れた瞬間（`ACTION_DOWN`）に先行推論を開始し、指を離した瞬間の体感応答時間を $0\text{ms}$ にする最適化。 |
+| **探索ビーム幅 $B$<br>(Beam Width)** | `Slider` (4 〜 16, step=2) | **8** | LM-First探索木で保持する仮説枝数。値を大きくすると長文精度が微増し、小さくするとCPU負荷が軽減。 |
+| **観測尤度重み係数 $\lambda$<br>(Observation Weight)** | `Slider` (0.5 〜 2.0, step=0.1) | **1.0** | 物理タッチ座標・フリック角度の尤度と、言語モデル事前確率のバランス。 |
+| **デバッグ表示バッジ<br>(Debug Badges)** | `SwitchMaterial` | **OFF** | ONにすると、候補ストリップの各候補の右上に `[LM-1st]`, `[USER]`, `[PRE-FETCH]`, `[VIT]` 等の生成元バッジを表示。 |
+| **文頭 SLM 推論<br>(Context-Free)** | `SwitchMaterial` | **ON** | 先行文脈が存在しない文頭入力時にも LM-First 探索を適用するかどうか。 |
+
+---
+
+### 10.4 IME 候補ストリップ（`CandidateStripView`）におけるミニマリズム表示仕様
+
+設定 UI だけでなく、文字入力中のキーボードヘッダー（`keyboard_view.xml`）における表示も、デザイン原則に従いクリーンさを維持します：
+
+1. **通常モード（一般ユーザー）**:
+   - 特別なアルゴリズム名（`Qwen` や `LM-First`）は一切出さず、シンプルに変換候補文字列（例：`結果`, `削除`, `好意的でしたか`）のみを美しく表示。
+   - **ユーザー辞書候補のみ**: 先頭に視認性の高い控えめなバッジ `[単語]`（または `[USER]`）を付与し、登録語が正しく優先されている安心感を提供（ADR-011 準拠）。
+2. **デバッグモード（Card 4 でデバッグ表示が ON の時）**:
+   - エンジニア・評価者がリアルタイムに生成経路を確認できるよう、各ピルの末尾に極小テキストでバッジを付与：
+     - `結果 [LM]`：LM-First ビーム探索により直接生成された候補。
+     - `中村 [USER]`：ユーザー辞書の Intra-Word Surprisal Clamping により保護・生成された候補。
+     - `好意 [PF]`：`ACTION_DOWN` 投機的プリフェッチにより $0\text{ms}$ で返却された候補。
+     - `結果 [VIT]`：フォールバック時（Viterbi）に生成された候補。
+
+
 
