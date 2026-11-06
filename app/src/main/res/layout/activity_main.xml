@@ -662,7 +662,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Mozc基本語彙・連接コスト行列・SudachiDict新語・Wikipedia・地名・人名・絵文字を一括管理します。"
+                        android:text="SudachiDict新語・Wikipedia・地名・人名・絵文字などの拡張語彙を一括管理します（品詞連接行列は内包済）。"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
@@ -694,13 +694,13 @@
                         android:backgroundTint="@color/primary"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
-                        android:text="推奨データを一括ダウンロード (辞書＋連接行列)"
+                        android:text="推奨拡張辞書を一括ダウンロード (約400万語)"
                         android:textAllCaps="false"
                         android:textColor="@color/on_primary"
                         android:textSize="13sp"
                         app:cornerRadius="10dp" />
 
-                    <!-- Progressive Disclosure Toggle for Individual Dictionaries & Connection Matrix -->
+                    <!-- Progressive Disclosure Toggle for Individual Dictionaries -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnToggleDictDetails"
                         style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -709,7 +709,7 @@
                         android:layout_marginTop="4dp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
-                        android:text="個別の辞書・連接コスト行列を管理 ▼"
+                        android:text="個別の拡張辞書を管理 ▼"
                         android:textAllCaps="false"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
@@ -722,91 +722,6 @@
                         android:layout_marginTop="4dp"
                         android:orientation="vertical"
                         android:visibility="gone">
-
-                        <!-- Connection Matrix Subsection -->
-                        <LinearLayout
-                            android:id="@+id/cardConnectionMatrix"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/result_background"
-                            android:orientation="vertical"
-                            android:padding="12dp">
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="Mozc 品詞間連接コスト行列 (2672×2672)"
-                                android:textColor="@color/text_primary"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/tvConnectionMatrixSummary"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="連文節Viterbi探索の文法遷移精度を向上させます (~14MB)。"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
-
-                            <com.google.android.material.progressindicator.LinearProgressIndicator
-                                android:id="@+id/connMatrixProgress"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:indeterminate="false"
-                                android:max="100"
-                                android:progress="0"
-                                android:visibility="gone" />
-
-                            <TextView
-                                android:id="@+id/tvConnMatrixStatus"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text=""
-                                android:textColor="@color/primary"
-                                android:textSize="11sp"
-                                android:visibility="gone" />
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:orientation="horizontal">
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btnDownloadConnMatrix"
-                                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                                    android:layout_width="0dp"
-                                    android:layout_height="36dp"
-                                    android:layout_marginEnd="6dp"
-                                    android:layout_weight="1"
-                                    android:insetTop="0dp"
-                                    android:insetBottom="0dp"
-                                    android:text="連接行列を取得"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/primary"
-                                    android:textSize="12sp"
-                                    app:cornerRadius="8dp"
-                                    app:strokeColor="@color/primary" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btnDeleteConnMatrix"
-                                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="36dp"
-                                    android:insetTop="0dp"
-                                    android:insetBottom="0dp"
-                                    android:text="削除"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="12sp"
-                                    android:visibility="gone"
-                                    app:cornerRadius="8dp"
-                                    app:strokeColor="@color/border" />
-                            </LinearLayout>
-                        </LinearLayout>
 
                         <!-- Individual Dictionaries List -->
                         <LinearLayout
