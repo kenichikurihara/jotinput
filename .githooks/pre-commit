@@ -1,0 +1,25 @@
+#!/bin/bash
+# Pre-commit hook to guarantee CI passes before committing
+set -e
+
+echo "🔍 [Pre-commit Hook] Verifying unit tests before commit..."
+
+# 1. Ensure test lexicon assets are accessible
+mkdir -p tools/mozc_dict
+if [ -f app/src/main/assets/mozc/connection_data.bin ] && [ ! -f tools/mozc_dict/connection_data.bin ]; then
+  ln -sf ../app/src/main/assets/mozc/connection_data.bin tools/mozc_dict/connection_data.bin
+fi
+if [ -f app/src/test/resources/mozc/system_dictionary.bin ] && [ ! -f tools/mozc_dict/system_dictionary.bin ]; then
+  ln -sf ../app/src/test/resources/mozc/system_dictionary.bin tools/mozc_dict/system_dictionary.bin
+fi
+
+# 2. Run unit tests
+if ! ./gradlew testDebugUnitTest --quiet; then
+  echo ""
+  echo "❌ [Pre-commit Hook Failed] Unit tests failed! Commit is blocked to ensure GitHub CI stays green."
+  echo "👉 Run './gradlew testDebugUnitTest' to inspect failure details."
+  exit 1
+fi
+
+echo "✅ [Pre-commit Hook] All unit tests passed! Proceeding with commit."
+exit 0
