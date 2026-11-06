@@ -1,0 +1,802 @@
+[
+  {
+    "rank": 1,
+    "target": "which",
+    "prefix": "whi",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "whisper"
+  },
+  {
+    "rank": 2,
+    "target": "first",
+    "prefix": "fir",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "fire"
+  },
+  {
+    "rank": 3,
+    "target": "their",
+    "prefix": "the",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "The"
+  },
+  {
+    "rank": 4,
+    "target": "other",
+    "prefix": "oth",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "other"
+  },
+  {
+    "rank": 5,
+    "target": "after",
+    "prefix": "aft",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "after"
+  },
+  {
+    "rank": 6,
+    "target": "years",
+    "prefix": "yea",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "yeah"
+  },
+  {
+    "rank": 7,
+    "target": "would",
+    "prefix": "wou",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "would"
+  },
+  {
+    "rank": 8,
+    "target": "during",
+    "prefix": "duri",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "during"
+  },
+  {
+    "rank": 9,
+    "target": "going",
+    "prefix": "goi",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "going"
+  },
+  {
+    "rank": 10,
+    "target": "where",
+    "prefix": "whe",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "where"
+  },
+  {
+    "rank": 11,
+    "target": "between",
+    "prefix": "betwe",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "between"
+  },
+  {
+    "rank": 12,
+    "target": "there",
+    "prefix": "the",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "The"
+  },
+  {
+    "rank": 13,
+    "target": "about",
+    "prefix": "abo",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "about"
+  },
+  {
+    "rank": 14,
+    "target": "became",
+    "prefix": "beca",
+    "length": 6,
+    "is_target_completed": false,
+    "expected_top1": "because"
+  },
+  {
+    "rank": 15,
+    "target": "later",
+    "prefix": "lat",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "later"
+  },
+  {
+    "rank": 16,
+    "target": "under",
+    "prefix": "und",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "understand"
+  },
+  {
+    "rank": 17,
+    "target": "being",
+    "prefix": "bei",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "being"
+  },
+  {
+    "rank": 18,
+    "target": "including",
+    "prefix": "includi",
+    "length": 9,
+    "is_target_completed": true,
+    "expected_top1": "including"
+  },
+  {
+    "rank": 19,
+    "target": "through",
+    "prefix": "throu",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "through"
+  },
+  {
+    "rank": 20,
+    "target": "before",
+    "prefix": "befo",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "before"
+  },
+  {
+    "rank": 21,
+    "target": "called",
+    "prefix": "call",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "called"
+  },
+  {
+    "rank": 22,
+    "target": "could",
+    "prefix": "cou",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "could"
+  },
+  {
+    "rank": 23,
+    "target": "people",
+    "prefix": "peop",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "people"
+  },
+  {
+    "rank": 24,
+    "target": "second",
+    "prefix": "seco",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "second"
+  },
+  {
+    "rank": 25,
+    "target": "until",
+    "prefix": "unt",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "until"
+  },
+  {
+    "rank": 26,
+    "target": "while",
+    "prefix": "whi",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "whisper"
+  },
+  {
+    "rank": 27,
+    "target": "against",
+    "prefix": "again",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "against"
+  },
+  {
+    "rank": 28,
+    "target": "number",
+    "prefix": "numb",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "number"
+  },
+  {
+    "rank": 29,
+    "target": "population",
+    "prefix": "populati",
+    "length": 10,
+    "is_target_completed": true,
+    "expected_top1": "population"
+  },
+  {
+    "rank": 30,
+    "target": "season",
+    "prefix": "seas",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "season"
+  },
+  {
+    "rank": 31,
+    "target": "several",
+    "prefix": "sever",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "several"
+  },
+  {
+    "rank": 32,
+    "target": "these",
+    "prefix": "the",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "The"
+  },
+  {
+    "rank": 33,
+    "target": "early",
+    "prefix": "ear",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "early"
+  },
+  {
+    "rank": 34,
+    "target": "family",
+    "prefix": "fami",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "family"
+  },
+  {
+    "rank": 35,
+    "target": "series",
+    "prefix": "seri",
+    "length": 6,
+    "is_target_completed": false,
+    "expected_top1": "seriously"
+  },
+  {
+    "rank": 36,
+    "target": "album",
+    "prefix": "alb",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "album"
+  },
+  {
+    "rank": 37,
+    "target": "based",
+    "prefix": "bas",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "base"
+  },
+  {
+    "rank": 38,
+    "target": "released",
+    "prefix": "releas",
+    "length": 8,
+    "is_target_completed": false,
+    "expected_top1": "release"
+  },
+  {
+    "rank": 39,
+    "target": "since",
+    "prefix": "sin",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "since"
+  },
+  {
+    "rank": 40,
+    "target": "state",
+    "prefix": "sta",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "start"
+  },
+  {
+    "rank": 41,
+    "target": "began",
+    "prefix": "beg",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "beginning"
+  },
+  {
+    "rank": 42,
+    "target": "century",
+    "prefix": "centu",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "century"
+  },
+  {
+    "rank": 43,
+    "target": "following",
+    "prefix": "followi",
+    "length": 9,
+    "is_target_completed": true,
+    "expected_top1": "following"
+  },
+  {
+    "rank": 44,
+    "target": "found",
+    "prefix": "fou",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "found"
+  },
+  {
+    "rank": 45,
+    "target": "located",
+    "prefix": "locat",
+    "length": 7,
+    "is_target_completed": false,
+    "expected_top1": "location"
+  },
+  {
+    "rank": 46,
+    "target": "around",
+    "prefix": "arou",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "around"
+  },
+  {
+    "rank": 47,
+    "target": "because",
+    "prefix": "becau",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "because"
+  },
+  {
+    "rank": 48,
+    "target": "government",
+    "prefix": "governme",
+    "length": 10,
+    "is_target_completed": true,
+    "expected_top1": "government"
+  },
+  {
+    "rank": 49,
+    "target": "group",
+    "prefix": "gro",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "group"
+  },
+  {
+    "rank": 50,
+    "target": "large",
+    "prefix": "lar",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "large"
+  },
+  {
+    "rank": 51,
+    "target": "music",
+    "prefix": "mus",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "muse"
+  },
+  {
+    "rank": 52,
+    "target": "named",
+    "prefix": "nam",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "name"
+  },
+  {
+    "rank": 53,
+    "target": "often",
+    "prefix": "oft",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "often"
+  },
+  {
+    "rank": 54,
+    "target": "system",
+    "prefix": "syst",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "system"
+  },
+  {
+    "rank": 55,
+    "target": "three",
+    "prefix": "thr",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "the"
+  },
+  {
+    "rank": 56,
+    "target": "place",
+    "prefix": "pla",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "play"
+  },
+  {
+    "rank": 57,
+    "target": "along",
+    "prefix": "alo",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "all"
+  },
+  {
+    "rank": 58,
+    "target": "built",
+    "prefix": "bui",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "Bui"
+  },
+  {
+    "rank": 59,
+    "target": "career",
+    "prefix": "care",
+    "length": 6,
+    "is_target_completed": false,
+    "expected_top1": "Care"
+  },
+  {
+    "rank": 60,
+    "target": "former",
+    "prefix": "form",
+    "length": 6,
+    "is_target_completed": false,
+    "expected_top1": "from"
+  },
+  {
+    "rank": 61,
+    "target": "include",
+    "prefix": "inclu",
+    "length": 7,
+    "is_target_completed": false,
+    "expected_top1": "including"
+  },
+  {
+    "rank": 62,
+    "target": "local",
+    "prefix": "loc",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "location"
+  },
+  {
+    "rank": 63,
+    "target": "small",
+    "prefix": "sma",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "small"
+  },
+  {
+    "rank": 64,
+    "target": "still",
+    "prefix": "sti",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "still"
+  },
+  {
+    "rank": 65,
+    "target": "those",
+    "prefix": "tho",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "though"
+  },
+  {
+    "rank": 66,
+    "target": "major",
+    "prefix": "maj",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "Maj"
+  },
+  {
+    "rank": 67,
+    "target": "member",
+    "prefix": "memb",
+    "length": 6,
+    "is_target_completed": false,
+    "expected_top1": "members"
+  },
+  {
+    "rank": 68,
+    "target": "members",
+    "prefix": "membe",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "members"
+  },
+  {
+    "rank": 69,
+    "target": "public",
+    "prefix": "publ",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "public"
+  },
+  {
+    "rank": 70,
+    "target": "single",
+    "prefix": "sing",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "single"
+  },
+  {
+    "rank": 71,
+    "target": "station",
+    "prefix": "stati",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "station"
+  },
+  {
+    "rank": 72,
+    "target": "within",
+    "prefix": "with",
+    "length": 6,
+    "is_target_completed": false,
+    "expected_top1": "without"
+  },
+  {
+    "rank": 73,
+    "target": "another",
+    "prefix": "anoth",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "another"
+  },
+  {
+    "rank": 74,
+    "target": "company",
+    "prefix": "compa",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "company"
+  },
+  {
+    "rank": 75,
+    "target": "death",
+    "prefix": "dea",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "dead"
+  },
+  {
+    "rank": 76,
+    "target": "different",
+    "prefix": "differe",
+    "length": 9,
+    "is_target_completed": true,
+    "expected_top1": "different"
+  },
+  {
+    "rank": 77,
+    "target": "however",
+    "prefix": "howev",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "however"
+  },
+  {
+    "rank": 78,
+    "target": "original",
+    "prefix": "origin",
+    "length": 8,
+    "is_target_completed": true,
+    "expected_top1": "original"
+  },
+  {
+    "rank": 79,
+    "target": "published",
+    "prefix": "publish",
+    "length": 9,
+    "is_target_completed": true,
+    "expected_top1": "published"
+  },
+  {
+    "rank": 80,
+    "target": "received",
+    "prefix": "receiv",
+    "length": 8,
+    "is_target_completed": true,
+    "expected_top1": "received"
+  },
+  {
+    "rank": 81,
+    "target": "served",
+    "prefix": "serv",
+    "length": 6,
+    "is_target_completed": false,
+    "expected_top1": "service"
+  },
+  {
+    "rank": 82,
+    "target": "again",
+    "prefix": "aga",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "again"
+  },
+  {
+    "rank": 83,
+    "target": "become",
+    "prefix": "beco",
+    "length": 6,
+    "is_target_completed": true,
+    "expected_top1": "become"
+  },
+  {
+    "rank": 84,
+    "target": "history",
+    "prefix": "histo",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "history"
+  },
+  {
+    "rank": 85,
+    "target": "included",
+    "prefix": "includ",
+    "length": 8,
+    "is_target_completed": false,
+    "expected_top1": "including"
+  },
+  {
+    "rank": 86,
+    "target": "order",
+    "prefix": "ord",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "order"
+  },
+  {
+    "rank": 87,
+    "target": "power",
+    "prefix": "pow",
+    "length": 5,
+    "is_target_completed": true,
+    "expected_top1": "power"
+  },
+  {
+    "rank": 88,
+    "target": "service",
+    "prefix": "servi",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "service"
+  },
+  {
+    "rank": 89,
+    "target": "students",
+    "prefix": "studen",
+    "length": 8,
+    "is_target_completed": false,
+    "expected_top1": "student"
+  },
+  {
+    "rank": 90,
+    "target": "third",
+    "prefix": "thi",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "this"
+  },
+  {
+    "rank": 91,
+    "target": "water",
+    "prefix": "wat",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "what"
+  },
+  {
+    "rank": 92,
+    "target": "children",
+    "prefix": "childr",
+    "length": 8,
+    "is_target_completed": true,
+    "expected_top1": "children"
+  },
+  {
+    "rank": 93,
+    "target": "among",
+    "prefix": "amo",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "amor"
+  },
+  {
+    "rank": 94,
+    "target": "average",
+    "prefix": "avera",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "average"
+  },
+  {
+    "rank": 95,
+    "target": "building",
+    "prefix": "buildi",
+    "length": 8,
+    "is_target_completed": true,
+    "expected_top1": "building"
+  },
+  {
+    "rank": 96,
+    "target": "every",
+    "prefix": "eve",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "Eve"
+  },
+  {
+    "rank": 97,
+    "target": "final",
+    "prefix": "fin",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "find"
+  },
+  {
+    "rank": 98,
+    "target": "given",
+    "prefix": "giv",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "give"
+  },
+  {
+    "rank": 99,
+    "target": "moved",
+    "prefix": "mov",
+    "length": 5,
+    "is_target_completed": false,
+    "expected_top1": "movie"
+  },
+  {
+    "rank": 100,
+    "target": "example",
+    "prefix": "examp",
+    "length": 7,
+    "is_target_completed": true,
+    "expected_top1": "example"
+  }
+]

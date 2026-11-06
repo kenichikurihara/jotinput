@@ -24,6 +24,9 @@ tools/models/reazonspeech/*.int8.onnx
 tools/models/*.gguf
 tools/models/futo_swipe/*.onnx
 tools/models/futo_swipe/models/
+tools/models/english_spelling/*.onnx
+tools/models/english_spelling/*.bin
+tools/models/english_spelling/*.model
 tools/mozc_dict/*.bin
 tools/mozc_dict/*.orig
 eval/futo_swipe/*.jsonl
