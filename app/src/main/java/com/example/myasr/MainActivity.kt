@@ -89,11 +89,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutAdvancedContent: LinearLayout
 
     private lateinit var tvConnectionMatrixBadge: TextView
-    private lateinit var tvConnectionMatrixSummary: TextView
-    private lateinit var connMatrixProgress: LinearProgressIndicator
-    private lateinit var tvConnMatrixStatus: TextView
-    private lateinit var btnDownloadConnMatrix: MaterialButton
-    private lateinit var btnDeleteConnMatrix: MaterialButton
 
     private lateinit var tvEnglishSpellingSummary: TextView
     private lateinit var englishSpellingProgress: LinearProgressIndicator
@@ -136,7 +131,7 @@ class MainActivity : AppCompatActivity() {
         updateDictionaryBadge()
         updateImeStatusBadge()
         refreshMultiDictionaryUI()
-        refreshConnectionMatrixUI()
+        refreshConnectionMatrixBadge()
         updateKeyboardHeightUI()
         checkAndInitializeModel()
         checkBenchmarkIntent(intent)
@@ -372,7 +367,7 @@ class MainActivity : AppCompatActivity() {
         updateDictionaryBadge()
         updateImeStatusBadge()
         refreshMultiDictionaryUI()
-        refreshConnectionMatrixUI()
+        refreshConnectionMatrixBadge()
         updateKeyboardHeightUI()
         isUpdatingUiFromPrefs = true
         try {
@@ -497,11 +492,6 @@ class MainActivity : AppCompatActivity() {
         layoutAdvancedContent = findViewById(R.id.layoutAdvancedContent)
 
         tvConnectionMatrixBadge = findViewById(R.id.tvConnectionMatrixBadge)
-        tvConnectionMatrixSummary = findViewById(R.id.tvConnectionMatrixSummary)
-        connMatrixProgress = findViewById(R.id.connMatrixProgress)
-        tvConnMatrixStatus = findViewById(R.id.tvConnMatrixStatus)
-        btnDownloadConnMatrix = findViewById(R.id.btnDownloadConnMatrix)
-        btnDeleteConnMatrix = findViewById(R.id.btnDeleteConnMatrix)
 
         tvEnglishSpellingSummary = findViewById(R.id.tvEnglishSpellingSummary)
         englishSpellingProgress = findViewById(R.id.englishSpellingProgress)
@@ -516,16 +506,15 @@ class MainActivity : AppCompatActivity() {
         }
 
         setupMultiDictionaryUI()
-        setupConnectionMatrixUI()
         setupEnglishSpellingUI()
 
         btnToggleDictDetails.setOnClickListener {
             val isVisible = layoutDictDetailsContainer.visibility == View.VISIBLE
             layoutDictDetailsContainer.visibility = if (isVisible) View.GONE else View.VISIBLE
             btnToggleDictDetails.text = if (isVisible) {
-                "個別の辞書・連接コスト行列を管理 ▼"
+                "個別の拡張辞書を管理 ▼"
             } else {
-                "個別の辞書・連接コスト行列を閉じる ▲"
+                "個別の拡張辞書を閉じる ▲"
             }
         }
 
@@ -707,12 +696,12 @@ class MainActivity : AppCompatActivity() {
             tvTotalDictWordsBadge.text = "辞書: $totalFormatted 語"
             tvTotalDictWordsBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
             tvTotalDictWordsBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-            btnDownloadAllDicts.text = "全辞書・連接データを最新版に更新 ($totalFormatted 語)"
+            btnDownloadAllDicts.text = "全拡張辞書を最新版に更新 ($totalFormatted 語)"
         } else {
             tvTotalDictWordsBadge.text = "辞書: 未取得"
             tvTotalDictWordsBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
             tvTotalDictWordsBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
-            btnDownloadAllDicts.text = "推奨データを一括ダウンロード (辞書＋連接行列)"
+            btnDownloadAllDicts.text = "推奨拡張辞書を一括ダウンロード (約400万語)"
         }
 
         layoutDictItemsContainer.removeAllViews()
@@ -843,7 +832,6 @@ class MainActivity : AppCompatActivity() {
     private fun startDownloadAllDicts() {
         val manager = AsrApp.instance.multiDictionaryManager
         val baseDownloader = AsrApp.instance.baseDictionaryDownloader
-        val connManager = AsrApp.instance.connectionDataManager
         btnDownloadAllDicts.isEnabled = false
         multiDictProgress.visibility = View.VISIBLE
         multiDictProgress.isIndeterminate = false
@@ -862,25 +850,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            if (!connManager.isInstalled()) {
-                withContext(Dispatchers.Main) {
-                    tvMultiDictStatus.text = "連接コスト行列を取得・構築中..."
-                }
-                connManager.downloadAndCompile { pct, msg ->
-                    lifecycleScope.launch(Dispatchers.Main) {
-                        multiDictProgress.progress = (10 + pct * 0.15).toInt()
-                        tvMultiDictStatus.text = msg
-                    }
-                }
-                withContext(Dispatchers.Main) {
-                    refreshConnectionMatrixUI()
-            refreshEnglishSpellingUI()
-                }
-            }
-
             val result = manager.downloadAllDictionaries { pct, msg ->
                 lifecycleScope.launch(Dispatchers.Main) {
-                    multiDictProgress.progress = (25 + pct * 0.75).toInt().coerceIn(25, 100)
+                    multiDictProgress.progress = (pct).coerceIn(0, 100)
                     tvMultiDictStatus.text = msg
                 }
             }
@@ -895,75 +867,22 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this@MainActivity, "一部の辞書ダウンロードに失敗しました: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
             }
             refreshMultiDictionaryUI()
-            refreshConnectionMatrixUI()
+            refreshConnectionMatrixBadge()
             refreshEnglishSpellingUI()
         }
     }
 
-    private fun setupConnectionMatrixUI() {
-        btnDownloadConnMatrix.setOnClickListener {
-            startDownloadConnectionMatrix()
-        }
-        btnDeleteConnMatrix.setOnClickListener {
-            val manager = AsrApp.instance.connectionDataManager
-            manager.deleteConnectionData()
-            Toast.makeText(this, "連接コスト行列を削除しました", Toast.LENGTH_SHORT).show()
-            refreshConnectionMatrixUI()
-            refreshEnglishSpellingUI()
-        }
-        refreshConnectionMatrixUI()
-        refreshEnglishSpellingUI()
-    }
-
-    private fun refreshConnectionMatrixUI() {
+    private fun refreshConnectionMatrixBadge() {
         val manager = AsrApp.instance.connectionDataManager
         val isInstalled = manager.isInstalled()
         if (isInstalled) {
-            val sizeMb = String.format(java.util.Locale.US, "%.1f", manager.getInstalledSizeBytes() / (1024.0 * 1024.0))
             tvConnectionMatrixBadge.text = "連接: 導入済"
             tvConnectionMatrixBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
             tvConnectionMatrixBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-            tvConnectionMatrixSummary.text = "2672×2672 連接コスト行列 (${sizeMb} MB, 714万遷移) が有効です。"
-            btnDownloadConnMatrix.text = "連接行列を再取得"
-            btnDeleteConnMatrix.visibility = View.VISIBLE
         } else {
             tvConnectionMatrixBadge.text = "連接: 未導入"
             tvConnectionMatrixBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
             tvConnectionMatrixBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
-            tvConnectionMatrixSummary.text = "品詞間連接コスト行列 (~14MB) を取得し、連文節Viterbi探索の文法遷移精度を向上させます。"
-            btnDownloadConnMatrix.text = "連接行列を取得 (~36MB)"
-            btnDeleteConnMatrix.visibility = View.GONE
-        }
-    }
-
-    private fun startDownloadConnectionMatrix() {
-        val manager = AsrApp.instance.connectionDataManager
-        btnDownloadConnMatrix.isEnabled = false
-        btnDeleteConnMatrix.isEnabled = false
-        connMatrixProgress.visibility = View.VISIBLE
-        tvConnMatrixStatus.visibility = View.VISIBLE
-        connMatrixProgress.progress = 0
-        tvConnMatrixStatus.text = "準備中..."
-
-        lifecycleScope.launch {
-            val result = manager.downloadAndCompile { pct, statusText ->
-                runOnUiThread {
-                    connMatrixProgress.progress = pct
-                    tvConnMatrixStatus.text = statusText
-                }
-            }
-            connMatrixProgress.visibility = View.GONE
-            tvConnMatrixStatus.visibility = View.GONE
-            btnDownloadConnMatrix.isEnabled = true
-            btnDeleteConnMatrix.isEnabled = true
-
-            if (result.isSuccess) {
-                Toast.makeText(this@MainActivity, "連接コスト行列のインストールが完了しました (714万遷移)", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(this@MainActivity, "ダウンロード/構築に失敗しました: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-            }
-            refreshConnectionMatrixUI()
-            refreshEnglishSpellingUI()
         }
     }
 
