@@ -229,7 +229,8 @@ class LlmReranker private constructor(private val context: Context) {
             val restPool = nonHiraganaCandidates.drop(8)
 
             val surfaces = topPool.map { it.surface }.toTypedArray()
-            val effectiveContext = if (contextPrefix.isBlank()) "<s>" else contextPrefix
+            val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
+            val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
             val scores = nativeScoreCandidates(effectiveContext, surfaces)
 
             if (scores == null || scores.size != topPool.size) {
@@ -315,7 +316,8 @@ class LlmReranker private constructor(private val context: Context) {
             return emptyList()
         }
         try {
-            val effectiveContext = if (contextPrefix.isBlank()) "<s>" else contextPrefix
+            val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
+            val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
             val surfaces = nativePredictNextPhrases(effectiveContext, maxCandidates, maxTokens) ?: return emptyList()
             return surfaces.filter { it.isNotBlank() }.map { surface ->
                 ConversionCandidate(
