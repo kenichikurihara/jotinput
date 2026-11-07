@@ -21,6 +21,12 @@ Or manually:
 3. Verify that the app launches and the ReazonSpeech model loads cleanly in logcat on both devices.
 4. For any UI / IME change, verify visual rendering and `dumpsys window` metrics on the physical phone (and on ARCVM whenever applicable). Never silently skip a target; if a target is unreachable or a check is constrained by the environment (e.g., ChromeOS hardware keyboard bridge), explicitly report it to the user.
 
+## ☁️ APK Sideload & Google Drive Sync Policy
+Whenever changes are made and the APK is compiled:
+- **Google Drive Sync for Phone Sideloading**:
+  - Ensure the compiled debug APK (`app/build/outputs/apk/debug/app-debug.apk`) is synced to Google Drive (e.g., `/mnt/chromeos/GoogleDrive/MyDrive/JotInput/app-debug.apk` or via Google Drive plugin/tool) so the user can immediately sideload and test on their physical phone.
+  - [`./deploy.sh`](file:///home/kenichikurihara/repos/myasr/deploy.sh) automatically checks for ChromeOS Google Drive / shared storage mounts (`/mnt/chromeos/GoogleDrive/MyDrive` or `/mnt/chromeos/MyFiles`) and copies `app-debug.apk` directly into the `JotInput/` directory on every build.
+
 ## 💾 Custom Dictionary Persistence Policy
 - Keep dictionary empty by default on fresh installs.
 - Never erase or overwrite `context.filesDir/custom_dictionary.json` across app updates or schema changes.
