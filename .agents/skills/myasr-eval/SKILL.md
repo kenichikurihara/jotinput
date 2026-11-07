@@ -23,6 +23,7 @@ This skill documents all evaluation suites, datasets, metrics, and command-line 
 | **5. Multimodal Voice & Touch Arbitration** | State machine transitions, voice streaming while typing, Undo/Delete/Space/Punctuation | [`VoiceInputArbitratorTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/VoiceInputArbitratorTest.kt), [`FutoSwipeIntegrationTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/FutoSwipeIntegrationTest.kt) | 100% Pass, Zero Inconsistency | Gradle JVM UnitTest |
 | **6. Streaming Prefix Freeze & Filler Removal** | Live speech partial commit, flicker suppression, filler filtering | [`StreamingPrefixFreezeEvaluationTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/StreamingPrefixFreezeEvaluationTest.kt), 120-case filler suite | Edit Distance, Revision Rate, Latency | Gradle JVM UnitTest |
 | **7. English QWERTY Neural Swipe Typing** | 1D-CNN/DFSMN spatial CTC beam search + ContextLM re-ranking | `eval/futo_swipe/swipe_eval_1000.jsonl` (1,000 cases) | Top-1 / Top-3 / Top-5 Acc, NN Latency (ms) | Python & Native C++ |
+| **8. LM-First Joint Scoring & Parameter Tuning** | Language model-first joint decoding, Intra-Word Surprisal Clamping, length diagnostic recovery, flick/QWERTY typo recovery | `eval/lm_first_eval_dataset.json` (247 cases), [`LmFirstJointEvaluationTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt) | Top-1, Top-3, MRR, User Dict 100%, Diagnostic 100% | Python (`tune_and_eval_lm_first.py`) & JVM UnitTest |
 
 --------------------------------------------------------------------------------
 
@@ -203,6 +204,54 @@ python3 eval/futo_swipe/run_futo_swipe_eval.py \
 ### Reference Documentation
 - [`docs/futo_swipe_phase1_evaluation_report.md`](file:///home/kenichikurihara/repos/myasr/docs/futo_swipe_phase1_evaluation_report.md)
 - [`docs/futo_swipe_qwerty_design.md`](file:///home/kenichikurihara/repos/myasr/docs/futo_swipe_qwerty_design.md)
+
+--------------------------------------------------------------------------------
+
+## 8. LM-First Joint Scoring & Parameter Tuning Benchmark
+
+### Purpose
+Evaluates Language Model-first joint beam search and candidate scoring, combining linguistic prior log-likelihood $\log P_{\text{LM}}(W \mid C)$, observation touch/typo penalties $\lambda_{\text{obs}} \cdot \text{dist}$, and dictionary rank costs $\alpha \cdot \text{rankCost}$. Specifically verifies:
+1. **Intra-Word Surprisal Clamping for Custom Dictionary**: Zero eviction of rare, multi-token user vocabulary through Clamped Floor $\max(\mathcal{L}_{\text{sys\_best}}, \log P_{\text{LM}}) + \gamma_{\text{user}} \cdot \text{Priority}$.
+2. **Context-Aware Homophone Disambiguation**: Eliminating length-normalization bias on diagnostic cases (`けっか` $\to$ `結果` vs `結界`/`欠陥`, `さくじょ` $\to$ `削除` vs `策`/`作`).
+3. **Flick Typo & Voicing Omission Recovery**: Recovering intention from adjacent mis-flicks and unvoiced inputs (`てんく` $\to$ `天気`, `かいき` $\to$ `会議`).
+4. **Natural Colloquial & Conversational Accuracy**: Maintaining fluent spoken conversation conventions (`おつかれさまです`, `それな`).
+
+### Key Datasets & Scripts
+- **Evaluation Dataset**: `eval/lm_first_eval_dataset.json` (247 test cases across 6 categories)
+- **Dataset Generator**: `eval/build_lm_first_eval_dataset.py`
+- **Tuner & Grid Search Runner**: `eval/tune_and_eval_lm_first.py`
+- **Cached NLL Cache**: `eval/lm_first_nll_cache.json`
+- **Tuning Results Summary**: `eval/lm_first_tuning_results.json`
+- **Android JVM Unit Test**: [`app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt)
+
+### Tuned Optimal Parameters & Benchmark Results
+- **Optimal Hyperparameters**:
+  - $\alpha = 0.20$ (Dictionary rank cost balance)
+  - $\lambda_{\text{obs}} = 0.50$ (Observation likelihood typo scaling)
+  - $\gamma_{\text{user}} = 3.00$ (Custom dictionary priority boost)
+- **Benchmark Metrics**:
+  - **Overall Top-1 Accuracy**: **90.28%** (223 / 247)
+  - **Overall Top-3 Recall**: **99.19%** (245 / 247)
+  - **MRR (Mean Reciprocal Rank)**: **0.9460**
+  - **Custom Dictionary Top-1**: **100.0%** (20 / 20)
+  - **Length-Bias Diagnostic Top-1 (`結果` / `削除`)**: **100.0%** (12 / 12)
+  - **Typo & Voicing Recovery Top-1**: **100.0%** (15 / 15)
+  - **Natural Conversational Top-1**: **96.0%** (96 / 100)
+
+### How to Run
+```bash
+# Generate / rebuild the 247-case evaluation dataset:
+python3 eval/build_lm_first_eval_dataset.py
+
+# Run parameter grid search and benchmarking:
+python3 eval/tune_and_eval_lm_first.py
+
+# Run deterministic Android LM-First JVM Unit Test suite:
+./gradlew testDebugUnitTest --tests "com.example.myasr.LmFirstJointEvaluationTest"
+```
+
+### Reference Documentation
+- [`docs/lm_first_flick_and_qwerty_architecture.md`](file:///home/kenichikurihara/repos/myasr/docs/lm_first_flick_and_qwerty_architecture.md)
 
 --------------------------------------------------------------------------------
 
