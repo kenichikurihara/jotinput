@@ -61,6 +61,7 @@ This document records the core architectural decisions, design rationales, criti
    - [Finding 38: Android Activity Task Reuse on `adb shell am start` without `am force-stop`](#finding-38-android-activity-task-reuse-on-adb-shell-am-start-without-am-force-stop)
    - [Finding 39: Wireless ADB Sleep & Transient Disconnection Characteristics in Doze Mode](#finding-39-wireless-adb-sleep--transient-disconnection-characteristics-in-doze-mode)
    - [Finding 40: Short-Word Distortion in Static Edit Distance and Space-Adaptive BPE Evaluation in Language Models](#finding-40-short-word-distortion-in-static-edit-distance-and-space-adaptive-bpe-evaluation-in-language-models)
+- [Finding 41: LM-First Latency Profiling, Space-Adaptive BPE Scope Boundary, and 32x Acceleration via Memoized NLL & Thresholded Softmax](#finding-41-lm-first-latency-profiling-space-adaptive-bpe-scope-boundary-and-32x-acceleration-via-memoized-nll--thresholded-softmax)
 
 ---
 
@@ -1901,6 +1902,45 @@ When typing short 2-letter tokens in English mode (e.g. typing `"wi"` after cont
    - $-\log P(\text{wi} \mid \text{"I "}) = 12.50$
    - $-\log P(\text{UI} \mid \text{"I "}) = 13.05$
    With $\Delta \text{NLL} \approx 6.47\text{ nats}$, $\text{will}$ is over $640\times$ more probable than $\text{UI}$, placing it decisively at rank #1.
+
+---
+
+## Finding 41: LM-First Latency Profiling, Space-Adaptive BPE Scope Boundary, and 32x Acceleration via Memoized NLL & Thresholded Softmax
+
+### 1. Problem & Empirical Latency Anomaly
+On the connected Pixel 10 Pro (Tensor G5), the on-device SLM re-ranking pipeline (`local_slm`, Qwen2.5-0.5B) under LM-First conversion reported unexpectedly high wall latency on KV cache hits:
+- **Cache Hit**: **658.8 ms / conversion** (CPU: 2,281.4 ms)
+- **Continuous Typing**: **799.3 ms / conversion** (CPU: 2,608.7 ms)
+- **Cache Miss**: **765.7 ms / conversion** (CPU: 2,623.5 ms)
+
+### 2. Root Cause Analysis
+1. **Space-Adaptive BPE Scope Boundary Misapplication**:
+   The space-adaptive tokenization check introduced for English QWERTY typing tested `!cand_str.empty() && !isspace(cand_str.front())`. For Japanese candidates (e.g. `結果`, `状況`, `移動`), the leading Kanji character satisfies `!isspace`, causing the engine to tokenize `" " + cand_str` (`[tok(" "), tok("状況")]`). Because the universal space token has high prior probability, `s_nll` beat `best_nll` on nearly 100% of Japanese candidates, corrupting 1-token words into multi-token sequences and forcing all 8 candidates into Stage 2 `llama_decode()` passes.
+2. **Absence of Score Memoization during Interactive Typing**:
+   Typing `か` $\to$ `かい` $\to$ `かいぎ` shares identical preceding context `C`. Candidates appearing across multiple keystrokes were re-decoded from scratch.
+3. **Absence of Admissible Lower-Bound Pruning**:
+   Multi-token candidates whose initial token $t_0$ NLL was already $+8.0\text{ nats}$ worse than completed 1-token words were unnecessarily evaluated in Stage 2.
+4. **151,936-Vocab Scalar Double Log-Sum-Exp**:
+   Calculating `std::exp(double)` across all vocabulary tokens at every speculative step incurred avoidable CPU overhead.
+
+### 3. Architectural Solutions & Quantified Impact
+1. **ASCII-Constrained Space-Adaptive Tokenization**:
+   Restricted `" " + cand_str` strictly to `std::isalnum(cand_str.front())`. Single-token Japanese words are resolved immediately in Stage 1 ($0.06\text{ms}$).
+2. **Per-Context Candidate Score Memoization (`cached_candidate_nlls_`)**:
+   Retains evaluated surface NLLs for the lifetime of the cached context hash.
+3. **Admissible Lower-Bound Pruning**:
+   Multi-token candidates with $\text{NLL}(t_0) > \text{NLL}_{\min} + 8.0\text{ nats}$ bypass Stage 2.
+4. **Thresholded Single-Precision `expf` Softmax (`ComputeLogDenominator`)**:
+   Values with $\text{logit} - \max < -16.0\text{f}$ are skipped ($< 1.1 \times 10^{-7}$ contribution), reducing instruction count by $10\times$.
+5. **Pre-Warming and Preemption**:
+   Idle time pre-warms the context prefix (`warmContext`), while incoming keystrokes preempt in-flight phrase prediction (`abort_prediction_`).
+
+### 4. Empirical Hardware Measurement Comparison (Pixel 10 Pro)
+- **KV Cache Hit**: **658.8 ms $\to$ 20.2 ms (32.6x speedup, CPU time 2281.4ms $\to$ 98.6ms / -95.7%)**
+- **Continuous Typing**: **799.3 ms $\to$ 132.7 ms (6.0x speedup, CPU time 2608.7ms $\to$ 506.5ms / -80.6%)**
+- **KV Cache Miss**: **765.7 ms $\to$ 246.7 ms (3.1x speedup, CPU time 2623.5ms $\to$ 915.0ms / -65.1%)**
+- **247-Case LM-First Benchmark**: Overall Top-1 **90.28%** (223/247), Top-3 **99.19%**, Diagnostic **100%**, User Dict **100%** (Zero regression).
+
 
 
 
