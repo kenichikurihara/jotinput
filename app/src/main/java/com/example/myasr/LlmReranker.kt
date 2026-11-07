@@ -200,13 +200,15 @@ class LlmReranker private constructor(private val context: Context) {
 
     /**
      * Re-ranks conversion candidates based on preceding text context and SLM conditional log-likelihood.
-     * Retains user-defined dictionary entries at absolute top priority.
+     * Retains user-defined dictionary entries at absolute top priority via Intra-Word Surprisal Clamping (ADR-011 & Section 9.3).
      * Returns a pair of (reranked candidates, whether SLM scoring was successfully applied).
      */
     fun rerankWithStatus(
         contextPrefix: String,
         candidates: List<ConversionCandidate>,
-        weightAlpha: Float = 0.00f
+        weightAlpha: Float = KeyboardHeightManager.DEFAULT_SLM_WEIGHT_ALPHA,
+        lambdaObs: Float = KeyboardHeightManager.DEFAULT_SLM_LAMBDA_OBS,
+        gammaUser: Float = KeyboardHeightManager.DEFAULT_SLM_GAMMA_USER
     ): Pair<List<ConversionCandidate>, Boolean> {
         if (state != State.READY || candidates.size <= 1) {
             return Pair(candidates, false)
@@ -222,41 +224,61 @@ class LlmReranker private constructor(private val context: Context) {
                 return Pair(nonHiraganaCandidates, false)
             }
 
-            // Keep user entries separate to guarantee custom dictionary priority (ADR-004 & ADR-005)
-            val userCandidates = nonHiraganaCandidates.filter { it.source == "user" }
-            val eligibleCandidates = nonHiraganaCandidates.filter { it.source != "user" }
-
-            if (eligibleCandidates.isEmpty()) {
-                return Pair(candidates, false)
-            }
-
             // Cap candidate evaluation pool to at most top 8 for low latency and zero UI lag
-            val topEligible = eligibleCandidates.take(8)
-            val restEligible = eligibleCandidates.drop(8)
+            val topPool = nonHiraganaCandidates.take(8)
+            val restPool = nonHiraganaCandidates.drop(8)
 
-            val surfaces = topEligible.map { it.surface }.toTypedArray()
+            val surfaces = topPool.map { it.surface }.toTypedArray()
             val effectiveContext = if (contextPrefix.isBlank()) "<s>" else contextPrefix
             val scores = nativeScoreCandidates(effectiveContext, surfaces)
 
-            if (scores == null || scores.size != topEligible.size) {
-                return Pair(candidates, false)
+            if (scores == null || scores.size != topPool.size) {
+                // Safe fallback: user entries first
+                val userFallback = nonHiraganaCandidates.filter { it.source == "user" }
+                val otherFallback = nonHiraganaCandidates.filter { it.source != "user" }
+                return Pair(userFallback + otherFallback, false)
             }
 
-            // Combine Mozc rank cost with SLM score
-            // Lower combined score is better
-            val scored = topEligible.mapIndexed { index, candidate ->
-                // Baseline rank cost: rank * 1000
+            // Find best system NLL for Intra-Word Surprisal Clamping
+            val sysNlls = topPool.mapIndexedNotNull { index, cand ->
+                if (cand.source != "user") scores[index] else null
+            }
+            val sysBestNll = sysNlls.minOrNull() ?: 15.0f
+
+            // LM-First Unified Scoring
+            val scored = topPool.mapIndexed { index, candidate ->
+                val rawNll = scores[index] // -log P(W|C)
+                val isUser = candidate.source == "user"
+
+                // 1. Effective NLL with Clamped Floor and Priority Boost for user words
+                val effectiveNll = if (isUser) {
+                    val priority = if (candidate.priority > 0f) candidate.priority else 3.0f
+                    val clampedNll = minOf(sysBestNll, rawNll)
+                    val userBoost = gammaUser * priority
+                    val tieBreaker = 0.05f * rawNll
+                    clampedNll - userBoost + tieBreaker
+                } else {
+                    rawNll
+                }
+
+                // 2. Observation penalty (e.g. flick typo distance, voicing omission)
+                val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f
+
+                // 3. Base rank cost (index in candidate pool)
                 val rankCost = (index * 1000.0f) / 1000.0f
-                val slmNegLogProb = scores[index] // -log P(W|C)
-                val combinedScore = weightAlpha * rankCost + (1.0f - weightAlpha) * slmNegLogProb
-                Pair(candidate, combinedScore)
+
+                // 4. Combined Score (lower is better)
+                val finalScore = (1.0f - weightAlpha) * (effectiveNll + effectiveObs) + weightAlpha * rankCost
+                Pair(candidate, finalScore)
             }
 
-            val sortedEligible = scored.sortedBy { it.second }.map { it.first }
-            return Pair(userCandidates + sortedEligible + restEligible, true)
+            val sortedPool = scored.sortedBy { it.second }.map { it.first }
+            return Pair(sortedPool + restPool, true)
         } catch (e: Exception) {
             Log.w(TAG, "Reranking failed: ${e.message}, falling back to original candidates.")
-            return Pair(candidates, false)
+            val userFallback = candidates.filter { it.source == "user" }
+            val otherFallback = candidates.filter { it.source != "user" }
+            return Pair(userFallback + otherFallback, false)
         }
     }
 
@@ -266,7 +288,7 @@ class LlmReranker private constructor(private val context: Context) {
     fun rerank(
         contextPrefix: String,
         candidates: List<ConversionCandidate>,
-        weightAlpha: Float = 0.00f
+        weightAlpha: Float = KeyboardHeightManager.DEFAULT_SLM_WEIGHT_ALPHA
     ): List<ConversionCandidate> {
         return rerankWithStatus(contextPrefix, candidates, weightAlpha).first
     }

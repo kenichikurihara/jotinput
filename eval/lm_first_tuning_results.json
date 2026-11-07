@@ -1,0 +1,5570 @@
+{
+  "best_config": {
+    "alpha": 0.15,
+    "lambda_obs": 0.5,
+    "gamma_user": 2.0,
+    "top1_acc": 90.2834008097166,
+    "top3_recall": 99.19028340080972,
+    "mrr": 0.9460188933873143,
+    "categories": {
+      "homophone": {
+        "top1_acc": 80.0,
+        "top3_recall": 96.0,
+        "mrr": 0.8866666666666666,
+        "count": 50
+      },
+      "phrase": {
+        "top1_acc": 80.0,
+        "top3_recall": 100.0,
+        "mrr": 0.8866666666666667,
+        "count": 50
+      },
+      "diagnostic": {
+        "top1_acc": 100.0,
+        "top3_recall": 100.0,
+        "mrr": 1.0,
+        "count": 12
+      },
+      "user_dict": {
+        "top1_acc": 100.0,
+        "top3_recall": 100.0,
+        "mrr": 1.0,
+        "count": 20
+      },
+      "observation": {
+        "top1_acc": 100.0,
+        "top3_recall": 100.0,
+        "mrr": 1.0,
+        "count": 15
+      },
+      "natural": {
+        "top1_acc": 96.0,
+        "top3_recall": 100.0,
+        "mrr": 0.98,
+        "count": 100
+      }
+    }
+  },
+  "all_results": [
+    {
+      "alpha": 0.15,
+      "lambda_obs": 0.5,
+      "gamma_user": 2.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9460188933873143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 0.5,
+      "gamma_user": 3.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9460188933873143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 0.5,
+      "gamma_user": 4.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9460188933873143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 0.5,
+      "gamma_user": 5.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9460188933873143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 0.5,
+      "gamma_user": 2.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9460188933873143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 0.5,
+      "gamma_user": 3.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9460188933873143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 0.5,
+      "gamma_user": 4.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9460188933873143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 0.5,
+      "gamma_user": 5.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9460188933873143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 0.5,
+      "gamma_user": 2.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9466936572199729,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 0.5,
+      "gamma_user": 3.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9466936572199729,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 0.5,
+      "gamma_user": 4.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9466936572199729,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 0.5,
+      "gamma_user": 5.0,
+      "top1_acc": 90.2834008097166,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9466936572199729,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 0.5,
+      "gamma_user": 2.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 0.5,
+      "gamma_user": 3.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 0.5,
+      "gamma_user": 4.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 0.5,
+      "gamma_user": 5.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 0.5,
+      "gamma_user": 2.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 0.5,
+      "gamma_user": 3.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 0.5,
+      "gamma_user": 4.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 0.5,
+      "gamma_user": 5.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 0.5,
+      "gamma_user": 2.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 0.5,
+      "gamma_user": 3.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 0.5,
+      "gamma_user": 4.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 0.5,
+      "gamma_user": 5.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 0.5,
+      "gamma_user": 1.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 0.5,
+      "gamma_user": 1.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9439946018893386,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 0.5,
+      "gamma_user": 1.0,
+      "top1_acc": 89.87854251012146,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9446693657219972,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 0.5,
+      "gamma_user": 1.0,
+      "top1_acc": 89.47368421052632,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9419703103913629,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 0.5,
+      "gamma_user": 1.0,
+      "top1_acc": 89.47368421052632,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9419703103913629,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 0.5,
+      "gamma_user": 1.0,
+      "top1_acc": 89.47368421052632,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9419703103913629,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 1.0,
+      "gamma_user": 2.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9399460188933871,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 1.0,
+      "gamma_user": 3.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9399460188933871,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 1.0,
+      "gamma_user": 4.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9399460188933871,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 1.0,
+      "gamma_user": 5.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9399460188933871,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 1.0,
+      "gamma_user": 2.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9399460188933871,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 1.0,
+      "gamma_user": 3.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9399460188933871,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 1.0,
+      "gamma_user": 4.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9399460188933871,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 1.0,
+      "gamma_user": 5.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9399460188933871,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 1.0,
+      "gamma_user": 2.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9406207827260458,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 1.0,
+      "gamma_user": 3.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9406207827260458,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 1.0,
+      "gamma_user": 4.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9406207827260458,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 1.0,
+      "gamma_user": 5.0,
+      "top1_acc": 89.06882591093117,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9406207827260458,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 1.0,
+      "gamma_user": 2.0,
+      "top1_acc": 88.66396761133603,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9379217273954115,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 1.0,
+      "gamma_user": 3.0,
+      "top1_acc": 88.66396761133603,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9379217273954115,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 1.0,
+      "gamma_user": 4.0,
+      "top1_acc": 88.66396761133603,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9379217273954115,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 1.0,
+      "gamma_user": 5.0,
+      "top1_acc": 88.66396761133603,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9379217273954115,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 1.0,
+      "gamma_user": 1.0,
+      "top1_acc": 88.66396761133603,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9379217273954115,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 1.0,
+      "gamma_user": 1.0,
+      "top1_acc": 88.66396761133603,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9379217273954115,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 1.0,
+      "gamma_user": 1.0,
+      "top1_acc": 88.66396761133603,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9385964912280701,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 1.0,
+      "gamma_user": 2.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 73.33333333333333,
+          "top3_recall": 100.0,
+          "mrr": 0.8666666666666667,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 1.0,
+      "gamma_user": 3.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 73.33333333333333,
+          "top3_recall": 100.0,
+          "mrr": 0.8666666666666667,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 1.0,
+      "gamma_user": 4.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 73.33333333333333,
+          "top3_recall": 100.0,
+          "mrr": 0.8666666666666667,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 1.0,
+      "gamma_user": 5.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 73.33333333333333,
+          "top3_recall": 100.0,
+          "mrr": 0.8666666666666667,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 1.0,
+      "gamma_user": 2.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 73.33333333333333,
+          "top3_recall": 100.0,
+          "mrr": 0.8666666666666667,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 1.0,
+      "gamma_user": 3.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 73.33333333333333,
+          "top3_recall": 100.0,
+          "mrr": 0.8666666666666667,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 1.0,
+      "gamma_user": 4.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 73.33333333333333,
+          "top3_recall": 100.0,
+          "mrr": 0.8666666666666667,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 1.0,
+      "gamma_user": 5.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 73.33333333333333,
+          "top3_recall": 100.0,
+          "mrr": 0.8666666666666667,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 1.0,
+      "gamma_user": 1.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.9,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 1.5,
+      "gamma_user": 2.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 1.5,
+      "gamma_user": 3.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 1.5,
+      "gamma_user": 4.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 1.5,
+      "gamma_user": 5.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 2.0,
+      "gamma_user": 2.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9345479082321186,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 2.0,
+      "gamma_user": 3.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9345479082321186,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 2.0,
+      "gamma_user": 4.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9345479082321186,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 2.0,
+      "gamma_user": 5.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9345479082321186,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 1.5,
+      "gamma_user": 2.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 1.5,
+      "gamma_user": 3.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 1.5,
+      "gamma_user": 4.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 1.5,
+      "gamma_user": 5.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 2.0,
+      "gamma_user": 2.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9345479082321186,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 2.0,
+      "gamma_user": 3.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9345479082321186,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 2.0,
+      "gamma_user": 4.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9345479082321186,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 2.0,
+      "gamma_user": 5.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9345479082321186,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 1.5,
+      "gamma_user": 2.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 1.5,
+      "gamma_user": 3.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 1.5,
+      "gamma_user": 4.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 1.5,
+      "gamma_user": 5.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9358974358974358,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 2.0,
+      "gamma_user": 2.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 2.0,
+      "gamma_user": 3.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 2.0,
+      "gamma_user": 4.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 2.0,
+      "gamma_user": 5.0,
+      "top1_acc": 88.25910931174089,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9352226720647772,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 1.0,
+      "gamma_user": 1.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.93387314439946,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 73.33333333333333,
+          "top3_recall": 100.0,
+          "mrr": 0.8666666666666667,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 1.5,
+      "gamma_user": 2.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 1.5,
+      "gamma_user": 3.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 1.5,
+      "gamma_user": 4.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 1.5,
+      "gamma_user": 5.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 2.0,
+      "gamma_user": 2.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 2.0,
+      "gamma_user": 3.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 2.0,
+      "gamma_user": 4.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 2.0,
+      "gamma_user": 5.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 1.0,
+      "gamma_user": 1.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.93387314439946,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 73.33333333333333,
+          "top3_recall": 100.0,
+          "mrr": 0.8666666666666667,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 1.5,
+      "gamma_user": 2.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 1.5,
+      "gamma_user": 3.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 1.5,
+      "gamma_user": 4.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 1.5,
+      "gamma_user": 5.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 2.0,
+      "gamma_user": 2.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 2.0,
+      "gamma_user": 3.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 2.0,
+      "gamma_user": 4.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 2.0,
+      "gamma_user": 5.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 1.5,
+      "gamma_user": 2.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 1.5,
+      "gamma_user": 3.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 1.5,
+      "gamma_user": 4.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 1.5,
+      "gamma_user": 5.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 2.0,
+      "gamma_user": 2.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 2.0,
+      "gamma_user": 3.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 2.0,
+      "gamma_user": 4.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 2.0,
+      "gamma_user": 5.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 1.5,
+      "gamma_user": 1.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.15,
+      "lambda_obs": 2.0,
+      "gamma_user": 1.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 1.5,
+      "gamma_user": 1.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.2,
+      "lambda_obs": 2.0,
+      "gamma_user": 1.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.932523616734143,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8866666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 1.5,
+      "gamma_user": 1.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.93387314439946,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.3,
+      "lambda_obs": 2.0,
+      "gamma_user": 1.0,
+      "top1_acc": 87.85425101214574,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9331983805668015,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 80.0,
+          "top3_recall": 100.0,
+          "mrr": 0.89,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 1.5,
+      "gamma_user": 1.0,
+      "top1_acc": 87.4493927125506,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9311740890688258,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.0,
+      "lambda_obs": 2.0,
+      "gamma_user": 1.0,
+      "top1_acc": 87.4493927125506,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9304993252361673,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 1.5,
+      "gamma_user": 1.0,
+      "top1_acc": 87.4493927125506,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9311740890688258,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.05,
+      "lambda_obs": 2.0,
+      "gamma_user": 1.0,
+      "top1_acc": 87.4493927125506,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9304993252361673,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 1.5,
+      "gamma_user": 1.0,
+      "top1_acc": 87.4493927125506,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9311740890688258,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8222222222222223,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    },
+    {
+      "alpha": 0.1,
+      "lambda_obs": 2.0,
+      "gamma_user": 1.0,
+      "top1_acc": 87.4493927125506,
+      "top3_recall": 99.19028340080972,
+      "mrr": 0.9304993252361673,
+      "categories": {
+        "homophone": {
+          "top1_acc": 80.0,
+          "top3_recall": 96.0,
+          "mrr": 0.8866666666666666,
+          "count": 50
+        },
+        "phrase": {
+          "top1_acc": 78.0,
+          "top3_recall": 100.0,
+          "mrr": 0.8766666666666667,
+          "count": 50
+        },
+        "diagnostic": {
+          "top1_acc": 100.0,
+          "top3_recall": 100.0,
+          "mrr": 1.0,
+          "count": 12
+        },
+        "user_dict": {
+          "top1_acc": 95.0,
+          "top3_recall": 100.0,
+          "mrr": 0.975,
+          "count": 20
+        },
+        "observation": {
+          "top1_acc": 66.66666666666666,
+          "top3_recall": 100.0,
+          "mrr": 0.8111111111111111,
+          "count": 15
+        },
+        "natural": {
+          "top1_acc": 96.0,
+          "top3_recall": 100.0,
+          "mrr": 0.98,
+          "count": 100
+        }
+      }
+    }
+  ]
+}

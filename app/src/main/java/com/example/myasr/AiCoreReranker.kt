@@ -61,11 +61,13 @@ class AiCoreReranker private constructor(private val context: Context) {
         engineType: RerankEngineType,
         contextPrefix: String,
         candidates: List<ConversionCandidate>,
-        weightAlpha: Float = 0.00f
+        weightAlpha: Float = KeyboardHeightManager.DEFAULT_SLM_WEIGHT_ALPHA,
+        lambdaObs: Float = KeyboardHeightManager.DEFAULT_SLM_LAMBDA_OBS,
+        gammaUser: Float = KeyboardHeightManager.DEFAULT_SLM_GAMMA_USER
     ): Pair<List<ConversionCandidate>, Boolean> {
         if (!isSupported() || candidates.size <= 1) {
             // AICore not supported on this device/runtime -> Fall back directly to Local SLM
-            return LlmReranker.getInstance(context).rerankWithStatus(contextPrefix, candidates, weightAlpha)
+            return LlmReranker.getInstance(context).rerankWithStatus(contextPrefix, candidates, weightAlpha, lambdaObs, gammaUser)
         }
 
         try {
@@ -85,15 +87,12 @@ class AiCoreReranker private constructor(private val context: Context) {
                 return Pair(candidates, false)
             }
 
-            val topEligible = eligibleCandidates.take(8)
-            val restEligible = eligibleCandidates.drop(8)
-
             // When running in production on Android 14+ / Tensor, AICore sandboxed inference service
             // is invoked. If AICore inference returns a ranked permutation or likelihoods, we apply it.
             // When AICore service binding is not yet active, we gracefully fall back to local SLM.
             val localSlm = LlmReranker.getInstance(context)
             if (localSlm.isReady()) {
-                val localResult = localSlm.rerankWithStatus(contextPrefix, candidates, weightAlpha)
+                val localResult = localSlm.rerankWithStatus(contextPrefix, candidates, weightAlpha, lambdaObs, gammaUser)
                 if (localResult.second) {
                     return localResult
                 }
@@ -103,7 +102,7 @@ class AiCoreReranker private constructor(private val context: Context) {
             return Pair(candidates, false)
         } catch (e: Exception) {
             Log.w(TAG, "AICore reranking exception: ${e.message}, falling back to Local SLM")
-            return LlmReranker.getInstance(context).rerankWithStatus(contextPrefix, candidates, weightAlpha)
+            return LlmReranker.getInstance(context).rerankWithStatus(contextPrefix, candidates, weightAlpha, lambdaObs, gammaUser)
         }
     }
 }

@@ -15,6 +15,11 @@ object KeyboardHeightManager {
     const val KEY_SLM_MANDATORY_RERANK_TIMEOUT_MS = "slm_mandatory_rerank_timeout_ms"
     const val DEFAULT_SLM_MANDATORY_RERANK_TIMEOUT_MS = 500L
     const val KEY_SLM_WEIGHT_ALPHA = "slm_weight_alpha"
+    const val DEFAULT_SLM_WEIGHT_ALPHA = 0.20f
+    const val KEY_SLM_LAMBDA_OBS = "slm_lambda_obs"
+    const val DEFAULT_SLM_LAMBDA_OBS = 0.50f
+    const val KEY_SLM_GAMMA_USER = "slm_gamma_user"
+    const val DEFAULT_SLM_GAMMA_USER = 3.00f
     const val KEY_STREAMING_VOICE_INPUT = "streaming_voice_input"
     const val KEY_DEBUG_DISPLAY = "debug_display"
     const val KEY_RERANK_ENGINE_TYPE = "rerank_engine_type"
@@ -135,12 +140,32 @@ object KeyboardHeightManager {
 
     fun getSlmWeightAlpha(context: Context): Float {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getFloat(KEY_SLM_WEIGHT_ALPHA, 0.00f)
+        return prefs.getFloat(KEY_SLM_WEIGHT_ALPHA, DEFAULT_SLM_WEIGHT_ALPHA)
     }
 
     fun setSlmWeightAlpha(context: Context, alpha: Float) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putFloat(KEY_SLM_WEIGHT_ALPHA, alpha).apply()
+    }
+
+    fun getSlmLambdaObs(context: Context): Float {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getFloat(KEY_SLM_LAMBDA_OBS, DEFAULT_SLM_LAMBDA_OBS)
+    }
+
+    fun setSlmLambdaObs(context: Context, lambdaObs: Float) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_SLM_LAMBDA_OBS, lambdaObs).apply()
+    }
+
+    fun getSlmGammaUser(context: Context): Float {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getFloat(KEY_SLM_GAMMA_USER, DEFAULT_SLM_GAMMA_USER)
+    }
+
+    fun setSlmGammaUser(context: Context, gammaUser: Float) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_SLM_GAMMA_USER, gammaUser).apply()
     }
 
     fun isStreamingVoiceInputEnabled(context: Context): Boolean {
