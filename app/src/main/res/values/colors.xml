@@ -30,6 +30,8 @@
     <color name="badge_info_text">#1967D2</color> <!-- Google Blue 700 -->
     <color name="badge_success_bg">#E6F4EA</color> <!-- Google Green 50 -->
     <color name="badge_success_text">#137333</color> <!-- Google Green 700 -->
+    <color name="badge_warning_bg">#FEF7E0</color> <!-- Google Amber 50 -->
+    <color name="badge_warning_text">#B06000</color> <!-- Google Amber 800 -->
     <color name="badge_neutral_bg">#F1F3F4</color> <!-- Google Grey 100 -->
     <color name="badge_neutral_text">#5F6368</color> <!-- Google Grey 700 -->
 

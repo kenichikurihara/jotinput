@@ -691,11 +691,60 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     /**
+     * Tries fast synchronous candidate scoring directly on Main Thread (< 0.1ms) using cached context logits.
+     * Returns FastRerankResult if cache hit, or null if full background decode is required.
+     */
+    fun tryFastRerankCandidatesWithStatus(
+        contextPrefix: String,
+        baseCandidates: List<ConversionCandidate>,
+        currentShownTop1: String? = null
+    ): LlmReranker.FastRerankResult? {
+        val firstReading = baseCandidates.firstOrNull()?.reading
+        val filtered = baseCandidates.filter {
+            val isRedundantHiragana = JapaneseKanaUtils.isAllHiragana(it.surface) && (firstReading != null && it.surface == firstReading)
+            !isRedundantHiragana
+        }
+        if (filtered.size <= 1) {
+            return null
+        }
+        val ctx = context ?: return null
+        if (!KeyboardHeightManager.isSlmRerankEnabled(ctx)) {
+            return null
+        }
+        val isContextFreeEnabled = KeyboardHeightManager.isSlmContextFreeRerankEnabled(ctx)
+        if (contextPrefix.isBlank() && (!isContextFreeEnabled || firstReading == "（" || firstReading == "）" || firstReading == "(" || firstReading == ")")) {
+            return null
+        }
+        val engineType = KeyboardHeightManager.getRerankEngineType(ctx)
+        if (engineType != RerankEngineType.LOCAL_SLM && engineType != RerankEngineType.LOCAL_SLM_1_5B && engineType != RerankEngineType.HYBRID_RERANK) {
+            return null
+        }
+
+        val alpha = KeyboardHeightManager.getSlmWeightAlpha(ctx)
+        val lambdaObs = KeyboardHeightManager.getSlmLambdaObs(ctx)
+        val gammaUser = KeyboardHeightManager.getSlmGammaUser(ctx)
+        val effectiveAlpha = if (engineType == RerankEngineType.HYBRID_RERANK) maxOf(alpha, 0.40f) else alpha
+
+        return LlmReranker.getInstance(ctx).tryFastRerankWithStatus(
+            contextPrefix = contextPrefix,
+            candidates = filtered,
+            currentShownTop1 = currentShownTop1,
+            weightAlpha = effectiveAlpha,
+            lambdaObs = lambdaObs,
+            gammaUser = gammaUser
+        )
+    }
+
+    /**
      * Contextual candidate re-ranking using SLM or Android AICore (Gemini Nano 1 / 2).
      * Designed to be executed asynchronously on Dispatchers.Default.
      * Returns a pair of (reranked candidates, whether scoring was successfully applied).
      */
-    fun rerankCandidatesWithStatus(contextPrefix: String, baseCandidates: List<ConversionCandidate>): Pair<List<ConversionCandidate>, Boolean> {
+    fun rerankCandidatesWithStatus(
+        contextPrefix: String,
+        baseCandidates: List<ConversionCandidate>,
+        currentShownTop1: String? = null
+    ): Pair<List<ConversionCandidate>, Boolean> {
         val firstReading = baseCandidates.firstOrNull()?.reading
         val filtered = baseCandidates.filter {
             val isRedundantHiragana = JapaneseKanaUtils.isAllHiragana(it.surface) && (firstReading != null && it.surface == firstReading)
@@ -724,7 +773,14 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             }
             RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B, RerankEngineType.HYBRID_RERANK -> {
                 val effectiveAlpha = if (engineType == RerankEngineType.HYBRID_RERANK) maxOf(alpha, 0.40f) else alpha
-                LlmReranker.getInstance(ctx).rerankWithStatus(contextPrefix, filtered, weightAlpha = effectiveAlpha, lambdaObs = lambdaObs, gammaUser = gammaUser)
+                LlmReranker.getInstance(ctx).rerankWithStatus(
+                    contextPrefix,
+                    filtered,
+                    weightAlpha = effectiveAlpha,
+                    lambdaObs = lambdaObs,
+                    gammaUser = gammaUser,
+                    currentShownTop1 = currentShownTop1
+                )
             }
         }
     }

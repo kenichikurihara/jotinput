@@ -117,6 +117,7 @@ class MultiDictionaryManager(private val context: Context) {
 
     suspend fun deleteDictionary(type: DictionaryType) = withContext(Dispatchers.IO) {
         dbHelper.deleteBySource(type.id)
+        AsrApp.instanceOrNull?.dictionaryUpdateTracker?.clearLocalUpdatedAt(type.id)
         KanaKanjiEngine.getInstance(context).clearMemoryCache()
     }
 
@@ -174,6 +175,7 @@ class MultiDictionaryManager(private val context: Context) {
 
             onProgress(95, "変換エンジンへ反映中...")
             KanaKanjiEngine.getInstance(context).clearMemoryCache()
+            AsrApp.instanceOrNull?.dictionaryUpdateTracker?.markDictionaryUpdated(type.id)
 
             onProgress(100, "完了 (${totalInserted}語)")
             Log.i(TAG, "Completed ${type.displayName}: $totalInserted words inserted")
