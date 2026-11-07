@@ -113,7 +113,8 @@ object EnglishDictionaryUtils {
         val surface: String,
         val reading: String,
         val score: Float,
-        val cost: Float
+        val cost: Float,
+        val normCost: Float = 0.0f
     )
 
     /**
@@ -148,7 +149,7 @@ object EnglishDictionaryUtils {
 
             // 1. Exact case-insensitive match (e.g. user typed "reazonspeech", dict has "ReazonSpeech")
             if (typedLower == candLower) {
-                scored.add(ScoredCandidate(surface, entry.reading, baseVirtualScore, 0.0f))
+                scored.add(ScoredCandidate(surface, entry.reading, baseVirtualScore, 0.0f, 0.0f))
                 continue
             }
 
@@ -157,29 +158,28 @@ object EnglishDictionaryUtils {
                 val lenDiff = candLower.length - typedLower.length
                 val prefixCost = 0.4f + 0.1f * lenDiff
                 val score = baseVirtualScore - 2.8f * prefixCost
-                scored.add(ScoredCandidate(surface, entry.reading, score, prefixCost))
+                val normCost = 0.05f * lenDiff.toFloat() / candLower.length.toFloat()
+                scored.add(ScoredCandidate(surface, entry.reading, score, prefixCost, normCost))
                 continue
             }
 
             // 3. Spatial edit distance match for typos / misspellings
-            val n = candLower.length
-            val maxAllowedCost = when {
-                n <= 3 -> 1.5f
-                n <= 6 -> 2.5f
-                else -> 3.6f
-            }
-
+            // Principled Relative Observation Error: d(X, W) / max(|X|, |W|) <= 0.38
+            val maxLen = maxOf(typedLower.length, candLower.length)
             val cost = editAndSpatialCost(typedLower, candLower)
-            if (cost <= maxAllowedCost) {
+            val normCost = if (maxLen > 0) cost / maxLen.toFloat() else cost
+
+            if (normCost <= 0.38f && cost <= 3.6f) {
                 val score = baseVirtualScore - 2.8f * cost
-                scored.add(ScoredCandidate(surface, entry.reading, score, cost))
+                scored.add(ScoredCandidate(surface, entry.reading, score, cost, normCost))
             } else if (typedLower.length >= 4 && candLower.length > typedLower.length) {
                 // 4. Fuzzy prefix match (e.g. user typed "reazno", dict has "ReazonSpeech")
                 val prefixSub = candLower.substring(0, typedLower.length)
                 val fuzzyPrefixCost = editAndSpatialCost(typedLower, prefixSub)
-                if (fuzzyPrefixCost <= 1.2f) {
+                val fuzzyNormCost = fuzzyPrefixCost / typedLower.length.toFloat()
+                if (fuzzyNormCost <= 0.30f && fuzzyPrefixCost <= 1.2f) {
                     val score = baseVirtualScore - 2.8f * (fuzzyPrefixCost + 0.8f)
-                    scored.add(ScoredCandidate(surface, entry.reading, score, fuzzyPrefixCost + 0.8f))
+                    scored.add(ScoredCandidate(surface, entry.reading, score, fuzzyPrefixCost + 0.8f, fuzzyNormCost + 0.1f))
                 }
             }
         }
@@ -191,7 +191,9 @@ object EnglishDictionaryUtils {
                 surface = it.surface,
                 reading = rawWord,
                 isPrediction = false,
-                source = "user_english"
+                source = "user_english",
+                priority = it.score,
+                obsPenalty = it.normCost
             )
         }
     }

@@ -234,24 +234,25 @@ class LlmReranker private constructor(private val context: Context) {
 
             if (scores == null || scores.size != topPool.size) {
                 // Safe fallback: user entries first
-                val userFallback = nonHiraganaCandidates.filter { it.source == "user" }
-                val otherFallback = nonHiraganaCandidates.filter { it.source != "user" }
+                val userFallback = nonHiraganaCandidates.filter { it.source == "user" || it.source == "user_english" }
+                val otherFallback = nonHiraganaCandidates.filter { it.source != "user" && it.source != "user_english" }
                 return Pair(userFallback + otherFallback, false)
             }
 
             // Find best system NLL for Intra-Word Surprisal Clamping
             val sysNlls = topPool.mapIndexedNotNull { index, cand ->
-                if (cand.source != "user") scores[index] else null
+                if (cand.source != "user" && cand.source != "user_english") scores[index] else null
             }
             val sysBestNll = sysNlls.minOrNull() ?: 15.0f
 
             // LM-First Unified Scoring
             val scored = topPool.mapIndexed { index, candidate ->
                 val rawNll = scores[index] // -log P(W|C)
-                val isUser = candidate.source == "user"
+                val isUser = candidate.source == "user" || candidate.source == "user_english"
+                val isExactUser = isUser && candidate.obsPenalty == 0.0f
 
                 // 1. Effective NLL with Clamped Floor and Priority Boost for user words
-                val effectiveNll = if (isUser) {
+                val effectiveNll = if (isExactUser) {
                     val priority = if (candidate.priority > 0f) candidate.priority else 3.0f
                     val clampedNll = minOf(sysBestNll, rawNll)
                     val userBoost = gammaUser * priority
@@ -276,8 +277,8 @@ class LlmReranker private constructor(private val context: Context) {
             return Pair(sortedPool + restPool, true)
         } catch (e: Exception) {
             Log.w(TAG, "Reranking failed: ${e.message}, falling back to original candidates.")
-            val userFallback = candidates.filter { it.source == "user" }
-            val otherFallback = candidates.filter { it.source != "user" }
+            val userFallback = candidates.filter { it.source == "user" || it.source == "user_english" }
+            val otherFallback = candidates.filter { it.source != "user" && it.source != "user_english" }
             return Pair(userFallback + otherFallback, false)
         }
     }

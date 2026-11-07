@@ -214,20 +214,43 @@ bool LlmReranker::ScoreCandidates(const std::string& context,
     info.index = i;
     info.surface = candidates[i];
 
+    std::string cand_str = candidates[i];
     std::vector<llama_token> ctokens(64);
-    int n_cand_tokens = llama_tokenize(vocab_, candidates[i].data(), candidates[i].size(),
+    int n_cand_tokens = llama_tokenize(vocab_, cand_str.data(), cand_str.size(),
                                        ctokens.data(), ctokens.size(),
                                        false, false);
+    float best_nll = 20.0f;
     if (n_cand_tokens > 0) {
       ctokens.resize(n_cand_tokens);
-      info.tokens = std::move(ctokens);
+      info.tokens = ctokens;
       llama_token t0 = info.tokens[0];
-      float logprob = logits[t0] - log_denom;
-      info.token0_neg_logprob = -logprob; // positive negative-log-likelihood
-    } else {
-      info.token0_neg_logprob = 20.0f;
+      best_nll = -(logits[t0] - log_denom);
     }
 
+    // Space-adaptive BPE evaluation:
+    // In subword BPE tokenization (e.g. Qwen, LLaMA), words following whitespace or preceding
+    // tokens have leading-space variants (e.g. " will" token 686 vs "will" token 14387).
+    // If context does not end with whitespace and candidate does not start with whitespace,
+    // evaluate both forms and select the one matching the language model's subword boundary.
+    if (!context.empty() && !isspace(static_cast<unsigned char>(context.back())) &&
+        !cand_str.empty() && !isspace(static_cast<unsigned char>(cand_str.front()))) {
+      std::string spaced_cand = " " + cand_str;
+      std::vector<llama_token> s_tokens(64);
+      int n_s_tokens = llama_tokenize(vocab_, spaced_cand.data(), spaced_cand.size(),
+                                      s_tokens.data(), s_tokens.size(),
+                                      false, false);
+      if (n_s_tokens > 0) {
+        s_tokens.resize(n_s_tokens);
+        llama_token st0 = s_tokens[0];
+        float s_nll = -(logits[st0] - log_denom);
+        if (s_nll < best_nll) {
+          best_nll = s_nll;
+          info.tokens = std::move(s_tokens);
+        }
+      }
+    }
+
+    info.token0_neg_logprob = best_nll;
     cand_infos.push_back(std::move(info));
   }
 

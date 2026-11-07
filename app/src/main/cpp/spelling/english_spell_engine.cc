@@ -394,8 +394,10 @@ public:
             } else {
                 // Spatial edit distance for typos
                 float cost = EditAndSpatialCost(typed_lower, w);
+                float max_len = static_cast<float>(std::max(m, n));
+                float norm_cost = (max_len > 0.0f) ? (cost / max_len) : cost;
                 float max_cost = (n >= 7) ? 3.6f : 3.0f;
-                if (cost <= max_cost) {
+                if (norm_cost <= 0.38f && cost <= max_cost) {
                     float score = log_freq - 2.8f * cost;
                     scored.push_back({it->second.surface, score});
                 }
