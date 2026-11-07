@@ -24,6 +24,7 @@ This skill documents all evaluation suites, datasets, metrics, and command-line 
 | **6. Streaming Prefix Freeze & Filler Removal** | Live speech partial commit, flicker suppression, filler filtering | [`StreamingPrefixFreezeEvaluationTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/StreamingPrefixFreezeEvaluationTest.kt), 120-case filler suite | Edit Distance, Revision Rate, Latency | Gradle JVM UnitTest |
 | **7. English QWERTY Neural Swipe Typing** | 1D-CNN/DFSMN spatial CTC beam search + ContextLM re-ranking | `eval/futo_swipe/swipe_eval_1000.jsonl` (1,000 cases) | Top-1 / Top-3 / Top-5 Acc, NN Latency (ms) | Python & Native C++ |
 | **8. LM-First Joint Scoring & Parameter Tuning** | Language model-first joint decoding, Intra-Word Surprisal Clamping, length diagnostic recovery, flick/QWERTY typo recovery | `eval/lm_first_eval_dataset.json` (247 cases), [`LmFirstJointEvaluationTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt) | Top-1, Top-3, MRR, User Dict 100%, Diagnostic 100% | Python (`tune_and_eval_lm_first.py`) & JVM UnitTest |
+| **9. English Typo & Contextual SLM Reranking** | Normalized relative observation cost $D_{\text{obs}} \le 0.38$, short-word protection, space-adaptive BPE evaluation | [`EnglishTypoRerankTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt), [`UnifiedEnglishDictionaryTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/UnifiedEnglishDictionaryTest.kt) | 100% Pass, Zero Distortion on Short Words | Gradle JVM UnitTest |
 
 --------------------------------------------------------------------------------
 
@@ -252,6 +253,34 @@ python3 eval/tune_and_eval_lm_first.py
 
 ### Reference Documentation
 - [`docs/lm_first_flick_and_qwerty_architecture.md`](file:///home/kenichikurihara/repos/myasr/docs/lm_first_flick_and_qwerty_architecture.md)
+
+--------------------------------------------------------------------------------
+
+## 9. English Typo & Context-Aware SLM Reranking Suite
+
+### Purpose
+Evaluates English QWERTY typing candidate ranking, relative observation error normalization ($D_{\text{obs}}(X, W) = d(X, W) / \max(|X|, |W|) \le 0.38$), and contextual small language model (Qwen2.5) candidate re-ranking under preceding sentence prefixes (e.g. guaranteeing `will`, `with`, `wish`, `win` rank above distorted typo entries like `UI` when context is `"I wi"`).
+
+### Test Matrix
+- **Test Classes**:
+  - [`app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt) (Joint Bayesian energy ranking, NLL vs. observation penalty)
+  - [`app/src/test/java/com/example/myasr/UnifiedEnglishDictionaryTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/UnifiedEnglishDictionaryTest.kt) (Normalized typo matching, prefix completion, bilingual property persistence)
+  - [`app/src/test/java/com/example/myasr/EnglishSpellEngineTest.kt`](file:///home/kenichikurihara/repos/myasr/app/src/test/java/com/example/myasr/EnglishSpellEngineTest.kt) (Native C++ typo correction, GEC clause correction)
+
+### How to Run
+```bash
+# Run English Typo & Contextual SLM Rerank test:
+./gradlew testDebugUnitTest --tests "com.example.myasr.EnglishTypoRerankTest"
+
+# Run Unified English & User Dictionary suite:
+./gradlew testDebugUnitTest --tests "com.example.myasr.UnifiedEnglishDictionaryTest"
+
+# Run all English spelling & capitalization tests:
+./gradlew testDebugUnitTest --tests "*English*"
+```
+
+### Reference Documentation
+- [ADR-019 & Finding 40 in `docs/findings_and_decisions.md`](file:///home/kenichikurihara/repos/myasr/docs/findings_and_decisions.md)
 
 --------------------------------------------------------------------------------
 
