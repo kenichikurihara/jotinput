@@ -847,5 +847,72 @@ Card 2 に常時露出する設定項目は、日常的にユーザーが好み�
      - `好意 [PF]`：`ACTION_DOWN` 投機的プリフェッチにより $0\text{ms}$ で返却された候補。
      - `結果 [VIT]`：フォールバック時（Viterbi）に生成された候補。
 
+---
+
+## 11. 言語非依存（日英・QWERTY共通）コンテキストウィンドウ管理・構造的境界分割・増分KVキャッシュ設計
+
+第8節で定義した「表層トークン空間（Surface Space）は日英普遍である」という原則を具現化し、日本語フリック入力と英語QWERTY入力の双方で**「コンテキストの長さとレイテンシのトレードオフ」**および**「不適切な文字列切断による言語モデル確率崩壊」**を完全解決するためのアーキテクチャ設計を定義します。
+
+---
+
+### 11.1 なぜ「文字数」ではなく「BPEトークン予算（Token Budget）」なのか？
+
+英語QWERTY入力と日本語フリック入力では、文字とトークンの密度比が大きく異なります：
+- **英語（Latin/ASCII）**: $1\text{ BPE token} \approx 4.2\text{ characters}$（例: `" conference"` = 11文字で1トークン）
+- **日本語（CJK/Hiragana/Kanji）**: $1\text{ BPE token} \approx 1.3\text{ characters}$（例: `"会議"` = 2文字で1トークン）
+
+もし「64文字」や「256文字」のような固定文字数でコンテキストを切り出すと、英語ではわずか15トークン程度しか参照できないのに対し、日本語では50〜100トークンを抱え込み、CPU Prefill遅延が不均一に増大します。
+言語モデル（Transformer）の計算負荷・Self-Attentionの計算量およびレイテンシを直接決定するのは**「BPEトークン数 ($N_{\text{tokens}}$)」**です。
+
+したがって、JotInput では **「言語非依存の目標トークン予算 $N_{\text{target}}$（探索窓 $[N_{\min}, N_{\max}]$）」** を統一基準として採用します：
+
+$$N_{\text{est}}(\text{text}) = \frac{\text{Count}_{\text{ASCII}}(\text{text})}{4.2} + \frac{\text{Count}_{\text{CJK}}(\text{text})}{1.3}$$
+
+実証実験（`docs/context_length_and_segmentation_report.md`）の結果、**$N_{\text{target}} = 24\text{ tokens}$（許容範囲 $[10, 36\text{ tokens}]$）** が精度・識別マージンとレイテンシのパレート最適点（Knee Point）であることが証明されました。
+
+---
+
+### 11.2 ユニバーサル3階層構造境界分割（Universal Structural Boundary Trimming）
+
+単純な文字数切り詰め（`takeLast`）を行うと、BOSトークン `<s>` の直後に単語の途中断片（英語: `"regarding"` $\to$ `"rding"`、日本語: `"販売戦略"` $\to$ `"売戦略"`）や、文頭に来るはずのない拘束形態素（英語: `"'t"`, `"n't"`、日本語: `"された"`, `"から"`）が配置され、言語モデルの条件付き確率 $P_{\text{LM}}(W \mid \text{<s>}, C)$ が著しく劣化します。
+
+これを防止するため、[`ContextWindowTrimmer.kt`](app/src/main/java/com/example/myasr/ContextWindowTrimmer.kt) では言語を問わず適用可能な **3階層構造境界ルール** を実装しています：
+
+```mermaid
+flowchart TD
+    Raw["カーソル前テキスト (textBeforeCursor: 256文字取得)"] --> Win["推定トークン数 N_est ∈ [10, 36] tokens の範囲を後方探索"]
+    Win --> T1{"Tier 1: 文終端記号の直後か？\n('.', '。', '!', '！', '?', '？', '\\n')\n※英語略語 (Mr., Dr., U.S.) は除外"}
+    T1 -->|Yes| Cut1["文頭スナップ (最高精度)"]
+    T1 -->|No| T2{"Tier 2: 節・句読点記号の直後か？\n(',', '、', ';', ':', ')', '）', '」', '』', '】')"}
+    T2 -->|Yes| Cut2["節頭スナップ (高精度)"]
+    T2 -->|No| T3{"Tier 3: 自由語幹オンセット境界か？\n・同一文字クラス (英単語/漢字/カタカナ) 内の切断は絶対禁止\n・英語: スペース直後 (clitic 除外)\n・日本語: ひらがな機能語 -> 漢字/カタカナ自立語 遷移点"}
+    T3 -->|Yes| Cut3["自立語先頭スナップ (語中切断防止)"]
+    T3 -->|No| Fallback["安全な単語境界フォールバック"]
+    Cut1 & Cut2 & Cut3 & Fallback --> Norm["BOS正規化:\n先頭の余剰空白を除去し <s> と密着\n末尾空白 (カーソル直前) は100%保持"]
+```
+
+#### 日英における挙動対比
+
+| 階層 | 英語（QWERTY入力時） | 日本語（フリック入力時） |
+| :--- | :--- | :--- |
+| **Tier 1 (文頭)** | `"Hello! Regarding the schedule, I "` $\to$ **`"Regarding the schedule, I "`** | `"議事録を共有しました。明日の会議の"` $\to$ **`"明日の会議の"`** |
+| **Tier 2 (節頭)** | `"When you arrive, please check "` $\to$ **`"please check "`** | `"資料の作成が完了し、役員会で"` $\to$ **`"役員会で"`** |
+| **Tier 3 (語頭)** | `"an email regarding the upcoming conference I "` $\to$ **`"the upcoming conference I "`**（`"rding"` のような語中切断を100%防止） | `"詳細に議論された新しい販売戦略の"` $\to$ **`"新しい販売戦略の"`**（`"売戦略"` や `"された"` 始まりを100%防止） |
+
+---
+
+### 11.3 C++ ネイティブ最長共通接頭辞（LCP）増分KVキャッシュ再利用
+
+コンテキスト長を制限するだけでなく、連続した入力・確定において毎回のフルキャッシュ消去を防止するため、[`app/src/main/cpp/llm_reranker.cc`](app/src/main/cpp/llm_reranker.cc) の `EnsureContextCached()` を改良しました：
+
+1. **キャッシュ済みトークン列の保持**: `cached_context_tokens_` を保持。
+2. **LCP $k$ の算出**: 新しいコンテキストのトークン列と前回のキャッシュ済みトークン列の一致長 $k$ を $O(n)$ で検出。
+3. **増分デコード**:
+   - $k > 0$ かつ $k < n_{\text{tokens}}$ の場合、`llama_memory_seq_rm(mem, 0, k, -1)` で位置 $k$ 以降の古いキャッシュのみを破棄。
+   - 新規に追加された $n_{\text{tokens}} - k$ 個のトークン（通常の日本語確定や英語スペース確定ではわずか **1〜3トークン**）のみを `llama_decode` で増分評価。
+4. **効果**:
+   文節を順次確定していく日本語入力、および単語を順次スペース確定していく英語QWERTY入力において、文脈が伸びてもPrefillにかかる実測レイテンシが **数ミリ秒以内** に抑制されます。
+
+
 
 

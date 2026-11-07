@@ -989,7 +989,7 @@ class VoiceInputMethodService : InputMethodService() {
     }
 
     private fun updateEnglishTypoAndSpellingCandidates() {
-        val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(64, 0)?.toString() ?: ""
+        val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
         val lastWordMatch = Regex("[A-Za-z']+$").find(textBeforeCursor)
         val rawWord = lastWordMatch?.value ?: ""
 

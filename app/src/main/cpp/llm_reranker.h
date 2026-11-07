@@ -58,6 +58,7 @@ class LlmReranker {
   // KV cache state
   uint64_t cached_context_hash_ = 0;
   int cached_context_n_tokens_ = 0;
+  std::vector<int32_t> cached_context_tokens_;
   std::vector<float> cached_context_logits_;
   float cached_context_log_denom_ = 0.0f;
   int cache_hits_ = 0;

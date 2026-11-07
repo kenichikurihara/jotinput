@@ -40,6 +40,7 @@ void LlmReranker::Release() {
   initialized_ = false;
   cached_context_hash_ = 0;
   cached_context_n_tokens_ = 0;
+  cached_context_tokens_.clear();
   cached_context_logits_.clear();
   cached_context_log_denom_ = 0.0f;
   LOGI("LlmReranker released.");
@@ -109,14 +110,13 @@ bool LlmReranker::Initialize(const std::string& model_path, int n_threads) {
 bool LlmReranker::EnsureContextCached(const std::string& context) {
   std::string effective_context = context.empty() ? "<s>" : context;
   uint64_t current_hash = ComputeContextHash(effective_context);
-  if (current_hash == cached_context_hash_ && cached_context_n_tokens_ > 0) {
+  if (current_hash == cached_context_hash_ && cached_context_n_tokens_ > 0 && !cached_context_tokens_.empty()) {
     cache_hits_++;
     return true;
   }
 
   cache_misses_++;
   llama_memory_t mem = llama_get_memory(ctx_);
-  llama_memory_clear(mem, true);
 
   std::vector<llama_token> context_tokens(config_.n_ctx);
   int n_tokens = llama_tokenize(vocab_, effective_context.data(), effective_context.size(),
@@ -126,18 +126,43 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     LOGW("Context tokenization failed or empty context.");
     cached_context_hash_ = 0;
     cached_context_n_tokens_ = 0;
+    cached_context_tokens_.clear();
     return false;
   }
+  context_tokens.resize(n_tokens);
 
-  llama_batch batch = llama_batch_init(n_tokens, 0, 1);
-  for (int i = 0; i < n_tokens; ++i) {
-    batch.token[i]     = context_tokens[i];
-    batch.pos[i]       = i;
+  // Compute Longest Common Prefix (LCP) with cached tokens
+  int common_prefix_len = 0;
+  int max_check = std::min(static_cast<int>(cached_context_tokens_.size()), n_tokens);
+  while (common_prefix_len < max_check &&
+         cached_context_tokens_[common_prefix_len] == context_tokens[common_prefix_len]) {
+    common_prefix_len++;
+  }
+
+  int n_new_tokens = n_tokens - common_prefix_len;
+  int start_pos = common_prefix_len;
+
+  if (common_prefix_len > 0 && n_new_tokens > 0) {
+    // Incremental update: roll back only tokens beyond the common prefix
+    llama_memory_seq_rm(mem, 0, common_prefix_len, -1);
+  } else if (common_prefix_len == 0) {
+    // Zero common prefix: full reset
+    llama_memory_clear(mem, true);
+  } else {
+    // Exact match (common_prefix_len == n_tokens && cached_context_tokens_.size() == n_tokens)
+    cache_hits_++;
+    return true;
+  }
+
+  llama_batch batch = llama_batch_init(n_new_tokens, 0, 1);
+  for (int i = 0; i < n_new_tokens; ++i) {
+    batch.token[i]     = context_tokens[start_pos + i];
+    batch.pos[i]       = start_pos + i;
     batch.n_seq_id[i]  = 1;
     batch.seq_id[i][0] = 0;
-    batch.logits[i]    = (i == n_tokens - 1); // logits only for last token
+    batch.logits[i]    = (i == n_new_tokens - 1); // logits only for last token
   }
-  batch.n_tokens = n_tokens;
+  batch.n_tokens = n_new_tokens;
 
   int ret = llama_decode(ctx_, batch);
   llama_batch_free(batch);
@@ -146,6 +171,8 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     LOGE("Failed to decode context prefix, ret = %d", ret);
     cached_context_hash_ = 0;
     cached_context_n_tokens_ = 0;
+    cached_context_tokens_.clear();
+    llama_memory_clear(mem, true);
     return false;
   }
 
@@ -154,6 +181,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     LOGE("Failed to retrieve context logits after decode.");
     cached_context_hash_ = 0;
     cached_context_n_tokens_ = 0;
+    cached_context_tokens_.clear();
     cached_context_logits_.clear();
     return false;
   }
@@ -173,6 +201,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
 
   cached_context_hash_ = current_hash;
   cached_context_n_tokens_ = n_tokens;
+  cached_context_tokens_ = std::move(context_tokens);
   return true;
 }
 
