@@ -348,14 +348,16 @@ class MainActivity : AppCompatActivity() {
     private fun updateAlphaDisplay(alpha: Float) {
         val rounded = String.format(java.util.Locale.US, "%.2f", alpha)
         tvSlmAlphaValue.text = when {
-            alpha == 0.00f -> "α = $rounded (純粋SLM / 最適値)"
+            alpha in 0.15f..0.25f -> "α = $rounded (LM-First 最適値: Top-1 90.3%)"
+            alpha == 0.00f -> "α = $rounded (純粋SLM)"
             alpha <= 0.10f -> "α = $rounded (SLM重視 + 辞書タイブレーク)"
             alpha <= 0.30f -> "α = $rounded (ハイブリッド標準)"
             alpha == 1.00f -> "α = $rounded (純粋Mozc)"
             else -> "α = $rounded"
         }
         tvSlmAlphaDesc.text = when {
-            alpha == 0.00f -> "SLMの対数尤度を100%信頼 (5-Fold CV最高精度: 66.8%)"
+            alpha in 0.15f..0.25f -> "言語モデル事前分布とMozc辞書コストの最適バランス (Top-1 90.3%)"
+            alpha == 0.00f -> "SLMの対数尤度を100%信頼"
             alpha <= 0.10f -> "高精度を維持しつつ同スコア時にMozc辞書順位で補正"
             alpha == 1.00f -> "SLMスコアを無視し、従来のMozc順位のみを使用"
             else -> "Mozc順位 ${(alpha * 100).toInt()}% / SLM尤度 ${((1 - alpha) * 100).toInt()}% の配分"

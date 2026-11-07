@@ -1,0 +1,7293 @@
+[
+  {
+    "id": "homophone_001",
+    "category": "homophone",
+    "context": "来月から営業部への",
+    "input": "いどう",
+    "target": "異動",
+    "candidates": [
+      {
+        "surface": "異動",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "移動",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "居留",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "威道",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_002",
+    "category": "homophone",
+    "context": "新幹線を使って大阪へ",
+    "input": "いどう",
+    "target": "移動",
+    "candidates": [
+      {
+        "surface": "移動",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "異動",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "居留",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "威道",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_003",
+    "category": "homophone",
+    "context": "日経新聞の敏腕",
+    "input": "きしゃ",
+    "target": "記者",
+    "candidates": [
+      {
+        "surface": "記者",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "貴社",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "汽車",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "帰社",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_004",
+    "category": "homophone",
+    "context": "ますますご清栄のこととお慶び申し上げます。",
+    "input": "きしゃ",
+    "target": "貴社",
+    "candidates": [
+      {
+        "surface": "貴社",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "記者",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "汽車",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "帰社",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_005",
+    "category": "homophone",
+    "context": "煙を吐いて走る昔ながらの",
+    "input": "きしゃ",
+    "target": "汽車",
+    "candidates": [
+      {
+        "surface": "汽車",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "記者",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "貴社",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "帰社",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_006",
+    "category": "homophone",
+    "context": "外出先での打ち合わせを終えて",
+    "input": "きしゃ",
+    "target": "帰社",
+    "candidates": [
+      {
+        "surface": "帰社",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "記者",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "貴社",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "汽車",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_007",
+    "category": "homophone",
+    "context": "最新の人工知能技術に強い",
+    "input": "かんしん",
+    "target": "関心",
+    "candidates": [
+      {
+        "surface": "関心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "感心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "歓心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "寒心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_008",
+    "category": "homophone",
+    "context": "彼の素晴らしい礼儀正しさにとても",
+    "input": "かんしん",
+    "target": "感心",
+    "candidates": [
+      {
+        "surface": "感心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "関心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "歓心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "寒心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_009",
+    "category": "homophone",
+    "context": "上司の機嫌をとって",
+    "input": "かんしん",
+    "target": "歓心",
+    "candidates": [
+      {
+        "surface": "歓心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "関心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "感心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "寒心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_010",
+    "category": "homophone",
+    "context": "緊急時に迅速に対応できる",
+    "input": "たいせい",
+    "target": "態勢",
+    "candidates": [
+      {
+        "surface": "態勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "体制",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "大勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "体勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_011",
+    "category": "homophone",
+    "context": "民主主義を支える強固な社会",
+    "input": "たいせい",
+    "target": "体制",
+    "candidates": [
+      {
+        "surface": "体制",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "態勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "大勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "体勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_012",
+    "category": "homophone",
+    "context": "転倒しないように低く構えた",
+    "input": "たいせい",
+    "target": "体勢",
+    "candidates": [
+      {
+        "surface": "体勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "体制",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "態勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "大勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_013",
+    "category": "homophone",
+    "context": "一部の反対があっても",
+    "input": "たいせい",
+    "target": "大勢",
+    "candidates": [
+      {
+        "surface": "大勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "態勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "体制",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "体勢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_014",
+    "category": "homophone",
+    "context": "築地で仕入れた新鮮な魚が並ぶ",
+    "input": "しじょう",
+    "target": "市場",
+    "candidates": [
+      {
+        "surface": "市場",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "史上",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "詩情",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "死条",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_015",
+    "category": "homophone",
+    "context": "ニューヨーク株式",
+    "input": "しじょう",
+    "target": "市場",
+    "candidates": [
+      {
+        "surface": "市場",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "史上",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "詩情",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "死条",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_016",
+    "category": "homophone",
+    "context": "オリンピックの歴史上、",
+    "input": "しじょう",
+    "target": "史上",
+    "candidates": [
+      {
+        "surface": "史上",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "市場",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "詩情",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "死条",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_017",
+    "category": "homophone",
+    "context": "この法律は国民の権利を",
+    "input": "ほしょう",
+    "target": "保障",
+    "candidates": [
+      {
+        "surface": "保障",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "補償",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "保証",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "舗装",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_018",
+    "category": "homophone",
+    "context": "メーカーによる製品の無償修理",
+    "input": "ほしょう",
+    "target": "保証",
+    "candidates": [
+      {
+        "surface": "保証",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "保障",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "補償",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "舗装",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_019",
+    "category": "homophone",
+    "context": "事故による損害を",
+    "input": "ほしょう",
+    "target": "補償",
+    "candidates": [
+      {
+        "surface": "補償",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "保障",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "保証",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "舗装",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_020",
+    "category": "homophone",
+    "context": "道路の舗装工事を",
+    "input": "ほしょう",
+    "target": "舗装",
+    "candidates": [
+      {
+        "surface": "舗装",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "保障",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "保証",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "補償",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_021",
+    "category": "homophone",
+    "context": "自分の信念に対する確固たる",
+    "input": "かくしん",
+    "target": "確信",
+    "candidates": [
+      {
+        "surface": "確信",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "核心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "革新",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "画期",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_022",
+    "category": "homophone",
+    "context": "問題の本質に迫る",
+    "input": "かくしん",
+    "target": "核心",
+    "candidates": [
+      {
+        "surface": "核心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "確信",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "革新",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "画期",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_023",
+    "category": "homophone",
+    "context": "技術革新による社会の",
+    "input": "かくしん",
+    "target": "革新",
+    "candidates": [
+      {
+        "surface": "革新",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "確信",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "核心",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "画期",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_024",
+    "category": "homophone",
+    "context": "調査の対象となる",
+    "input": "たいしょう",
+    "target": "対象",
+    "candidates": [
+      {
+        "surface": "対象",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "対照",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "対称",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "大正",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_025",
+    "category": "homophone",
+    "context": "光と影の見事な",
+    "input": "たいしょう",
+    "target": "対照",
+    "candidates": [
+      {
+        "surface": "対照",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "対象",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "対称",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "大正",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_026",
+    "category": "homophone",
+    "context": "左右対称の美しい",
+    "input": "たいしょう",
+    "target": "対称",
+    "candidates": [
+      {
+        "surface": "対称",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "対象",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "対照",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "大正",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_027",
+    "category": "homophone",
+    "context": "大正時代に建てられた",
+    "input": "たいしょう",
+    "target": "大正",
+    "candidates": [
+      {
+        "surface": "大正",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "対象",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "対照",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "対称",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_028",
+    "category": "homophone",
+    "context": "科学的な実験を行う",
+    "input": "じっけん",
+    "target": "実験",
+    "candidates": [
+      {
+        "surface": "実験",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "実権",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "十軒",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "十件",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_029",
+    "category": "homophone",
+    "context": "独裁者が権力を握り",
+    "input": "じっけん",
+    "target": "実権",
+    "candidates": [
+      {
+        "surface": "実権",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "実験",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "十軒",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "十件",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_030",
+    "category": "homophone",
+    "context": "現場の状況を冷静に",
+    "input": "はあく",
+    "target": "把握",
+    "candidates": [
+      {
+        "surface": "把握",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "波及",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "歯垢",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "葉隠",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_031",
+    "category": "homophone",
+    "context": "病気にかかった原因を",
+    "input": "きゅうめい",
+    "target": "究明",
+    "candidates": [
+      {
+        "surface": "究明",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "救命",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "糾明",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "窮命",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_032",
+    "category": "homophone",
+    "context": "救急車による救命活動",
+    "input": "きゅうめい",
+    "target": "救命",
+    "candidates": [
+      {
+        "surface": "救命",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "究明",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "糾明",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "窮命",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_033",
+    "category": "homophone",
+    "context": "不正の真相を厳しく",
+    "input": "きゅうめい",
+    "target": "糾明",
+    "candidates": [
+      {
+        "surface": "糾明",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "究明",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "救命",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "窮命",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_034",
+    "category": "homophone",
+    "context": "素晴らしい成果を",
+    "input": "おさめる",
+    "target": "収める",
+    "candidates": [
+      {
+        "surface": "収める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "納める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "治める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "修める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_035",
+    "category": "homophone",
+    "context": "税金を期日までに",
+    "input": "おさめる",
+    "target": "納める",
+    "candidates": [
+      {
+        "surface": "納める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "収める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "治める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "修める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_036",
+    "category": "homophone",
+    "context": "国を平和に",
+    "input": "おさめる",
+    "target": "治める",
+    "candidates": [
+      {
+        "surface": "治める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "収める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "納める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "修める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_037",
+    "category": "homophone",
+    "context": "学問や芸能を",
+    "input": "おさめる",
+    "target": "修める",
+    "candidates": [
+      {
+        "surface": "修める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "収める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "納める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "治める",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_038",
+    "category": "homophone",
+    "context": "将来の夢を熱く",
+    "input": "かたる",
+    "target": "語る",
+    "candidates": [
+      {
+        "surface": "語る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "騙る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "過たる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "固る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_039",
+    "category": "homophone",
+    "context": "身元を偽って",
+    "input": "かたる",
+    "target": "騙る",
+    "candidates": [
+      {
+        "surface": "騙る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "語る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "過たる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "固る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_040",
+    "category": "homophone",
+    "context": "新しい法律を",
+    "input": "せいてい",
+    "target": "制定",
+    "candidates": [
+      {
+        "surface": "制定",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "清純",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "静止",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "晴天",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_041",
+    "category": "homophone",
+    "context": "澄み渡るような青空の",
+    "input": "せいてん",
+    "target": "晴天",
+    "candidates": [
+      {
+        "surface": "晴天",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "聖典",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "正典",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "生誕",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_042",
+    "category": "homophone",
+    "context": "キリスト教の聖なる",
+    "input": "せいてん",
+    "target": "聖典",
+    "candidates": [
+      {
+        "surface": "聖典",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "晴天",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "正典",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "生誕",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_043",
+    "category": "homophone",
+    "context": "物価の継続的な上昇を示す",
+    "input": "いんふれ",
+    "target": "インフレ",
+    "candidates": [
+      {
+        "surface": "インフレ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "院振れ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "因触れ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "隠府例",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_044",
+    "category": "homophone",
+    "context": "海外旅行で訪れた美しい",
+    "input": "ぱり",
+    "target": "パリ",
+    "candidates": [
+      {
+        "surface": "パリ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "破裏",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "把利",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "針",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_045",
+    "category": "homophone",
+    "context": "裁縫箱から取り出した一本の",
+    "input": "はり",
+    "target": "針",
+    "candidates": [
+      {
+        "surface": "針",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "張り",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "巴里",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "播磨",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_046",
+    "category": "homophone",
+    "context": "壁にポスターを",
+    "input": "はる",
+    "target": "貼る",
+    "candidates": [
+      {
+        "surface": "貼る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "春",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "張る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "遥",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_047",
+    "category": "homophone",
+    "context": "桜が咲き誇る暖かい",
+    "input": "はる",
+    "target": "春",
+    "candidates": [
+      {
+        "surface": "春",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "貼る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "張る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "遥",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_048",
+    "category": "homophone",
+    "context": "テントの布地をピンと",
+    "input": "はる",
+    "target": "張る",
+    "candidates": [
+      {
+        "surface": "張る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "貼る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "春",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "遥",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_049",
+    "category": "homophone",
+    "context": "川の流れに沿って",
+    "input": "くだる",
+    "target": "下る",
+    "candidates": [
+      {
+        "surface": "下る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "降る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "百済",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "件る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "homophone_050",
+    "category": "homophone",
+    "context": "電車からホームに",
+    "input": "おりる",
+    "target": "降りる",
+    "candidates": [
+      {
+        "surface": "降りる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      },
+      {
+        "surface": "下りる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "織る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      },
+      {
+        "surface": "檻る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "phrase_001",
+    "category": "phrase",
+    "context": "Mozcは私の直感と挙動が",
+    "input": "ことなります",
+    "target": "異なります",
+    "candidates": [
+      {
+        "surface": "異なります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ことなります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "事成ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "言成ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_002",
+    "category": "phrase",
+    "context": "一般的な仕様とは大きく",
+    "input": "ことなり",
+    "target": "異なり",
+    "candidates": [
+      {
+        "surface": "異なり",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ことなり",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "事なり",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "言なり",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_003",
+    "category": "phrase",
+    "context": "来週より担当者が変更される",
+    "input": "ことになりました",
+    "target": "ことになりました",
+    "candidates": [
+      {
+        "surface": "ことになりました",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "異になりました",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "事になりました",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_004",
+    "category": "phrase",
+    "context": "私の個人的な意見としてはそう",
+    "input": "おもいます",
+    "target": "思います",
+    "candidates": [
+      {
+        "surface": "思います",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "おもいます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "重います",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "想います",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_005",
+    "category": "phrase",
+    "context": "別の多角的な視点からも",
+    "input": "かんがえます",
+    "target": "考えます",
+    "candidates": [
+      {
+        "surface": "考えます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "かんがえます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "勘が得ます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_006",
+    "category": "phrase",
+    "context": "季節の移り変わりによって気温が",
+    "input": "かわります",
+    "target": "変わります",
+    "candidates": [
+      {
+        "surface": "変わります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "代わります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "替わります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "かわります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_007",
+    "category": "phrase",
+    "context": "担当者が急病のため急遽",
+    "input": "かわります",
+    "target": "代わります",
+    "candidates": [
+      {
+        "surface": "代わります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "変わります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "替わります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "かわります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_008",
+    "category": "phrase",
+    "context": "古くなった電池を新しいものに",
+    "input": "かえます",
+    "target": "替えます",
+    "candidates": [
+      {
+        "surface": "替えます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "変えます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "代えます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "かえます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_009",
+    "category": "phrase",
+    "context": "これからも日々の努力を",
+    "input": "つづけます",
+    "target": "続けます",
+    "candidates": [
+      {
+        "surface": "続けます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "つづけます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "続け増す",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_010",
+    "category": "phrase",
+    "context": "計算の手順をうっかり",
+    "input": "まちがえます",
+    "target": "間違えます",
+    "candidates": [
+      {
+        "surface": "間違えます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "まちがえます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "間違う得ます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_011",
+    "category": "phrase",
+    "context": "明日の朝一番で会社に",
+    "input": "むかいます",
+    "target": "向かいます",
+    "candidates": [
+      {
+        "surface": "向かいます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "迎えます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "むかいます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_012",
+    "category": "phrase",
+    "context": "空港で大事なお客様を",
+    "input": "むかえます",
+    "target": "迎えます",
+    "candidates": [
+      {
+        "surface": "迎えます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "向かいます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "むかえます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_013",
+    "category": "phrase",
+    "context": "美味しい料理をたくさん",
+    "input": "つくります",
+    "target": "作ります",
+    "candidates": [
+      {
+        "surface": "作ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "造ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "創ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "つくります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_014",
+    "category": "phrase",
+    "context": "新しい会社組織を",
+    "input": "つくります",
+    "target": "創ります",
+    "candidates": [
+      {
+        "surface": "創ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "作ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "造ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "つくります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_015",
+    "category": "phrase",
+    "context": "巨大なダムを川に",
+    "input": "つくります",
+    "target": "造ります",
+    "candidates": [
+      {
+        "surface": "造ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "作ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "創ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "つくります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_016",
+    "category": "phrase",
+    "context": "先生が優しく生徒に",
+    "input": "おしえます",
+    "target": "教えます",
+    "candidates": [
+      {
+        "surface": "教えます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "惜し得ます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "おしえます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_017",
+    "category": "phrase",
+    "context": "困っている友達をみんなで",
+    "input": "たすけます",
+    "target": "助けます",
+    "candidates": [
+      {
+        "surface": "助けます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "たすけます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "足す蹴ます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_018",
+    "category": "phrase",
+    "context": "試験に合格することを心から",
+    "input": "ねがいます",
+    "target": "願います",
+    "candidates": [
+      {
+        "surface": "願います",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ねがいます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "根が居ます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_019",
+    "category": "phrase",
+    "context": "約束の時間をしっかり",
+    "input": "まもります",
+    "target": "守ります",
+    "candidates": [
+      {
+        "surface": "守ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "まもります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "真盛ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_020",
+    "category": "phrase",
+    "context": "重い荷物を二人で一緒に",
+    "input": "はこびます",
+    "target": "運びます",
+    "candidates": [
+      {
+        "surface": "運びます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "はこびます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "歯来ます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_021",
+    "category": "phrase",
+    "context": "朝の澄んだ空気を胸いっぱいに",
+    "input": "すいます",
+    "target": "吸います",
+    "candidates": [
+      {
+        "surface": "吸います",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "すいます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "巣居ます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_022",
+    "category": "phrase",
+    "context": "きれいな字で丁寧に手紙を",
+    "input": "かきます",
+    "target": "書きます",
+    "candidates": [
+      {
+        "surface": "書きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "描きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "掻きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "かきます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_023",
+    "category": "phrase",
+    "context": "スケッチブックに風景を",
+    "input": "かきます",
+    "target": "描きます",
+    "candidates": [
+      {
+        "surface": "描きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "書きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "掻きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "かきます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_024",
+    "category": "phrase",
+    "context": "頭の痒いところをボリボリ",
+    "input": "かきます",
+    "target": "掻きます",
+    "candidates": [
+      {
+        "surface": "掻きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "書きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "描きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "かきます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_025",
+    "category": "phrase",
+    "context": "走った後に喉がとても",
+    "input": "かわきます",
+    "target": "渇きます",
+    "candidates": [
+      {
+        "surface": "渇きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "乾きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "かわきます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_026",
+    "category": "phrase",
+    "context": "洗った洗濯物が天日でよく",
+    "input": "かわきます",
+    "target": "乾きます",
+    "candidates": [
+      {
+        "surface": "乾きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "渇きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "かわきます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_027",
+    "category": "phrase",
+    "context": "冷たい風が強く",
+    "input": "ふきます",
+    "target": "吹きます",
+    "candidates": [
+      {
+        "surface": "吹きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "拭きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "ふきます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_028",
+    "category": "phrase",
+    "context": "汚れた机の上を雑巾で",
+    "input": "ふきます",
+    "target": "拭きます",
+    "candidates": [
+      {
+        "surface": "拭きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "吹きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "ふきます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_029",
+    "category": "phrase",
+    "context": "お風呂に入って汗を",
+    "input": "ながします",
+    "target": "流します",
+    "candidates": [
+      {
+        "surface": "流します",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ながします",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "名が沁ます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_030",
+    "category": "phrase",
+    "context": "大きな声で元気に",
+    "input": "さけびます",
+    "target": "叫びます",
+    "candidates": [
+      {
+        "surface": "叫びます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "さけびます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "酒美ます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_031",
+    "category": "phrase",
+    "context": "悲しい出来事に涙を",
+    "input": "ながします",
+    "target": "流します",
+    "candidates": [
+      {
+        "surface": "流します",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ながします",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "名が沁ます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_032",
+    "category": "phrase",
+    "context": "先生の貴重なアドバイスに深く",
+    "input": "うなずきます",
+    "target": "頷きます",
+    "candidates": [
+      {
+        "surface": "頷きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "うなずきます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "首肯きます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_033",
+    "category": "phrase",
+    "context": "新しい挑戦に胸がワクワク",
+    "input": "おどります",
+    "target": "躍ります",
+    "candidates": [
+      {
+        "surface": "躍ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "踊ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "おどります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_034",
+    "category": "phrase",
+    "context": "音楽に合わせて楽しくリズムよく",
+    "input": "おどります",
+    "target": "踊ります",
+    "candidates": [
+      {
+        "surface": "踊ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "躍ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "おどります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_035",
+    "category": "phrase",
+    "context": "冷たい水の中に深く",
+    "input": "もぐります",
+    "target": "潜ります",
+    "candidates": [
+      {
+        "surface": "潜ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "もぐります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "藻繰ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_036",
+    "category": "phrase",
+    "context": "急な坂道をゆっくり慎重に",
+    "input": "のぼります",
+    "target": "登ります",
+    "candidates": [
+      {
+        "surface": "登ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "上ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "昇ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "のぼります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_037",
+    "category": "phrase",
+    "context": "階段を一段ずつ",
+    "input": "のぼります",
+    "target": "上ります",
+    "candidates": [
+      {
+        "surface": "上ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "登ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "昇ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "のぼります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_038",
+    "category": "phrase",
+    "context": "太陽が東の空から高く",
+    "input": "のぼります",
+    "target": "昇ります",
+    "candidates": [
+      {
+        "surface": "昇ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "登ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "上ります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "のぼります",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_039",
+    "category": "phrase",
+    "context": "暗い部屋のカーテンを勢いよく",
+    "input": "あけます",
+    "target": "開けます",
+    "candidates": [
+      {
+        "surface": "開けます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "明けます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "空けます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "あけます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_040",
+    "category": "phrase",
+    "context": "新しい年がめでたく",
+    "input": "あけます",
+    "target": "明けます",
+    "candidates": [
+      {
+        "surface": "明けます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "開けます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "空けます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "あけます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_041",
+    "category": "phrase",
+    "context": "旅行のためにスケジュールを",
+    "input": "あけます",
+    "target": "空けます",
+    "candidates": [
+      {
+        "surface": "空けます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "開けます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "明けます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "あけます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_042",
+    "category": "phrase",
+    "context": "部屋の鍵をカバンから取り出して",
+    "input": "しめます",
+    "target": "閉めます",
+    "candidates": [
+      {
+        "surface": "閉めます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "締めます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "占めます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "しめます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_043",
+    "category": "phrase",
+    "context": "ネクタイを首元できっちり",
+    "input": "しめます",
+    "target": "締めます",
+    "candidates": [
+      {
+        "surface": "締めます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "閉めます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "占めます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "しめます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_044",
+    "category": "phrase",
+    "context": "市場の過半数のシェアを",
+    "input": "しめます",
+    "target": "占めます",
+    "candidates": [
+      {
+        "surface": "占めます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "閉めます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "締めます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      },
+      {
+        "surface": "しめます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4300
+      }
+    ]
+  },
+  {
+    "id": "phrase_045",
+    "category": "phrase",
+    "context": "静かに目を",
+    "input": "とじます",
+    "target": "閉じます",
+    "candidates": [
+      {
+        "surface": "閉じます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "とじます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "綴じます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_046",
+    "category": "phrase",
+    "context": "書類をホチキスでしっかり",
+    "input": "とじます",
+    "target": "綴じます",
+    "candidates": [
+      {
+        "surface": "綴じます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "閉じます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "とじます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_047",
+    "category": "phrase",
+    "context": "新しいアイデアを次々に",
+    "input": "うみだします",
+    "target": "生み出します",
+    "candidates": [
+      {
+        "surface": "生み出します",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "産み出します",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "うみだします",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_048",
+    "category": "phrase",
+    "context": "母猫が元気な子猫を",
+    "input": "うみだします",
+    "target": "産み出します",
+    "candidates": [
+      {
+        "surface": "産み出します",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "生み出します",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "うみだします",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_049",
+    "category": "phrase",
+    "context": "遠くに見える高い山の頂を",
+    "input": "のぞみます",
+    "target": "望みます",
+    "candidates": [
+      {
+        "surface": "望みます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "臨みます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "のぞみます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "phrase_050",
+    "category": "phrase",
+    "context": "明日の重要な入学試験に",
+    "input": "のぞみます",
+    "target": "臨みます",
+    "candidates": [
+      {
+        "surface": "臨みます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "望みます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3100
+      },
+      {
+        "surface": "のぞみます",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3700
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_001",
+    "category": "diagnostic",
+    "context": "",
+    "input": "けっか",
+    "target": "結果",
+    "candidates": [
+      {
+        "surface": "結果",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "結家",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "欠課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "決河",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "けっ課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "蹴っか",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_002",
+    "category": "diagnostic",
+    "context": "。",
+    "input": "けっか",
+    "target": "結果",
+    "candidates": [
+      {
+        "surface": "結果",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "結家",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "欠課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "決河",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "けっ課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "蹴っか",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_003",
+    "category": "diagnostic",
+    "context": "実験の",
+    "input": "けっか",
+    "target": "結果",
+    "candidates": [
+      {
+        "surface": "結果",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "結家",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "欠課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "決河",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "けっ課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "蹴っか",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_004",
+    "category": "diagnostic",
+    "context": "検査の",
+    "input": "けっか",
+    "target": "結果",
+    "candidates": [
+      {
+        "surface": "結果",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "結家",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "欠課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "決河",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "けっ課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "蹴っか",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_005",
+    "category": "diagnostic",
+    "context": "投票の",
+    "input": "けっか",
+    "target": "結果",
+    "candidates": [
+      {
+        "surface": "結果",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "結家",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "欠課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "決河",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "けっ課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "蹴っか",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_006",
+    "category": "diagnostic",
+    "context": "その",
+    "input": "けっか",
+    "target": "結果",
+    "candidates": [
+      {
+        "surface": "結果",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "結家",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "欠課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "決河",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "けっ課",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "蹴っか",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_007",
+    "category": "diagnostic",
+    "context": "",
+    "input": "さくじょ",
+    "target": "削除",
+    "candidates": [
+      {
+        "surface": "削除",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "策所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "咲くじょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "さ9時ょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "咲所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "サク所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_008",
+    "category": "diagnostic",
+    "context": "。",
+    "input": "さくじょ",
+    "target": "削除",
+    "candidates": [
+      {
+        "surface": "削除",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "策所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "咲くじょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "さ9時ょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "咲所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "サク所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_009",
+    "category": "diagnostic",
+    "context": "ファイルを",
+    "input": "さくじょ",
+    "target": "削除",
+    "candidates": [
+      {
+        "surface": "削除",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "策所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "咲くじょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "さ9時ょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "咲所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "サク所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_010",
+    "category": "diagnostic",
+    "context": "不要な行を",
+    "input": "さくじょ",
+    "target": "削除",
+    "candidates": [
+      {
+        "surface": "削除",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "策所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "咲くじょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "さ9時ょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "咲所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "サク所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_011",
+    "category": "diagnostic",
+    "context": "データベースのレコードを",
+    "input": "さくじょ",
+    "target": "削除",
+    "candidates": [
+      {
+        "surface": "削除",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "策所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "咲くじょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "さ9時ょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "咲所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "サク所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "diagnostic_012",
+    "category": "diagnostic",
+    "context": "ユーザーアカウントの",
+    "input": "さくじょ",
+    "target": "削除",
+    "candidates": [
+      {
+        "surface": "削除",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 1000
+      },
+      {
+        "surface": "策所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "咲くじょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      },
+      {
+        "surface": "さ9時ょ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5500
+      },
+      {
+        "surface": "咲所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      },
+      {
+        "surface": "サク所",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "user_dict_001",
+    "category": "user_dict",
+    "context": "",
+    "input": "なかむら",
+    "target": "中村",
+    "candidates": [
+      {
+        "surface": "中村",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "仲村",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "クリア",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      }
+    ]
+  },
+  {
+    "id": "user_dict_002",
+    "category": "user_dict",
+    "context": "",
+    "input": "れいぞんすぴーち",
+    "target": "ReazonSpeech",
+    "candidates": [
+      {
+        "surface": "ReazonSpeech",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "令息地",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "user_dict_003",
+    "category": "user_dict",
+    "context": "",
+    "input": "あんちぐらびてぃ",
+    "target": "Antigravity",
+    "candidates": [
+      {
+        "surface": "Antigravity",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "安地グラビティ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "user_dict_004",
+    "category": "user_dict",
+    "context": "",
+    "input": "きしだん",
+    "target": "氣志團",
+    "candidates": [
+      {
+        "surface": "氣志團",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "騎士団",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "岸団",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      }
+    ]
+  },
+  {
+    "id": "user_dict_005",
+    "category": "user_dict",
+    "context": "",
+    "input": "じょっといんぷっと",
+    "target": "JotInput",
+    "candidates": [
+      {
+        "surface": "JotInput",
+        "source": "user",
+        "priority": 4.5,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "じょっとインプット",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "user_dict_006",
+    "category": "user_dict",
+    "context": "",
+    "input": "なかむらさんにれんらくする",
+    "target": "中村さんに連絡する",
+    "candidates": [
+      {
+        "surface": "中村さんに連絡する",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "仲村さんに連絡する",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "クリアさんに連絡する",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      }
+    ]
+  },
+  {
+    "id": "user_dict_007",
+    "category": "user_dict",
+    "context": "昨日の会議で",
+    "input": "なかむらさんがはつげんした",
+    "target": "中村さんが発言した",
+    "candidates": [
+      {
+        "surface": "中村さんが発言した",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "仲村さんが発言した",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "user_dict_008",
+    "category": "user_dict",
+    "context": "新しい音声認識エンジンとして",
+    "input": "れいぞんすぴーちをじっそうした",
+    "target": "ReazonSpeechを実装した",
+    "candidates": [
+      {
+        "surface": "ReazonSpeechを実装した",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "令息地を実装した",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "user_dict_009",
+    "category": "user_dict",
+    "context": "オープンソースの",
+    "input": "あんちぐらびてぃをつかう",
+    "target": "Antigravityを使う",
+    "candidates": [
+      {
+        "surface": "Antigravityを使う",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "安地グラビティを使う",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "user_dict_010",
+    "category": "user_dict",
+    "context": "ロックバンドの",
+    "input": "きしだんのらいぶにいく",
+    "target": "氣志團のライブに行く",
+    "candidates": [
+      {
+        "surface": "氣志團のライブに行く",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "騎士団のライブに行く",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "user_dict_011",
+    "category": "user_dict",
+    "context": "平素は格別のご高配を賜り、",
+    "input": "きしゃのますますのごはってんを",
+    "target": "貴社の益々のご発展を",
+    "candidates": [
+      {
+        "surface": "貴社の益々のご発展を",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "記者の益々のご発展を",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "汽車の益々のご発展を",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      }
+    ]
+  },
+  {
+    "id": "user_dict_012",
+    "category": "user_dict",
+    "context": "朝日新聞の政治部",
+    "input": "きしゃがしゅざいにきた",
+    "target": "記者が取材に来た",
+    "candidates": [
+      {
+        "surface": "記者が取材に来た",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "貴社が取材に来た",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "汽車が取材に来た",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      }
+    ]
+  },
+  {
+    "id": "user_dict_013",
+    "category": "user_dict",
+    "context": "来週の月曜日に",
+    "input": "きしゃのオフィスへうかがいます",
+    "target": "貴社のオフィスへ伺います",
+    "candidates": [
+      {
+        "surface": "貴社のオフィスへ伺います",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "記者のオフィスへ伺います",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      }
+    ]
+  },
+  {
+    "id": "user_dict_014",
+    "category": "user_dict",
+    "context": "事件の真相を解明すべく敏腕",
+    "input": "きしゃがげんばをちょうさした",
+    "target": "記者が現場を調査した",
+    "candidates": [
+      {
+        "surface": "記者が現場を調査した",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "貴社が現場を調査した",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      }
+    ]
+  },
+  {
+    "id": "user_dict_015",
+    "category": "user_dict",
+    "context": "",
+    "input": "とうきょう",
+    "target": "東京都庁",
+    "candidates": [
+      {
+        "surface": "東京都庁",
+        "source": "user",
+        "priority": 4.5,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "東京",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "東京都",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      }
+    ]
+  },
+  {
+    "id": "user_dict_016",
+    "category": "user_dict",
+    "context": "日本の首都である",
+    "input": "とうきょう",
+    "target": "東京",
+    "candidates": [
+      {
+        "surface": "東京",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "東京都庁",
+        "source": "user",
+        "priority": 1.5,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "登校",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      }
+    ]
+  },
+  {
+    "id": "user_dict_017",
+    "category": "user_dict",
+    "context": "担当エンジニアの",
+    "input": "なかむら",
+    "target": "中村",
+    "candidates": [
+      {
+        "surface": "中村",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "繰り原",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "なかむら",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      }
+    ]
+  },
+  {
+    "id": "user_dict_018",
+    "category": "user_dict",
+    "context": "営業責任者の",
+    "input": "なかむら",
+    "target": "中村",
+    "candidates": [
+      {
+        "surface": "中村",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "繰りはら",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "user_dict_019",
+    "category": "user_dict",
+    "context": "プロジェクトリーダーの",
+    "input": "なかむら",
+    "target": "中村",
+    "candidates": [
+      {
+        "surface": "中村",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "繰原",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "user_dict_020",
+    "category": "user_dict",
+    "context": "取締役の",
+    "input": "なかむら",
+    "target": "中村",
+    "candidates": [
+      {
+        "surface": "中村",
+        "source": "user",
+        "priority": 3.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "繰原",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "observation_001",
+    "category": "observation",
+    "context": "明日は全国的に",
+    "input": "てんくがよい",
+    "target": "天気が良い",
+    "candidates": [
+      {
+        "surface": "天気が良い",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.5,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "点区が良い",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      },
+      {
+        "surface": "店苦が良い",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 5000
+      }
+    ]
+  },
+  {
+    "id": "observation_002",
+    "category": "observation",
+    "context": "午前中に重要な",
+    "input": "かいきがある",
+    "target": "会議がある",
+    "candidates": [
+      {
+        "surface": "会議がある",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.2,
+        "mozc_cost": 2200
+      },
+      {
+        "surface": "会期がある",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3800
+      },
+      {
+        "surface": "回帰がある",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4200
+      }
+    ]
+  },
+  {
+    "id": "observation_003",
+    "category": "observation",
+    "context": "近所の大型",
+    "input": "すーはーにいく",
+    "target": "スーパーに行く",
+    "candidates": [
+      {
+        "surface": "スーパーに行く",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.2,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "吸う歯に行く",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      }
+    ]
+  },
+  {
+    "id": "observation_004",
+    "category": "observation",
+    "context": "夕食に温かい",
+    "input": "こはんをたべる",
+    "target": "ご飯を食べる",
+    "candidates": [
+      {
+        "surface": "ご飯を食べる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.2,
+        "mozc_cost": 2100
+      },
+      {
+        "surface": "弧版を食べる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 7000
+      }
+    ]
+  },
+  {
+    "id": "observation_005",
+    "category": "observation",
+    "context": "駅前の交差点で",
+    "input": "しんこうがかわる",
+    "target": "信号が変わる",
+    "candidates": [
+      {
+        "surface": "信号が変わる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.2,
+        "mozc_cost": 2300
+      },
+      {
+        "surface": "信仰が変わる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3500
+      },
+      {
+        "surface": "進行が変わる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3600
+      }
+    ]
+  },
+  {
+    "id": "observation_006",
+    "category": "observation",
+    "context": "冷たい風が",
+    "input": "ふいてさむい",
+    "target": "吹いて寒い",
+    "candidates": [
+      {
+        "surface": "吹いて寒い",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2400
+      },
+      {
+        "surface": "拭いて寒い",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3800
+      }
+    ]
+  },
+  {
+    "id": "observation_007",
+    "category": "observation",
+    "context": "美味しい料理を",
+    "input": "たへる",
+    "target": "食べる",
+    "candidates": [
+      {
+        "surface": "食べる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.2,
+        "mozc_cost": 2000
+      },
+      {
+        "surface": "他経る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 8000
+      }
+    ]
+  },
+  {
+    "id": "observation_008",
+    "category": "observation",
+    "context": "朝の満員",
+    "input": "てんしゃにのる",
+    "target": "電車に乗る",
+    "candidates": [
+      {
+        "surface": "電車に乗る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.2,
+        "mozc_cost": 2200
+      },
+      {
+        "surface": "転写に乗る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4500
+      }
+    ]
+  },
+  {
+    "id": "observation_009",
+    "category": "observation",
+    "context": "大切な荷物を",
+    "input": "ととける",
+    "target": "届ける",
+    "candidates": [
+      {
+        "surface": "届ける",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.2,
+        "mozc_cost": 2200
+      },
+      {
+        "surface": "途溶ける",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 7500
+      }
+    ]
+  },
+  {
+    "id": "observation_010",
+    "category": "observation",
+    "context": "病院で薬を",
+    "input": "もらつてかえる",
+    "target": "もらって帰る",
+    "candidates": [
+      {
+        "surface": "もらって帰る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.0,
+        "mozc_cost": 2300
+      },
+      {
+        "surface": "貰う津で帰る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 8000
+      }
+    ]
+  },
+  {
+    "id": "observation_011",
+    "category": "observation",
+    "context": "雨が降って道路が",
+    "input": "ぬれてすべる",
+    "target": "濡れて滑る",
+    "candidates": [
+      {
+        "surface": "濡れて滑る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2400
+      },
+      {
+        "surface": "塗れて統べる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6500
+      }
+    ]
+  },
+  {
+    "id": "observation_012",
+    "category": "observation",
+    "context": "夜空に輝く満天の",
+    "input": "ほしそらをみる",
+    "target": "星空を見る",
+    "candidates": [
+      {
+        "surface": "星空を見る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2200
+      },
+      {
+        "surface": "干し空を見る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 6000
+      }
+    ]
+  },
+  {
+    "id": "observation_013",
+    "category": "observation",
+    "context": "友達と仲良く",
+    "input": "あそふ",
+    "target": "遊ぶ",
+    "candidates": [
+      {
+        "surface": "遊ぶ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.2,
+        "mozc_cost": 2100
+      },
+      {
+        "surface": "麻布",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4200
+      }
+    ]
+  },
+  {
+    "id": "observation_014",
+    "category": "observation",
+    "context": "お腹が空いたのでパンを",
+    "input": "かじく",
+    "target": "かじる",
+    "candidates": [
+      {
+        "surface": "かじる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.5,
+        "mozc_cost": 2600
+      },
+      {
+        "surface": "加重く",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 7000
+      }
+    ]
+  },
+  {
+    "id": "observation_015",
+    "category": "observation",
+    "context": "冷たいアイスを",
+    "input": "かちる",
+    "target": "かじる",
+    "candidates": [
+      {
+        "surface": "かじる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 1.2,
+        "mozc_cost": 2600
+      },
+      {
+        "surface": "勝る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 4000
+      }
+    ]
+  },
+  {
+    "id": "natural_001_eval_00001",
+    "category": "natural",
+    "context": "十八歳から二十五歳の",
+    "input": "あいだに、",
+    "target": "間に、",
+    "candidates": [
+      {
+        "surface": "間に、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "あいだに、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_002_eval_00011",
+    "category": "natural",
+    "context": "公認会計士とは、監査・会計・税務のプロとして",
+    "input": "くにが",
+    "target": "国が",
+    "candidates": [
+      {
+        "surface": "国が",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "くにが",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_003_eval_00021",
+    "category": "natural",
+    "context": "原宿の",
+    "input": "ら・べるでまで",
+    "target": "ラ・ベルデまで",
+    "candidates": [
+      {
+        "surface": "ラ・ベルデまで",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ら・べるでまで",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_004_eval_00031",
+    "category": "natural",
+    "context": "水星には",
+    "input": "たいきは",
+    "target": "大気は",
+    "candidates": [
+      {
+        "surface": "大気は",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "たいきは",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_005_eval_00041",
+    "category": "natural",
+    "context": "",
+    "input": "おうちでの",
+    "target": "お家での",
+    "candidates": [
+      {
+        "surface": "お家での",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "おうちでの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_006_eval_00051",
+    "category": "natural",
+    "context": "これからは心を",
+    "input": "いれかえ、",
+    "target": "入れ替え、",
+    "candidates": [
+      {
+        "surface": "入れ替え、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "いれかえ、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_007_eval_00061",
+    "category": "natural",
+    "context": "",
+    "input": "まいた",
+    "target": "撒いた",
+    "candidates": [
+      {
+        "surface": "撒いた",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "まいた",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_008_eval_00071",
+    "category": "natural",
+    "context": "",
+    "input": "せんじつ",
+    "target": "先日",
+    "candidates": [
+      {
+        "surface": "先日",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "せんじつ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_009_eval_00081",
+    "category": "natural",
+    "context": "見た目ですごく太った人がみんな治療が",
+    "input": "ひつようかと",
+    "target": "必要かと",
+    "candidates": [
+      {
+        "surface": "必要かと",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ひつようかと",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_010_eval_00091",
+    "category": "natural",
+    "context": "ホームページの",
+    "input": "おといあわせふぉーむからも",
+    "target": "お問い合わせフォームからも",
+    "candidates": [
+      {
+        "surface": "お問い合わせフォームからも",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "おといあわせふぉーむからも",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_011_eval_00101",
+    "category": "natural",
+    "context": "オリアレフアは、兵庫県伊丹市にあるハワイの伝統マッサージロミロミとホットストーンセラピーの",
+    "input": "りらくぜーしょんさろんです。",
+    "target": "リラクゼーションサロンです。",
+    "candidates": [
+      {
+        "surface": "リラクゼーションサロンです。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "りらくぜーしょんさろんです。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_012_eval_00111",
+    "category": "natural",
+    "context": "「楽市楽座」の名称で九州を中心に関西、",
+    "input": "ちゅうぶ、",
+    "target": "中部、",
+    "candidates": [
+      {
+        "surface": "中部、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ちゅうぶ、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_013_eval_00121",
+    "category": "natural",
+    "context": "胸元にオリエンタルなテイストを",
+    "input": "くわえ",
+    "target": "加え",
+    "candidates": [
+      {
+        "surface": "加え",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "くわえ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_014_eval_00131",
+    "category": "natural",
+    "context": "家庭教師応援サイトでは、お子様のベストな家庭教師選びを",
+    "input": "じつげんする",
+    "target": "実現する",
+    "candidates": [
+      {
+        "surface": "実現する",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "じつげんする",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_015_eval_00141",
+    "category": "natural",
+    "context": "道路などが",
+    "input": "せいびされた",
+    "target": "整備された",
+    "candidates": [
+      {
+        "surface": "整備された",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "せいびされた",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_016_eval_00151",
+    "category": "natural",
+    "context": "ボールの高さは調節可能グローブとポンプ付きボールの高さは",
+    "input": "ひゃくにじゅうなな〜ひゃくよんじゅうななせんちめーとるまで",
+    "target": "１２７〜１４７ｃｍまで",
+    "candidates": [
+      {
+        "surface": "１２７〜１４７ｃｍまで",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ひゃくにじゅうなな〜ひゃくよんじゅうななせんちめーとるまで",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_017_eval_00161",
+    "category": "natural",
+    "context": "切替にステッチを加えたタンクトップは、ちょっと",
+    "input": "さの",
+    "target": "差の",
+    "candidates": [
+      {
+        "surface": "差の",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "さの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_018_eval_00171",
+    "category": "natural",
+    "context": "最近",
+    "input": "こうした",
+    "target": "こうした",
+    "candidates": [
+      {
+        "surface": "こうした",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "こうした",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_019_eval_00181",
+    "category": "natural",
+    "context": "",
+    "input": "かゆくて",
+    "target": "かゆくて",
+    "candidates": [
+      {
+        "surface": "かゆくて",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "かゆくて",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_020_eval_00191",
+    "category": "natural",
+    "context": "本ソフトウェアを株式会社エンターブレインの許可",
+    "input": "なく、",
+    "target": "なく、",
+    "candidates": [
+      {
+        "surface": "なく、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "なく、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_021_eval_00201",
+    "category": "natural",
+    "context": "教育総合センターの３階には、",
+    "input": "せんせいがたが",
+    "target": "先生方が",
+    "candidates": [
+      {
+        "surface": "先生方が",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "せんせいがたが",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_022_eval_00211",
+    "category": "natural",
+    "context": "まだ未来は選べると",
+    "input": "しんじてましたが、",
+    "target": "信じてましたが、",
+    "candidates": [
+      {
+        "surface": "信じてましたが、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "しんじてましたが、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_023_eval_00221",
+    "category": "natural",
+    "context": "どの",
+    "input": "はなびたいかいも",
+    "target": "花火大会も",
+    "candidates": [
+      {
+        "surface": "花火大会も",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "はなびたいかいも",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_024_eval_00231",
+    "category": "natural",
+    "context": "オス",
+    "input": "いっぴき",
+    "target": "１匹",
+    "candidates": [
+      {
+        "surface": "１匹",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "いっぴき",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_025_eval_00241",
+    "category": "natural",
+    "context": "高山の花はいよいよ数が減って今でも登山道にてよく",
+    "input": "みられるのは",
+    "target": "見られるのは",
+    "candidates": [
+      {
+        "surface": "見られるのは",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "みられるのは",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_026_eval_00251",
+    "category": "natural",
+    "context": "未統合の",
+    "input": "ねんきんきろくへの",
+    "target": "年金記録への",
+    "candidates": [
+      {
+        "surface": "年金記録への",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ねんきんきろくへの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_027_eval_00261",
+    "category": "natural",
+    "context": "２００３年度入学生から人数減の一学年６クラス２００人、翌２００４年度入学生から１クラス減の一学年",
+    "input": "ごくらす",
+    "target": "５クラス",
+    "candidates": [
+      {
+        "surface": "５クラス",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ごくらす",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_028_eval_00271",
+    "category": "natural",
+    "context": "もちろん、プレゼントで貰ったお気に入りの帽子も",
+    "input": "いっしょです。",
+    "target": "一緒です。",
+    "candidates": [
+      {
+        "surface": "一緒です。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "いっしょです。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_029_eval_00281",
+    "category": "natural",
+    "context": "全国高等学校ラグビーフットボール大会、ジャパンラグビートップリーグをはじめ数多くの国際試合など、ラガーメンの檜舞台にふさわしい",
+    "input": "さんまんにんしゅうようの",
+    "target": "３万人収容の",
+    "candidates": [
+      {
+        "surface": "３万人収容の",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "さんまんにんしゅうようの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_030_eval_00291",
+    "category": "natural",
+    "context": "目を",
+    "input": "ぱっちりと、",
+    "target": "パッチリと、",
+    "candidates": [
+      {
+        "surface": "パッチリと、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ぱっちりと、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_031_eval_00301",
+    "category": "natural",
+    "context": "同事業では、西宮市立学校園の教員を支援対象と",
+    "input": "しています。",
+    "target": "しています。",
+    "candidates": [
+      {
+        "surface": "しています。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "しています。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_032_eval_00311",
+    "category": "natural",
+    "context": "三脚に金を",
+    "input": "おしむな、と",
+    "target": "惜しむな、と",
+    "candidates": [
+      {
+        "surface": "惜しむな、と",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "おしむな、と",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_033_eval_00321",
+    "category": "natural",
+    "context": "また、数々の",
+    "input": "きのうを",
+    "target": "機能を",
+    "candidates": [
+      {
+        "surface": "機能を",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "きのうを",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_034_eval_00331",
+    "category": "natural",
+    "context": "３月２６日、熊本のサクラの満開を",
+    "input": "かんそくしました。",
+    "target": "観測しました。",
+    "candidates": [
+      {
+        "surface": "観測しました。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "かんそくしました。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_035_eval_00341",
+    "category": "natural",
+    "context": "このグリーン車のネタは",
+    "input": "はじめて",
+    "target": "初めて",
+    "candidates": [
+      {
+        "surface": "初めて",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "はじめて",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_036_eval_00351",
+    "category": "natural",
+    "context": "",
+    "input": "こまかな",
+    "target": "細かな",
+    "candidates": [
+      {
+        "surface": "細かな",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "こまかな",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_037_eval_00361",
+    "category": "natural",
+    "context": "近くには金沢城の",
+    "input": "いしがきも",
+    "target": "石垣も",
+    "candidates": [
+      {
+        "surface": "石垣も",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "いしがきも",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_038_eval_00371",
+    "category": "natural",
+    "context": "リボルドウェとは異なり、コインブラの",
+    "input": "けいびへいは",
+    "target": "警備兵は",
+    "candidates": [
+      {
+        "surface": "警備兵は",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "けいびへいは",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_039_eval_00381",
+    "category": "natural",
+    "context": "",
+    "input": "つちを",
+    "target": "土を",
+    "candidates": [
+      {
+        "surface": "土を",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "つちを",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_040_eval_00391",
+    "category": "natural",
+    "context": "自動車ローンの",
+    "input": "きんりと",
+    "target": "金利と",
+    "candidates": [
+      {
+        "surface": "金利と",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "きんりと",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_041_eval_00401",
+    "category": "natural",
+    "context": "管理人は意外とチキンなので、誹謗・中傷を見かけたら光の",
+    "input": "はやさで",
+    "target": "速さで",
+    "candidates": [
+      {
+        "surface": "速さで",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "はやさで",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_042_eval_00411",
+    "category": "natural",
+    "context": "単語を覚えるのが苦手な人は、基礎的な単語を",
+    "input": "おぼえていないはずなので、",
+    "target": "覚えていないはずなので、",
+    "candidates": [
+      {
+        "surface": "覚えていないはずなので、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "おぼえていないはずなので、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_043_eval_00421",
+    "category": "natural",
+    "context": "",
+    "input": "ごひゃくきゅうじゅうよんねん",
+    "target": "５９４年",
+    "candidates": [
+      {
+        "surface": "５９４年",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ごひゃくきゅうじゅうよんねん",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_044_eval_00431",
+    "category": "natural",
+    "context": "細かく描かれた背景は日本そのもので、都市や地区名まで現実の名称で",
+    "input": "つくられています。",
+    "target": "造られています。",
+    "candidates": [
+      {
+        "surface": "造られています。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "つくられています。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_045_eval_00441",
+    "category": "natural",
+    "context": "",
+    "input": "じゅうがつから",
+    "target": "十月から",
+    "candidates": [
+      {
+        "surface": "十月から",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "じゅうがつから",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_046_eval_00451",
+    "category": "natural",
+    "context": "同投資法人は当初２００５年１２月に上場を予定していたが一旦上場を",
+    "input": "えんきしていた。",
+    "target": "延期していた。",
+    "candidates": [
+      {
+        "surface": "延期していた。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "えんきしていた。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_047_eval_00461",
+    "category": "natural",
+    "context": "ビジネス社会学科では、女性ならではの感性を活かし、社会で輝きながら働く",
+    "input": "ちからを",
+    "target": "力を",
+    "candidates": [
+      {
+        "surface": "力を",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ちからを",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_048_eval_00471",
+    "category": "natural",
+    "context": "ここ",
+    "input": "すうねん、",
+    "target": "数年、",
+    "candidates": [
+      {
+        "surface": "数年、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "すうねん、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_049_eval_00481",
+    "category": "natural",
+    "context": "「小鯛の笹づつみ」と全く",
+    "input": "おなじ",
+    "target": "同じ",
+    "candidates": [
+      {
+        "surface": "同じ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "おなじ",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_050_eval_00491",
+    "category": "natural",
+    "context": "弊社は東京都羽村市を拠点にするバイク便・軽",
+    "input": "よんりんびんの",
+    "target": "四輪便の",
+    "candidates": [
+      {
+        "surface": "四輪便の",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "よんりんびんの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_051_eval_00501",
+    "category": "natural",
+    "context": "宿探しは、温泉で和室を",
+    "input": "じょうけんに",
+    "target": "条件に",
+    "candidates": [
+      {
+        "surface": "条件に",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "じょうけんに",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_052_eval_00511",
+    "category": "natural",
+    "context": "眼科での診察料は",
+    "input": "べっと",
+    "target": "別途",
+    "candidates": [
+      {
+        "surface": "別途",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "べっと",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_053_eval_00521",
+    "category": "natural",
+    "context": "メールビンが十分",
+    "input": "はいる",
+    "target": "入る",
+    "candidates": [
+      {
+        "surface": "入る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "はいる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_054_eval_00531",
+    "category": "natural",
+    "context": "",
+    "input": "けいえいこんさるたんととは、",
+    "target": "経営コンサルタントとは、",
+    "candidates": [
+      {
+        "surface": "経営コンサルタントとは、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "けいえいこんさるたんととは、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_055_eval_00541",
+    "category": "natural",
+    "context": "",
+    "input": "ぎょかいるいの",
+    "target": "魚介類の",
+    "candidates": [
+      {
+        "surface": "魚介類の",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ぎょかいるいの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_056_eval_00551",
+    "category": "natural",
+    "context": "私たちは、常に",
+    "input": "ぷろふぇっしょなると",
+    "target": "プロフェッショナルと",
+    "candidates": [
+      {
+        "surface": "プロフェッショナルと",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ぷろふぇっしょなると",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_057_eval_00561",
+    "category": "natural",
+    "context": "・１日数分、お肌の",
+    "input": "きに",
+    "target": "気に",
+    "candidates": [
+      {
+        "surface": "気に",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "きに",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_058_eval_00571",
+    "category": "natural",
+    "context": "",
+    "input": "ちきゅうじょうの",
+    "target": "地球上の",
+    "candidates": [
+      {
+        "surface": "地球上の",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ちきゅうじょうの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_059_eval_00581",
+    "category": "natural",
+    "context": "引出し付きはフリーに",
+    "input": "はいります。",
+    "target": "はいります。",
+    "candidates": [
+      {
+        "surface": "はいります。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "はいります。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_060_eval_00591",
+    "category": "natural",
+    "context": "この",
+    "input": "さくじょいらいは",
+    "target": "削除依頼は",
+    "candidates": [
+      {
+        "surface": "削除依頼は",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "さくじょいらいは",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_061_eval_00601",
+    "category": "natural",
+    "context": "ダイヤモンドリジューでお気に入りのジュエリーが",
+    "input": "みつかりましたら、",
+    "target": "見つかりましたら、",
+    "candidates": [
+      {
+        "surface": "見つかりましたら、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "みつかりましたら、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_062_eval_00611",
+    "category": "natural",
+    "context": "あなた方の前では９０分切ったなんて二度と",
+    "input": "くちに",
+    "target": "口に",
+    "candidates": [
+      {
+        "surface": "口に",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "くちに",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_063_eval_00621",
+    "category": "natural",
+    "context": "アトマイザーはその性質上、次第に汚れや",
+    "input": "こげなどが",
+    "target": "焦げなどが",
+    "candidates": [
+      {
+        "surface": "焦げなどが",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "こげなどが",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_064_eval_00631",
+    "category": "natural",
+    "context": "日本舞踊の流派で、最大とされる花柳流の講師のもと、",
+    "input": "にほんぶんかの",
+    "target": "日本文化の",
+    "candidates": [
+      {
+        "surface": "日本文化の",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "にほんぶんかの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_065_eval_00641",
+    "category": "natural",
+    "context": "ケアンズを離れてやってきたのは、「アリススプリングス」というオーストラリアの砂漠の真ん中に",
+    "input": "ある",
+    "target": "ある",
+    "candidates": [
+      {
+        "surface": "ある",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ある",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_066_eval_00651",
+    "category": "natural",
+    "context": "不思議の勝ちと言うのはあるが、不思議の",
+    "input": "まけと",
+    "target": "負けと",
+    "candidates": [
+      {
+        "surface": "負けと",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "まけと",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_067_eval_00661",
+    "category": "natural",
+    "context": "もうちょっと進んだ場所のジャンプ台横に専用駐車場が",
+    "input": "あります。",
+    "target": "あります。",
+    "candidates": [
+      {
+        "surface": "あります。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "あります。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_068_eval_00671",
+    "category": "natural",
+    "context": "婚約指輪は、ダイヤモンドを",
+    "input": "おくる",
+    "target": "贈る",
+    "candidates": [
+      {
+        "surface": "贈る",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "おくる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_069_eval_00681",
+    "category": "natural",
+    "context": "",
+    "input": "あっとほーむな",
+    "target": "アットホームな",
+    "candidates": [
+      {
+        "surface": "アットホームな",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "あっとほーむな",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_070_eval_00691",
+    "category": "natural",
+    "context": "しかし、ほとんどは",
+    "input": "じつげんしなかった。",
+    "target": "実現しなかった。",
+    "candidates": [
+      {
+        "surface": "実現しなかった。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "じつげんしなかった。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_071_eval_00701",
+    "category": "natural",
+    "context": "１年間にはいくつもの台風が発生しますし、同時に複数の",
+    "input": "たいふうが",
+    "target": "台風が",
+    "candidates": [
+      {
+        "surface": "台風が",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "たいふうが",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_072_eval_00711",
+    "category": "natural",
+    "context": "同じトウダイグサ科で，同じく",
+    "input": "さんごと",
+    "target": "珊瑚と",
+    "candidates": [
+      {
+        "surface": "珊瑚と",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "さんごと",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_073_eval_00721",
+    "category": "natural",
+    "context": "ただし、分野によっては中央アジアと中部アジアは",
+    "input": "つかいわけられる。",
+    "target": "使い分けられる。",
+    "candidates": [
+      {
+        "surface": "使い分けられる。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "つかいわけられる。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_074_eval_00731",
+    "category": "natural",
+    "context": "２００９年１０月１日に，国立国語研究所が人間文化研究機構の",
+    "input": "だいろくばんめの",
+    "target": "第６番目の",
+    "candidates": [
+      {
+        "surface": "第６番目の",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "だいろくばんめの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_075_eval_00741",
+    "category": "natural",
+    "context": "子どもの学習には、それぞれの",
+    "input": "のうりょくに",
+    "target": "能力に",
+    "candidates": [
+      {
+        "surface": "能力に",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "のうりょくに",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_076_eval_00751",
+    "category": "natural",
+    "context": "",
+    "input": "くれじっとかーどの",
+    "target": "クレジットカードの",
+    "candidates": [
+      {
+        "surface": "クレジットカードの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "くれじっとかーどの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_077_eval_00761",
+    "category": "natural",
+    "context": "また、仕事内容・賃金・保険・福利厚生の待遇面等の疑問点を解消するよう、納得の",
+    "input": "いくまで",
+    "target": "いくまで",
+    "candidates": [
+      {
+        "surface": "いくまで",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "いくまで",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_078_eval_00771",
+    "category": "natural",
+    "context": "今朝からまた",
+    "input": "あやしい",
+    "target": "怪しい",
+    "candidates": [
+      {
+        "surface": "怪しい",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "あやしい",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_079_eval_00781",
+    "category": "natural",
+    "context": "夜イカ昼イカともに",
+    "input": "にぎわっている。",
+    "target": "にぎわっている。",
+    "candidates": [
+      {
+        "surface": "にぎわっている。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "にぎわっている。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_080_eval_00791",
+    "category": "natural",
+    "context": "クイックに姿勢を",
+    "input": "もどして",
+    "target": "戻して",
+    "candidates": [
+      {
+        "surface": "戻して",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "もどして",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_081_eval_00801",
+    "category": "natural",
+    "context": "リコメ＆ご訪問が",
+    "input": "おくれております。。",
+    "target": "遅れております。。",
+    "candidates": [
+      {
+        "surface": "遅れております。。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "おくれております。。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_082_eval_00811",
+    "category": "natural",
+    "context": "当時は、県内の米軍基地で働く従業員向けへの販売のみだったが、１９６３年に基地外に直営の",
+    "input": "ぱーらー",
+    "target": "パーラー",
+    "candidates": [
+      {
+        "surface": "パーラー",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "ぱーらー",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_083_eval_00821",
+    "category": "natural",
+    "context": "",
+    "input": "また",
+    "target": "また",
+    "candidates": [
+      {
+        "surface": "また",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "また",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_084_eval_00831",
+    "category": "natural",
+    "context": "",
+    "input": "しょっぷめい、",
+    "target": "ショップ名、",
+    "candidates": [
+      {
+        "surface": "ショップ名、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "しょっぷめい、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_085_eval_00841",
+    "category": "natural",
+    "context": "そして筋力が",
+    "input": "あっぷすると",
+    "target": "アップすると",
+    "candidates": [
+      {
+        "surface": "アップすると",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "あっぷすると",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_086_eval_00851",
+    "category": "natural",
+    "context": "十分に資産があれば、新築を",
+    "input": "こうにゅうすべきでしょう。",
+    "target": "購入すべきでしょう。",
+    "candidates": [
+      {
+        "surface": "購入すべきでしょう。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "こうにゅうすべきでしょう。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_087_eval_00861",
+    "category": "natural",
+    "context": "",
+    "input": "りょうしゃの",
+    "target": "両者の",
+    "candidates": [
+      {
+        "surface": "両者の",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "りょうしゃの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_088_eval_00871",
+    "category": "natural",
+    "context": "",
+    "input": "じかいは、",
+    "target": "次回は、",
+    "candidates": [
+      {
+        "surface": "次回は、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "じかいは、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_089_eval_00881",
+    "category": "natural",
+    "context": "この、",
+    "input": "かんとくの",
+    "target": "監督の",
+    "candidates": [
+      {
+        "surface": "監督の",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "かんとくの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_090_eval_00891",
+    "category": "natural",
+    "context": "かつらのナチュラルでは、福岡市に本部を置く弁護士事務所と顧問契約を",
+    "input": "むすんでいます。",
+    "target": "結んでいます。",
+    "candidates": [
+      {
+        "surface": "結んでいます。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "むすんでいます。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_091_eval_00901",
+    "category": "natural",
+    "context": "なお、１２月に",
+    "input": "おこなわれる",
+    "target": "行われる",
+    "candidates": [
+      {
+        "surface": "行われる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "おこなわれる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_092_eval_00911",
+    "category": "natural",
+    "context": "空いた",
+    "input": "じかんに",
+    "target": "時間に",
+    "candidates": [
+      {
+        "surface": "時間に",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "じかんに",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_093_eval_00921",
+    "category": "natural",
+    "context": "ここに今までに得られた",
+    "input": "しりょうの",
+    "target": "資料の",
+    "candidates": [
+      {
+        "surface": "資料の",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "しりょうの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_094_eval_00931",
+    "category": "natural",
+    "context": "なお、この立谷川には、",
+    "input": "あだぷとと",
+    "target": "アダプトと",
+    "candidates": [
+      {
+        "surface": "アダプトと",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "あだぷとと",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_095_eval_00941",
+    "category": "natural",
+    "context": "また、エンジン内外の気温差に",
+    "input": "よる",
+    "target": "よる",
+    "candidates": [
+      {
+        "surface": "よる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "よる",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_096_eval_00951",
+    "category": "natural",
+    "context": "",
+    "input": "げんざい",
+    "target": "現在",
+    "candidates": [
+      {
+        "surface": "現在",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "げんざい",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_097_eval_00961",
+    "category": "natural",
+    "context": "家族で楽しめるお餅が食べたい",
+    "input": "あなたに。",
+    "target": "あなたに。",
+    "candidates": [
+      {
+        "surface": "あなたに。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "あなたに。",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_098_eval_00971",
+    "category": "natural",
+    "context": "後遺障害が残った場合、または残りそうな場合、自賠責保険の後遺障害等級認定を",
+    "input": "うける",
+    "target": "受ける",
+    "candidates": [
+      {
+        "surface": "受ける",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "うける",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_099_eval_00981",
+    "category": "natural",
+    "context": "このバージョンのカバーを同じ",
+    "input": "えるヴぃすふぁんの",
+    "target": "エルヴィスファンの",
+    "candidates": [
+      {
+        "surface": "エルヴィスファンの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "えるヴぃすふぁんの",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  },
+  {
+    "id": "natural_100_eval_00991",
+    "category": "natural",
+    "context": "洗った",
+    "input": "あと、",
+    "target": "あと、",
+    "candidates": [
+      {
+        "surface": "あと、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 2500
+      },
+      {
+        "surface": "あと、",
+        "source": "system",
+        "priority": 0.0,
+        "obs_penalty": 0.0,
+        "mozc_cost": 3000
+      }
+    ]
+  }
+]

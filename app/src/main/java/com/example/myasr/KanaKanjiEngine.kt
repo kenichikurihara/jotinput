@@ -15,7 +15,9 @@ data class ConversionCandidate(
     val surface: String,
     val reading: String,
     val isPrediction: Boolean = false,
-    val source: String = "dict"
+    val source: String = "dict",
+    val priority: Float = 0.0f,
+    val obsPenalty: Float = 0.0f
 )
 
 class KanaKanjiEngine internal constructor(private val context: Context? = null) {
@@ -34,7 +36,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val cost: Int,
         val source: String,
         val lid: Int = 0,
-        val rid: Int = 0
+        val rid: Int = 0,
+        val priority: Float = 0.0f
     )
 
     private class TrieNode {
@@ -345,7 +348,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     Priority.NORMAL -> 10
                     Priority.LOW -> 50
                 }
-                insertWord(normalizedReading, entry.word, cost = cost, source = "user", lid = 1851, rid = 1851)
+                val priorityScore = entry.priority.score
+                insertWord(normalizedReading, entry.word, cost = cost, source = "user", lid = 1851, rid = 1851, priority = priorityScore)
             }
         }
         clearMemoryCache()
@@ -387,7 +391,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         cost: Int,
         source: String,
         lid: Int = 0,
-        rid: Int = 0
+        rid: Int = 0,
+        priority: Float = 0.0f
     ) {
         var node = root
         for (ch in reading) {
@@ -402,13 +407,14 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             val effectiveRid = if (rid > 0) rid else existing.rid
             val effectiveCost = minOf(cost, existing.cost)
             val effectiveSource = if (source == "user" || existing.source == "user") "user" else source
+            val effectivePriority = if (priority > 0f) priority else existing.priority
             if (cost <= existing.cost || source == "user") {
-                node.words[existingIndex] = WordEntry(surface, effectiveCost, effectiveSource, effectiveLid, effectiveRid)
+                node.words[existingIndex] = WordEntry(surface, effectiveCost, effectiveSource, effectiveLid, effectiveRid, effectivePriority)
             } else if (effectiveLid != existing.lid || effectiveRid != existing.rid) {
-                node.words[existingIndex] = WordEntry(surface, existing.cost, existing.source, effectiveLid, effectiveRid)
+                node.words[existingIndex] = WordEntry(surface, existing.cost, existing.source, effectiveLid, effectiveRid, effectivePriority)
             }
         } else {
-            node.words.add(WordEntry(surface, cost, source, lid, rid))
+            node.words.add(WordEntry(surface, cost, source, lid, rid, priority))
         }
         node.words.sortWith { a, b ->
             if (a.cost != b.cost) {
@@ -480,7 +486,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             val exactTrieWords = exactNode?.words?.toList() ?: emptyList()
             val userMatches = exactTrieWords.filter { it.source == "user" }
             for (w in userMatches) {
-                addCandidate(ConversionCandidate(surface = w.surface, reading = normalized, isPrediction = false, source = "user"))
+                addCandidate(ConversionCandidate(surface = w.surface, reading = normalized, isPrediction = false, source = "user", priority = w.priority))
             }
 
             // 1.5. Dynamic Arabic Numeral Candidate Generation (e.g. "ごきろ" -> "5キロ", "にせんにじゅうろくねん" -> "2026年")
@@ -538,8 +544,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                         costA.compareTo(costB)
                     }
                 }
-                for ((reading, entry, _) in voicedExactWords) {
-                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source))
+                for ((reading, entry, vDist) in voicedExactWords) {
+                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = 1.2f * vDist))
                 }
                 // Query SQLite exact matches for top voiced readings (up to 2 readings)
                 for (vPath in voicedPaths.take(2)) {
@@ -631,8 +637,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                         costA.compareTo(costB)
                     }
                 }
-                for ((reading, entry, _) in flickExactWords.take(8)) {
-                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source))
+                for ((reading, entry, penalty) in flickExactWords.take(8)) {
+                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = penalty.toFloat() / 1000.0f))
                 }
 
                 // If the typo-corrected reading represents a valid word in the lexicon,
@@ -707,15 +713,17 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             return Pair(filtered, false)
         }
         val alpha = KeyboardHeightManager.getSlmWeightAlpha(ctx)
+        val lambdaObs = KeyboardHeightManager.getSlmLambdaObs(ctx)
+        val gammaUser = KeyboardHeightManager.getSlmGammaUser(ctx)
         val engineType = KeyboardHeightManager.getRerankEngineType(ctx)
 
         return when (engineType) {
             RerankEngineType.NONE -> Pair(filtered, false)
             RerankEngineType.AICORE_NANO_2, RerankEngineType.AICORE_NANO_1 -> {
-                AiCoreReranker.getInstance(ctx).rerankWithStatus(engineType, contextPrefix, filtered, weightAlpha = alpha)
+                AiCoreReranker.getInstance(ctx).rerankWithStatus(engineType, contextPrefix, filtered, weightAlpha = alpha, lambdaObs = lambdaObs, gammaUser = gammaUser)
             }
             RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B -> {
-                LlmReranker.getInstance(ctx).rerankWithStatus(contextPrefix, filtered, weightAlpha = alpha)
+                LlmReranker.getInstance(ctx).rerankWithStatus(contextPrefix, filtered, weightAlpha = alpha, lambdaObs = lambdaObs, gammaUser = gammaUser)
             }
         }
     }
