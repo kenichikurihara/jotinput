@@ -290,25 +290,27 @@ class VoiceInputMethodService : InputMethodService() {
             false
         }
 
-        val rawContext = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+        val rawContext = currentInputConnection?.getTextBeforeCursor(2048, 0)?.toString() ?: ""
         if (rawContext == lastRenderedContextText) {
             return
         }
         lastRenderedContextText = rawContext
 
+        val rawLength = rawContext.length
         if (isPassword) {
-            tvContextBadge?.text = "CTX: パスワード"
+            tvContextBadge?.text = "CTX: パスワード max_ctx_len=${rawLength}"
             tvContextContent?.text = if (rawContext.isEmpty()) "(空)" else "•".repeat(rawContext.length.coerceAtMost(16))
             return
         }
 
-        val length = rawContext.length
-        tvContextBadge?.text = "CTX: ${length}字"
-        if (length == 0) {
+        val lmContext = ContextWindowTrimmer.trimToOptimalContext(rawContext)
+        val lmLength = lmContext.length
+        tvContextBadge?.text = "CTX: ${lmLength}字 max_ctx_len=${rawLength}"
+        if (lmLength == 0) {
             tvContextContent?.text = "(空)"
         } else {
             // Replace newlines with visual representation for single-line readability
-            val sanitized = rawContext.replace("\n", "↵")
+            val sanitized = lmContext.replace("\n", "↵")
             tvContextContent?.text = sanitized
         }
     }
@@ -795,6 +797,9 @@ class VoiceInputMethodService : InputMethodService() {
         if (canRerank) {
             rerankJob = serviceScope.launch(Dispatchers.Default) {
                 try {
+                    // Micro-debounce (12ms): skips redundant background SLM decode passes during rapid flick typing
+                    // while retaining zero UI latency because base candidates are already rendered synchronously above.
+                    delay(12L)
                     val (reranked, slmUsed) = withTimeout(2500L) {
                         kanaKanjiEngine.rerankCandidatesWithStatus(textBeforeCursor, baseCandidates)
                     }
@@ -932,9 +937,12 @@ class VoiceInputMethodService : InputMethodService() {
 
         rerankJob = serviceScope.launch(Dispatchers.Default) {
             try {
-                withTimeout(3000L) {
-                    // Generate next-phrase continuations directly from on-device SLM
-                    val slmContinuations = slm.predictNextPhrases(textBeforeCursor, maxCandidates = 3, maxTokens = 5)
+                withTimeout(2500L) {
+                    // Pre-warm SLM KV cache with current context so next keystroke hits the cache instantly (<1ms)
+                    slm.warmContext(textBeforeCursor)
+
+                    // Generate next-phrase continuations directly from on-device SLM with lightweight bounds
+                    val slmContinuations = slm.predictNextPhrases(textBeforeCursor, maxCandidates = 2, maxTokens = 2)
 
                     // Combine SLM continuations with fast predictions
                     val combined = mutableListOf<ConversionCandidate>()
