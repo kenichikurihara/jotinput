@@ -5,6 +5,8 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <unordered_map>
+#include <atomic>
 #include <cstdint>
 
 struct llama_model;
@@ -32,6 +34,8 @@ class LlmReranker {
                        const std::vector<std::string>& candidates,
                        std::vector<float>* out_neg_logprobs);
 
+  bool WarmContext(const std::string& context);
+
   bool PredictNextPhrases(const std::string& context,
                           int max_candidates,
                           int max_tokens,
@@ -48,6 +52,7 @@ class LlmReranker {
 
   uint64_t ComputeContextHash(const std::string& context) const;
   bool EnsureContextCached(const std::string& context);
+  static float ComputeLogDenominator(const float* logits, int n_vocab);
 
   LlmRerankerConfig config_;
   llama_model* model_ = nullptr;
@@ -61,9 +66,11 @@ class LlmReranker {
   std::vector<int32_t> cached_context_tokens_;
   std::vector<float> cached_context_logits_;
   float cached_context_log_denom_ = 0.0f;
+  std::unordered_map<std::string, float> cached_candidate_nlls_;
   int cache_hits_ = 0;
   int cache_misses_ = 0;
 
+  std::atomic<bool> abort_prediction_{false};
   mutable std::mutex mutex_;
 };
 

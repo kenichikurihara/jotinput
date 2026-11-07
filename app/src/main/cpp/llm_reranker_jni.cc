@@ -120,6 +120,19 @@ Java_com_example_myasr_LlmReranker_nativeScoreCandidates(JNIEnv* env, jobject /*
   return result;
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_example_myasr_LlmReranker_nativeWarmContext(JNIEnv* env, jobject /* thiz */,
+                                                     jstring jContext) {
+  std::string context_str = "";
+  if (jContext != nullptr) {
+    const char* c_str = env->GetStringUTFChars(jContext, nullptr);
+    context_str = c_str;
+    env->ReleaseStringUTFChars(jContext, c_str);
+  }
+  bool success = myasr::LlmReranker::GetInstance().WarmContext(context_str);
+  return success ? JNI_TRUE : JNI_FALSE;
+}
+
 JNIEXPORT jobjectArray JNICALL
 Java_com_example_myasr_LlmReranker_nativePredictNextPhrases(JNIEnv* env, jobject /* thiz */,
                                                             jstring jContext,
