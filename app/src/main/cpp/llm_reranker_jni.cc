@@ -180,6 +180,71 @@ Java_com_example_myasr_LlmReranker_nativePredictNextPhrases(JNIEnv* env, jobject
   return result;
 }
 
+JNIEXPORT jfloatArray JNICALL
+Java_com_example_myasr_LlmReranker_nativeTryFastScoreCandidates(JNIEnv* env, jobject /* thiz */,
+                                                                 jstring jContext,
+                                                                 jobjectArray jCandidates,
+                                                                 jbooleanArray outIsComplete) {
+  if (jCandidates == nullptr || outIsComplete == nullptr) {
+    return nullptr;
+  }
+
+  std::string context_str = "";
+  if (jContext != nullptr) {
+    const char* c_str = env->GetStringUTFChars(jContext, nullptr);
+    context_str = c_str;
+    env->ReleaseStringUTFChars(jContext, c_str);
+  }
+
+  jsize num_candidates = env->GetArrayLength(jCandidates);
+  if (num_candidates == 0) {
+    return nullptr;
+  }
+
+  std::vector<std::string> candidates;
+  candidates.reserve(num_candidates);
+
+  for (jsize i = 0; i < num_candidates; ++i) {
+    jstring cand_str = (jstring)env->GetObjectArrayElement(jCandidates, i);
+    if (cand_str != nullptr) {
+      const char* utf = env->GetStringUTFChars(cand_str, nullptr);
+      candidates.emplace_back(utf);
+      env->ReleaseStringUTFChars(cand_str, utf);
+      env->DeleteLocalRef(cand_str);
+    } else {
+      candidates.emplace_back("");
+    }
+  }
+
+  std::vector<float> neg_logprobs;
+  std::vector<bool> is_complete;
+  bool success = myasr::LlmReranker::GetInstance().TryFastScoreCandidates(
+      context_str, candidates, &neg_logprobs, &is_complete);
+
+  if (!success || neg_logprobs.size() != static_cast<size_t>(num_candidates)) {
+    return nullptr;
+  }
+
+  jfloatArray result = env->NewFloatArray(num_candidates);
+  if (result == nullptr) {
+    return nullptr;
+  }
+  env->SetFloatArrayRegion(result, 0, num_candidates, neg_logprobs.data());
+
+  std::vector<jboolean> j_is_complete(num_candidates);
+  for (jsize i = 0; i < num_candidates; ++i) {
+    j_is_complete[i] = is_complete[i] ? JNI_TRUE : JNI_FALSE;
+  }
+  env->SetBooleanArrayRegion(outIsComplete, 0, num_candidates, j_is_complete.data());
+
+  return result;
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_myasr_LlmReranker_nativeRequestAbortScoring(JNIEnv* /* env */, jobject /* thiz */) {
+  myasr::LlmReranker::GetInstance().RequestAbortScoring();
+}
+
 JNIEXPORT void JNICALL
 Java_com_example_myasr_LlmReranker_nativeRelease(JNIEnv* /* env */, jobject /* thiz */) {
   myasr::LlmReranker::GetInstance().Release();

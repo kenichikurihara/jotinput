@@ -23,6 +23,8 @@ class AsrApp : Application() {
         private set
     lateinit var multiDictionaryManager: MultiDictionaryManager
         private set
+    lateinit var dictionaryUpdateTracker: DictionaryUpdateTracker
+        private set
     lateinit var connectionDataManager: ConnectionDataManager
         private set
     lateinit var kanaKanjiEngine: KanaKanjiEngine
@@ -52,6 +54,7 @@ class AsrApp : Application() {
         asrManager = AsrManager(this)
         baseDictionaryDownloader = BaseDictionaryDownloader(this)
         multiDictionaryManager = MultiDictionaryManager(this)
+        dictionaryUpdateTracker = DictionaryUpdateTracker(this)
         connectionDataManager = ConnectionDataManager(this)
         llmReranker = LlmReranker.getInstance(this)
         modelWarmUpManager = ModelWarmUpManager.getInstance(this)

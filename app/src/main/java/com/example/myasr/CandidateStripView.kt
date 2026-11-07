@@ -22,6 +22,25 @@ class CandidateStripView @JvmOverloads constructor(
 
     var listener: OnCandidateClickListener? = null
 
+    var isUserInteracting: Boolean = false
+        private set
+
+    override fun onInterceptTouchEvent(ev: android.view.MotionEvent): Boolean {
+        when (ev.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN -> isUserInteracting = true
+            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> isUserInteracting = false
+        }
+        return super.onInterceptTouchEvent(ev)
+    }
+
+    override fun onTouchEvent(ev: android.view.MotionEvent): Boolean {
+        when (ev.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_MOVE -> isUserInteracting = true
+            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> isUserInteracting = false
+        }
+        return super.onTouchEvent(ev)
+    }
+
     private val container = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
@@ -38,6 +57,7 @@ class CandidateStripView @JvmOverloads constructor(
     }
 
     private var currentCandidates: List<ConversionCandidate> = emptyList()
+    private var lastRenderedBadge: String? = null
 
     fun getCandidates(): List<ConversionCandidate> = currentCandidates
 
@@ -51,6 +71,7 @@ class CandidateStripView @JvmOverloads constructor(
 
     fun showEmptyStatus(text: String) {
         currentCandidates = emptyList()
+        lastRenderedBadge = null
         container.removeAllViews()
         emptyStatusView.text = text
         emptyStatusView.setTextColor(ContextCompat.getColor(context, R.color.candidate_empty_text))
@@ -59,14 +80,24 @@ class CandidateStripView @JvmOverloads constructor(
     }
 
     fun setCandidates(candidates: List<ConversionCandidate>, debugBadge: String? = null) {
-        currentCandidates = candidates
-        container.removeAllViews()
         // Retain candidates from engine (redundant Hiragana matching composing text is already excluded by engine)
         val displayCandidates = candidates.filter { it.isPrediction || it.reading != it.surface || !JapaneseKanaUtils.isAllHiragana(it.surface) }
         if (displayCandidates.isEmpty()) {
             showEmptyStatus("話すか、フリックで入力")
             return
         }
+
+        // Zero-Jitter optimization: If surfaces and debugBadge are identical to current strip, skip DOM recreation
+        val currentSurfaces = currentCandidates.filter { it.isPrediction || it.reading != it.surface || !JapaneseKanaUtils.isAllHiragana(it.surface) }.map { it.surface }
+        val newSurfaces = displayCandidates.map { it.surface }
+        if (currentSurfaces == newSurfaces && lastRenderedBadge == debugBadge && container.childCount > 0) {
+            currentCandidates = candidates
+            return
+        }
+
+        currentCandidates = candidates
+        lastRenderedBadge = debugBadge
+        container.removeAllViews()
 
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val density = resources.displayMetrics.density
@@ -108,6 +139,18 @@ class CandidateStripView @JvmOverloads constructor(
                 textSize = textSizeSp
                 typeface = Typeface.DEFAULT
                 gravity = Gravity.CENTER
+
+                // Quantized minimum width by character count: eliminates cumulative layout shifts (CLS)
+                // when homophones of the same character count exchange positions.
+                val charCount = candidate.surface.length
+                val minW = when (charCount) {
+                    1 -> (42 * density).toInt()
+                    2 -> (64 * density).toInt()
+                    3 -> (86 * density).toInt()
+                    4 -> (108 * density).toInt()
+                    else -> 0
+                }
+                minWidth = minW
 
                 setTextColor(ContextCompat.getColor(context, R.color.candidate_text))
                 setBackgroundResource(R.drawable.bg_candidate_pill)

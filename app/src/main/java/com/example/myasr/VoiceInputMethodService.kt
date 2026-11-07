@@ -48,6 +48,11 @@ class VoiceInputMethodService : InputMethodService() {
     private lateinit var kanaKanjiEngine: KanaKanjiEngine
     private lateinit var nextPhrasePredictor: NextPhrasePredictor
 
+    // Zero-Jitter SLM Reranking & Tap-Safe Window State
+    private var lastKeystrokeUptimeMs: Long = 0L
+    private var firstRenderUptimeMs: Long = 0L
+    private var initialRenderedTop1: String? = null
+
     // Multimodal Voice + Touch Input Arbitrator
     private val arbitrator = VoiceTouchInputArbitrator()
     private val editorBridge = InputConnectionEditorBridge { currentInputConnection }
@@ -632,6 +637,7 @@ class VoiceInputMethodService : InputMethodService() {
                 )
                 audioRecorder.notifyUserTyping(350L)
                 rerankJob?.cancel()
+                LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
                 isCurrentCandidatesReranked = false
                 syncKeyboardState()
 
@@ -672,6 +678,7 @@ class VoiceInputMethodService : InputMethodService() {
                 )
                 audioRecorder.notifyUserTyping(350L)
                 rerankJob?.cancel()
+                LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
                 isCurrentCandidatesReranked = false
                 syncKeyboardState()
                 candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
@@ -690,6 +697,7 @@ class VoiceInputMethodService : InputMethodService() {
                 )
                 audioRecorder.notifyUserTyping(350L)
                 rerankJob?.cancel()
+                LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
                 isCurrentCandidatesReranked = false
                 syncKeyboardState()
                 candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
@@ -759,6 +767,7 @@ class VoiceInputMethodService : InputMethodService() {
                 )
                 audioRecorder.notifyUserTyping(350L)
                 rerankJob?.cancel()
+                LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
                 isCurrentCandidatesReranked = false
                 syncKeyboardState()
                 candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
@@ -769,6 +778,7 @@ class VoiceInputMethodService : InputMethodService() {
     private fun updateCandidates() {
         if (!arbitrator.isKeyboardComposing()) {
             rerankJob?.cancel()
+            LlmReranker.getInstance(this).requestAbortScoring()
             isCurrentCandidatesReranked = false
             updateDebugSlmBadge(null)
             candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
@@ -778,53 +788,108 @@ class VoiceInputMethodService : InputMethodService() {
         val reading = arbitrator.composingText.toString()
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
 
-        val baseCandidates = kanaKanjiEngine.getBaseCandidates(reading)
+        val nowUptime = android.os.SystemClock.uptimeMillis()
+        val ikiMs = if (lastKeystrokeUptimeMs > 0L) nowUptime - lastKeystrokeUptimeMs else 999L
+        lastKeystrokeUptimeMs = nowUptime
 
-        // Cancel any pending SLM re-ranking job from previous keystroke
+        // Signal any ongoing C++ score/decode pass to abort immediately (Policy ⑥)
+        LlmReranker.getInstance(this).requestAbortScoring()
         rerankJob?.cancel()
         isCurrentCandidatesReranked = false
         updateDebugSlmBadge(null)
 
-        // FAST PATH (Immediate UI update, < 1ms):
-        // ALWAYS instantly display base candidates so the user has immediate tactile and visual feedback
-        candidateStripView?.setCandidates(baseCandidates)
+        val baseCandidates = kanaKanjiEngine.getBaseCandidates(reading)
 
         val isRerankEnabled = KeyboardHeightManager.isSlmRerankEnabled(this)
         val isContextFreeEnabled = KeyboardHeightManager.isSlmContextFreeRerankEnabled(this)
         val isSlmReady = LlmReranker.getInstance(this).isReady()
         val canRerank = isRerankEnabled && (textBeforeCursor.isNotBlank() || isContextFreeEnabled) && baseCandidates.size > 1 && isSlmReady
 
+        // 1. FAST ZERO-JITTER PATH (< 0.1ms synchronous on Main Thread, Policies ① & ②):
+        // If context logits or memoized NLLs are available, compute ranking instantly before first render.
+        var renderedCandidates = baseCandidates
+        var isFullyCompleteFromFastPath = false
         if (canRerank) {
-            rerankJob = serviceScope.launch(Dispatchers.Default) {
-                try {
-                    // Micro-debounce (12ms): skips redundant background SLM decode passes during rapid flick typing
-                    // while retaining zero UI latency because base candidates are already rendered synchronously above.
-                    delay(12L)
-                    val (reranked, slmUsed) = withTimeout(2500L) {
-                        kanaKanjiEngine.rerankCandidatesWithStatus(textBeforeCursor, baseCandidates)
-                    }
-                    if (arbitrator.composingText.toString() == reading && reranked.isNotEmpty()) {
-                        withContext(Dispatchers.Main) {
-                            if (arbitrator.composingText.toString() == reading) {
-                                isCurrentCandidatesReranked = true
-                                val engineType = KeyboardHeightManager.getRerankEngineType(this@VoiceInputMethodService)
-                                val debugBadge = if (slmUsed) engineType.badgeLabel else null
-                                updateDebugSlmBadge(debugBadge)
-                                candidateStripView?.setCandidates(reranked)
+            val fastResult = kanaKanjiEngine.tryFastRerankCandidatesWithStatus(
+                contextPrefix = textBeforeCursor,
+                baseCandidates = baseCandidates,
+                currentShownTop1 = null
+            )
+            if (fastResult != null && fastResult.candidates.isNotEmpty()) {
+                renderedCandidates = fastResult.candidates
+                isFullyCompleteFromFastPath = fastResult.isFullyComplete
+                if (isFullyCompleteFromFastPath) {
+                    isCurrentCandidatesReranked = true
+                    val engineType = KeyboardHeightManager.getRerankEngineType(this)
+                    updateDebugSlmBadge(engineType.badgeLabel)
+                }
+            }
+        }
+
+        // Render immediately (< 1ms)
+        initialRenderedTop1 = renderedCandidates.firstOrNull()?.surface
+        firstRenderUptimeMs = android.os.SystemClock.uptimeMillis()
+        candidateStripView?.setCandidates(renderedCandidates)
+
+        // If the synchronous fast path was 100% complete, skip background reranking completely (0ms Two-Phase Redraw Rate!)
+        if (isFullyCompleteFromFastPath || !canRerank) {
+            return
+        }
+
+        // 2. ADAPTIVE BACKGROUND RERANKING PATH (Policies ③, ④, ⑤, ⑥):
+        // Adaptive debounce: 40ms during rapid typing (iki < 140ms and short reading), 4ms when typing pauses
+        val debounceMs = if (ikiMs < 140L && reading.length <= 2) 40L else 4L
+        val currentTop1ToPreserve = initialRenderedTop1
+
+        rerankJob = serviceScope.launch(Dispatchers.Default) {
+            try {
+                delay(debounceMs)
+                val (reranked, slmUsed) = withTimeout(2500L) {
+                    kanaKanjiEngine.rerankCandidatesWithStatus(
+                        contextPrefix = textBeforeCursor,
+                        baseCandidates = baseCandidates,
+                        currentShownTop1 = currentTop1ToPreserve
+                    )
+                }
+                if (arbitrator.composingText.toString() == reading && reranked.isNotEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        if (arbitrator.composingText.toString() == reading) {
+                            val elapsedFromFirstRenderMs = android.os.SystemClock.uptimeMillis() - firstRenderUptimeMs
+                            val isUserTouchingStrip = candidateStripView?.isUserInteracting == true
+
+                            // Policy ⑤: Tap-Safe Window Protection
+                            val safeCandidates = if ((elapsedFromFirstRenderMs > 100L || isUserTouchingStrip) &&
+                                currentTop1ToPreserve != null &&
+                                reranked.firstOrNull()?.surface != currentTop1ToPreserve
+                            ) {
+                                // Pin the initial Top-1 at Slot 0 to prevent mis-taps, inserting new Top-1 at Slot 1
+                                val pinnedTop = reranked.find { it.surface == currentTop1ToPreserve }
+                                    ?: ConversionCandidate(surface = currentTop1ToPreserve, reading = reading, isPrediction = false)
+                                val otherCands = reranked.filter { it.surface != currentTop1ToPreserve }
+                                listOf(pinnedTop) + otherCands
+                            } else {
+                                reranked
                             }
+
+                            isCurrentCandidatesReranked = true
+                            val engineType = KeyboardHeightManager.getRerankEngineType(this@VoiceInputMethodService)
+                            val debugBadge = if (slmUsed) engineType.badgeLabel else null
+                            updateDebugSlmBadge(debugBadge)
+                            candidateStripView?.setCandidates(safeCandidates)
                         }
                     }
-                } catch (e: TimeoutCancellationException) {
-                    Log.w(TAG, "KanaKanji/SLM rerank timed out (>2500ms), fail-safe preserving base candidates")
-                } catch (e: Exception) {
-                    Log.w(TAG, "KanaKanji/SLM rerank error: ${e.message}")
                 }
+            } catch (e: TimeoutCancellationException) {
+                Log.w(TAG, "KanaKanji/SLM rerank timed out (>2500ms), fail-safe preserving base candidates")
+            } catch (e: Exception) {
+                Log.w(TAG, "KanaKanji/SLM rerank error: ${e.message}")
             }
         }
     }
 
     private fun commitComposingText() {
         rerankJob?.cancel()
+        LlmReranker.getInstance(this).requestAbortScoring()
         isCurrentCandidatesReranked = false
         updateDebugSlmBadge(null)
         if (arbitrator.isStreamingComposing()) {

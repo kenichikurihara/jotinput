@@ -15,6 +15,15 @@ class LlmReranker private constructor(private val context: Context) {
 
     private val TAG = "LlmReranker"
 
+    // Kotlin-level memoized NLL cache (contextHash:surface -> complete NLL)
+    private val memoizedNllCache = android.util.LruCache<String, Float>(512)
+
+    data class FastRerankResult(
+        val candidates: List<ConversionCandidate>,
+        val isFullyComplete: Boolean,
+        val slmUsed: Boolean
+    )
+
     enum class State {
         UNINITIALIZED,
         INITIALIZING,
@@ -198,6 +207,134 @@ class LlmReranker private constructor(private val context: Context) {
         }
     }
 
+    fun requestAbortScoring() {
+        if (state == State.READY && nativeLibraryLoaded) {
+            try {
+                nativeRequestAbortScoring()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error in requestAbortScoring: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Tries fast synchronous candidate scoring directly from cached context logits on Main Thread (< 0.1ms).
+     * If all candidates are 1-token or already memoized, returns complete final ranking immediately.
+     * Otherwise returns approximate ranking for immediate display while Stage 2 Tree batch decodes in background.
+     */
+    fun tryFastRerankWithStatus(
+        contextPrefix: String,
+        candidates: List<ConversionCandidate>,
+        currentShownTop1: String? = null,
+        weightAlpha: Float = KeyboardHeightManager.DEFAULT_SLM_WEIGHT_ALPHA,
+        lambdaObs: Float = KeyboardHeightManager.DEFAULT_SLM_LAMBDA_OBS,
+        gammaUser: Float = KeyboardHeightManager.DEFAULT_SLM_GAMMA_USER
+    ): FastRerankResult? {
+        if (state != State.READY || !nativeLibraryLoaded || candidates.size <= 1) {
+            return null
+        }
+
+        try {
+            val nonHiraganaCandidates = candidates.filter {
+                val isRedundantHiragana = JapaneseKanaUtils.isAllHiragana(it.surface) && it.surface == it.reading
+                !isRedundantHiragana
+            }
+            if (nonHiraganaCandidates.size <= 1) {
+                return null
+            }
+
+            val topPool = nonHiraganaCandidates.take(8)
+            val restPool = nonHiraganaCandidates.drop(8)
+
+            val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
+            val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
+
+            // 1. Check if all candidates are already memoized in Kotlin cache
+            var allCached = true
+            val memoizedScores = FloatArray(topPool.size)
+            for (i in topPool.indices) {
+                val key = "$effectiveContext:${topPool[i].surface}"
+                val cached = memoizedNllCache.get(key)
+                if (cached != null) {
+                    memoizedScores[i] = cached
+                } else {
+                    allCached = false
+                    break
+                }
+            }
+
+            val scores: FloatArray
+            val isFullyComplete: Boolean
+
+            if (allCached) {
+                scores = memoizedScores
+                isFullyComplete = true
+            } else {
+                val surfaces = topPool.map { it.surface }.toTypedArray()
+                val isCompleteArray = BooleanArray(surfaces.size)
+                val fastScores = nativeTryFastScoreCandidates(effectiveContext, surfaces, isCompleteArray)
+                    ?: return null
+                scores = fastScores
+                var complete = true
+                for (i in topPool.indices) {
+                    val key = "$effectiveContext:${topPool[i].surface}"
+                    val cached = memoizedNllCache.get(key)
+                    if (cached != null) {
+                        scores[i] = cached
+                    } else if (!isCompleteArray[i]) {
+                        complete = false
+                    }
+                }
+                isFullyComplete = complete
+            }
+
+            // Intra-Word Surprisal Clamping & Scoring
+            val sysNlls = topPool.mapIndexedNotNull { index, cand ->
+                if (cand.source != "user" && cand.source != "user_english") scores[index] else null
+            }
+            val sysBestNll = sysNlls.minOrNull() ?: 15.0f
+
+            val scored = topPool.mapIndexed { index, candidate ->
+                val rawNll = scores[index]
+                val isUser = candidate.source == "user" || candidate.source == "user_english"
+                val isExactUser = isUser && candidate.obsPenalty == 0.0f
+
+                val effectiveNll = if (isExactUser) {
+                    val priority = if (candidate.priority > 0f) candidate.priority else 3.0f
+                    val clampedNll = minOf(sysBestNll, rawNll)
+                    val userBoost = gammaUser * priority
+                    val tieBreaker = 0.05f * rawNll
+                    clampedNll - userBoost + tieBreaker
+                } else {
+                    rawNll
+                }
+
+                val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f
+                val rankCost = (index * 1000.0f) / 1000.0f
+
+                // Hysteresis: Apply gentle anchor bonus (0.35 nats) to currently shown top1
+                val hysteresisBonus = if (currentShownTop1 != null && candidate.surface == currentShownTop1 && !isExactUser) {
+                    -0.35f
+                } else {
+                    0.0f
+                }
+
+                val finalScore = (1.0f - weightAlpha) * (effectiveNll + effectiveObs + hysteresisBonus) + weightAlpha * rankCost
+                Pair(candidate, finalScore)
+            }
+
+            val sortedPool = scored.sortedBy { it.second }.map { it.first }
+            return FastRerankResult(
+                candidates = sortedPool + restPool,
+                isFullyComplete = isFullyComplete,
+                slmUsed = true
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "tryFastRerankWithStatus failed: ${e.message}")
+            return null
+        }
+    }
+
     /**
      * Re-ranks conversion candidates based on preceding text context and SLM conditional log-likelihood.
      * Retains user-defined dictionary entries at absolute top priority via Intra-Word Surprisal Clamping (ADR-011 & Section 9.3).
@@ -208,7 +345,8 @@ class LlmReranker private constructor(private val context: Context) {
         candidates: List<ConversionCandidate>,
         weightAlpha: Float = KeyboardHeightManager.DEFAULT_SLM_WEIGHT_ALPHA,
         lambdaObs: Float = KeyboardHeightManager.DEFAULT_SLM_LAMBDA_OBS,
-        gammaUser: Float = KeyboardHeightManager.DEFAULT_SLM_GAMMA_USER
+        gammaUser: Float = KeyboardHeightManager.DEFAULT_SLM_GAMMA_USER,
+        currentShownTop1: String? = null
     ): Pair<List<ConversionCandidate>, Boolean> {
         if (state != State.READY || candidates.size <= 1) {
             return Pair(candidates, false)
@@ -240,6 +378,12 @@ class LlmReranker private constructor(private val context: Context) {
                 return Pair(userFallback + otherFallback, false)
             }
 
+            // Memoize completed scores in Kotlin cache for fast 0ms retrieval on subsequent typing
+            for (i in topPool.indices) {
+                val key = "$effectiveContext:${topPool[i].surface}"
+                memoizedNllCache.put(key, scores[i])
+            }
+
             // Find best system NLL for Intra-Word Surprisal Clamping
             val sysNlls = topPool.mapIndexedNotNull { index, cand ->
                 if (cand.source != "user" && cand.source != "user_english") scores[index] else null
@@ -269,8 +413,16 @@ class LlmReranker private constructor(private val context: Context) {
                 // 3. Base rank cost (index in candidate pool)
                 val rankCost = (index * 1000.0f) / 1000.0f
 
-                // 4. Combined Score (lower is better)
-                val finalScore = (1.0f - weightAlpha) * (effectiveNll + effectiveObs) + weightAlpha * rankCost
+                // 4. Hysteresis (Policy ④): Anchor currently shown Top-1 candidate with Δ_hysteresis
+                // Requires new candidate to beat currently shown top1 by at least 1.20 nats (~3.3x probability)
+                val hysteresisBonus = if (currentShownTop1 != null && candidate.surface == currentShownTop1 && !isExactUser) {
+                    -1.20f
+                } else {
+                    0.0f
+                }
+
+                // 5. Combined Score (lower is better)
+                val finalScore = (1.0f - weightAlpha) * (effectiveNll + effectiveObs + hysteresisBonus) + weightAlpha * rankCost
                 Pair(candidate, finalScore)
             }
 
@@ -354,6 +506,8 @@ class LlmReranker private constructor(private val context: Context) {
     // Native JNI functions implemented in libmyasr_llm.so
     private external fun nativeInit(modelPath: String, nThreads: Int): Boolean
     private external fun nativeScoreCandidates(context: String, candidates: Array<String>): FloatArray?
+    private external fun nativeTryFastScoreCandidates(context: String, candidates: Array<String>, outIsComplete: BooleanArray): FloatArray?
+    private external fun nativeRequestAbortScoring()
     private external fun nativeWarmContext(context: String): Boolean
     private external fun nativePredictNextPhrases(context: String, maxCandidates: Int, maxTokens: Int): Array<String>?
     private external fun nativeRelease()

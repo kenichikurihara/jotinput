@@ -125,6 +125,7 @@ class BaseDictionaryDownloader(private val context: Context) {
 
             onProgress(97, "変換エンジンへ登録中...")
             KanaKanjiEngine.getInstance(context).reloadDictionaries()
+            AsrApp.instanceOrNull?.dictionaryUpdateTracker?.markDictionaryUpdated(DictionaryUpdateTracker.BASE_DICT_ID)
 
             onProgress(100, "基本辞書完了 (${wordCount}語)")
             Log.i(TAG, "Base dictionary successfully installed: $wordCount words (${targetFile.length()} bytes)")

@@ -84,6 +84,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvSlmLambdaDesc: TextView
     private lateinit var multiDictProgress: LinearProgressIndicator
     private lateinit var tvMultiDictStatus: TextView
+    private lateinit var layoutDictUpdateBanner: LinearLayout
+    private lateinit var tvDictUpdateBanner: TextView
+    private lateinit var btnCheckDictUpdates: TextView
     private lateinit var btnDownloadAllDicts: MaterialButton
     private lateinit var btnToggleDictDetails: MaterialButton
     private lateinit var layoutDictDetailsContainer: LinearLayout
@@ -569,6 +572,9 @@ class MainActivity : AppCompatActivity() {
         updateLambdaDisplay(currentLambda)
         multiDictProgress = findViewById(R.id.multiDictProgress)
         tvMultiDictStatus = findViewById(R.id.tvMultiDictStatus)
+        layoutDictUpdateBanner = findViewById(R.id.layoutDictUpdateBanner)
+        tvDictUpdateBanner = findViewById(R.id.tvDictUpdateBanner)
+        btnCheckDictUpdates = findViewById(R.id.btnCheckDictUpdates)
         btnDownloadAllDicts = findViewById(R.id.btnDownloadAllDicts)
         btnToggleDictDetails = findViewById(R.id.btnToggleDictDetails)
         layoutDictDetailsContainer = findViewById(R.id.layoutDictDetailsContainer)
@@ -784,20 +790,129 @@ class MainActivity : AppCompatActivity() {
         btnDownloadAllDicts.setOnClickListener {
             startDownloadAllDicts()
         }
+        btnCheckDictUpdates.setOnClickListener {
+            triggerDictionaryUpdateCheck(force = true)
+        }
         refreshMultiDictionaryUI()
+        triggerDictionaryUpdateCheck(force = false)
+    }
+
+    private fun triggerDictionaryUpdateCheck(force: Boolean) {
+        if (force) {
+            tvDictUpdateBanner.text = "ネット上の最新辞書更新日を確認中..."
+            btnCheckDictUpdates.isEnabled = false
+        }
+        lifecycleScope.launch {
+            val statuses = AsrApp.instance.dictionaryUpdateTracker.checkRemoteUpdates(
+                force = force,
+                postSystemNotification = true
+            )
+            withContext(Dispatchers.Main) {
+                btnCheckDictUpdates.isEnabled = true
+                refreshMultiDictionaryUI()
+                if (force) {
+                    val outdatedCount = statuses.count { it.state == DictUpdateState.UPDATE_AVAILABLE }
+                    val msg = if (outdatedCount > 0) {
+                        "🔔 ${outdatedCount}件の辞書に新しい更新が見つかりました"
+                    } else {
+                        "辞書の更新日確認が完了しました（導入済みの辞書は最新です）"
+                    }
+                    Toast.makeText(this@MainActivity, msg, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun bindDictItemDatesAndStatus(
+        statusInfo: DictionaryStatusInfo,
+        wordCountLabel: String,
+        tvStatusBadge: TextView,
+        tvDates: TextView,
+        btnAction: MaterialButton
+    ) {
+        tvDates.text = statusInfo.formatComparisonLine()
+        when (statusInfo.state) {
+            DictUpdateState.UPDATE_AVAILABLE -> {
+                tvStatusBadge.text = "更新あり ($wordCountLabel)"
+                tvStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_warning_bg))
+                tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_warning_text))
+                tvDates.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_warning_bg))
+                tvDates.setTextColor(ContextCompat.getColor(this, R.color.badge_warning_text))
+                btnAction.text = "更新"
+            }
+            DictUpdateState.UP_TO_DATE -> {
+                tvStatusBadge.text = "最新 ($wordCountLabel)"
+                tvStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
+                tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+                tvDates.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_info_bg))
+                tvDates.setTextColor(ContextCompat.getColor(this, R.color.badge_info_text))
+                btnAction.text = "再取得"
+            }
+            DictUpdateState.INSTALLED_REMOTE_UNKNOWN -> {
+                tvStatusBadge.text = "導入済 ($wordCountLabel)"
+                tvStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
+                tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+                tvDates.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
+                tvDates.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                btnAction.text = "再取得"
+            }
+            DictUpdateState.NOT_INSTALLED -> {
+                tvStatusBadge.text = "未取得"
+                tvStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
+                tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+                tvDates.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
+                tvDates.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
+                btnAction.text = "取得"
+            }
+        }
     }
 
     private fun refreshMultiDictionaryUI() {
         val manager = AsrApp.instance.multiDictionaryManager
+        val tracker = AsrApp.instance.dictionaryUpdateTracker
+        val allStatuses = tracker.getAllStatusInfo()
+        val outdatedList = allStatuses.filter { it.state == DictUpdateState.UPDATE_AVAILABLE }
+        val installedList = allStatuses.filter { it.isInstalled }
+
         val totalWords = manager.getTotalWordCount()
         val baseCount = if (kanaKanjiEngine.isBaseDictionaryDownloaded()) 131156 else 0
         val totalCombined = totalWords + baseCount
         val totalFormatted = String.format(java.util.Locale.US, "%,d", totalCombined)
+
+        if (outdatedList.isNotEmpty()) {
+            val latestRemoteStr = DictionaryUpdateTracker.formatDateMillis(outdatedList.maxOf { it.remoteUpdatedAtMillis })
+            tvDictUpdateBanner.text = "🔔 ${outdatedList.size}件の辞書に更新があります (ネット最新: $latestRemoteStr)"
+            layoutDictUpdateBanner.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_warning_bg))
+            tvDictUpdateBanner.setTextColor(ContextCompat.getColor(this, R.color.badge_warning_text))
+        } else if (installedList.isNotEmpty() && installedList.all { it.state == DictUpdateState.UP_TO_DATE }) {
+            val latestRemoteStr = DictionaryUpdateTracker.formatDateMillis(allStatuses.maxOfOrNull { it.remoteUpdatedAtMillis } ?: 0L)
+            tvDictUpdateBanner.text = "✓ 導入済みの辞書はすべて最新です (ネット最新: $latestRemoteStr)"
+            layoutDictUpdateBanner.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
+            tvDictUpdateBanner.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+        } else {
+            val maxRemote = allStatuses.maxOfOrNull { it.remoteUpdatedAtMillis } ?: 0L
+            if (maxRemote > 0L) {
+                val latestRemoteStr = DictionaryUpdateTracker.formatDateMillis(maxRemote)
+                tvDictUpdateBanner.text = "ネット上の最新辞書公開日: $latestRemoteStr"
+            } else {
+                tvDictUpdateBanner.text = "ネット上の辞書更新日を確認中..."
+            }
+            layoutDictUpdateBanner.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
+            tvDictUpdateBanner.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+        }
+
         if (totalCombined > 0) {
-            tvTotalDictWordsBadge.text = "辞書: $totalFormatted 語"
-            tvTotalDictWordsBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
-            tvTotalDictWordsBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-            btnDownloadAllDicts.text = "全拡張辞書を最新版に更新 ($totalFormatted 語)"
+            if (outdatedList.isNotEmpty()) {
+                tvTotalDictWordsBadge.text = "更新あり: ${outdatedList.size}件"
+                tvTotalDictWordsBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_warning_bg))
+                tvTotalDictWordsBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_warning_text))
+                btnDownloadAllDicts.text = "更新がある辞書を一括アップデート (${outdatedList.size}件)"
+            } else {
+                tvTotalDictWordsBadge.text = "辞書: $totalFormatted 語"
+                tvTotalDictWordsBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
+                tvTotalDictWordsBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+                btnDownloadAllDicts.text = "全拡張辞書を最新版に更新 ($totalFormatted 語)"
+            }
         } else {
             tvTotalDictWordsBadge.text = "辞書: 未取得"
             tvTotalDictWordsBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
@@ -808,29 +923,26 @@ class MainActivity : AppCompatActivity() {
         layoutDictItemsContainer.removeAllViews()
         val inflater = LayoutInflater.from(this)
 
-        // 0. Base Mozc Core Dictionary (~51,000 words, ~2.0MB)
+        // 0. Base Mozc Core Dictionary (~131,156 words, ~5.1MB)
         val baseItemView = inflater.inflate(R.layout.item_multi_dict, layoutDictItemsContainer, false)
         val tvBaseTitle = baseItemView.findViewById<TextView>(R.id.tvDictTitle)
         val tvBaseBadge = baseItemView.findViewById<TextView>(R.id.tvDictStatusBadge)
         val tvBaseDesc = baseItemView.findViewById<TextView>(R.id.tvDictDescription)
+        val tvBaseDates = baseItemView.findViewById<TextView>(R.id.tvDictDates)
         val tvBaseStats = baseItemView.findViewById<TextView>(R.id.tvDictStats)
         val btnBaseAction = baseItemView.findViewById<MaterialButton>(R.id.btnDictAction)
 
-        val isBaseDownloaded = kanaKanjiEngine.isBaseDictionaryDownloaded()
-        tvBaseTitle.text = "Mozc 基本・標準語彙 (コア辞書)"
+        val baseStatus = tracker.getStatusInfo(DictionaryUpdateTracker.BASE_DICT_ID)
+        tvBaseTitle.text = DictionaryUpdateTracker.BASE_DICT_DISPLAY_NAME
         tvBaseDesc.text = "高速Trie・Viterbi連文節変換用の標準コア辞書 (~13.1万語)"
         tvBaseStats.text = "約13.1万語 (約5.1 MB)"
-        if (isBaseDownloaded) {
-            tvBaseBadge.text = "導入済 (~13.1万語)"
-            tvBaseBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
-            tvBaseBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-            btnBaseAction.text = "再取得"
-        } else {
-            tvBaseBadge.text = "未取得"
-            tvBaseBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
-            tvBaseBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
-            btnBaseAction.text = "取得"
-        }
+        bindDictItemDatesAndStatus(
+            statusInfo = baseStatus,
+            wordCountLabel = "~13.1万語",
+            tvStatusBadge = tvBaseBadge,
+            tvDates = tvBaseDates,
+            btnAction = btnBaseAction
+        )
         btnBaseAction.setOnClickListener {
             startDownloadBaseDict()
         }
@@ -841,6 +953,7 @@ class MainActivity : AppCompatActivity() {
             val tvTitle = itemView.findViewById<TextView>(R.id.tvDictTitle)
             val tvStatusBadge = itemView.findViewById<TextView>(R.id.tvDictStatusBadge)
             val tvDesc = itemView.findViewById<TextView>(R.id.tvDictDescription)
+            val tvDates = itemView.findViewById<TextView>(R.id.tvDictDates)
             val tvStats = itemView.findViewById<TextView>(R.id.tvDictStats)
             val btnAction = itemView.findViewById<MaterialButton>(R.id.btnDictAction)
 
@@ -848,19 +961,15 @@ class MainActivity : AppCompatActivity() {
             tvDesc.text = dictType.description
             tvStats.text = "${dictType.estimatedWords} (${dictType.estimatedDownloadSize})"
 
-            val count = manager.getWordCount(dictType)
-            if (count > 0) {
-                val countFormatted = String.format(java.util.Locale.US, "%,d", count)
-                tvStatusBadge.text = "有効 ($countFormatted 語)"
-                tvStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
-                tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-                btnAction.text = "再取得"
-            } else {
-                tvStatusBadge.text = "未取得"
-                tvStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
-                tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
-                btnAction.text = "取得"
-            }
+            val statusInfo = tracker.getStatusInfo(dictType.id)
+            val countFormatted = String.format(java.util.Locale.US, "%,d語", statusInfo.wordCount)
+            bindDictItemDatesAndStatus(
+                statusInfo = statusInfo,
+                wordCountLabel = countFormatted,
+                tvStatusBadge = tvStatusBadge,
+                tvDates = tvDates,
+                btnAction = btnAction
+            )
 
             btnAction.setOnClickListener {
                 startDownloadSingleDict(dictType)
@@ -933,39 +1042,83 @@ class MainActivity : AppCompatActivity() {
     private fun startDownloadAllDicts() {
         val manager = AsrApp.instance.multiDictionaryManager
         val baseDownloader = AsrApp.instance.baseDictionaryDownloader
+        val tracker = AsrApp.instance.dictionaryUpdateTracker
+        val outdatedStatuses = tracker.getAllStatusInfo().filter { it.state == DictUpdateState.UPDATE_AVAILABLE }
+
         btnDownloadAllDicts.isEnabled = false
         multiDictProgress.visibility = View.VISIBLE
         multiDictProgress.isIndeterminate = false
         multiDictProgress.progress = 0
         tvMultiDictStatus.visibility = View.VISIBLE
-        tvMultiDictStatus.text = "推奨データを一括ダウンロード中..."
+        tvMultiDictStatus.text = if (outdatedStatuses.isNotEmpty()) {
+            "更新がある辞書 (${outdatedStatuses.size}件) をアップデート中..."
+        } else {
+            "推奨データを一括ダウンロード中..."
+        }
 
         lifecycleScope.launch {
-            if (!kanaKanjiEngine.isBaseDictionaryDownloaded()) {
-                tvMultiDictStatus.text = "基本辞書を取得中..."
-                baseDownloader.download { pct, msg ->
+            if (outdatedStatuses.isNotEmpty()) {
+                var updatedTotalWords = 0
+                val totalSteps = outdatedStatuses.size
+                outdatedStatuses.forEachIndexed { idx, status ->
+                    val stepBase = (idx.toDouble() / totalSteps * 100).toInt()
+                    val stepRange = (1.0 / totalSteps * 100).toInt()
+                    if (status.sourceId == DictionaryUpdateTracker.BASE_DICT_ID) {
+                        val res = baseDownloader.download { pct, msg ->
+                            lifecycleScope.launch(Dispatchers.Main) {
+                                multiDictProgress.progress = (stepBase + pct * stepRange / 100).coerceIn(0, 99)
+                                tvMultiDictStatus.text = msg
+                            }
+                        }
+                        updatedTotalWords += res.getOrDefault(0)
+                    } else {
+                        val dictType = DictionaryType.fromId(status.sourceId)
+                        if (dictType != null) {
+                            val res = manager.downloadDictionary(dictType) { pct, msg ->
+                                lifecycleScope.launch(Dispatchers.Main) {
+                                    multiDictProgress.progress = (stepBase + pct * stepRange / 100).coerceIn(0, 99)
+                                    tvMultiDictStatus.text = msg
+                                }
+                            }
+                            updatedTotalWords += res.getOrDefault(0)
+                        }
+                    }
+                }
+                multiDictProgress.visibility = View.GONE
+                tvMultiDictStatus.visibility = View.GONE
+                btnDownloadAllDicts.isEnabled = true
+                Toast.makeText(
+                    this@MainActivity,
+                    "${outdatedStatuses.size}件の辞書を最新版に更新しました (計${updatedTotalWords}語)",
+                    Toast.LENGTH_LONG
+                ).show()
+            } else {
+                if (!kanaKanjiEngine.isBaseDictionaryDownloaded()) {
+                    tvMultiDictStatus.text = "基本辞書を取得中..."
+                    baseDownloader.download { pct, msg ->
+                        lifecycleScope.launch(Dispatchers.Main) {
+                            multiDictProgress.progress = (pct * 0.1).toInt()
+                            tvMultiDictStatus.text = msg
+                        }
+                    }
+                }
+
+                val result = manager.downloadAllDictionaries { pct, msg ->
                     lifecycleScope.launch(Dispatchers.Main) {
-                        multiDictProgress.progress = (pct * 0.1).toInt()
+                        multiDictProgress.progress = (pct).coerceIn(0, 100)
                         tvMultiDictStatus.text = msg
                     }
                 }
-            }
+                multiDictProgress.visibility = View.GONE
+                tvMultiDictStatus.visibility = View.GONE
+                btnDownloadAllDicts.isEnabled = true
 
-            val result = manager.downloadAllDictionaries { pct, msg ->
-                lifecycleScope.launch(Dispatchers.Main) {
-                    multiDictProgress.progress = (pct).coerceIn(0, 100)
-                    tvMultiDictStatus.text = msg
+                if (result.isSuccess) {
+                    val totalWords = result.getOrDefault(0)
+                    Toast.makeText(this@MainActivity, "全辞書・言語データの導入が完了しました (計${totalWords}語)", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this@MainActivity, "一部の辞書ダウンロードに失敗しました: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                 }
-            }
-            multiDictProgress.visibility = View.GONE
-            tvMultiDictStatus.visibility = View.GONE
-            btnDownloadAllDicts.isEnabled = true
-
-            if (result.isSuccess) {
-                val totalWords = result.getOrDefault(0)
-                Toast.makeText(this@MainActivity, "全辞書・言語データの導入が完了しました (計${totalWords}語)", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(this@MainActivity, "一部の辞書ダウンロードに失敗しました: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
             }
             refreshMultiDictionaryUI()
             refreshConnectionMatrixBadge()

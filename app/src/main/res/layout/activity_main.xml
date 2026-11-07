@@ -693,6 +693,45 @@
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
 
+                    <!-- Automatic Dictionary Update Status & Notification Banner -->
+                    <LinearLayout
+                        android:id="@+id/layoutDictUpdateBanner"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/badge_background"
+                        android:backgroundTint="@color/badge_neutral_bg"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="6dp">
+
+                        <TextView
+                            android:id="@+id/tvDictUpdateBanner"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="ネット上の辞書更新日を確認中..."
+                            android:textColor="@color/badge_neutral_text"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/btnCheckDictUpdates"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingHorizontal="6dp"
+                            android:paddingVertical="2dp"
+                            android:text="更新確認 ↻"
+                            android:textColor="@color/primary"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
                     <com.google.android.material.progressindicator.LinearProgressIndicator
                         android:id="@+id/multiDictProgress"
                         android:layout_width="match_parent"

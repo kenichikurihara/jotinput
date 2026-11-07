@@ -23,6 +23,14 @@ struct LlmRerankerConfig {
   float fast_path_threshold = 1.5f;
 };
 
+struct ContextLogitsSnapshot {
+  uint64_t context_hash = 0;
+  int n_tokens = 0;
+  std::vector<float> logits;
+  float log_denom = 0.0f;
+  std::unordered_map<std::string, float> candidate_nlls;
+};
+
 class LlmReranker {
  public:
   static LlmReranker& GetInstance();
@@ -33,6 +41,13 @@ class LlmReranker {
   bool ScoreCandidates(const std::string& context,
                        const std::vector<std::string>& candidates,
                        std::vector<float>* out_neg_logprobs);
+
+  bool TryFastScoreCandidates(const std::string& context,
+                              const std::vector<std::string>& candidates,
+                              std::vector<float>* out_neg_logprobs,
+                              std::vector<bool>* out_is_complete);
+
+  void RequestAbortScoring();
 
   bool WarmContext(const std::string& context);
 
@@ -70,7 +85,13 @@ class LlmReranker {
   int cache_hits_ = 0;
   int cache_misses_ = 0;
 
+  // Fast snapshot for lock-free 0ms candidate evaluation from UI thread
+  mutable std::mutex snapshot_mutex_;
+  ContextLogitsSnapshot snapshot_;
+
   std::atomic<bool> abort_prediction_{false};
+  std::atomic<bool> abort_scoring_{false};
+  std::atomic<uint64_t> active_request_seq_{0};
   mutable std::mutex mutex_;
 };
 
