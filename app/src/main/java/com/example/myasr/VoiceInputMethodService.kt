@@ -400,19 +400,19 @@ class VoiceInputMethodService : InputMethodService() {
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
 
                 if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET &&
-                    candidate.source in listOf("english_typo", "english_gec", "user_english")
+                    candidate.source in listOf("english_typo", "english_gec", "user_english", "english_cap", "raw")
                 ) {
                     val rawWord = candidate.reading
-                    if (rawWord.isNotEmpty() && !candidate.isPrediction) {
-                        // Delete typed raw word before cursor and replace with corrected surface
-                        editorBridge.deleteSurroundingText(rawWord.length, 0)
-                        editorBridge.commitText(committedSurface, 1)
-                    } else if (candidate.source == "english_gec") {
+                    if (candidate.source == "english_gec") {
                         // Replace clause/sentence
                         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
                         val lastSentenceStart = textBeforeCursor.lastIndexOfAny(charArrayOf('.', '!', '?', '\n'))
                         val clause = if (lastSentenceStart >= 0) textBeforeCursor.substring(lastSentenceStart + 1) else textBeforeCursor
                         editorBridge.deleteSurroundingText(clause.length, 0)
+                        editorBridge.commitText(committedSurface, 1)
+                    } else if (rawWord.isNotEmpty()) {
+                        // Delete typed raw word before cursor and replace with corrected surface
+                        editorBridge.deleteSurroundingText(rawWord.length, 0)
                         editorBridge.commitText(committedSurface, 1)
                     }
                     candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
@@ -1026,91 +1026,136 @@ class VoiceInputMethodService : InputMethodService() {
             val userCandidates = EnglishDictionaryUtils.suggestFromUserDictionary(rawWord, activeEntries, maxCandidates = 4)
 
             val suggestions = if (rawWord.length >= 2 && spellEngine.isReady()) {
-                spellEngine.suggestTypo(rawWord, maxCandidates = 5)
+                spellEngine.suggestTypo(rawWord, maxCandidates = 6)
             } else {
                 emptyList()
             }
 
-            val orderedCandidates = mutableListOf<String>()
-
-            // 1. Highest Priority: User dictionary entries (exact case / typo / prefix)
             val isSentenceStart = (capResult.type == EnglishCapitalizationAnalyzer.CapitalizationType.SENTENCE_START)
-            var hasUserMatch = false
+            val candidateList = mutableListOf<ConversionCandidate>()
+            val seenSurfaces = mutableSetOf<String>()
+
+            // 1. User dictionary entries (exact case / normalized typo / prefix)
             for (uCand in userCandidates) {
-                hasUserMatch = true
                 val surface = uCand.surface
-                // If the user registered an all-lowercase word, adapt to sentence start capitalization
                 val adapted = if (isSentenceStart && surface.all { it.isLowerCase() || !it.isLetter() }) {
                     surface.replaceFirstChar { it.uppercase() }
                 } else {
                     surface
                 }
-                if (!orderedCandidates.contains(adapted)) {
-                    orderedCandidates.add(adapted)
+                if (seenSurfaces.add(adapted.lowercase())) {
+                    candidateList.add(
+                        ConversionCandidate(
+                            surface = adapted,
+                            reading = rawWord,
+                            isPrediction = false,
+                            source = "user_english",
+                            priority = uCand.priority,
+                            obsPenalty = uCand.obsPenalty
+                        )
+                    )
                 }
             }
 
             // 2. Primary capitalization candidate (if any)
-            if (capResult.primaryCandidate != null && !orderedCandidates.contains(capResult.primaryCandidate)) {
-                orderedCandidates.add(capResult.primaryCandidate)
-            }
-            for (extra in capResult.additionalCandidates) {
-                if (!orderedCandidates.contains(extra)) {
-                    orderedCandidates.add(extra)
-                }
+            if (capResult.primaryCandidate != null && seenSurfaces.add(capResult.primaryCandidate.lowercase())) {
+                candidateList.add(
+                    ConversionCandidate(
+                        surface = capResult.primaryCandidate,
+                        reading = rawWord,
+                        isPrediction = false,
+                        source = "english_cap",
+                        obsPenalty = 0.0f
+                    )
+                )
             }
 
-            // Adapt typo & completion suggestions to capitalized form if sentence start or proper noun
-            val adaptedSuggestions = suggestions.map { sug ->
-                if (capResult.type == EnglishCapitalizationAnalyzer.CapitalizationType.SENTENCE_START ||
-                    capResult.type == EnglishCapitalizationAnalyzer.CapitalizationType.PROPER_NOUN
-                ) {
+            // 3. Typo & completion suggestions from EnglishSpellEngine
+            for (sug in suggestions) {
+                val adapted = if (isSentenceStart || capResult.type == EnglishCapitalizationAnalyzer.CapitalizationType.PROPER_NOUN) {
                     sug.replaceFirstChar { it.uppercase() }
                 } else {
                     sug
                 }
-            }
-
-            // 3. Top-1 completion/typo candidate (e.g. examp -> example) before rawWord if not exact
-            if (adaptedSuggestions.isNotEmpty()) {
-                val topSug = adaptedSuggestions[0]
-                if (!orderedCandidates.contains(topSug)) {
-                    orderedCandidates.add(topSug)
+                if (seenSurfaces.add(adapted.lowercase())) {
+                    val isPrefix = sug.lowercase().startsWith(rawWord.lowercase())
+                    val obsPenalty = if (isPrefix) {
+                        0.0f
+                    } else {
+                        val cost = EnglishDictionaryUtils.editAndSpatialCost(rawWord.lowercase(), sug.lowercase())
+                        val maxLen = maxOf(rawWord.length, sug.length)
+                        if (maxLen > 0) cost / maxLen.toFloat() else 0.0f
+                    }
+                    candidateList.add(
+                        ConversionCandidate(
+                            surface = adapted,
+                            reading = rawWord,
+                            isPrediction = false,
+                            source = "english_typo",
+                            obsPenalty = obsPenalty
+                        )
+                    )
                 }
             }
 
-            // 4. Include raw typed word so user can keep exact typing
-            if (!orderedCandidates.contains(rawWord)) {
-                orderedCandidates.add(rawWord)
+            // 4. Raw typed word so user can always keep exact typing
+            if (seenSurfaces.add(rawWord.lowercase())) {
+                candidateList.add(
+                    ConversionCandidate(
+                        surface = rawWord,
+                        reading = rawWord,
+                        isPrediction = false,
+                        source = "raw",
+                        obsPenalty = 0.0f
+                    )
+                )
             }
 
-            // 5. Remaining completion and typo suggestions
-            for (sug in adaptedSuggestions) {
-                if (!orderedCandidates.contains(sug)) {
-                    orderedCandidates.add(sug)
+            // 5. Additional capitalization candidates
+            for (extra in capResult.additionalCandidates) {
+                if (seenSurfaces.add(extra.lowercase())) {
+                    candidateList.add(
+                        ConversionCandidate(
+                            surface = extra,
+                            reading = rawWord,
+                            isPrediction = false,
+                            source = "english_cap",
+                            obsPenalty = 0.0f
+                        )
+                    )
                 }
             }
 
-            if (orderedCandidates.isNotEmpty()) {
+            // 6. Contextual Language Model Reranking (SLM)
+            val slm = app?.llmReranker
+            val precedingContext = textBeforeCursor.dropLast(rawWord.length)
+            val alpha = KeyboardHeightManager.getSlmWeightAlpha(this@VoiceInputMethodService)
+
+            val (finalCandidates, slmUsed) = if (
+                slm != null &&
+                slm.state == LlmReranker.State.READY &&
+                KeyboardHeightManager.isSlmRerankEnabled(this@VoiceInputMethodService) &&
+                candidateList.size > 1 &&
+                (precedingContext.isNotBlank() || KeyboardHeightManager.isSlmContextFreeRerankEnabled(this@VoiceInputMethodService))
+            ) {
+                slm.rerankWithStatus(precedingContext, candidateList.take(8), weightAlpha = alpha)
+            } else {
+                Pair(candidateList, false)
+            }
+
+            val displayList = finalCandidates.take(5)
+            if (displayList.isNotEmpty()) {
                 val badge = when {
-                    hasUserMatch -> "USER"
+                    slmUsed -> "SLM"
+                    userCandidates.isNotEmpty() -> "USER"
                     capResult.primaryCandidate != null -> "CAPS"
                     else -> "SPELL"
                 }
-                val candidates = orderedCandidates.take(5).map {
-                    val isFromUser = userCandidates.any { u -> u.surface.equals(it, ignoreCase = true) }
-                    ConversionCandidate(
-                        surface = it,
-                        reading = rawWord,
-                        isPrediction = false,
-                        source = if (isFromUser) "user_english" else "english_typo"
-                    )
-                }
-                Log.i(TAG, "English completion candidates for '$rawWord': ${candidates.map { it.surface }}")
+                Log.i(TAG, "English candidates for '$rawWord' (context='$precedingContext', slm=$slmUsed): ${displayList.map { it.surface }}")
                 withContext(Dispatchers.Main) {
                     if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
                         updateDebugSlmBadge(badge)
-                        candidateStripView?.setCandidates(candidates)
+                        candidateStripView?.setCandidates(displayList)
                     }
                 }
             } else {

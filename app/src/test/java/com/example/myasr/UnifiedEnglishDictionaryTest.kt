@@ -143,6 +143,41 @@ class UnifiedEnglishDictionaryTest {
     }
 
     @Test
+    fun testRelativeObservationCostRejectsShortWordTypos() {
+        val dict = listOf(
+            DictionaryEntry(word = "UI", reading = "ui", priority = Priority.HIGH),
+            DictionaryEntry(word = "OK", reading = "ok", priority = Priority.NORMAL),
+            DictionaryEntry(word = "Kurihara", reading = "kurihara", priority = Priority.HIGH)
+        )
+
+        // Typing "wi" with non-adjacent keys must NOT suggest "UI" (relative error = 1.40 / 2 = 0.70 > 0.38)
+        val candsWi = EnglishDictionaryUtils.suggestFromUserDictionary("wi", dict)
+        assertFalse("Must NOT suggest UI when user types wi", candsWi.any { it.surface.equals("UI", ignoreCase = true) })
+
+        // Typing "ui" must suggest "UI" (exact match, obsPenalty = 0.0)
+        val candsUi = EnglishDictionaryUtils.suggestFromUserDictionary("ui", dict)
+        assertTrue("Must suggest UI for ui", candsUi.any { it.surface == "UI" })
+        assertEquals(0.0f, candsUi.first { it.surface == "UI" }.obsPenalty, 1e-4f)
+
+        // Typing "ok" must suggest "OK"
+        val candsOk = EnglishDictionaryUtils.suggestFromUserDictionary("ok", dict)
+        assertTrue("Must suggest OK for ok", candsOk.any { it.surface == "OK" })
+
+        // 2-letter words reject 1-char substitution typos (1.10 / 2 = 0.55 > 0.38)
+        val candsIk = EnglishDictionaryUtils.suggestFromUserDictionary("ik", dict)
+        assertFalse("2-letter words reject 50% character substitution", candsIk.any { it.surface == "OK" })
+
+        // Typing "ko" (transposition typo: 0.60 / 2 = 0.30 <= 0.38)
+        val candsKo = EnglishDictionaryUtils.suggestFromUserDictionary("ko", dict)
+        assertTrue("Must suggest OK for transposition ko", candsKo.any { it.surface == "OK" })
+
+        // Typing "kurihata" for "Kurihara" (long word typo: 1.10 / 8 = 0.1375 <= 0.38)
+        val candsKuri = EnglishDictionaryUtils.suggestFromUserDictionary("kurihata", dict)
+        assertTrue("Must suggest Kurihara for kurihata", candsKuri.any { it.surface == "Kurihara" })
+        assertTrue("Long word typo obsPenalty must be <= 0.2f", candsKuri.first { it.surface == "Kurihara" }.obsPenalty <= 0.2f)
+    }
+
+    @Test
     fun testJapaneseKanaEngineIgnoresEnglishEntries() {
         val engine = KanaKanjiEngine()
         val mixedEntries = listOf(

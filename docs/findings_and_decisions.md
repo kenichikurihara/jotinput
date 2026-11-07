@@ -25,6 +25,7 @@ This document records the core architectural decisions, design rationales, criti
    - [ADR-016: Unified Japanese & English User Dictionary with Dynamic Swipe Trie Synchronization and Misspelling Correction Candidates](#adr-016-unified-japanese--english-user-dictionary-with-dynamic-swipe-trie-synchronization-and-misspelling-correction-candidates)
    - [ADR-017: Mozc Bigram Connection Matrix APK Bundling and Continuous Remote Sync Policy](#adr-017-mozc-bigram-connection-matrix-apk-bundling-and-continuous-remote-sync-policy)
    - [ADR-018: LM-First Joint Scoring Architecture & Intra-Word Surprisal Clamping for Custom Dictionary](#adr-018-lm-first-joint-scoring-architecture--intra-word-surprisal-clamping-for-custom-dictionary)
+   - [ADR-019: Principled Observation Normalization and Context-Aware SLM Reranking for English QWERTY Typing](#adr-019-principled-observation-normalization-and-context-aware-slm-reranking-for-english-qwerty-typing)
 2. [Technical Findings & Post-Mortems](#2-technical-findings--post-mortems)
    - [Finding 1: Sherpa-ONNX `cjkchar` FST Hotword Space-Separation Bug](#finding-1-sherpa-onnx-cjkchar-fst-hotword-space-separation-bug)
    - [Finding 2: 5-Fold Stratified Cross-Validation on 1,000 Tricky Japanese Sentences](#finding-2-5-fold-stratified-cross-validation-on-1000-tricky-japanese-sentences)
@@ -59,6 +60,7 @@ This document records the core architectural decisions, design rationales, criti
    - [Finding 37: Root Cause Analysis of Top-1 Rank Degradation on Common Words (`けっか` → `結果`, `さくじょ` → `削除`) under Gemini Nano 2 / SLM Reranking & Evaluation of 3 Architectural Solutions](#finding-37-root-cause-analysis-of-top-1-rank-degradation-on-common-words-けっか--結果-さくじょ--削除-under-gemini-nano-2--slm-reranking--evaluation-of-3-architectural-solutions)
    - [Finding 38: Android Activity Task Reuse on `adb shell am start` without `am force-stop`](#finding-38-android-activity-task-reuse-on-adb-shell-am-start-without-am-force-stop)
    - [Finding 39: Wireless ADB Sleep & Transient Disconnection Characteristics in Doze Mode](#finding-39-wireless-adb-sleep--transient-disconnection-characteristics-in-doze-mode)
+   - [Finding 40: Short-Word Distortion in Static Edit Distance and Space-Adaptive BPE Evaluation in Language Models](#finding-40-short-word-distortion-in-static-edit-distance-and-space-adaptive-bpe-evaluation-in-language-models)
 
 ---
 
@@ -1817,6 +1819,30 @@ Users regularly need to type domain-specific English words, technical proper nou
 
 ---
 
+## ADR-019: Principled Observation Normalization and Context-Aware SLM Reranking for English QWERTY Typing
+
+### 1. Context & Motivation
+During English QWERTY typing, when context was `"I "` and user entered `"wi"`, the CandidateStripView promoted `"UI"` from the custom dictionary to rank #1 ahead of natural English completions (`will`, `with`, `wish`, `win`, `wide`).
+Root-cause analysis revealed that:
+1. Candidate matching relied on absolute edit distance thresholds (`maxAllowedCost = 1.5f` for length $\le 3$), allowing 50% character corruption ($w \to u$) on 2-letter words.
+2. English candidate generation bypassed the On-Device SLM re-ranker entirely, placing custom dictionary suggestions ahead of system suggestions unconditionally.
+3. Subword BPE tokenizers encode space-preceded words with separate token IDs (e.g. `' will'` token 686 vs `'will'` token 14387), penalizing unspaced token probes.
+
+### 2. Architecture & Decision
+1. **Normalized Spatial Relative Observation Error**:
+   Replace static length branches with continuous relative distortion:
+   $$D_{\text{obs}}(X, W) = \frac{d_{\text{spatial}}(X, W)}{\max(|X|, |W|)} \le 0.38$$
+   For 2-letter words, any 1-letter substitution has $D_{\text{obs}} \ge 1.10 / 2 = 0.55 > 0.38$ (naturally rejected without length-specific branches), while physically adjacent keystroke typos in longer words ($1.10 / 8 = 0.1375 \le 0.38$) are seamlessly accepted.
+2. **Context-Aware SLM Reranking for English QWERTY**:
+   In [`VoiceInputMethodService.updateEnglishTypoAndSpellingCandidates()`](file:///home/kenichikurihara/repos/myasr/app/src/main/java/com/example/myasr/VoiceInputMethodService.kt), evaluate candidates conditioned on preceding text prefix using unified Bayesian energy:
+   $$E(W \mid X, C) = (1 - \alpha) \Bigl( -\log P_{\text{LM}}(W \mid C) + \lambda_{\text{obs}} \cdot \text{obsPenalty} \Bigr) + \alpha \cdot \text{rankCost}$$
+3. **Space-Adaptive BPE Scoring**:
+   In [`llm_reranker.cc`](file:///home/kenichikurihara/repos/myasr/app/src/main/cpp/llm_reranker.cc), when context does not end in whitespace, evaluate both unspaced and leading-space tokens (`llama_tokenize(" " + cand)`), selecting the minimum NLL.
+4. **Strict Separation of Exact vs. Approximate User Words**:
+   Intra-word surprisal clamping and user priority boosts are strictly restricted to exact matches (`obsPenalty == 0.0f`). Approximate or typo user matches must compete on raw Bayesian likelihood.
+
+---
+
 ## Finding 38: Android Activity Task Reuse on `adb shell am start` without `am force-stop`
 
 ### Problem
@@ -1852,5 +1878,29 @@ Under Android 14+ / Android 15 Doze mode and aggressive Wi-Fi power saving polic
 1. **Screen Awakening Protocol**: In [`deploy.sh`](file:///home/kenichikurihara/repos/myasr/deploy.sh), prior to deployment or network port scanning, wake the screen if reachable (`input keyevent KEYCODE_WAKEUP`).
 2. **Interactive User Instruction**: When wireless debugging drops, remind the user to unlock the device screen.
 3. **Graceful Timeout in Automated Tooling**: Avoid blocking unbounded thread executors during port scanning by enforcing socket connection timeouts ($\le 0.12\text{s}$).
+
+---
+
+## Finding 40: Short-Word Distortion in Static Edit Distance and Space-Adaptive BPE Evaluation in Language Models
+
+### Problem
+When typing short 2-letter tokens in English mode (e.g. typing `"wi"` after context `"I "`), custom dictionary entries such as `"UI"` surfaced as the #1 candidate ahead of high-frequency words (`will`, `with`, `wish`, `win`).
+
+### Root Cause
+1. **Length-Independent Thresholding**:
+   Static thresholds (e.g., $d \le 1.5$) allowed 50% relative distortion on 2-character words ($1.0 / 2 = 0.50$), corrupting short word recognition.
+2. **BPE Subword Token Asymmetry**:
+   In causal BPE language models (Qwen2.5, LLaMA), words following whitespace use different tokens from initial words (`' will'` = 686 vs `'will'` = 14387). Scoring candidates without accounting for leading whitespace boundaries inflated the negative log-likelihood of valid completions.
+
+### Solution & Empirical Findings
+1. Normalized relative error $D_{\text{obs}}(X, W) = d(X, W) / \max(|X|, |W|) \le 0.38$ scales continuously across all word lengths without ad-hoc `if (len <= 2)` checks.
+2. Space-adaptive BPE evaluation in [`llm_reranker.cc`](file:///home/kenichikurihara/repos/myasr/app/src/main/cpp/llm_reranker.cc) compares both tokenizations and selects the minimal NLL.
+3. On Qwen2.5-0.5B:
+   - $-\log P(\text{will} \mid \text{"I "}) = 6.58$
+   - $-\log P(\text{with} \mid \text{"I "}) = 7.48$
+   - $-\log P(\text{wi} \mid \text{"I "}) = 12.50$
+   - $-\log P(\text{UI} \mid \text{"I "}) = 13.05$
+   With $\Delta \text{NLL} \approx 6.47\text{ nats}$, $\text{will}$ is over $640\times$ more probable than $\text{UI}$, placing it decisively at rank #1.
+
 
 
