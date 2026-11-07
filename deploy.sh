@@ -154,6 +154,7 @@ for DEV in $DEVICES; do
     adb -s "$DEV" shell ime enable com.example.myasr/.VoiceInputMethodService || true
     
     echo "  -> Launching MainActivity..."
+    adb -s "$DEV" shell am force-stop com.example.myasr || true
     adb -s "$DEV" shell am start -n com.example.myasr/.MainActivity || true
     
     echo "  ✓ Device [$DEV] ($DEV_MODEL) successfully deployed and configured."
