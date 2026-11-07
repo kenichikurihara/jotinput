@@ -17,6 +17,27 @@ if [ ! -f "$APK_PATH" ]; then
 fi
 
 echo ""
+echo "=== 1.5 Syncing APK to Google Drive / Shared Storage for Phone Sideloading ==="
+GDRIVE_SYNCED=false
+for GDRIVE_CANDIDATE in \
+    "/mnt/chromeos/GoogleDrive/MyDrive" \
+    "/mnt/chromeos/GoogleDrive" \
+    "/mnt/chromeos/MyFiles/Downloads" \
+    "/mnt/chromeos/MyFiles"; do
+    if [ -d "$GDRIVE_CANDIDATE" ]; then
+        DEST_DIR="$GDRIVE_CANDIDATE/JotInput"
+        mkdir -p "$DEST_DIR" 2>/dev/null || DEST_DIR="$GDRIVE_CANDIDATE"
+        cp "$APK_PATH" "$DEST_DIR/app-debug.apk"
+        echo "  ✓ APK copied to shared storage: $DEST_DIR/app-debug.apk"
+        GDRIVE_SYNCED=true
+        break
+    fi
+done
+if [ "$GDRIVE_SYNCED" = false ]; then
+    echo "  (Note: Google Drive is not currently mounted under /mnt/chromeos/. Right-click 'Google Drive' in ChromeOS Files app and select 'Share with Linux' for zero-friction auto-sync.)"
+fi
+
+echo ""
 echo "=== 2. Discovering Connected ADB Targets ==="
 # Prune stale offline wireless connections and auto-discover Pixel 10 Pro if not connected
 for OFFLINE_DEV in $(adb devices | awk 'NR>1 && $2=="offline" {print $1}'); do
