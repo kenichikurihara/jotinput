@@ -14,6 +14,20 @@ enum class RerankEngineType(
     val badgeLabel: String,
     val modelFileName: String = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
 ) {
+    LOCAL_SLM(
+        id = "local_slm",
+        displayName = "言語モデル直接生成 (LM-First 0.5B)",
+        modelName = "Qwen2.5-0.5B (469MB • LM-First 高速標準)",
+        badgeLabel = "SLM",
+        modelFileName = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+    ),
+    LOCAL_SLM_1_5B(
+        id = "local_slm_1_5b",
+        displayName = "言語モデル直接生成 (LM-First 1.5B)",
+        modelName = "Qwen2.5-1.5B (1.1GB • LM-First 高精度)",
+        badgeLabel = "1.5B",
+        modelFileName = "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+    ),
     AICORE_NANO_2(
         id = "aicore_nano_2",
         displayName = "Android AICore (Gemini Nano 2)",
@@ -26,31 +40,32 @@ enum class RerankEngineType(
         modelName = "Gemini Nano 1 (1.8B • AICore NPU)",
         badgeLabel = "n1"
     ),
-    LOCAL_SLM(
-        id = "local_slm",
-        displayName = "Local SLM (Qwen2.5-0.5B)",
-        modelName = "Qwen2.5-0.5B-Instruct (469MB • llama.cpp CPU)",
-        badgeLabel = "SLM",
+    HYBRID_RERANK(
+        id = "hybrid_rerank",
+        displayName = "辞書優先 ＋ 後段AIリランク (従来互換)",
+        modelName = "Mozc辞書優先 ＋ Qwen2.5リランク",
+        badgeLabel = "HYB",
         modelFileName = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
-    ),
-    LOCAL_SLM_1_5B(
-        id = "local_slm_1_5b",
-        displayName = "Local SLM (Qwen2.5-1.5B)",
-        modelName = "Qwen2.5-1.5B-Instruct (1.1GB • llama.cpp CPU)",
-        badgeLabel = "1.5B",
-        modelFileName = "qwen2.5-1.5b-instruct-q4_k_m.gguf"
     ),
     NONE(
         id = "none",
-        displayName = "リランクなし (OFF)",
-        modelName = "SLM 再ランキング無効 (辞書・Viterbiのみ)",
+        displayName = "AI変換オフ (Viterbi単体)",
+        modelName = "AI変換無効 (Mozc辞書・Viterbiのみ)",
         badgeLabel = "",
         modelFileName = ""
     );
 
     companion object {
         fun fromId(id: String): RerankEngineType {
-            return values().firstOrNull { it.id == id } ?: LOCAL_SLM
+            return when (id) {
+                "local_slm", "lm_first_0_5b" -> LOCAL_SLM
+                "local_slm_1_5b", "lm_first_1_5b" -> LOCAL_SLM_1_5B
+                "aicore_nano_2" -> AICORE_NANO_2
+                "aicore_nano_1" -> AICORE_NANO_1
+                "hybrid_rerank" -> HYBRID_RERANK
+                "none" -> NONE
+                else -> LOCAL_SLM
+            }
         }
 
         /**

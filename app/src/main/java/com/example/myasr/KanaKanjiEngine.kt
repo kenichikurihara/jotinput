@@ -722,8 +722,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             RerankEngineType.AICORE_NANO_2, RerankEngineType.AICORE_NANO_1 -> {
                 AiCoreReranker.getInstance(ctx).rerankWithStatus(engineType, contextPrefix, filtered, weightAlpha = alpha, lambdaObs = lambdaObs, gammaUser = gammaUser)
             }
-            RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B -> {
-                LlmReranker.getInstance(ctx).rerankWithStatus(contextPrefix, filtered, weightAlpha = alpha, lambdaObs = lambdaObs, gammaUser = gammaUser)
+            RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B, RerankEngineType.HYBRID_RERANK -> {
+                val effectiveAlpha = if (engineType == RerankEngineType.HYBRID_RERANK) maxOf(alpha, 0.40f) else alpha
+                LlmReranker.getInstance(ctx).rerankWithStatus(contextPrefix, filtered, weightAlpha = effectiveAlpha, lambdaObs = lambdaObs, gammaUser = gammaUser)
             }
         }
     }

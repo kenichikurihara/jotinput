@@ -36,6 +36,7 @@ class MainActivity : AppCompatActivity() {
 
     // Keyboard controls
     private lateinit var tvImeStatusBadge: TextView
+    private lateinit var tvCard1AiStatusBadge: TextView
     private lateinit var btnEnableIme: MaterialButton
     private lateinit var btnSelectIme: MaterialButton
     private lateinit var etKeyboardTest: EditText
@@ -70,12 +71,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbEngineNano1: android.widget.RadioButton
     private lateinit var rbEngineLocalSlm: android.widget.RadioButton
     private lateinit var rbEngineLocalSlm15B: android.widget.RadioButton
+    private lateinit var rbEngineHybridRerank: android.widget.RadioButton
     private lateinit var rbEngineNone: android.widget.RadioButton
     private lateinit var switchSlmContextFree: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var switchSlmMandatoryRerank: com.google.android.material.switchmaterial.SwitchMaterial
+    private lateinit var switchSpeculativePrefetch: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var sliderSlmAlpha: com.google.android.material.slider.Slider
     private lateinit var tvSlmAlphaValue: TextView
     private lateinit var tvSlmAlphaDesc: TextView
+    private lateinit var sliderSlmLambda: com.google.android.material.slider.Slider
+    private lateinit var tvSlmLambdaValue: TextView
+    private lateinit var tvSlmLambdaDesc: TextView
     private lateinit var multiDictProgress: LinearProgressIndicator
     private lateinit var tvMultiDictStatus: TextView
     private lateinit var btnDownloadAllDicts: MaterialButton
@@ -186,6 +192,7 @@ class MainActivity : AppCompatActivity() {
         rbEngineNano1.visibility = if (isAiCore) View.VISIBLE else View.GONE
         rbEngineLocalSlm.isEnabled = true
         rbEngineLocalSlm15B.isEnabled = true
+        rbEngineHybridRerank.isEnabled = true
         rbEngineNone.isEnabled = true
 
         when (current) {
@@ -193,6 +200,7 @@ class MainActivity : AppCompatActivity() {
             RerankEngineType.AICORE_NANO_1 -> rbEngineNano1.isChecked = true
             RerankEngineType.LOCAL_SLM -> rbEngineLocalSlm.isChecked = true
             RerankEngineType.LOCAL_SLM_1_5B -> rbEngineLocalSlm15B.isChecked = true
+            RerankEngineType.HYBRID_RERANK -> rbEngineHybridRerank.isChecked = true
             RerankEngineType.NONE -> rbEngineNone.isChecked = true
         }
 
@@ -204,6 +212,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.rbEngineNano2 -> RerankEngineType.AICORE_NANO_2
                 R.id.rbEngineNano1 -> RerankEngineType.AICORE_NANO_1
                 R.id.rbEngineLocalSlm15B -> RerankEngineType.LOCAL_SLM_1_5B
+                R.id.rbEngineHybridRerank -> RerankEngineType.HYBRID_RERANK
                 R.id.rbEngineNone -> RerankEngineType.NONE
                 else -> RerankEngineType.LOCAL_SLM
             }
@@ -220,7 +229,7 @@ class MainActivity : AppCompatActivity() {
                     if (!switchSlmRerankEnabled.isChecked) {
                         switchSlmRerankEnabled.isChecked = true
                     }
-                    if (selected == RerankEngineType.LOCAL_SLM || selected == RerankEngineType.LOCAL_SLM_1_5B) {
+                    if (selected == RerankEngineType.LOCAL_SLM || selected == RerankEngineType.LOCAL_SLM_1_5B || selected == RerankEngineType.HYBRID_RERANK) {
                         AsrApp.instance.llmReranker.initializeIfAvailable(lifecycleScope, selected.modelFileName) {
                             runOnUiThread { updateSlmStatusBadge() }
                         }
@@ -230,7 +239,7 @@ class MainActivity : AppCompatActivity() {
                 isUpdatingUiFromPrefs = false
             }
             updateSlmStatusBadge()
-            Toast.makeText(this, "推論エンジン: ${selected.displayName} を選択しました", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "AI 変換エンジン: ${selected.displayName} を選択しました", Toast.LENGTH_SHORT).show()
         }
 
         switchSlmRerankEnabled.setOnCheckedChangeListener { _, isChecked ->
@@ -243,31 +252,19 @@ class MainActivity : AppCompatActivity() {
                         rbEngineNone.isChecked = true
                     }
                 } else if (KeyboardHeightManager.getRerankEngineType(this) == RerankEngineType.NONE) {
-                    val defaultEngine = if (RerankEngineType.isNano2Supported(this)) {
-                        RerankEngineType.AICORE_NANO_2
-                    } else if (RerankEngineType.isAiCoreSupported(this)) {
-                        RerankEngineType.AICORE_NANO_1
-                    } else {
-                        RerankEngineType.LOCAL_SLM
-                    }
+                    val defaultEngine = RerankEngineType.LOCAL_SLM
                     KeyboardHeightManager.setRerankEngineType(this, defaultEngine)
-                    when (defaultEngine) {
-                        RerankEngineType.AICORE_NANO_2 -> rbEngineNano2.isChecked = true
-                        RerankEngineType.AICORE_NANO_1 -> rbEngineNano1.isChecked = true
-                        else -> rbEngineLocalSlm.isChecked = true
-                    }
-                    if (defaultEngine == RerankEngineType.LOCAL_SLM) {
-                        AsrApp.instance.llmReranker.initializeIfAvailable(lifecycleScope, defaultEngine.modelFileName) {
-                            runOnUiThread { updateSlmStatusBadge() }
-                        }
+                    rbEngineLocalSlm.isChecked = true
+                    AsrApp.instance.llmReranker.initializeIfAvailable(lifecycleScope, defaultEngine.modelFileName) {
+                        runOnUiThread { updateSlmStatusBadge() }
                     }
                 }
             } finally {
                 isUpdatingUiFromPrefs = false
             }
             updateSlmStatusBadge()
-            val status = if (isChecked) "有効 (ON)" else "無効 (OFF: 辞書・Viterbiのみ)"
-            Toast.makeText(this, "言語モデルによるリランク: $status", Toast.LENGTH_SHORT).show()
+            val status = if (isChecked) "有効 (ON: LM-First)" else "無効 (OFF: Mozc辞書・Viterbiのみ)"
+            Toast.makeText(this, "AI 変換エンジン: $status", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -283,7 +280,14 @@ class MainActivity : AppCompatActivity() {
                 ContextCompat.getColor(this, R.color.badge_neutral_bg)
             )
             tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
-            tvSlmStatusDesc.text = "言語モデルによるリランクは無効です (Mozc辞書・Viterbiのみ使用)"
+            tvSlmStatusDesc.text = "AI 変換エンジンは無効です (Mozc辞書・Viterbiのみ使用)"
+            if (::tvCard1AiStatusBadge.isInitialized) {
+                tvCard1AiStatusBadge.text = "AI: オフ (Viterbi)"
+                tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(this, R.color.badge_neutral_bg)
+                )
+                tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+            }
             return
         }
 
@@ -298,6 +302,13 @@ class MainActivity : AppCompatActivity() {
                 )
                 tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
                 tvSlmStatusDesc.text = "Android AICore: Gemini Nano 2 (3.2B • Tensor G5 NPU)"
+                if (::tvCard1AiStatusBadge.isInitialized) {
+                    tvCard1AiStatusBadge.text = "AI: Nano 2"
+                    tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                        ContextCompat.getColor(this, R.color.badge_success_bg)
+                    )
+                    tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+                }
             }
             RerankEngineType.AICORE_NANO_1 -> {
                 tvSlmStatusBadge.text = "Nano 1 (Active)"
@@ -306,18 +317,48 @@ class MainActivity : AppCompatActivity() {
                 )
                 tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
                 tvSlmStatusDesc.text = "Android AICore: Gemini Nano 1 (1.8B • NPU 加速)"
+                if (::tvCard1AiStatusBadge.isInitialized) {
+                    tvCard1AiStatusBadge.text = "AI: Nano 1"
+                    tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                        ContextCompat.getColor(this, R.color.badge_success_bg)
+                    )
+                    tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+                }
+            }
+            RerankEngineType.HYBRID_RERANK -> {
+                tvSlmStatusBadge.text = "リランク (Active)"
+                tvSlmStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                    ContextCompat.getColor(this, R.color.badge_info_bg)
+                )
+                tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_info_text))
+                tvSlmStatusDesc.text = "辞書優先 ＋ 後段AIリランク (従来互換モード)"
+                if (::tvCard1AiStatusBadge.isInitialized) {
+                    tvCard1AiStatusBadge.text = "AI: リランク"
+                    tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                        ContextCompat.getColor(this, R.color.badge_info_bg)
+                    )
+                    tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_info_text))
+                }
             }
             RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B -> {
-                val modelName = if (selectedEngine == RerankEngineType.LOCAL_SLM_1_5B) "Qwen2.5-1.5B" else "Qwen2.5-0.5B"
+                val modelName = if (selectedEngine == RerankEngineType.LOCAL_SLM_1_5B) "LM-First 1.5B" else "LM-First 0.5B"
+                val badgeText = if (selectedEngine == RerankEngineType.LOCAL_SLM_1_5B) "LM-1.5B" else "LM-First"
                 val modelFileName = selectedEngine.modelFileName
                 when (reranker.state) {
                     LlmReranker.State.READY -> {
-                        tvSlmStatusBadge.text = "${selectedEngine.badgeLabel} (Ready)"
+                        tvSlmStatusBadge.text = "$badgeText (Ready)"
                         tvSlmStatusBadge.backgroundTintList = ColorStateList.valueOf(
                             ContextCompat.getColor(this, R.color.badge_success_bg)
                         )
                         tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-                        tvSlmStatusDesc.text = "$modelName 稼働中 (文脈連動・再ランキング)"
+                        tvSlmStatusDesc.text = "$modelName 稼働中 (かな漢字・QWERTY一括直接生成)"
+                        if (::tvCard1AiStatusBadge.isInitialized) {
+                            tvCard1AiStatusBadge.text = "AI: $badgeText"
+                            tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                                ContextCompat.getColor(this, R.color.badge_success_bg)
+                            )
+                            tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+                        }
                     }
                     LlmReranker.State.INITIALIZING -> {
                         tvSlmStatusBadge.text = "読込中..."
@@ -326,6 +367,13 @@ class MainActivity : AppCompatActivity() {
                         )
                         tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
                         tvSlmStatusDesc.text = "$modelName モデルをメモリにロードしています..."
+                        if (::tvCard1AiStatusBadge.isInitialized) {
+                            tvCard1AiStatusBadge.text = "AI: 読込中…"
+                            tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                                ContextCompat.getColor(this, R.color.badge_neutral_bg)
+                            )
+                            tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+                        }
                     }
                     else -> {
                         if (reranker.isModelInstalled(modelFileName)) {
@@ -339,6 +387,13 @@ class MainActivity : AppCompatActivity() {
                             ContextCompat.getColor(this, R.color.badge_neutral_bg)
                         )
                         tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+                        if (::tvCard1AiStatusBadge.isInitialized) {
+                            tvCard1AiStatusBadge.text = "AI: $badgeText (待機中)"
+                            tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
+                                ContextCompat.getColor(this, R.color.badge_neutral_bg)
+                            )
+                            tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+                        }
                     }
                 }
             }
@@ -364,6 +419,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateLambdaDisplay(lambda: Float) {
+        val rounded = String.format(java.util.Locale.US, "%.2f", lambda)
+        tvSlmLambdaValue.text = when {
+            lambda in 0.45f..0.55f -> "λ = $rounded (最適値: Top-1 90.3%)"
+            lambda <= 0.30f -> "λ = $rounded (言語モデル事前確率重視)"
+            lambda >= 1.50f -> "λ = $rounded (入力キータッチ厳密一致重視)"
+            else -> "λ = $rounded (バランス)"
+        }
+        tvSlmLambdaDesc.text = when {
+            lambda in 0.45f..0.55f -> "タッチ座標・濁音落ちの観測ペナルティと言語モデル尤度の最適バランス (最適値: 0.50)"
+            lambda <= 0.30f -> "多少の入力ミスがあっても文脈に合った単語を強力に推論"
+            lambda >= 1.50f -> "入力された打鍵座標に厳密に従い、勝手な修正を抑制"
+            else -> "入力忠実度と文脈補正のハイブリッド"
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         updateDictionaryBadge()
@@ -378,9 +449,13 @@ class MainActivity : AppCompatActivity() {
             switchSlmRerankEnabled.isChecked = KeyboardHeightManager.isSlmRerankEnabled(this)
             switchSlmContextFree.isChecked = KeyboardHeightManager.isSlmContextFreeRerankEnabled(this)
             switchSlmMandatoryRerank.isChecked = KeyboardHeightManager.isSlmMandatoryRerankEnabled(this)
+            switchSpeculativePrefetch.isChecked = KeyboardHeightManager.isSpeculativePrefetchEnabled(this)
             val alpha = KeyboardHeightManager.getSlmWeightAlpha(this)
             sliderSlmAlpha.value = alpha.coerceIn(0.00f, 1.00f)
             updateAlphaDisplay(alpha)
+            val lambda = KeyboardHeightManager.getSlmLambdaObs(this)
+            sliderSlmLambda.value = lambda.coerceIn(0.10f, 2.00f)
+            updateLambdaDisplay(lambda)
         } finally {
             isUpdatingUiFromPrefs = false
         }
@@ -437,6 +512,7 @@ class MainActivity : AppCompatActivity() {
     private fun initViews() {
         tvModelStatus = findViewById(R.id.tvModelStatus)
         tvDictionaryStatus = findViewById(R.id.tvDictionaryStatus)
+        tvCard1AiStatusBadge = findViewById(R.id.tvCard1AiStatusBadge)
         btnOpenDictionary = findViewById(R.id.btnOpenDictionary)
         tvOssLicenses = findViewById(R.id.tvOssLicenses)
 
@@ -472,16 +548,25 @@ class MainActivity : AppCompatActivity() {
         rbEngineNano1 = findViewById(R.id.rbEngineNano1)
         rbEngineLocalSlm = findViewById(R.id.rbEngineLocalSlm)
         rbEngineLocalSlm15B = findViewById(R.id.rbEngineLocalSlm15B)
+        rbEngineHybridRerank = findViewById(R.id.rbEngineHybridRerank)
         rbEngineNone = findViewById(R.id.rbEngineNone)
         setupRerankEngineUI()
         switchSlmContextFree = findViewById(R.id.switchSlmContextFree)
         switchSlmMandatoryRerank = findViewById(R.id.switchSlmMandatoryRerank)
+        switchSpeculativePrefetch = findViewById(R.id.switchSpeculativePrefetch)
         sliderSlmAlpha = findViewById(R.id.sliderSlmAlpha)
         tvSlmAlphaValue = findViewById(R.id.tvSlmAlphaValue)
         tvSlmAlphaDesc = findViewById(R.id.tvSlmAlphaDesc)
         val currentAlpha = KeyboardHeightManager.getSlmWeightAlpha(this)
         sliderSlmAlpha.value = currentAlpha.coerceIn(0.00f, 1.00f)
         updateAlphaDisplay(currentAlpha)
+
+        sliderSlmLambda = findViewById(R.id.sliderSlmLambda)
+        tvSlmLambdaValue = findViewById(R.id.tvSlmLambdaValue)
+        tvSlmLambdaDesc = findViewById(R.id.tvSlmLambdaDesc)
+        val currentLambda = KeyboardHeightManager.getSlmLambdaObs(this)
+        sliderSlmLambda.value = currentLambda.coerceIn(0.10f, 2.00f)
+        updateLambdaDisplay(currentLambda)
         multiDictProgress = findViewById(R.id.multiDictProgress)
         tvMultiDictStatus = findViewById(R.id.tvMultiDictStatus)
         btnDownloadAllDicts = findViewById(R.id.btnDownloadAllDicts)
@@ -592,6 +677,20 @@ class MainActivity : AppCompatActivity() {
                 KeyboardHeightManager.setSlmWeightAlpha(this, value)
                 updateAlphaDisplay(value)
             }
+        }
+
+        sliderSlmLambda.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                KeyboardHeightManager.setSlmLambdaObs(this, value)
+                updateLambdaDisplay(value)
+            }
+        }
+
+        switchSpeculativePrefetch.setOnCheckedChangeListener { _, isChecked ->
+            if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
+            KeyboardHeightManager.setSpeculativePrefetchEnabled(this, isChecked)
+            val status = if (isChecked) "有効 (0ms応答)" else "無効"
+            Toast.makeText(this, "投機的先行デコード: $status", Toast.LENGTH_SHORT).show()
         }
 
         btnEnableIme.setOnClickListener {

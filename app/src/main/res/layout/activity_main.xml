@@ -137,6 +137,20 @@
                                 android:textColor="@color/badge_success_text"
                                 android:textSize="11sp"
                                 android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvCard1AiStatusBadge"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/badge_background"
+                                android:backgroundTint="@color/badge_success_bg"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="3dp"
+                                android:text="AI: LM-First (0.5B)"
+                                android:textColor="@color/badge_success_text"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
                     </HorizontalScrollView>
 
@@ -473,7 +487,7 @@
                         android:layout_marginVertical="8dp"
                         android:background="@color/border" />
 
-                    <!-- 4. On-Device SLM Contextual Reranking & Engine Selection -->
+                    <!-- 5. On-Device LM-First Engine & Mode Selection -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -495,7 +509,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="AI 文脈変換 (SLM再ランキング)"
+                                    android:text="AI 変換エンジン (LM-First / 文脈補正)"
                                     android:textColor="@color/text_primary"
                                     android:textSize="13sp"
                                     android:textStyle="bold" />
@@ -520,7 +534,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="前後の文脈から同音異義語を自動判別"
+                                android:text="言語モデルが前後の文脈からかな漢字変換・英字タイポを直接生成・補正"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="11sp" />
                         </LinearLayout>
@@ -532,7 +546,7 @@
                             android:checked="true" />
                     </LinearLayout>
 
-                    <!-- Engine Selector (Automatically shown when SLM Rerank is ON) -->
+                    <!-- Engine Selector (Automatically shown when AI Engine is ON) -->
                     <LinearLayout
                         android:id="@+id/layoutRerankEngineSelector"
                         android:layout_width="match_parent"
@@ -550,34 +564,47 @@
                             android:orientation="vertical">
 
                             <RadioButton
-                                android:id="@+id/rbEngineNano2"
-                                android:layout_width="match_parent"
-                                android:layout_height="34dp"
-                                android:text="Gemini Nano 2 (3.2B • Tensor G5 NPU)"
-                                android:textColor="@color/text_primary"
-                                android:textSize="12sp" />
-
-                            <RadioButton
-                                android:id="@+id/rbEngineNano1"
-                                android:layout_width="match_parent"
-                                android:layout_height="34dp"
-                                android:text="Gemini Nano 1 (1.8B • AICore NPU)"
-                                android:textColor="@color/text_primary"
-                                android:textSize="12sp" />
-
-                            <RadioButton
                                 android:id="@+id/rbEngineLocalSlm"
                                 android:layout_width="match_parent"
-                                android:layout_height="34dp"
-                                android:text="Qwen2.5-0.5B (469MB • 高速・省電力標準)"
+                                android:layout_height="wrap_content"
+                                android:paddingVertical="4dp"
+                                android:text="言語モデル主導 (LM-First 0.5B) ★推奨\n・かな漢字変換・予測補完・タイポ補正を一括高速処理 (省電力)"
                                 android:textColor="@color/text_primary"
                                 android:textSize="12sp" />
 
                             <RadioButton
                                 android:id="@+id/rbEngineLocalSlm15B"
                                 android:layout_width="match_parent"
-                                android:layout_height="34dp"
-                                android:text="Qwen2.5-1.5B (1.1GB • 高精度モデル)"
+                                android:layout_height="wrap_content"
+                                android:paddingVertical="4dp"
+                                android:text="言語モデル主導 (LM-First 1.5B 高精度)\n・長文・複雑な専門用語に強い大容量モデル"
+                                android:textColor="@color/text_primary"
+                                android:textSize="12sp" />
+
+                            <RadioButton
+                                android:id="@+id/rbEngineNano2"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:paddingVertical="4dp"
+                                android:text="Gemini Nano 2 (3.2B • Tensor G5 NPU)\n・Android AICore システム常駐モデル"
+                                android:textColor="@color/text_primary"
+                                android:textSize="12sp" />
+
+                            <RadioButton
+                                android:id="@+id/rbEngineNano1"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:paddingVertical="4dp"
+                                android:text="Gemini Nano 1 (1.8B • AICore NPU)\n・Android AICore NPU加速"
+                                android:textColor="@color/text_primary"
+                                android:textSize="12sp" />
+
+                            <RadioButton
+                                android:id="@+id/rbEngineHybridRerank"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:paddingVertical="4dp"
+                                android:text="辞書優先 ＋ 後段AIリランク (従来互換)\n・Mozc辞書候補の上位をAIで並べ替え"
                                 android:textColor="@color/text_primary"
                                 android:textSize="12sp" />
 
@@ -1012,6 +1039,44 @@
                                 android:checked="true" />
                         </LinearLayout>
 
+                        <!-- Speculative Prefetch Switch -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="投機的先行デコード (ACTION_DOWN)"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvSpeculativePrefetchDesc"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="タッチダウン時に先行推論を開始し指離し時の体感遅延を0ms化"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+
+                            <com.google.android.material.switchmaterial.SwitchMaterial
+                                android:id="@+id/switchSpeculativePrefetch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="true" />
+                        </LinearLayout>
+
                         <!-- SLM Alpha Slider -->
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -1041,7 +1106,7 @@
                                     android:id="@+id/tvSlmAlphaValue"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="α = 0.00 (純粋SLM)"
+                                    android:text="α = 0.20 (LM-First 最適値)"
                                     android:textColor="@color/primary"
                                     android:textSize="12sp"
                                     android:textStyle="bold" />
@@ -1052,7 +1117,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="0.00: SLM確率100% (CV最適値) / 1.00: Mozc辞書順位100%"
+                                android:text="言語モデル事前分布とMozc辞書コストの最適バランス (Top-1 90.3%)"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="11sp" />
 
@@ -1061,9 +1126,63 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:stepSize="0.05"
-                                android:value="0.00"
+                                android:value="0.20"
                                 android:valueFrom="0.00"
                                 android:valueTo="1.00" />
+                        </LinearLayout>
+
+                        <!-- SLM Observation Weight Lambda Slider -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:background="@drawable/result_background"
+                            android:orientation="vertical"
+                            android:padding="10dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/tvSlmLambdaTitle"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="観測尤度重み係数 λ (Typo補正)"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvSlmLambdaValue"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="λ = 0.50 (最適値)"
+                                    android:textColor="@color/primary"
+                                    android:textSize="12sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvSlmLambdaDesc"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="タッチ座標・濁音落ちの観測ペナルティと言語モデル尤度のバランス (最適値: 0.50)"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/sliderSlmLambda"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:stepSize="0.10"
+                                android:value="0.50"
+                                android:valueFrom="0.10"
+                                android:valueTo="2.00" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>

@@ -24,6 +24,7 @@ object KeyboardHeightManager {
     const val KEY_DEBUG_DISPLAY = "debug_display"
     const val KEY_RERANK_ENGINE_TYPE = "rerank_engine_type"
     const val KEY_SLM_RERANK_ENABLED = "slm_rerank_enabled"
+    const val KEY_SPECULATIVE_PREFETCH = "speculative_prefetch_enabled"
 
     fun isSlmRerankEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -40,13 +41,7 @@ object KeyboardHeightManager {
 
     fun getRerankEngineType(context: Context): RerankEngineType {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val defaultType = if (RerankEngineType.isNano2Supported(context)) {
-            RerankEngineType.AICORE_NANO_2
-        } else if (RerankEngineType.isAiCoreSupported(context)) {
-            RerankEngineType.AICORE_NANO_1
-        } else {
-            RerankEngineType.LOCAL_SLM
-        }
+        val defaultType = RerankEngineType.LOCAL_SLM
         val saved = prefs.getString(KEY_RERANK_ENGINE_TYPE, defaultType.id) ?: defaultType.id
         return RerankEngineType.fromId(saved)
     }
@@ -54,6 +49,16 @@ object KeyboardHeightManager {
     fun setRerankEngineType(context: Context, type: RerankEngineType) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_RERANK_ENGINE_TYPE, type.id).apply()
+    }
+
+    fun isSpeculativePrefetchEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_SPECULATIVE_PREFETCH, true)
+    }
+
+    fun setSpeculativePrefetchEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_SPECULATIVE_PREFETCH, enabled).apply()
     }
 
     enum class HeightPreset(val displayName: String, val scale: Float) {
