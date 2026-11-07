@@ -23,6 +23,8 @@ This document records the core architectural decisions, design rationales, criti
    - [ADR-014: Mozc Bigram Connection Cost Matrix (`connection_single_column.txt`) On-Demand Download & Zero-Copy Memory-Mapped Viterbi Integration](#adr-014-mozc-bigram-connection-cost-matrix-connection_single_columntxt-on-demand-download--zero-copy-memory-mapped-viterbi-integration)
    - [ADR-015: FUTO Keyboard Swipe Model Integration for English QWERTY Layout](#adr-015-futo-keyboard-swipe-model-integration-for-english-qwerty-layout)
    - [ADR-016: Unified Japanese & English User Dictionary with Dynamic Swipe Trie Synchronization and Misspelling Correction Candidates](#adr-016-unified-japanese--english-user-dictionary-with-dynamic-swipe-trie-synchronization-and-misspelling-correction-candidates)
+   - [ADR-017: Mozc Bigram Connection Matrix APK Bundling and Continuous Remote Sync Policy](#adr-017-mozc-bigram-connection-matrix-apk-bundling-and-continuous-remote-sync-policy)
+   - [ADR-018: LM-First Joint Scoring Architecture & Intra-Word Surprisal Clamping for Custom Dictionary](#adr-018-lm-first-joint-scoring-architecture--intra-word-surprisal-clamping-for-custom-dictionary)
 2. [Technical Findings & Post-Mortems](#2-technical-findings--post-mortems)
    - [Finding 1: Sherpa-ONNX `cjkchar` FST Hotword Space-Separation Bug](#finding-1-sherpa-onnx-cjkchar-fst-hotword-space-separation-bug)
    - [Finding 2: 5-Fold Stratified Cross-Validation on 1,000 Tricky Japanese Sentences](#finding-2-5-fold-stratified-cross-validation-on-1000-tricky-japanese-sentences)
@@ -55,6 +57,8 @@ This document records the core architectural decisions, design rationales, criti
    - [Finding 30: Android AICore Integration & Comparative Evaluation (Gemini Nano 2 vs Local SLM)](#finding-30-android-aicore-integration--comparative-evaluation-gemini-nano-2-vs-gemini-nano-1-vs-local-qwen25-05b-slm)
    - [Finding 31: Elimination of Anecdotal Heuristics & Transition to Corpus-Driven Mozc CRF Parameters & Bigram Connection Matrix](#finding-31-elimination-of-anecdotal-heuristics--transition-to-corpus-driven-mozc-crf-parameters--bigram-connection-matrix)
    - [Finding 37: Root Cause Analysis of Top-1 Rank Degradation on Common Words (`けっか` → `結果`, `さくじょ` → `削除`) under Gemini Nano 2 / SLM Reranking & Evaluation of 3 Architectural Solutions](#finding-37-root-cause-analysis-of-top-1-rank-degradation-on-common-words-けっか--結果-さくじょ--削除-under-gemini-nano-2--slm-reranking--evaluation-of-3-architectural-solutions)
+   - [Finding 38: Android Activity Task Reuse on `adb shell am start` without `am force-stop`](#finding-38-android-activity-task-reuse-on-adb-shell-am-start-without-am-force-stop)
+   - [Finding 39: Wireless ADB Sleep & Transient Disconnection Characteristics in Doze Mode](#finding-39-wireless-adb-sleep--transient-disconnection-characteristics-in-doze-mode)
 
 ---
 
@@ -1775,5 +1779,78 @@ Users regularly need to type domain-specific English words, technical proper nou
 ### 3. Verification & Compliance
 - **Unit Test Pass**: All 167+ unit tests in `./gradlew testDebugUnitTest` pass with 100% success.
 - **Dual-Target Verified**: Deployed and verified on both ChromeOS ARCVM (`arc:5555`) and physical Pixel 10 Pro (`<device-ip>:43343`), with logcat confirming successful memory mapping of 7,139,584 transitions.
+
+---
+
+## ADR-018: LM-First Joint Scoring Architecture & Intra-Word Surprisal Clamping for Custom Dictionary
+
+### 1. Context & Motivation
+1. **Length-Bias & Morphological Diagnostic Degradation (Finding 37)**:
+   - When using post-hoc SLM re-ranking on Viterbi candidates, short common words like `けっか` (結果 vs 結界/欠陥) and `さくじょ` (削除 vs 策/作) frequently suffered from unigram length-normalization bias or subword fragmentation, causing incorrect top-1 rankings in empty or short contexts.
+2. **Multi-Token Surprisal Collapse for User-Registered Words**:
+   - User entries (e.g. `中村`, `ReazonSpeech`, `JotInput`, `kubectl`) are by definition low-frequency proper nouns or compound neologisms in standard LLM training corpora.
+   - When tokenized by Byte-Pair Encoding (BPE), they fracture into 2 to 5 subwords (`["Re", "azon", "Spe", "ech"]`), generating immense cumulative negative log-likelihood ($> 30\text{ nats}$). In an LM-First autoregressive beam search or joint scoring pipeline, raw likelihood scoring inevitably evicts genuine user terms in favor of generic single-token competitors.
+3. **Observation Noise (Flick Typos & Voicing Omission)**:
+   - Mobile touch inputs exhibit physical adjacency errors (e.g. `くゆはら` instead of `なかむら`, `てんく` instead of `てんき`) and conversational unvoicing (`かいき` instead of `かいぎ`). A pure LM easily hallucinates unrelated words without an observation penalty term $\lambda_{\text{obs}} \cdot \text{dist}$.
+
+### 2. Architecture & Design Decisions
+1. **Intra-Word Surprisal Clamping (ADR-018 Core Algorithm)**:
+   - To guarantee 100% user dictionary priority without losing the benefits of LM contextual reasoning, we define the effective language model score $\mathcal{L}_{\text{user}}^{\text{eff}}(e \mid C)$ for any user entry $e$ under context $C$:
+   $$\mathcal{L}_{\text{user}}^{\text{eff}}(e \mid C) = \max\Bigl( \mathcal{L}_{\text{sys\_best}}(C),\; \log P_{\text{LM}}(\mathbf{t}_e \mid C) \Bigr) + \gamma_{\text{user}} \cdot \text{PriorityScore}(e) + \epsilon \cdot \frac{\log P_{\text{LM}}(\mathbf{t}_e \mid C)}{M}$$
+   - **Clamped Floor $\max(\mathcal{L}_{\text{sys\_best}}, \log P_{\text{LM}})$**: Guarantees that rare or heavily fragmented user words never fall below the best system competitor in the same reading span.
+   - **Priority Boost $\gamma_{\text{user}} \cdot \text{PriorityScore}(e)$**: Positive bias ensuring decisive Top-1 placement across all operating conditions.
+   - **Contextual Tie-Breaker $\epsilon \cdot \frac{\log P_{\text{LM}}}{M}$** ($\epsilon = 0.05$): When competing user terms share the same reading (e.g., `貴社` vs `記者`), the LM context prior resolves the optimal surface choice dynamically.
+2. **Unified Joint Scoring Formula**:
+   $$\text{FinalScore} = (1 - \alpha) \cdot \Bigl( \text{EffectiveNLL} + \lambda_{\text{obs}} \cdot \text{obsPenalty} \cdot 5.0 \Bigr) + \alpha \cdot \text{rankCost}$$
+   - Lower final score is better.
+   - Combines linguistic NLL with physical observation distance $\text{obsPenalty}$ and dictionary lattice rank cost $\text{rankCost}$.
+3. **Systematic Parameter Grid Search**:
+   - Tuned over 120 configurations on the 247-case evaluation dataset ([`eval/lm_first_eval_dataset.json`](eval/lm_first_eval_dataset.json)).
+   - **Optimal Constants**: $\alpha = 0.20$, $\lambda_{\text{obs}} = 0.50$, $\gamma_{\text{user}} = 3.00$.
+
+### 3. Verification & Metrics
+- **Overall Top-1 Accuracy**: **90.28%** (223 / 247), **Top-3 Recall**: **99.19%** (245 / 247), **MRR**: **0.9460**.
+- **User Dictionary Preservation**: **100.0%** (20 / 20).
+- **Diagnostic Cases (`けっか` $\to$ `結果`, `さくじょ` $\to$ `削除`)**: **100.0%** (12 / 12).
+- **Typo Recovery**: **100.0%** (15 / 15).
+- **Unit Test Suite**: [`LmFirstJointEvaluationTest.kt`](app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt) passing 100%.
+
+---
+
+## Finding 38: Android Activity Task Reuse on `adb shell am start` without `am force-stop`
+
+### Problem
+During developer deployments using `./deploy.sh`, `adb install -r app-debug.apk` successfully streamed and installed the updated APK bytecode and resources on the target device. However, subsequent invocation of `adb shell am start -n com.example.myasr/.MainActivity` resulted in:
+```
+Warning: Activity not started, its current task has been brought to the front
+```
+Because `MainActivity` was already alive in the Android task stack (either in foreground or background), Android's default launch mode simply brought the existing task record to the front without destroying or recreating the Activity. As a consequence, newly modified XML layouts (`activity_main.xml`) and dynamic badge view bindings were never re-inflated, creating the deceptive illusion that the deployment failed or that "the UI was still the old one".
+
+### Solution
+Updated [`deploy.sh`](deploy.sh) to explicitly issue `am force-stop` prior to `am start`:
+```bash
+echo "  -> Launching MainActivity..."
+adb -s "$DEV" shell am force-stop com.example.myasr || true
+adb -s "$DEV" shell am start -n com.example.myasr/.MainActivity || true
+```
+This guarantees an authentic cold start (`onCreate()` $\to$ `setContentView()` $\to$ `onResume()`), ensuring that new layout hierarchies, preference switches, and live status badges inflate cleanly on both physical phones and ARCVM containers.
+
+---
+
+## Finding 39: Wireless ADB Sleep & Transient Disconnection Characteristics in Doze Mode
+
+### Problem
+Physical Android test devices connected via Wi-Fi wireless debugging (e.g. `<device-ip>:<port>`) frequently dropped connection or reported `No route to host` during extended background execution.
+
+### Root Cause
+Under Android 14+ / Android 15 Doze mode and aggressive Wi-Fi power saving policies, when the physical device screen turns off:
+1. The Wi-Fi radio enters a low-power listening state, dropping TCP keep-alive sockets for adb daemon connections.
+2. The wireless debugging TCP port (dynamically allocated in range 30000–50000) may close or re-bind upon subsequent screen wakeup.
+3. Automated streaming installs (`adb install -r`) of large multi-megabyte APKs hang indefinitely if initiated when the device screen is off.
+
+### Best Practice & Mitigation
+1. **Screen Awakening Protocol**: In [`deploy.sh`](deploy.sh), prior to deployment or network port scanning, wake the screen if reachable (`input keyevent KEYCODE_WAKEUP`).
+2. **Interactive User Instruction**: When wireless debugging drops, remind the user to unlock the device screen.
+3. **Graceful Timeout in Automated Tooling**: Avoid blocking unbounded thread executors during port scanning by enforcing socket connection timeouts ($\le 0.12\text{s}$).
 
 
