@@ -71,7 +71,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbEngineNano1: android.widget.RadioButton
     private lateinit var rbEngineLocalSlm: android.widget.RadioButton
     private lateinit var rbEngineLocalSlm15B: android.widget.RadioButton
-    private lateinit var rbEngineHybridRerank: android.widget.RadioButton
     private lateinit var rbEngineNone: android.widget.RadioButton
     private lateinit var sliderSlmAlpha: com.google.android.material.slider.Slider
     private lateinit var tvSlmAlphaValue: TextView
@@ -192,7 +191,6 @@ class MainActivity : AppCompatActivity() {
         rbEngineNano1.visibility = if (isAiCore) View.VISIBLE else View.GONE
         rbEngineLocalSlm.isEnabled = true
         rbEngineLocalSlm15B.isEnabled = true
-        rbEngineHybridRerank.isEnabled = true
         rbEngineNone.isEnabled = true
 
         when (current) {
@@ -200,7 +198,6 @@ class MainActivity : AppCompatActivity() {
             RerankEngineType.AICORE_NANO_1 -> rbEngineNano1.isChecked = true
             RerankEngineType.LOCAL_SLM -> rbEngineLocalSlm.isChecked = true
             RerankEngineType.LOCAL_SLM_1_5B -> rbEngineLocalSlm15B.isChecked = true
-            RerankEngineType.HYBRID_RERANK -> rbEngineHybridRerank.isChecked = true
             RerankEngineType.NONE -> rbEngineNone.isChecked = true
         }
 
@@ -212,7 +209,6 @@ class MainActivity : AppCompatActivity() {
                 R.id.rbEngineNano2 -> RerankEngineType.AICORE_NANO_2
                 R.id.rbEngineNano1 -> RerankEngineType.AICORE_NANO_1
                 R.id.rbEngineLocalSlm15B -> RerankEngineType.LOCAL_SLM_1_5B
-                R.id.rbEngineHybridRerank -> RerankEngineType.HYBRID_RERANK
                 R.id.rbEngineNone -> RerankEngineType.NONE
                 else -> RerankEngineType.LOCAL_SLM
             }
@@ -229,7 +225,7 @@ class MainActivity : AppCompatActivity() {
                     if (!switchSlmRerankEnabled.isChecked) {
                         switchSlmRerankEnabled.isChecked = true
                     }
-                    if (selected == RerankEngineType.LOCAL_SLM || selected == RerankEngineType.LOCAL_SLM_1_5B || selected == RerankEngineType.HYBRID_RERANK) {
+                    if (selected == RerankEngineType.LOCAL_SLM || selected == RerankEngineType.LOCAL_SLM_1_5B) {
                         AsrApp.instance.llmReranker.initializeIfAvailable(lifecycleScope, selected.modelFileName) {
                             runOnUiThread { updateSlmStatusBadge() }
                         }
@@ -263,7 +259,7 @@ class MainActivity : AppCompatActivity() {
                 isUpdatingUiFromPrefs = false
             }
             updateSlmStatusBadge()
-            val status = if (isChecked) "有効 (ON: LM-First)" else "無効 (OFF: Mozc辞書・Viterbiのみ)"
+            val status = if (isChecked) "有効 (ON)" else "無効 (OFF: Mozc辞書・Viterbiのみ)"
             Toast.makeText(this, "AI 変換エンジン: $status", Toast.LENGTH_SHORT).show()
         }
     }
@@ -325,24 +321,9 @@ class MainActivity : AppCompatActivity() {
                     tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
                 }
             }
-            RerankEngineType.HYBRID_RERANK -> {
-                tvSlmStatusBadge.text = "リランク (Active)"
-                tvSlmStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                    ContextCompat.getColor(this, R.color.badge_info_bg)
-                )
-                tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_info_text))
-                tvSlmStatusDesc.text = "辞書優先 ＋ 後段AIリランク (従来互換モード)"
-                if (::tvCard1AiStatusBadge.isInitialized) {
-                    tvCard1AiStatusBadge.text = "AI: リランク"
-                    tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                        ContextCompat.getColor(this, R.color.badge_info_bg)
-                    )
-                    tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_info_text))
-                }
-            }
             RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B -> {
-                val modelName = if (selectedEngine == RerankEngineType.LOCAL_SLM_1_5B) "LM-First 1.5B" else "LM-First 0.5B"
-                val badgeText = if (selectedEngine == RerankEngineType.LOCAL_SLM_1_5B) "LM-1.5B" else "LM-First"
+                val modelName = if (selectedEngine == RerankEngineType.LOCAL_SLM_1_5B) "Qwen2.5-1.5B" else "Qwen2.5-0.5B"
+                val badgeText = if (selectedEngine == RerankEngineType.LOCAL_SLM_1_5B) "Qwen 1.5B" else "Qwen 0.5B"
                 val modelFileName = selectedEngine.modelFileName
                 when (reranker.state) {
                     LlmReranker.State.READY -> {
@@ -351,7 +332,7 @@ class MainActivity : AppCompatActivity() {
                             ContextCompat.getColor(this, R.color.badge_success_bg)
                         )
                         tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-                        tvSlmStatusDesc.text = "$modelName 稼働中 (かな漢字・QWERTY一括直接生成)"
+                        tvSlmStatusDesc.text = "$modelName 稼働中 (文脈補正・かな漢字変換)"
                         if (::tvCard1AiStatusBadge.isInitialized) {
                             tvCard1AiStatusBadge.text = "AI: $badgeText"
                             tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
@@ -403,7 +384,7 @@ class MainActivity : AppCompatActivity() {
     private fun updateAlphaDisplay(alpha: Float) {
         val rounded = String.format(java.util.Locale.US, "%.2f", alpha)
         tvSlmAlphaValue.text = when {
-            alpha in 0.15f..0.25f -> "α = $rounded (LM-First 最適値: Top-1 90.3%)"
+            alpha in 0.15f..0.25f -> "α = $rounded (推奨値: Top-1 90.3%)"
             alpha == 0.00f -> "α = $rounded (純粋SLM)"
             alpha <= 0.10f -> "α = $rounded (SLM重視 + 辞書タイブレーク)"
             alpha <= 0.30f -> "α = $rounded (ハイブリッド標準)"
@@ -545,7 +526,6 @@ class MainActivity : AppCompatActivity() {
         rbEngineNano1 = findViewById(R.id.rbEngineNano1)
         rbEngineLocalSlm = findViewById(R.id.rbEngineLocalSlm)
         rbEngineLocalSlm15B = findViewById(R.id.rbEngineLocalSlm15B)
-        rbEngineHybridRerank = findViewById(R.id.rbEngineHybridRerank)
         rbEngineNone = findViewById(R.id.rbEngineNone)
         setupRerankEngineUI()
         sliderSlmAlpha = findViewById(R.id.sliderSlmAlpha)

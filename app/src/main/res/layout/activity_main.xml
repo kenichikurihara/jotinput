@@ -147,7 +147,7 @@
                                 android:backgroundTint="@color/badge_success_bg"
                                 android:paddingHorizontal="8dp"
                                 android:paddingVertical="3dp"
-                                android:text="AI: LM-First (0.5B)"
+                                android:text="AI: Qwen2.5 (0.5B)"
                                 android:textColor="@color/badge_success_text"
                                 android:textSize="11sp"
                                 android:textStyle="bold" />
@@ -487,7 +487,7 @@
                         android:layout_marginVertical="8dp"
                         android:background="@color/border" />
 
-                    <!-- 5. On-Device LM-First Engine & Mode Selection -->
+                    <!-- 5. On-Device AI Engine Selection -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -509,7 +509,7 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="AI 変換エンジン (LM-First / 文脈補正)"
+                                    android:text="AI 変換エンジン (文脈予測・変換)"
                                     android:textColor="@color/text_primary"
                                     android:textSize="13sp"
                                     android:textStyle="bold" />
@@ -534,7 +534,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="言語モデルが前後の文脈からかな漢字変換・英字タイポを直接生成・補正"
+                                android:text="言語モデルが前後の文脈から適切な漢字変換やタイポ補正を行います"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="11sp" />
                         </LinearLayout>
@@ -568,7 +568,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:paddingVertical="4dp"
-                                android:text="言語モデル主導 (LM-First 0.5B) ★推奨\n・かな漢字変換・予測補完・タイポ補正を一括高速処理 (省電力)"
+                                android:text="Qwen2.5-0.5B"
                                 android:textColor="@color/text_primary"
                                 android:textSize="12sp" />
 
@@ -577,7 +577,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:paddingVertical="4dp"
-                                android:text="言語モデル主導 (LM-First 1.5B 高精度)\n・長文・複雑な専門用語に強い大容量モデル"
+                                android:text="Qwen2.5-1.5B"
                                 android:textColor="@color/text_primary"
                                 android:textSize="12sp" />
 
@@ -596,15 +596,6 @@
                                 android:layout_height="wrap_content"
                                 android:paddingVertical="4dp"
                                 android:text="Gemini Nano 1 (1.8B • AICore NPU)\n・Android AICore NPU加速"
-                                android:textColor="@color/text_primary"
-                                android:textSize="12sp" />
-
-                            <RadioButton
-                                android:id="@+id/rbEngineHybridRerank"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:paddingVertical="4dp"
-                                android:text="辞書優先 ＋ 後段AIリランク (従来互換)\n・Mozc辞書候補の上位をAIで並べ替え"
                                 android:textColor="@color/text_primary"
                                 android:textSize="12sp" />
 
@@ -1031,7 +1022,7 @@
                                     android:id="@+id/tvSlmAlphaValue"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="α = 0.20 (LM-First 最適値)"
+                                    android:text="α = 0.20 (推奨値)"
                                     android:textColor="@color/primary"
                                     android:textSize="12sp"
                                     android:textStyle="bold" />
