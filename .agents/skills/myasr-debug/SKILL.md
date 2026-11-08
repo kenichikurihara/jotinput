@@ -171,6 +171,16 @@ adb -s "$DEV" logcat -b crash -d
 adb -s "$DEV" logcat -s DEBUG | head -n 50
 ```
 
+#### llama.cpp JNI Native Crash (`SIGABRT` / `ggml_abort` / `seq_cp`) Diagnostic Recipe
+- **Symptom**: App crashes instantly on typing or re-ranking with `Fatal signal 6 (SIGABRT)` in `libc.so` (`abort+205` $\to$ `ggml_abort` $\to$ `llama_kv_cache::seq_cp`).
+- **Diagnosis**:
+  ```bash
+  # Check native crash backtrace in crash logcat buffer:
+  adb -s "$DEV" logcat -b crash -d | head -n 40
+  ```
+- **Root Cause (Finding 42)**: `llama.cpp`'s `seq_cp()` contains an internal invariant assertion: `GGML_ASSERT(is_full && "seq_cp() is only supported for full KV buffers")`. Calling `seq_cp()` on a subrange ($p_1 < \text{get\_size}()$) intentionally aborts the process.
+- **Resolution Principle**: Never use `llama_memory_seq_cp()` for speculative candidate branch evaluation in mobile IMEs. Keep all evaluations on sequence 0, evaluate multi-token candidates with admissible lower-bound pruning, and roll back cleanly via `llama_memory_seq_rm(mem, 0, start_pos, -1)`.
+
 #### 16 KB Page Alignment Verification (Android 15+)
 All native `.so` binaries must be aligned to 16 KB pages (`-Wl,-z,max-page-size=16384`):
 ```bash

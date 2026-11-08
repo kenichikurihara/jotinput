@@ -61,7 +61,8 @@ This document records the core architectural decisions, design rationales, criti
    - [Finding 38: Android Activity Task Reuse on `adb shell am start` without `am force-stop`](#finding-38-android-activity-task-reuse-on-adb-shell-am-start-without-am-force-stop)
    - [Finding 39: Wireless ADB Sleep & Transient Disconnection Characteristics in Doze Mode](#finding-39-wireless-adb-sleep--transient-disconnection-characteristics-in-doze-mode)
    - [Finding 40: Short-Word Distortion in Static Edit Distance and Space-Adaptive BPE Evaluation in Language Models](#finding-40-short-word-distortion-in-static-edit-distance-and-space-adaptive-bpe-evaluation-in-language-models)
-- [Finding 41: LM-First Latency Profiling, Space-Adaptive BPE Scope Boundary, and 32x Acceleration via Memoized NLL & Thresholded Softmax](#finding-41-lm-first-latency-profiling-space-adaptive-bpe-scope-boundary-and-32x-acceleration-via-memoized-nll--thresholded-softmax)
+   - [Finding 41: LM-First Latency Profiling, Space-Adaptive BPE Scope Boundary, and 32x Acceleration via Memoized NLL & Thresholded Softmax](#finding-41-lm-first-latency-profiling-space-adaptive-bpe-scope-boundary-and-32x-acceleration-via-memoized-nll--thresholded-softmax)
+   - [Finding 42: `llama.cpp` `llama_memory_seq_cp()` Partial Range Assertion Failure (`GGML_ASSERT(is_full)`) Post-Mortem & Robust Zero-Jitter SLM Architecture](#finding-42-llamacpp-llama_memory_seq_cp-partial-range-assertion-failure-ggml_assertis_full-post-mortem--robust-zero-jitter-slm-architecture)
 
 ---
 
@@ -1940,6 +1941,48 @@ On the connected Pixel 10 Pro (Tensor G5), the on-device SLM re-ranking pipeline
 - **Continuous Typing**: **799.3 ms $\to$ 132.7 ms (6.0x speedup, CPU time 2608.7ms $\to$ 506.5ms / -80.6%)**
 - **KV Cache Miss**: **765.7 ms $\to$ 246.7 ms (3.1x speedup, CPU time 2623.5ms $\to$ 915.0ms / -65.1%)**
 - **247-Case LM-First Benchmark**: Overall Top-1 **90.28%** (223/247), Top-3 **99.19%**, Diagnostic **100%**, User Dict **100%** (Zero regression).
+
+---
+
+## Finding 42: `llama.cpp` `llama_memory_seq_cp()` Partial Range Assertion Failure (`GGML_ASSERT(is_full)`) Post-Mortem & Robust Zero-Jitter SLM Architecture
+
+### 1. Problem & Incident Summary
+Following the initial introduction of Tree Attention Batching intended to evaluate multi-token conversion candidates simultaneously, the application suffered immediate, catastrophic native crashes (`SIGABRT`, `Fatal signal 6`) on connected Android targets (Pixel 10 Pro, ARCVM) upon triggering candidate re-ranking:
+```
+F libc    : Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 21557 (DefaultDispatch), pid 21537 (m.example.myasr)
+F DEBUG   : #00 pc 0009fb6d  /apex/com.android.runtime/lib64/bionic/libc.so (abort+205)
+F DEBUG   : #01 pc 0063d74a  libmyasr_llm.so (ggml_abort+282)
+F DEBUG   : #02 pc 002c3920  libmyasr_llm.so (llama_kv_cache::seq_cp(int, int, int, int)+2464)
+F DEBUG   : #03 pc 00243842  libmyasr_llm.so (myasr::LlmReranker::ScoreCandidates...)
+```
+
+### 2. Root Cause Analysis
+1. **llama.cpp KV Cache Contract Invariance (`GGML_ASSERT(is_full)`)**:
+   In `tools/llama_cpp_src/src/llama-kv-cache.cpp:528` and `llama-memory-hybrid-idx.cpp:202`, `seq_cp` contains an internal structural assertion:
+   ```cpp
+   if (p0 > 0 && p0 + 1 < (int) get_size()) { is_full = false; }
+   if (p1 > 0 && p1 + 1 < (int) get_size()) { is_full = false; }
+   GGML_ASSERT(is_full && "seq_cp() is only supported for full KV buffers");
+   ```
+   When passing `p0 = 0, p1 = start_pos` (where `start_pos < get_size()`), `is_full` becomes `false`, triggering an unavoidable assertion failure and aborting the process via `ggml_abort()`.
+2. **Abort Callback State Leak**:
+   The native `llama_set_abort_callback()` registered on the llama context evaluated both `abort_scoring_` and `abort_prediction_`. Because phrase prediction preemption sets `abort_prediction_ = true`, subsequent context decodes aborted prematurely with `ret = 2` (aborted) if the flag was not properly cleared prior to `EnsureContextCached()`.
+
+### 3. Architectural Resolution & Zero-Jitter Hardening
+1. **Crash-Free Single-Sequence KV Rollback**:
+   Eliminated `llama_memory_seq_cp()` in favor of sequence 0 speculative evaluation with admissible lower-bound pruning and immediate, robust rollback via `llama_memory_seq_rm(mem, 0, start_pos, -1)`. This guarantees 100% crash immunity across all Android NDK ABI architectures (ARM64-v8a, x86_64).
+2. **Dedicated Abort Scoping**:
+   Decoupled `abort_scoring_` (for candidate scoring) from `abort_prediction_` (for phrase prediction), ensuring that scoring decodes are only interrupted when a new keystroke arrives.
+3. **Multi-Tier Zero-Jitter Protection**:
+   - **0ms Synchronous Fast Path**: Locks-free `ContextLogitsSnapshot` and Kotlin-level `memoizedNllCache` enable 1-token words and previously evaluated candidates to display final rankings synchronously (< 0.1ms).
+   - **Top-1 Hysteresis Anchor ($\Delta = 1.20\text{ nats}$)**: Prevents candidate position swapping on marginal score differences (~3.3x probability threshold required to replace currently shown top-1).
+   - **Tap-Safe Window**: Pins Slot 0 if re-ranking completes after 100ms or while user is touching the strip, placing the alternative choice adjacent in Slot 1.
+   - **View Recycling & Quantized Widths**: Re-rendering is completely skipped if candidate surfaces match, and pill widths are quantized to character-count buckets to eliminate layout shifts (CLS).
+
+### 4. Verification & Non-Regression
+- **Unit Test Suite**: 191/191 unit tests passing 100% (including `ZeroJitterRerankingTest` and `JapanesePunctuationEvaluationTest`).
+- **Physical Device & Container Verification**: Verified clean initialization and on-device SLM execution (`Mozcは私の直感と挙動が` $\to$ `異なる`, `事故の目撃者から事故直後の` $\to$ `状況`) without any crashes or abort warnings in logcat.
+
 
 
 
