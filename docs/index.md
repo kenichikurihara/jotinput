@@ -294,6 +294,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 54. [統一英語・日本語ユーザー辞書 PRD & システム設計仕様書](docs/prd_and_design_unified_english_dictionary.md)
     - 日本語と英語の統合ユーザー辞書管理、英語入力時の単一よみフィールドUI（表記自動非表示）、FUTO Swipe C++ Trie動的マージ＆優先ブースト、およびQWERTY空間タイポ・SymSpellミススペル訂正候補の完全仕様。
 
+55. [LM-First リランキングにおける部分一致候補の順位逆転現象（「さいしょの」→「最初」＞「最初の」）の数学的解剖とアルゴリズム改善設計書](docs/lm_first_partial_prefix_ranking_analysis_and_solutions.md)
+    - 自己回帰言語モデルの連鎖律による部分候補（`viterbi_prefix`, $m < n$）と全文候補（$m = n$）の NLL 単調性・未消費読みスパン欠落の解剖、BPE トークン長正規化（Finding 37）と読みモーラ長スパン整合の理論的区別、および5つのアルゴリズム改善案（未消費読み生成補完・包含優越ゲート・ホライズン層別リランキング・後方 LSE 周辺化統合・期待解決モーラ効用）の設計仕様。
+
 ---
 
 ## 📂 Source Code Layout
