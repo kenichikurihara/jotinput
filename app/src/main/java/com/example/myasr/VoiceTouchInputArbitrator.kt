@@ -722,7 +722,8 @@ class VoiceTouchInputArbitrator {
     fun deliverRecognizedVoiceChunk(
         editor: EditorBridge?,
         text: String,
-        decodeId: Long
+        decodeId: Long,
+        deletePrecedingChars: Int = 0
     ): Boolean {
         val descriptor: InFlightDecode? = synchronized(inFlightLock) {
             val idx = inFlightDecodes.indexOfFirst { it.decodeId == decodeId }
@@ -755,14 +756,20 @@ class VoiceTouchInputArbitrator {
                 }
 
                 if (typedAfterSpeech.isNotEmpty()) {
-                    val before = editor?.getTextBeforeCursor(typedAfterSpeech.length, 0) ?: ""
-                    if (before == typedAfterSpeech) {
-                        editor?.deleteSurroundingText(typedAfterSpeech.length, 0)
+                    val before = editor?.getTextBeforeCursor(typedAfterSpeech.length + deletePrecedingChars, 0) ?: ""
+                    if (before.endsWith(typedAfterSpeech)) {
+                        editor?.deleteSurroundingText(typedAfterSpeech.length + deletePrecedingChars, 0)
                         editor?.commitText(text + typedAfterSpeech, 1)
                     } else {
+                        if (deletePrecedingChars > 0) {
+                            editor?.deleteSurroundingText(deletePrecedingChars, 0)
+                        }
                         editor?.commitText(text, 1)
                     }
                 } else {
+                    if (deletePrecedingChars > 0) {
+                        editor?.deleteSurroundingText(deletePrecedingChars, 0)
+                    }
                     editor?.commitText(text, 1)
                 }
 
@@ -788,6 +795,9 @@ class VoiceTouchInputArbitrator {
         }
 
         // Case 3: Idle delivery (no active keyboard composing and no commits occurred during decode)
+        if (deletePrecedingChars > 0) {
+            editor?.deleteSurroundingText(deletePrecedingChars, 0)
+        }
         editor?.commitText(text, 1)
         recordDirectCommitForInFlightDecodes(text)
         previousCommittedPhrase = text.takeLast(6)

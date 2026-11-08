@@ -66,9 +66,30 @@ class ContextAwareProcessor(
         rawText: String,
         contextBefore: String,
         entries: List<DictionaryEntry>,
-        formatPunctuation: Boolean = true
+        formatPunctuation: Boolean = true,
+        metadata: ProsodyBoundaryMetadata? = null
     ): String {
-        if (rawText.isBlank()) return rawText
+        return processWithPunctuationResult(
+            rawText = rawText,
+            contextBefore = contextBefore,
+            entries = entries,
+            formatPunctuation = formatPunctuation,
+            metadata = metadata
+        ).formattedText
+    }
+
+    /**
+     * Process raw ASR text using preceding text box context, prosody metadata, and active dictionary entries,
+     * returning both formatted text and retroactive edit instructions (deletePrecedingChars).
+     */
+    fun processWithPunctuationResult(
+        rawText: String,
+        contextBefore: String,
+        entries: List<DictionaryEntry>,
+        formatPunctuation: Boolean = true,
+        metadata: ProsodyBoundaryMetadata? = null
+    ): PunctuationFormatResult {
+        if (rawText.isBlank()) return PunctuationFormatResult(rawText, 0)
 
         var result = rawText
         val activeEntries = entries.filter { it.isEnabled && it.word.isNotBlank() }
@@ -99,14 +120,20 @@ class ContextAwareProcessor(
         result = formatBoundarySpacing(result, contextBefore)
 
         // Step 8: Spoken Punctuation Commands & Natural Japanese Punctuation Restoration (まる/てん/文末/読点)
+        var deletePreceding = 0
         if (formatPunctuation) {
-            result = JapanesePunctuationEngine.formatPunctuation(result)
+            val effectiveMetadata = metadata ?: ProsodyBoundaryMetadata(
+                precedingCommittedTail = contextBefore
+            )
+            val pResult = JapanesePunctuationEngine.formatPunctuation(result, effectiveMetadata)
+            result = pResult.formattedText
+            deletePreceding = pResult.deletePrecedingChars
         }
 
         if (result != rawText) {
             Log.d(TAG, "Context-Aware processed: '$rawText' -> '$result' (ctx len=${contextBefore.length})")
         }
-        return result
+        return PunctuationFormatResult(result, deletePreceding)
     }
 
     private fun resolveKanjiVariants(

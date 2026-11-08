@@ -876,6 +876,7 @@ class VoiceInputMethodService : InputMethodService() {
                     currentInputConnection?.getTextBeforeCursor(500, 0)?.toString() ?: ""
                 }
                 var recognizedText = ""
+                var deletePreceding = 0
                 var error: String? = null
                 try {
                     val app = AsrApp.instance
@@ -887,7 +888,19 @@ class VoiceInputMethodService : InputMethodService() {
                         val rawText = withTimeout(3000L) {
                             app.asrManager.transcribe(samples, 16000, hotwordsStr)
                         }
-                        recognizedText = app.contextAwareProcessor.process(rawText, textBeforeCursor, activeEntries)
+                        val pitchSlope = ProsodyPitchEstimator.estimateTerminalPitchSlope(samples, 16000)
+                        val prosodyMetadata = ProsodyBoundaryMetadata(
+                            terminalPitchSlopeSemitones = pitchSlope,
+                            precedingCommittedTail = textBeforeCursor
+                        )
+                        val pResult = app.contextAwareProcessor.processWithPunctuationResult(
+                            rawText = rawText,
+                            contextBefore = textBeforeCursor,
+                            entries = activeEntries,
+                            metadata = prosodyMetadata
+                        )
+                        recognizedText = pResult.formattedText
+                        deletePreceding = pResult.deletePrecedingChars
                     }
                 } catch (e: TimeoutCancellationException) {
                     Log.w(TAG, "Streaming chunk transcription timed out (>3000ms)")
@@ -910,7 +923,8 @@ class VoiceInputMethodService : InputMethodService() {
                         val committedImmediately = arbitrator.deliverRecognizedVoiceChunk(
                             editor = editorBridge,
                             text = recognizedText,
-                            decodeId = decodeId
+                            decodeId = decodeId,
+                            deletePrecedingChars = deletePreceding
                         )
                         syncKeyboardState()
                         if (arbitrator.isKeyboardComposing()) {
@@ -1413,6 +1427,7 @@ class VoiceInputMethodService : InputMethodService() {
                 try {
                     if (shouldDecodeFinalSamples) {
                         var recognizedText = ""
+                        var deletePreceding = 0
                         var error: String? = null
 
                         try {
@@ -1425,7 +1440,19 @@ class VoiceInputMethodService : InputMethodService() {
                                 val rawText = withTimeout(3000L) {
                                     app.asrManager.transcribe(samples, 16000, hotwordsStr)
                                 }
-                                recognizedText = app.contextAwareProcessor.process(rawText, textBeforeCursor, activeEntries)
+                                val pitchSlope = ProsodyPitchEstimator.estimateTerminalPitchSlope(samples, 16000)
+                                val prosodyMetadata = ProsodyBoundaryMetadata(
+                                    terminalPitchSlopeSemitones = pitchSlope,
+                                    precedingCommittedTail = textBeforeCursor
+                                )
+                                val pResult = app.contextAwareProcessor.processWithPunctuationResult(
+                                    rawText = rawText,
+                                    contextBefore = textBeforeCursor,
+                                    entries = activeEntries,
+                                    metadata = prosodyMetadata
+                                )
+                                recognizedText = pResult.formattedText
+                                deletePreceding = pResult.deletePrecedingChars
                             }
                         } catch (e: TimeoutCancellationException) {
                             Log.w(TAG, "IME Transcription timed out (>3000ms)")
@@ -1446,7 +1473,8 @@ class VoiceInputMethodService : InputMethodService() {
                                 val committedImmediately = arbitrator.deliverRecognizedVoiceChunk(
                                     editor = editorBridge,
                                     text = recognizedText,
-                                    decodeId = decodeId
+                                    decodeId = decodeId,
+                                    deletePrecedingChars = deletePreceding
                                 )
                                 if (arbitrator.isKeyboardComposing()) {
                                     if (committedImmediately) {
