@@ -51,15 +51,8 @@ object KeyboardHeightManager {
         prefs.edit().putString(KEY_RERANK_ENGINE_TYPE, type.id).apply()
     }
 
-    fun isSpeculativePrefetchEnabled(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(KEY_SPECULATIVE_PREFETCH, true)
-    }
-
-    fun setSpeculativePrefetchEnabled(context: Context, enabled: Boolean) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_SPECULATIVE_PREFETCH, enabled).apply()
-    }
+    // Speculative prefetch (ACTION_DOWN) is permanently enabled for 0ms physical touch-down latency; UI option deprecated
+    fun isSpeculativePrefetchEnabled(context: Context? = null): Boolean = true
 
     enum class HeightPreset(val displayName: String, val scale: Float) {
         COMPACT("超小型 (80%)", 0.80f),

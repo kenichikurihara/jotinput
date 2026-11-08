@@ -75,7 +75,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbEngineNone: android.widget.RadioButton
     private lateinit var switchSlmContextFree: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var switchSlmMandatoryRerank: com.google.android.material.switchmaterial.SwitchMaterial
-    private lateinit var switchSpeculativePrefetch: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var sliderSlmAlpha: com.google.android.material.slider.Slider
     private lateinit var tvSlmAlphaValue: TextView
     private lateinit var tvSlmAlphaDesc: TextView
@@ -452,7 +451,6 @@ class MainActivity : AppCompatActivity() {
             switchSlmRerankEnabled.isChecked = KeyboardHeightManager.isSlmRerankEnabled(this)
             switchSlmContextFree.isChecked = KeyboardHeightManager.isSlmContextFreeRerankEnabled(this)
             switchSlmMandatoryRerank.isChecked = KeyboardHeightManager.isSlmMandatoryRerankEnabled(this)
-            switchSpeculativePrefetch.isChecked = KeyboardHeightManager.isSpeculativePrefetchEnabled(this)
             val alpha = KeyboardHeightManager.getSlmWeightAlpha(this)
             sliderSlmAlpha.value = alpha.coerceIn(0.00f, 1.00f)
             updateAlphaDisplay(alpha)
@@ -556,7 +554,6 @@ class MainActivity : AppCompatActivity() {
         setupRerankEngineUI()
         switchSlmContextFree = findViewById(R.id.switchSlmContextFree)
         switchSlmMandatoryRerank = findViewById(R.id.switchSlmMandatoryRerank)
-        switchSpeculativePrefetch = findViewById(R.id.switchSpeculativePrefetch)
         sliderSlmAlpha = findViewById(R.id.sliderSlmAlpha)
         tvSlmAlphaValue = findViewById(R.id.tvSlmAlphaValue)
         tvSlmAlphaDesc = findViewById(R.id.tvSlmAlphaDesc)
@@ -692,12 +689,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        switchSpeculativePrefetch.setOnCheckedChangeListener { _, isChecked ->
-            if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
-            KeyboardHeightManager.setSpeculativePrefetchEnabled(this, isChecked)
-            val status = if (isChecked) "有効 (0ms応答)" else "無効"
-            Toast.makeText(this, "投機的先行デコード: $status", Toast.LENGTH_SHORT).show()
-        }
 
         btnEnableIme.setOnClickListener {
             startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))

@@ -1078,43 +1078,6 @@
                                 android:checked="true" />
                         </LinearLayout>
 
-                        <!-- Speculative Prefetch Switch -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="投機的先行デコード (ACTION_DOWN)"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="13sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:id="@+id/tvSpeculativePrefetchDesc"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="タッチダウン時に先行推論を開始し指離し時の体感遅延を0ms化"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="11sp" />
-                            </LinearLayout>
-
-                            <com.google.android.material.switchmaterial.SwitchMaterial
-                                android:id="@+id/switchSpeculativePrefetch"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:checked="true" />
-                        </LinearLayout>
 
                         <!-- SLM Alpha Slider -->
                         <LinearLayout
