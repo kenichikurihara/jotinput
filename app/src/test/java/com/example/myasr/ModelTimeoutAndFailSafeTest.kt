@@ -132,37 +132,36 @@ class ModelTimeoutAndFailSafeTest {
     }
 
     @Test
-    fun testMandatorySlmRerankTimeoutFailsSafeRetainingBaseCandidates() = runBlocking {
+    fun testSlmAsyncRerankTimeoutFailsSafeRetainingBaseCandidates() = runBlocking {
         val baseCandidates = listOf(
             ConversionCandidate(surface = "生みのまわりに", reading = "うみのまわりに"),
             ConversionCandidate(surface = "海のまわりに", reading = "うみのまわりに")
         )
-        val timeoutMs = KeyboardHeightManager.DEFAULT_SLM_MANDATORY_RERANK_TIMEOUT_MS
-        assertEquals(500L, timeoutMs)
+        val timeoutMs = 2500L
 
         var finalCandidates: List<ConversionCandidate>
 
         try {
             withTimeout(timeoutMs) {
-                delay(600L) // Exceeds 500ms timeout budget
+                delay(2600L) // Exceeds 2500ms timeout budget
                 finalCandidates = listOf(ConversionCandidate(surface = "海のまわりに", reading = "うみのまわりに"))
             }
         } catch (e: TimeoutCancellationException) {
-            // Mandatory Rerank fail-safe: fall back to baseCandidates
+            // SLM Rerank fail-safe: fall back to baseCandidates
             finalCandidates = baseCandidates
         }
 
-        assertEquals("Should fall back to base candidates when mandatory SLM rerank times out", 2, finalCandidates.size)
+        assertEquals("Should fall back to base candidates when SLM rerank times out", 2, finalCandidates.size)
         assertEquals("生みのまわりに", finalCandidates[0].surface)
     }
 
     @Test
-    fun testMandatorySlmRerankSucceedsWithinTimeout() = runBlocking {
+    fun testSlmAsyncRerankSucceedsWithinTimeout() = runBlocking {
         val baseCandidates = listOf(
             ConversionCandidate(surface = "生みのまわりに", reading = "うみのまわりに"),
             ConversionCandidate(surface = "海のまわりに", reading = "うみのまわりに")
         )
-        val timeoutMs = KeyboardHeightManager.DEFAULT_SLM_MANDATORY_RERANK_TIMEOUT_MS
+        val timeoutMs = 2500L
 
         var finalCandidates: List<ConversionCandidate>
 

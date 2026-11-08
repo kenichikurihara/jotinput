@@ -73,7 +73,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbEngineLocalSlm15B: android.widget.RadioButton
     private lateinit var rbEngineHybridRerank: android.widget.RadioButton
     private lateinit var rbEngineNone: android.widget.RadioButton
-    private lateinit var switchSlmMandatoryRerank: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var sliderSlmAlpha: com.google.android.material.slider.Slider
     private lateinit var tvSlmAlphaValue: TextView
     private lateinit var tvSlmAlphaDesc: TextView
@@ -448,7 +447,6 @@ class MainActivity : AppCompatActivity() {
             switchStreamingVoiceInput.isChecked = KeyboardHeightManager.isStreamingVoiceInputEnabled(this)
             switchDebugDisplay.isChecked = KeyboardHeightManager.isDebugDisplayEnabled(this)
             switchSlmRerankEnabled.isChecked = KeyboardHeightManager.isSlmRerankEnabled(this)
-            switchSlmMandatoryRerank.isChecked = KeyboardHeightManager.isSlmMandatoryRerankEnabled(this)
             val alpha = KeyboardHeightManager.getSlmWeightAlpha(this)
             sliderSlmAlpha.value = alpha.coerceIn(0.00f, 1.00f)
             updateAlphaDisplay(alpha)
@@ -550,7 +548,6 @@ class MainActivity : AppCompatActivity() {
         rbEngineHybridRerank = findViewById(R.id.rbEngineHybridRerank)
         rbEngineNone = findViewById(R.id.rbEngineNone)
         setupRerankEngineUI()
-        switchSlmMandatoryRerank = findViewById(R.id.switchSlmMandatoryRerank)
         sliderSlmAlpha = findViewById(R.id.sliderSlmAlpha)
         tvSlmAlphaValue = findViewById(R.id.tvSlmAlphaValue)
         tvSlmAlphaDesc = findViewById(R.id.tvSlmAlphaDesc)
@@ -654,14 +651,6 @@ class MainActivity : AppCompatActivity() {
             KeyboardHeightManager.setDebugDisplayEnabled(this, isChecked)
             val status = if (isChecked) "有効 (ON: SLMリランク時にデバッグバーにバッジ表示)" else "無効 (OFF)"
             Toast.makeText(this, "デバッグ表示: $status", Toast.LENGTH_SHORT).show()
-        }
-
-        switchSlmMandatoryRerank.isChecked = KeyboardHeightManager.isSlmMandatoryRerankEnabled(this)
-        switchSlmMandatoryRerank.setOnCheckedChangeListener { _, isChecked ->
-            if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
-            KeyboardHeightManager.setSlmMandatoryRerankEnabled(this, isChecked)
-            val status = if (isChecked) "有効 (ON: 100msタイムアウト付きで必ず適用)" else "無効 (OFF: 即時描画+非同期)"
-            Toast.makeText(this, "SLM確定リランク: $status", Toast.LENGTH_SHORT).show()
         }
 
         sliderSlmAlpha.addOnChangeListener { _, value, fromUser ->

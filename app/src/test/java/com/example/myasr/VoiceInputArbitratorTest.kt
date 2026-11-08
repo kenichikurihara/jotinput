@@ -178,7 +178,6 @@ class VoiceInputArbitratorTest {
         val outcome = arbitrator.onSpacePressed(
             editor = editor,
             spaceCharWhenIdle = "　",
-            resolveCandidateFn = { it },
             onResetStreamingUtterance = { audioReset = true }
         )
 
@@ -231,13 +230,12 @@ class VoiceInputArbitratorTest {
         assertFalse("Streaming loop must never overwrite active keyboard composing text", blocked)
         assertEquals("てんき", editor.composingSpan)
 
-        // 4. User converts "てんき" -> "天気" via Space
+        // 4. User presses Space -> commits composing reading as-is and enters a space
         arbitrator.onSpacePressed(
             editor = editor,
-            spaceCharWhenIdle = "　",
-            resolveCandidateFn = { "天気" }
+            spaceCharWhenIdle = "　"
         )
-        assertEquals("今日は天気", editor.committedText)
+        assertEquals("今日はてんき　", editor.committedText)
         assertEquals("", editor.composingSpan)
     }
 

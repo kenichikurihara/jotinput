@@ -555,63 +555,17 @@ class VoiceInputMethodService : InputMethodService() {
                     editor = editorBridge,
                     spaceCharWhenIdle = spaceChar,
                     hasUnflushedSpeech = hadUnflushed,
-                    resolveCandidateFn = { reading ->
-                        val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
-                        val isRerankEnabled = KeyboardHeightManager.isSlmRerankEnabled(this@VoiceInputMethodService)
-                        val isMandatoryEnabled = KeyboardHeightManager.isSlmMandatoryRerankEnabled(this@VoiceInputMethodService)
-                        val isSlmReady = LlmReranker.getInstance(this@VoiceInputMethodService).isReady()
-                        val canRerank = isRerankEnabled && isSlmReady
-
-                        val baseCandidates = kanaKanjiEngine.getBaseCandidates(reading)
-                        val displayCandidates = candidateStripView?.getCandidates() ?: emptyList()
-
-                        val targetCandidate: ConversionCandidate? = if (
-                            isCurrentCandidatesReranked &&
-                            displayCandidates.isNotEmpty() &&
-                            displayCandidates.firstOrNull()?.reading == reading
-                        ) {
-                            displayCandidates.first()
-                        } else if (isMandatoryEnabled && canRerank && baseCandidates.size > 1) {
-                            val timeoutMs = KeyboardHeightManager.getSlmMandatoryRerankTimeoutMs(this@VoiceInputMethodService)
-                            try {
-                                val reranked = runBlocking(Dispatchers.Default) {
-                                    withTimeout(timeoutMs) {
-                                        kanaKanjiEngine.rerankCandidates(textBeforeCursor, baseCandidates)
-                                    }
-                                }
-                                reranked.firstOrNull() ?: displayCandidates.firstOrNull() ?: baseCandidates.firstOrNull()
-                            } catch (e: Exception) {
-                                Log.w(TAG, "Space commit mandatory rerank failed or timed out: ${e.message}")
-                                displayCandidates.firstOrNull() ?: baseCandidates.firstOrNull()
-                            }
-                        } else {
-                            displayCandidates.firstOrNull() ?: baseCandidates.firstOrNull()
-                        }
-
-                        rerankJob?.cancel()
-                        isCurrentCandidatesReranked = false
-                        if (targetCandidate != null) {
-                            kanaKanjiEngine.commitCandidate(targetCandidate)
-                            targetCandidate.surface
-                        } else {
-                            reading
-                        }
-                    },
                     onFlushPreTypingSpeech = { flushPreTypingSpeechIfNeeded() },
                     onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() },
                     formatStreamingFn = { formatVoiceText(it) }
                 )
                 audioRecorder.notifyUserTyping(350L)
+                rerankJob?.cancel()
+                isCurrentCandidatesReranked = false
                 syncKeyboardState()
 
                 when (outcome) {
-                    VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_KEYBOARD_CONVERSION -> {
-                        val committed = arbitrator.lastCommittedSurface.ifEmpty { arbitrator.previousCommittedPhrase }
-                        if (prevPhrase.isNotEmpty() && committed.isNotEmpty()) {
-                            nextPhrasePredictor.recordTransition(prevPhrase, committed)
-                        }
-                        showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
-                    }
+                    VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_KEYBOARD_AND_SPACE,
                     VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_STREAMING_AND_SPACE,
                     VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_IDLE_SPACE -> {
                         if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
