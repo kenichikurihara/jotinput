@@ -73,7 +73,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbEngineLocalSlm15B: android.widget.RadioButton
     private lateinit var rbEngineHybridRerank: android.widget.RadioButton
     private lateinit var rbEngineNone: android.widget.RadioButton
-    private lateinit var switchSlmContextFree: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var switchSlmMandatoryRerank: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var sliderSlmAlpha: com.google.android.material.slider.Slider
     private lateinit var tvSlmAlphaValue: TextView
@@ -449,7 +448,6 @@ class MainActivity : AppCompatActivity() {
             switchStreamingVoiceInput.isChecked = KeyboardHeightManager.isStreamingVoiceInputEnabled(this)
             switchDebugDisplay.isChecked = KeyboardHeightManager.isDebugDisplayEnabled(this)
             switchSlmRerankEnabled.isChecked = KeyboardHeightManager.isSlmRerankEnabled(this)
-            switchSlmContextFree.isChecked = KeyboardHeightManager.isSlmContextFreeRerankEnabled(this)
             switchSlmMandatoryRerank.isChecked = KeyboardHeightManager.isSlmMandatoryRerankEnabled(this)
             val alpha = KeyboardHeightManager.getSlmWeightAlpha(this)
             sliderSlmAlpha.value = alpha.coerceIn(0.00f, 1.00f)
@@ -552,7 +550,6 @@ class MainActivity : AppCompatActivity() {
         rbEngineHybridRerank = findViewById(R.id.rbEngineHybridRerank)
         rbEngineNone = findViewById(R.id.rbEngineNone)
         setupRerankEngineUI()
-        switchSlmContextFree = findViewById(R.id.switchSlmContextFree)
         switchSlmMandatoryRerank = findViewById(R.id.switchSlmMandatoryRerank)
         sliderSlmAlpha = findViewById(R.id.sliderSlmAlpha)
         tvSlmAlphaValue = findViewById(R.id.tvSlmAlphaValue)
@@ -657,14 +654,6 @@ class MainActivity : AppCompatActivity() {
             KeyboardHeightManager.setDebugDisplayEnabled(this, isChecked)
             val status = if (isChecked) "有効 (ON: SLMリランク時にデバッグバーにバッジ表示)" else "無効 (OFF)"
             Toast.makeText(this, "デバッグ表示: $status", Toast.LENGTH_SHORT).show()
-        }
-
-        switchSlmContextFree.isChecked = KeyboardHeightManager.isSlmContextFreeRerankEnabled(this)
-        switchSlmContextFree.setOnCheckedChangeListener { _, isChecked ->
-            if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
-            KeyboardHeightManager.setSlmContextFreeRerankEnabled(this, isChecked)
-            val status = if (isChecked) "有効 (ON: 空文脈でもSLM再ランク)" else "無効 (OFF: 文脈ありのみ)"
-            Toast.makeText(this, "文頭・単独入力時のSLM再ランク: $status", Toast.LENGTH_SHORT).show()
         }
 
         switchSlmMandatoryRerank.isChecked = KeyboardHeightManager.isSlmMandatoryRerankEnabled(this)
