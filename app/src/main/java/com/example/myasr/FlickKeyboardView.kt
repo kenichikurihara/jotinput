@@ -446,7 +446,7 @@ class FlickKeyboardView @JvmOverloads constructor(
 
         // Col 4: Right Function Column
         val rightLeft = width - colFnWidth
-        val spaceLabel = if (isComposingState) "変換" else "␣"
+        val spaceLabel = "␣"
         val enterLabel = if (isComposingState || hasVoiceComposingState) "確定" else "↵"
 
         addKey(KeyType.DELETE, rightLeft, 0f, width, rowHeight, marginX, marginY, "⌫", isFunctionKey = true)

@@ -68,7 +68,7 @@ class VoiceTouchInputArbitrator {
     }
 
     enum class SpaceOutcome {
-        COMMITTED_KEYBOARD_CONVERSION,
+        COMMITTED_KEYBOARD_AND_SPACE,
         COMMITTED_STREAMING_AND_SPACE,
         COMMITTED_IDLE_SPACE
     }
@@ -452,25 +452,29 @@ class VoiceTouchInputArbitrator {
     }
 
     /**
-     * Handles Space / Convert (`変換` / `␣`) button press.
+     * Handles Space (`␣`) button press. Always commits text and enters a space character.
      */
     fun onSpacePressed(
         editor: EditorBridge?,
         spaceCharWhenIdle: String,
         hasUnflushedSpeech: Boolean = false,
-        resolveCandidateFn: (reading: String) -> String,
         onFlushPreTypingSpeech: () -> Unit = {},
         onResetStreamingUtterance: () -> Unit = {},
         formatStreamingFn: (String) -> String = { it }
     ): SpaceOutcome {
         if (composingText.isNotEmpty()) {
             val reading = composingText.toString()
-            val committedSurface = resolveCandidateFn(reading)
             if (hasUnflushedSpeech) {
                 onFlushPreTypingSpeech()
             }
-            commitKeyboardSurface(editor, reading, committedSurface)
-            return SpaceOutcome.COMMITTED_KEYBOARD_CONVERSION
+            // Commit composing reading as-is without Kana-Kanji conversion, then enter space
+            commitKeyboardSurface(editor, reading, reading)
+            clearUndoState()
+            previousCommittedPhrase = ""
+            editor?.commitText(spaceCharWhenIdle, 1)
+            recordDirectCommitForInFlightDecodes(spaceCharWhenIdle)
+            flushPendingVoice(editor)
+            return SpaceOutcome.COMMITTED_KEYBOARD_AND_SPACE
         }
 
         if (streamingLastComposingText.isNotEmpty()) {
