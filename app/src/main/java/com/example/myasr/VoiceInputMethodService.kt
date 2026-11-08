@@ -765,7 +765,8 @@ class VoiceInputMethodService : InputMethodService() {
             val fastResult = kanaKanjiEngine.tryFastRerankCandidatesWithStatus(
                 contextPrefix = textBeforeCursor,
                 baseCandidates = baseCandidates,
-                currentShownTop1 = null
+                currentShownTop1 = null,
+                targetInputLength = reading.length
             )
             if (fastResult != null && fastResult.candidates.isNotEmpty()) {
                 renderedCandidates = fastResult.candidates
@@ -800,7 +801,8 @@ class VoiceInputMethodService : InputMethodService() {
                     kanaKanjiEngine.rerankCandidatesWithStatus(
                         contextPrefix = textBeforeCursor,
                         baseCandidates = baseCandidates,
-                        currentShownTop1 = currentTop1ToPreserve
+                        currentShownTop1 = currentTop1ToPreserve,
+                        targetInputLength = reading.length
                     )
                 }
                 if (arbitrator.composingText.toString() == reading && reranked.isNotEmpty()) {
@@ -1104,6 +1106,7 @@ class VoiceInputMethodService : InputMethodService() {
                 }
                 if (seenSurfaces.add(adapted.lowercase())) {
                     val isPrefix = sug.lowercase().startsWith(rawWord.lowercase())
+                    val isPrediction = isPrefix && sug.length > rawWord.length
                     val obsPenalty = if (isPrefix) {
                         0.0f
                     } else {
@@ -1115,7 +1118,7 @@ class VoiceInputMethodService : InputMethodService() {
                         ConversionCandidate(
                             surface = adapted,
                             reading = rawWord,
-                            isPrediction = false,
+                            isPrediction = isPrediction,
                             source = "english_typo",
                             obsPenalty = obsPenalty
                         )
@@ -1162,7 +1165,8 @@ class VoiceInputMethodService : InputMethodService() {
                 KeyboardHeightManager.isSlmRerankEnabled(this@VoiceInputMethodService) &&
                 candidateList.size > 1
             ) {
-                slm.rerankWithStatus(precedingContext, candidateList.take(8), weightAlpha = alpha)
+                val targetLen = rawWord.filter { it.isLetter() }.length.let { if (it > 0) it else rawWord.length }
+                slm.rerankWithStatus(precedingContext, candidateList.take(8), weightAlpha = alpha, targetInputLength = targetLen)
             } else {
                 Pair(candidateList, false)
             }
