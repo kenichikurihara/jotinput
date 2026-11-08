@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
@@ -23,16 +25,16 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
 
     private val TAG = "NextPhrasePredictor"
     private val scope = CoroutineScope(Dispatchers.IO)
+    private var saveHistoryJob: Job? = null
     private val cacheFile = context?.let { File(it.filesDir, "next_phrase_cache.json") }
 
-    // Map: previous phrase -> Map of (next phrase -> occurrence count)
-    private val bigramHistory = HashMap<String, MutableMap<String, Int>>()
-
-    init {
-        loadHistory()
-    }
-
+    // Constants for 5MB RAM cap:
+    // 4,000 prefix keys x 16 continuations = max 32,000 bigram pairs (< 5MB RAM)
     companion object {
+        const val MAX_PREFIX_KEYS = 4_000
+        const val MAX_CONTINUATIONS_PER_KEY = 16
+        const val MAX_TOTAL_BIGRAM_PAIRS = 32_000
+
         @Volatile
         private var instance: NextPhrasePredictor? = null
 
@@ -84,6 +86,14 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         )
     }
 
+    // Access-ordered LinkedHashMap for LRU prefix keys (prevPhrase -> (nextPhrase -> count))
+    private val bigramHistory = LinkedHashMap<String, LinkedHashMap<String, Int>>(256, 0.75f, true)
+    private var totalBigramPairs = 0
+
+    init {
+        loadHistory()
+    }
+
     /**
      * Records a phrase transition (prevPhrase -> currentPhrase) into the dynamic learning cache.
      * Safe to call from any thread; asynchronous background serialization avoids any UI jitter.
@@ -94,17 +104,40 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         val curr = currentPhrase.trim()
         if (prev.isEmpty() || curr.isEmpty() || prev == curr) return
 
-        val nextMap = bigramHistory.getOrPut(prev) { HashMap() }
+        val nextMap = bigramHistory.getOrPut(prev) { LinkedHashMap(8, 0.75f, true) }
+        val existed = nextMap.containsKey(curr)
         val count = nextMap.getOrDefault(curr, 0)
-        nextMap[curr] = count + 1
-
-        // Cap map size to prevent unbounded memory growth
-        if (bigramHistory.size > 1000) {
-            val keyToRemove = bigramHistory.keys.firstOrNull()
-            if (keyToRemove != null) bigramHistory.remove(keyToRemove)
+        nextMap[curr] = (count + 1).coerceAtMost(100_000)
+        if (!existed) {
+            totalBigramPairs++
         }
 
-        saveHistoryAsync()
+        // Cap continuations per prefix key (Frequency-guarded eviction: drop lowest count)
+        if (nextMap.size > MAX_CONTINUATIONS_PER_KEY) {
+            val lowestEntry = nextMap.minByOrNull { it.value }
+            if (lowestEntry != null) {
+                nextMap.remove(lowestEntry.key)
+                totalBigramPairs--
+            }
+        }
+
+        // Cap prefix keys (LRU eviction: drop oldest accessed key)
+        if (bigramHistory.size > MAX_PREFIX_KEYS) {
+            val oldestKey = bigramHistory.keys.firstOrNull()
+            if (oldestKey != null) {
+                val removedMap = bigramHistory.remove(oldestKey)
+                if (removedMap != null) totalBigramPairs -= removedMap.size
+            }
+        }
+
+        // Global pair count cap (< 5MB RAM guarantee)
+        while (totalBigramPairs > MAX_TOTAL_BIGRAM_PAIRS && bigramHistory.isNotEmpty()) {
+            val oldestKey = bigramHistory.keys.firstOrNull() ?: break
+            val removedMap = bigramHistory.remove(oldestKey)
+            if (removedMap != null) totalBigramPairs -= removedMap.size
+        }
+
+        scheduleSaveHistory()
     }
 
     /**
@@ -209,12 +242,96 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
     @Synchronized
     fun clearHistory() {
         bigramHistory.clear()
-        saveHistoryAsync()
+        totalBigramPairs = 0
+        scheduleSaveHistory(immediate = true)
     }
 
-    private fun saveHistoryAsync() {
+    /**
+     * Returns an immutable snapshot copy of the current bigram history.
+     */
+    @Synchronized
+    fun getHistorySnapshot(): Map<String, Map<String, Int>> {
+        val copy = LinkedHashMap<String, Map<String, Int>>(bigramHistory.size)
+        for ((k, v) in bigramHistory) {
+            copy[k] = LinkedHashMap(v)
+        }
+        return copy
+    }
+
+    /**
+     * Total number of unique bigram pairs currently held in memory.
+     */
+    @Synchronized
+    fun getTotalBigramPairs(): Int = totalBigramPairs
+
+    /**
+     * Number of unique previous phrase keys in memory.
+     */
+    @Synchronized
+    fun getPrefixKeyCount(): Int = bigramHistory.size
+
+    /**
+     * Safely merges remote bigram history entries using idempotent Max-Merge.
+     */
+    @Synchronized
+    fun mergeHistory(remoteBigram: Map<String, Map<String, Int>>) {
+        if (remoteBigram.isEmpty()) return
+
+        for ((prev, nextMap) in remoteBigram) {
+            if (prev.isBlank() || nextMap.isEmpty()) continue
+            val localNextMap = bigramHistory.getOrPut(prev) { LinkedHashMap(8, 0.75f, true) }
+            for ((curr, remoteCount) in nextMap) {
+                if (curr.isBlank() || remoteCount <= 0) continue
+                val existed = localNextMap.containsKey(curr)
+                val localCount = localNextMap.getOrDefault(curr, 0)
+                val mergedCount = maxOf(localCount, remoteCount).coerceAtMost(100_000)
+                localNextMap[curr] = mergedCount
+                if (!existed) {
+                    totalBigramPairs++
+                }
+            }
+
+            // Cap continuations for this key
+            if (localNextMap.size > MAX_CONTINUATIONS_PER_KEY) {
+                val toRemove = localNextMap.entries.sortedBy { it.value }
+                    .take(localNextMap.size - MAX_CONTINUATIONS_PER_KEY)
+                for (rem in toRemove) {
+                    localNextMap.remove(rem.key)
+                    totalBigramPairs--
+                }
+            }
+        }
+
+        // Cap prefix keys
+        while (bigramHistory.size > MAX_PREFIX_KEYS) {
+            val oldestKey = bigramHistory.keys.firstOrNull() ?: break
+            val removedMap = bigramHistory.remove(oldestKey)
+            if (removedMap != null) totalBigramPairs -= removedMap.size
+        }
+
+        // Cap global total pairs
+        while (totalBigramPairs > MAX_TOTAL_BIGRAM_PAIRS && bigramHistory.isNotEmpty()) {
+            val oldestKey = bigramHistory.keys.firstOrNull() ?: break
+            val removedMap = bigramHistory.remove(oldestKey)
+            if (removedMap != null) totalBigramPairs -= removedMap.size
+        }
+
+        scheduleSaveHistory(immediate = true)
+    }
+
+    private fun scheduleSaveHistory(immediate: Boolean = false) {
+        saveHistoryJob?.cancel()
+        saveHistoryJob = scope.launch {
+            if (!immediate) {
+                delay(1500L) // 1.5s debounce
+            }
+            saveHistory()
+        }
+    }
+
+    private fun saveHistory() {
         val file = cacheFile ?: return
-        val snapshot = synchronized(this) {
+        val snapshotJson = synchronized(this) {
             val root = JSONObject()
             for ((key, map) in bigramHistory) {
                 val child = JSONObject()
@@ -226,12 +343,15 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             root.toString()
         }
 
-        scope.launch {
-            try {
-                file.writeText(snapshot, Charsets.UTF_8)
-            } catch (e: Exception) {
-                Log.w(TAG, "Error saving next phrase history: ${e.message}")
+        try {
+            val tempFile = File(file.parentFile, "${file.name}.tmp")
+            tempFile.writeText(snapshotJson, Charsets.UTF_8)
+            if (!tempFile.renameTo(file)) {
+                tempFile.copyTo(file, overwrite = true)
+                tempFile.delete()
             }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error saving next phrase history: ${e.message}")
         }
     }
 
@@ -242,16 +362,21 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 val jsonStr = file.readText(Charsets.UTF_8)
                 val root = JSONObject(jsonStr)
                 val keys = root.keys()
-                while (keys.hasNext()) {
-                    val k = keys.next()
-                    val child = root.optJSONObject(k) ?: continue
-                    val childMap = HashMap<String, Int>()
-                    val childKeys = child.keys()
-                    while (childKeys.hasNext()) {
-                        val ck = childKeys.next()
-                        childMap[ck] = child.optInt(ck, 1)
+                synchronized(this) {
+                    bigramHistory.clear()
+                    totalBigramPairs = 0
+                    while (keys.hasNext()) {
+                        val k = keys.next()
+                        val child = root.optJSONObject(k) ?: continue
+                        val childMap = LinkedHashMap<String, Int>(8, 0.75f, true)
+                        val childKeys = child.keys()
+                        while (childKeys.hasNext()) {
+                            val ck = childKeys.next()
+                            childMap[ck] = child.optInt(ck, 1)
+                            totalBigramPairs++
+                        }
+                        bigramHistory[k] = childMap
                     }
-                    bigramHistory[k] = childMap
                 }
             }
         } catch (e: Exception) {

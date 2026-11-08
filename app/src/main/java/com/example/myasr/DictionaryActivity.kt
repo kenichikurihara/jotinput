@@ -1,11 +1,15 @@
 package com.example.myasr
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -17,11 +21,21 @@ import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class DictionaryActivity : AppCompatActivity() {
 
     private lateinit var toolbar: MaterialToolbar
     private lateinit var nestedScrollView: NestedScrollView
+    private lateinit var tvHistoryStatsBadge: TextView
+    private lateinit var tvSyncStatusSummary: TextView
+    private lateinit var btnSyncGoogleDrive: MaterialButton
+    private lateinit var btnSelectSyncFile: MaterialButton
+    private lateinit var btnClearHistory: MaterialButton
+
     private lateinit var tvFormTitle: TextView
     private lateinit var tvFormSubtitle: TextView
     private lateinit var layoutWord: TextInputLayout
@@ -43,6 +57,21 @@ class DictionaryActivity : AppCompatActivity() {
 
     private var editingEntry: DictionaryEntry? = null
 
+    private lateinit var syncManager: UserHistorySyncManager
+    private val scope = CoroutineScope(Dispatchers.Main)
+
+    private val selectSyncFileLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            handleSyncFileSelected(uri)
+        }
+    }
+
+    private val createSyncFileLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) {
+            handleSyncFileSelected(uri)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dictionary)
@@ -50,16 +79,24 @@ class DictionaryActivity : AppCompatActivity() {
         val app = AsrApp.instance
         repository = app.dictionaryRepository
         hotwordsGenerator = app.hotwordsGenerator
+        syncManager = UserHistorySyncManager.getInstance(this)
 
         initViews()
         setupRecyclerView()
         setupListeners()
         refreshList()
+        updateHistorySyncUI()
     }
 
     private fun initViews() {
         toolbar = findViewById(R.id.toolbar)
         nestedScrollView = findViewById(R.id.nestedScrollView)
+        tvHistoryStatsBadge = findViewById(R.id.tvHistoryStatsBadge)
+        tvSyncStatusSummary = findViewById(R.id.tvSyncStatusSummary)
+        btnSyncGoogleDrive = findViewById(R.id.btnSyncGoogleDrive)
+        btnSelectSyncFile = findViewById(R.id.btnSelectSyncFile)
+        btnClearHistory = findViewById(R.id.btnClearHistory)
+
         tvFormTitle = findViewById(R.id.tvFormTitle)
         tvFormSubtitle = findViewById(R.id.tvFormSubtitle)
         layoutWord = findViewById(R.id.layoutWord)
@@ -129,6 +166,108 @@ class DictionaryActivity : AppCompatActivity() {
         btnCancelEdit.setOnClickListener {
             cancelEditing()
         }
+
+        btnSyncGoogleDrive.setOnClickListener {
+            handleSyncButtonClick()
+        }
+
+        btnSelectSyncFile.setOnClickListener {
+            promptChooseOrCreateSyncFile()
+        }
+
+        btnClearHistory.setOnClickListener {
+            promptClearHistory()
+        }
+    }
+
+    private fun updateHistorySyncUI() {
+        val stats = syncManager.getSyncStats()
+        tvHistoryStatsBadge.text = "単語 ${stats.unigramCount} / 連接 ${stats.bigramPairCount}"
+
+        if (stats.syncUriString != null) {
+            val dateStr = if (stats.lastSyncTimestamp > 0L) {
+                val sdf = SimpleDateFormat("MM/dd HH:mm", Locale.getDefault())
+                sdf.format(Date(stats.lastSyncTimestamp))
+            } else {
+                "未同期"
+            }
+            val summary = stats.lastSyncSummary ?: "準備完了"
+            tvSyncStatusSummary.text = "同期先設定済 • 最終同期: $dateStr ($summary)"
+            btnSyncGoogleDrive.text = "Google Drive と同期 (安全マージ)"
+        } else {
+            tvSyncStatusSummary.text = "Google Driveの同期ファイルを選択すると、複数端末間で履歴を安全に統合できます。"
+            btnSyncGoogleDrive.text = "同期先ファイルを選択して連携"
+        }
+    }
+
+    private fun handleSyncButtonClick() {
+        val currentUri = syncManager.getSyncUri()
+        if (currentUri == null) {
+            promptChooseOrCreateSyncFile()
+        } else {
+            startSyncExecution(currentUri)
+        }
+    }
+
+    private fun promptChooseOrCreateSyncFile() {
+        val options = arrayOf("Google Drive 上の既存ファイルを選択", "Google Drive 上に新規作成 (推奨)")
+        AlertDialog.Builder(this)
+            .setTitle("同期先ファイルの設定")
+            .setItems(options) { _, which ->
+                if (which == 0) {
+                    selectSyncFileLauncher.launch(arrayOf("application/json", "*/*"))
+                } else {
+                    createSyncFileLauncher.launch("jotinput_history_sync.json")
+                }
+            }
+            .setNegativeButton("キャンセル", null)
+            .show()
+    }
+
+    private fun handleSyncFileSelected(uri: Uri) {
+        try {
+            val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            contentResolver.takePersistableUriPermission(uri, takeFlags)
+        } catch (e: Exception) {
+            // Some document providers might not support persistable permissions
+        }
+        syncManager.setSyncUri(uri)
+        updateHistorySyncUI()
+        startSyncExecution(uri)
+    }
+
+    private fun startSyncExecution(uri: Uri) {
+        btnSyncGoogleDrive.isEnabled = false
+        btnSyncGoogleDrive.text = "同期処理中…"
+
+        scope.launch {
+            val result = syncManager.performSync(uri)
+            btnSyncGoogleDrive.isEnabled = true
+            updateHistorySyncUI()
+            updateHotwords()
+            refreshList()
+
+            if (result.success) {
+                Toast.makeText(this@DictionaryActivity, result.message, Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this@DictionaryActivity, result.message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun promptClearHistory() {
+        AlertDialog.Builder(this)
+            .setTitle("学習履歴のクリア")
+            .setMessage("変換候補の単語選択履歴および次フレーズ予測の接続履歴をリセットしますか？\n（※登録済み単語は削除されません）")
+            .setPositiveButton("クリア") { _, _ ->
+                val app = AsrApp.instance
+                app.kanaKanjiEngine.clearHistory()
+                app.nextPhrasePredictor.clearHistory()
+                updateHistorySyncUI()
+                Toast.makeText(this, "学習履歴をクリアしました", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("キャンセル", null)
+            .show()
     }
 
     private fun startEditing(entry: DictionaryEntry) {
