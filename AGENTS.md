@@ -11,11 +11,11 @@ Whenever any code, resource, or configuration change is made to the Android app:
 2. Run [`./deploy.sh`](deploy.sh) and confirm in `adb -s <device> logcat` that `MainActivity` launches and the ReazonSpeech model (`AsrManager`) loads cleanly on **both** devices.
 3. For any UI or IME window change, verify visual behavior (`screencap`) and window/inset geometry (`dumpsys window windows`) on the physical phone. Never silently skip a target.
 
-## ☁️ Mandatory APK Sideload & Google Drive Sync Contract
-Whenever any code, resource, or configuration change is made and the APK is built:
-- **Google Drive Sync for Phone Sideloading**:
-  - Ensure the compiled debug APK (`app/build/outputs/apk/debug/app-debug.apk`) is synced to Google Drive (e.g., `/mnt/chromeos/GoogleDrive/MyDrive/JotInput/app-debug.apk` or via Google Drive plugin/tool) so the user can immediately sideload and test on their physical phone.
-  - [`./deploy.sh`](deploy.sh) automatically checks for ChromeOS Google Drive / shared storage mounts (`/mnt/chromeos/GoogleDrive/MyDrive` or `/mnt/chromeos/MyFiles`) and copies `app-debug.apk` directly into the `JotInput/` directory on every build.
+## ☁️ Mandatory APK Distribution Contract (GitHub CI/CD)
+Whenever any code, resource, or configuration change is pushed or tested:
+- **GitHub Actions Artifact Storage**:
+  - CI/CD (`.github/workflows/android-ci.yml`) automatically builds and archives the compiled debug APK (`app-debug.apk`) as a workflow artifact upon push to `main` or pull request.
+  - Sideloading and verification can download the fresh artifact directly from GitHub Actions runs.
 
 ## 💾 Custom Dictionary Persistence Contract
 - Keep the custom dictionary empty by default on fresh installs.
