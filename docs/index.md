@@ -300,6 +300,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 56. [ASRモデル非依存の自動句読点挿入アーキテクチャ・アイデア提案書](docs/asr_agnostic_punctuation_insertion_ideas.md)
     - CTC/Transducer系（句読点なし）やSeq2Seq/Whisper系（記号揺れ・句点欠落）など任意のASRモデルに依存せず利用できる4大普遍シグナル（表層正規化、Mozc形態素・2D連接行列、VADポーズ長＆終端ピッチ $F_0$、オンデバイスSLMロジット）の整理、6つのコアアイデア（チャンク間遡及境界リライト、読点密度予算モデル等）、および5段階ハイブリッド・カスケード設計仕様。
 
+57. [未消費スパンの言語モデル評価と言語モデル下での多様性確保に関する設計書 (LM Evaluation of Unconsumed Spans & Diversity-Preserving Reranking)](docs/lm_unconsumed_span_evaluation_and_diversity_design.md)
+    - 静的スパンペナルティ（ADR-020）でも「さいしょの」が解決しなかった根本原因（未消費スパンのLM未評価＋`prioritizeByHistory` による部分候補のRank 0昇格＋2フェーズTap-Safeピン留め＋フラットソートによる多様性破壊）の解剖、後方Viterbi最良接尾辞を用いた仮想全文補完LM評価（$\widetilde{W}(U) = U \oplus V^*_{m:n}$）、後方ラティスLSE周辺化エントロピーボーナス（$-\tau_{\text{branch}} \ln M_{\text{eff}}$）、および非LM時の多様性議論（[`prd_and_design_viterbi_nbest_diversity.md`](docs/prd_and_design_viterbi_nbest_diversity.md) / [`prd_and_design_multi_length_prefix_diversity.md`](docs/prd_and_design_multi_length_prefix_diversity.md)）をLM事後確率空間へ一般化した2次元MMR・劣モジュラ多様性選択＋後続エントロピー適応型層化スロットインターリーブの設計仕様。
+
 ---
 
 ## 📂 Source Code Layout
