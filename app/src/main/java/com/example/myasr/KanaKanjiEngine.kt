@@ -22,7 +22,11 @@ data class ConversionCandidate(
     val isPrediction: Boolean = false,
     val source: String = "dict",
     val priority: Float = 0.0f,
-    val obsPenalty: Float = 0.0f
+    val obsPenalty: Float = 0.0f,
+    val firstBunsetsuSurface: String = "",
+    val lastContentWordSurface: String = "",
+    val completedSurface: String = "",
+    val suffixBranchingFactor: Float = 1.0f
 )
 
 class KanaKanjiEngine internal constructor(private val context: Context? = null) {
@@ -696,7 +700,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             addCandidate(ConversionCandidate(surface = halfWidth, reading = normalized, isPrediction = false, source = "system"))
 
             // Sort non-user exact matches by selection history
-            val ranked = prioritizeByHistory(result)
+            val ranked = prioritizeByHistory(result, targetReading = normalized)
             synchronized(queryCache) {
                 if (queryCache.size >= 300) {
                     val oldestKey = queryCache.keys.firstOrNull()
@@ -734,14 +738,18 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         }
         val engineType = KeyboardHeightManager.getRerankEngineType(ctx)
         if (engineType != RerankEngineType.LOCAL_SLM && engineType != RerankEngineType.LOCAL_SLM_1_5B && engineType != RerankEngineType.HYBRID_RERANK) {
-            return null
+            // Also allow fast rerank if AICore is selected but local SLM is ready as instant fallback
+            val isSlmReady = LlmReranker.getInstance(ctx).isReady()
+            if (!isSlmReady) return null
         }
 
         val alpha = KeyboardHeightManager.getSlmWeightAlpha(ctx)
         val lambdaObs = KeyboardHeightManager.getSlmLambdaObs(ctx)
         val gammaUser = KeyboardHeightManager.getSlmGammaUser(ctx)
         val effectiveAlpha = if (engineType == RerankEngineType.HYBRID_RERANK) maxOf(alpha, 0.40f) else alpha
-        val effectiveTargetLength = targetInputLength ?: firstReading?.length
+        val effectiveTargetLength = targetInputLength
+            ?: filtered.filter { !it.isPrediction && it.source != "viterbi_prefix" }.maxOfOrNull { it.reading.length }
+            ?: firstReading?.length
 
         return LlmReranker.getInstance(ctx).tryFastRerankWithStatus(
             contextPrefix = contextPrefix,
@@ -784,12 +792,23 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val lambdaObs = KeyboardHeightManager.getSlmLambdaObs(ctx)
         val gammaUser = KeyboardHeightManager.getSlmGammaUser(ctx)
         val engineType = KeyboardHeightManager.getRerankEngineType(ctx)
-        val effectiveTargetLength = targetInputLength ?: firstReading?.length
+        val effectiveTargetLength = targetInputLength
+            ?: filtered.filter { !it.isPrediction && it.source != "viterbi_prefix" }.maxOfOrNull { it.reading.length }
+            ?: firstReading?.length
 
         return when (engineType) {
             RerankEngineType.NONE -> Pair(filtered, false)
             RerankEngineType.AICORE_NANO_2, RerankEngineType.AICORE_NANO_1 -> {
-                AiCoreReranker.getInstance(ctx).rerankWithStatus(engineType, contextPrefix, filtered, weightAlpha = alpha, lambdaObs = lambdaObs, gammaUser = gammaUser)
+                AiCoreReranker.getInstance(ctx).rerankWithStatus(
+                    engineType,
+                    contextPrefix,
+                    filtered,
+                    weightAlpha = alpha,
+                    lambdaObs = lambdaObs,
+                    gammaUser = gammaUser,
+                    currentShownTop1 = currentShownTop1,
+                    targetInputLength = effectiveTargetLength
+                )
             }
             RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B, RerankEngineType.HYBRID_RERANK -> {
                 val effectiveAlpha = if (engineType == RerankEngineType.HYBRID_RERANK) maxOf(alpha, 0.40f) else alpha
@@ -811,14 +830,17 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     private fun prioritizeByHistory(
-        candidates: List<ConversionCandidate>
+        candidates: List<ConversionCandidate>,
+        targetReading: String = ""
     ): List<ConversionCandidate> {
         val userCandidates = candidates.filter { it.source == "user" }
         val nonUserCandidates = candidates.filter { it.source != "user" }
 
         val sortedNonUser = nonUserCandidates.sortedWith { a, b ->
-            val histA = synchronized(historyLock) { historyMap["${a.reading}:${a.surface}"] ?: 0 }
-            val histB = synchronized(historyLock) { historyMap["${b.reading}:${b.surface}"] ?: 0 }
+            val aIsFull = targetReading.isEmpty() || (a.reading == targetReading && !a.isPrediction && a.source != "viterbi_prefix")
+            val bIsFull = targetReading.isEmpty() || (b.reading == targetReading && !b.isPrediction && b.source != "viterbi_prefix")
+            val histA = if (aIsFull) synchronized(historyLock) { historyMap["${a.reading}:${a.surface}"] ?: 0 } else 0
+            val histB = if (bIsFull) synchronized(historyLock) { historyMap["${b.reading}:${b.surface}"] ?: 0 } else 0
             histB.compareTo(histA)
         }
 
@@ -1213,11 +1235,21 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         scoredFullCandidates.sortBy { it.effectiveCost }
 
         val fullCandidates = scoredFullCandidates.map {
+            val fb = it.path.firstBunsetsuSurface.ifEmpty { it.path.surface }
+            val lastCw = if (it.path.lastContentWordSurface.isNotEmpty() && it.path.lastContentWordSurface != fb) {
+                it.path.lastContentWordSurface
+            } else {
+                ""
+            }
             ConversionCandidate(
                 surface = it.path.surface,
                 reading = reading,
                 isPrediction = false,
-                source = if (it.path.hasUserWord) "user" else "viterbi"
+                source = if (it.path.hasUserWord) "user" else "viterbi",
+                firstBunsetsuSurface = fb,
+                lastContentWordSurface = lastCw,
+                completedSurface = it.path.surface,
+                suffixBranchingFactor = 1.0f
             )
         }
 
@@ -1229,12 +1261,17 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             // Compute Backward DP costs from position m to end of string n
             val betaMin = IntArray(n + 1) { 100000 }
             val branchFactor = IntArray(n + 1) { 0 }
+            val bestSuffixSurface = Array(n + 1) { "" }
+            val effectiveBranching = FloatArray(n + 1) { 1.0f }
             betaMin[n] = 0
+            bestSuffixSurface[n] = ""
 
             for (m in (n - 1) downTo 1) {
                 var bestCost = 100000
+                var bestSurf = reading.substring(m, n)
                 var branchCount = 0
                 var minSuffixWordCost = 100000
+                val transitionCosts = mutableListOf<Int>()
 
                 var node: TrieNode? = root
                 var j = m
@@ -1261,8 +1298,10 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                 if (j == n) matrix.getTransitionCost(tok.rid, 0) else 0
                             } else 0
                             val futureCost = tok.cost - lengthBonus + transCost + betaMin[j]
+                            transitionCosts.add(futureCost)
                             if (futureCost < bestCost) {
                                 bestCost = futureCost
+                                bestSurf = tok.surface + bestSuffixSurface[j]
                             }
                             if (tok.cost < minSuffixWordCost) {
                                 minSuffixWordCost = tok.cost
@@ -1274,7 +1313,19 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     }
                 }
                 betaMin[m] = bestCost.coerceAtMost(100000)
+                bestSuffixSurface[m] = bestSurf
                 branchFactor[m] = branchCount
+
+                if (transitionCosts.isNotEmpty() && bestCost < 100000) {
+                    var sumExp = 0.0f
+                    for (c in transitionCosts) {
+                        val diff = (c - bestCost).toFloat()
+                        if (diff <= 6000.0f) {
+                            sumExp += kotlin.math.exp(-diff / 1500.0f)
+                        }
+                    }
+                    effectiveBranching[m] = sumExp.coerceAtLeast(1.0f)
+                }
             }
 
             // Gather candidate prefix surfaces across horizons m in (n-1 downTo 2)
@@ -1368,12 +1419,22 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
             candidatePrefixList.sortBy { it.score }
             for (sp in candidatePrefixList) {
+                val matchingFull = scoredFullCandidates.firstOrNull {
+                    it.path.firstBunsetsuSurface == sp.surface && it.path.firstBunsetsuReadingLen == sp.readingLen
+                }
+                val compSurface = matchingFull?.path?.surface ?: (sp.surface + bestSuffixSurface[sp.readingLen])
+                val branchFactorVal = if (sp.readingLen in 1 until n) effectiveBranching[sp.readingLen] else 1.0f
+
                 prefixCandidates.add(
                     ConversionCandidate(
                         surface = sp.surface,
                         reading = reading.substring(0, sp.readingLen),
                         isPrediction = false,
-                        source = "viterbi_prefix"
+                        source = "viterbi_prefix",
+                        firstBunsetsuSurface = sp.surface,
+                        lastContentWordSurface = "",
+                        completedSurface = compSurface,
+                        suffixBranchingFactor = branchFactorVal
                     )
                 )
             }

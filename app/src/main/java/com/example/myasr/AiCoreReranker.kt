@@ -63,11 +63,21 @@ class AiCoreReranker private constructor(private val context: Context) {
         candidates: List<ConversionCandidate>,
         weightAlpha: Float = KeyboardHeightManager.DEFAULT_SLM_WEIGHT_ALPHA,
         lambdaObs: Float = KeyboardHeightManager.DEFAULT_SLM_LAMBDA_OBS,
-        gammaUser: Float = KeyboardHeightManager.DEFAULT_SLM_GAMMA_USER
+        gammaUser: Float = KeyboardHeightManager.DEFAULT_SLM_GAMMA_USER,
+        currentShownTop1: String? = null,
+        targetInputLength: Int? = null
     ): Pair<List<ConversionCandidate>, Boolean> {
         if (!isSupported() || candidates.size <= 1) {
             // AICore not supported on this device/runtime -> Fall back directly to Local SLM
-            return LlmReranker.getInstance(context).rerankWithStatus(contextPrefix, candidates, weightAlpha, lambdaObs, gammaUser)
+            return LlmReranker.getInstance(context).rerankWithStatus(
+                contextPrefix = contextPrefix,
+                candidates = candidates,
+                weightAlpha = weightAlpha,
+                lambdaObs = lambdaObs,
+                gammaUser = gammaUser,
+                currentShownTop1 = currentShownTop1,
+                targetInputLength = targetInputLength
+            )
         }
 
         try {
@@ -92,7 +102,15 @@ class AiCoreReranker private constructor(private val context: Context) {
             // When AICore service binding is not yet active, we gracefully fall back to local SLM.
             val localSlm = LlmReranker.getInstance(context)
             if (localSlm.isReady()) {
-                val localResult = localSlm.rerankWithStatus(contextPrefix, candidates, weightAlpha, lambdaObs, gammaUser)
+                val localResult = localSlm.rerankWithStatus(
+                    contextPrefix = contextPrefix,
+                    candidates = candidates,
+                    weightAlpha = weightAlpha,
+                    lambdaObs = lambdaObs,
+                    gammaUser = gammaUser,
+                    currentShownTop1 = currentShownTop1,
+                    targetInputLength = targetInputLength
+                )
                 if (localResult.second) {
                     return localResult
                 }
@@ -102,7 +120,15 @@ class AiCoreReranker private constructor(private val context: Context) {
             return Pair(candidates, false)
         } catch (e: Exception) {
             Log.w(TAG, "AICore reranking exception: ${e.message}, falling back to Local SLM")
-            return LlmReranker.getInstance(context).rerankWithStatus(contextPrefix, candidates, weightAlpha, lambdaObs, gammaUser)
+            return LlmReranker.getInstance(context).rerankWithStatus(
+                contextPrefix = contextPrefix,
+                candidates = candidates,
+                weightAlpha = weightAlpha,
+                lambdaObs = lambdaObs,
+                gammaUser = gammaUser,
+                currentShownTop1 = currentShownTop1,
+                targetInputLength = targetInputLength
+            )
         }
     }
 }

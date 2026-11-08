@@ -1,6 +1,7 @@
 package com.example.myasr
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -64,8 +65,10 @@ class SpanAwareBayesianRerankingEvaluationTest {
 
         // Crucial verification: "最初の" MUST be at Rank 1!
         assertEquals("最初の", reranked[0].surface)
-        assertEquals("最初", reranked[1].surface)
-        assertEquals("才女の", reranked[2].surface)
+        // With 2D stem diversity and det-sub prevention, the alternative full-span candidate "才女の"
+        // is prioritized at Rank 2 over the duplicate-stem truncated candidate "最初"
+        assertEquals("才女の", reranked[1].surface)
+        assertEquals("最初", reranked[2].surface)
         assertEquals("最初の一歩", reranked[3].surface)
     }
 
@@ -277,5 +280,107 @@ class SpanAwareBayesianRerankingEvaluationTest {
 
         val reranked = LlmReranker.scoreAndRankPool(pool, scores, null, 0.20f, 0.50f, 3.00f, "さいしょの".length)
         assertEquals("User dictionary candidate MUST stay at Rank 1 via Intra-Word Surprisal Clamping", "栗原", reranked[0].surface)
+    }
+
+    @Test
+    fun testHighBranchingSuffixPreservesPartialCandidatesAnd2DDiversity() {
+        // Input: "さいとうこうき" (n = 7)
+        // High effective branching factor for "+こうき" (M_eff >= 1.80)
+        val full1 = ConversionCandidate(
+            surface = "斎藤工機",
+            reading = "さいとうこうき",
+            source = "viterbi",
+            firstBunsetsuSurface = "斎藤",
+            lastContentWordSurface = "工機"
+        )
+        val full2SameStem = ConversionCandidate(
+            surface = "斎藤幸喜",
+            reading = "さいとうこうき",
+            source = "viterbi",
+            firstBunsetsuSurface = "斎藤",
+            lastContentWordSurface = "幸喜"
+        )
+        val full3Diverse = ConversionCandidate(
+            surface = "斉藤幸喜",
+            reading = "さいとうこうき",
+            source = "viterbi",
+            firstBunsetsuSurface = "斉藤",
+            lastContentWordSurface = "幸喜"
+        )
+        val partialSaitou1 = ConversionCandidate(
+            surface = "斎藤",
+            reading = "さいとう",
+            source = "viterbi_prefix",
+            firstBunsetsuSurface = "斎藤",
+            completedSurface = "斎藤工機",
+            suffixBranchingFactor = 6.5f
+        )
+        val partialSaitou2 = ConversionCandidate(
+            surface = "斉藤",
+            reading = "さいとう",
+            source = "viterbi_prefix",
+            firstBunsetsuSurface = "斉藤",
+            completedSurface = "斉藤幸喜",
+            suffixBranchingFactor = 6.5f
+        )
+
+        val pool = listOf(full1, full2SameStem, full3Diverse, partialSaitou1, partialSaitou2)
+        // Raw NLLs:
+        // full1 (斎藤工機) = 10.0
+        // full2SameStem (斎藤幸喜) = 10.2
+        // full3Diverse (斉藤幸喜) = 10.5
+        // partialSaitou1 (斎藤) = 10.0 (virtual completed: 斎藤工機)
+        // partialSaitou2 (斉藤) = 10.5 (virtual completed: 斉藤幸喜)
+        val scores = floatArrayOf(10.0f, 10.2f, 10.5f, 10.0f, 10.5f)
+
+        val reranked = LlmReranker.scoreAndRankPool(
+            topPool = pool,
+            scores = scores,
+            currentShownTop1 = null,
+            weightAlpha = 0.20f,
+            lambdaObs = 0.50f,
+            gammaUser = 3.00f,
+            targetInputLength = 7
+        )
+
+        // 1. Slots 1 and 2 MUST be full candidates with 2D diversity (different first stems!):
+        // Slot 1: "斎藤工機"
+        // Slot 2: "斉藤幸喜" (penalizes "斎藤幸喜" due to duplicate first stem "斎藤")
+        assertEquals("斎藤工機", reranked[0].surface)
+        assertEquals("斉藤幸喜", reranked[1].surface)
+
+        // 2. Slots 3 and 4 MUST be partial candidates with diverse stems:
+        val partialsInTop4 = reranked.slice(2..3).map { it.surface }
+        assertTrue("Top partial candidates must be preserved in Slots 3-4", partialsInTop4.contains("斎藤"))
+        assertTrue("Top partial candidates must be preserved in Slots 3-4", partialsInTop4.contains("斉藤"))
+    }
+
+    @Test
+    fun testEnginePrioritizeByHistoryDoesNotLetPartialCandidateOvertakeFullSpan() {
+        val engine = KanaKanjiEngine()
+        val stream = javaClass.classLoader?.getResourceAsStream("mozc/base_dictionary.tsv")
+        if (stream != null) {
+            engine.initializeWithStream(stream)
+        } else {
+            engine.registerCanonicalVocabulary()
+        }
+
+        // 1. User previously committed "さいしょ" -> "最初" 10 times
+        val stemCand = ConversionCandidate(surface = "最初", reading = "さいしょ", source = "viterbi_prefix")
+        for (i in 1..10) {
+            engine.commitCandidate(stemCand)
+        }
+
+        // 2. Now user types "さいしょの" (length 5)
+        val candidates = engine.getBaseCandidates("さいしょの")
+        assertTrue("Candidates must not be empty", candidates.isNotEmpty())
+
+        // 3. Top candidate must be a full-span candidate, NOT the partial candidate "最初"!
+        val top1 = candidates.first()
+        assertTrue("Top candidate must be full span", top1.reading == "さいしょの" && !top1.isPrediction && top1.source != "viterbi_prefix")
+        assertFalse("Partial candidate '最初' must not overtake full candidates despite history", top1.surface == "最初")
+        val candidateSurfaces = candidates.map { it.surface }
+        assertTrue("Expected full candidates like '最初の' or '再書の' in candidate list",
+            candidateSurfaces.contains("最初の") || candidateSurfaces.contains("再書の"))
     }
 }
