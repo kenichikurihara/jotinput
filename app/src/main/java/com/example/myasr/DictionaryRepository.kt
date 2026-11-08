@@ -101,6 +101,33 @@ class DictionaryRepository(private val context: Context) {
     }
 
     @Synchronized
+    fun mergeEntries(remoteEntries: List<DictionaryEntry>): Int {
+        var addedOrUpdatedCount = 0
+        for (remote in remoteEntries) {
+            val existingIndex = entries.indexOfFirst {
+                (it.word.equals(remote.word, ignoreCase = true) && it.reading == remote.reading) ||
+                (remote.isEnglishOnlyEntry && it.isEnglishOnlyEntry && it.reading.equals(remote.reading, ignoreCase = true))
+            }
+            if (existingIndex >= 0) {
+                // If remote has higher priority, adopt it
+                val existing = entries[existingIndex]
+                val bestPriority = if (remote.priority == Priority.HIGH || existing.priority == Priority.HIGH) Priority.HIGH else Priority.NORMAL
+                if (existing.priority != bestPriority || (!existing.isEnabled && remote.isEnabled)) {
+                    entries[existingIndex] = existing.copy(priority = bestPriority, isEnabled = existing.isEnabled || remote.isEnabled)
+                    addedOrUpdatedCount++
+                }
+            } else {
+                entries.add(remote)
+                addedOrUpdatedCount++
+            }
+        }
+        if (addedOrUpdatedCount > 0) {
+            save()
+        }
+        return addedOrUpdatedCount
+    }
+
+    @Synchronized
     private fun save(): Boolean {
         return try {
             val file = getFile()
@@ -108,7 +135,12 @@ class DictionaryRepository(private val context: Context) {
             for (entry in entries) {
                 jsonArray.put(entry.toJson())
             }
-            file.writeText(jsonArray.toString(2), Charsets.UTF_8)
+            val tempFile = File(file.parentFile, "${file.name}.tmp")
+            tempFile.writeText(jsonArray.toString(2), Charsets.UTF_8)
+            if (!tempFile.renameTo(file)) {
+                tempFile.copyTo(file, overwrite = true)
+                tempFile.delete()
+            }
             Log.d(TAG, "Saved ${entries.size} dictionary entries")
             true
         } catch (e: Exception) {

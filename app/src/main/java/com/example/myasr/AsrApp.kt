@@ -29,6 +29,8 @@ class AsrApp : Application() {
         private set
     lateinit var kanaKanjiEngine: KanaKanjiEngine
         private set
+    lateinit var nextPhrasePredictor: NextPhrasePredictor
+        private set
     lateinit var llmReranker: LlmReranker
         private set
     lateinit var modelWarmUpManager: ModelWarmUpManager
@@ -49,6 +51,7 @@ class AsrApp : Application() {
         dictionaryRepository = DictionaryRepository(this)
         hotwordsGenerator = HotwordsGenerator(this)
         kanaKanjiEngine = KanaKanjiEngine.getInstance(this)
+        nextPhrasePredictor = NextPhrasePredictor.getInstance(this)
         postProcessor = DictionaryPostProcessor { kanaKanjiEngine }
         contextAwareProcessor = ContextAwareProcessor { kanaKanjiEngine }
         asrManager = AsrManager(this)

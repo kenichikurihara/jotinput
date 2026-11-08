@@ -4,6 +4,11 @@ import android.content.Context
 import android.util.Log
 import android.util.LruCache
 import org.json.JSONObject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileInputStream
@@ -46,10 +51,15 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     private val root = TrieNode()
-    private val historyCache = LruCache<String, Int>(300)
-    private val queryCache = LruCache<String, List<ConversionCandidate>>(300)
+    // In-memory access-ordered LinkedHashMap to guarantee consistent JVM/Android LRU behavior and null-safety
+    private val historyMap = LinkedHashMap<String, Int>(256, 0.75f, true)
+    private val queryCache = LinkedHashMap<String, List<ConversionCandidate>>(300, 0.75f, true)
     private val historyFile = context?.let { File(it.filesDir, "ime_history.json") }
     private val dbHelper = context?.let { DictionaryDatabaseHelper.getInstance(it) }
+
+    private val ioScope = CoroutineScope(Dispatchers.IO)
+    private var saveHistoryJob: Job? = null
+    private val historyLock = Any()
 
     @Volatile
     private var connectionMatrix: ConnectionMatrix? = null
@@ -81,6 +91,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     fun getMmapDictionary(): MmapDictionary? = mmapDictionary
 
     companion object {
+        const val MAX_HISTORY_WORDS = 10_000
+
         @Volatile
         private var instance: KanaKanjiEngine? = null
 
@@ -334,7 +346,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     fun clearMemoryCache() {
-        queryCache.evictAll()
+        synchronized(queryCache) {
+            queryCache.clear()
+        }
     }
 
     @Synchronized
@@ -450,8 +464,10 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val normalized = JapaneseKanaUtils.normalizeReading(rawReading)
 
         // Retrieve base candidates from queryCache or generate them
-        return queryCache.get(normalized) ?: run {
-            val result = mutableListOf<ConversionCandidate>()
+        val cached = synchronized(queryCache) { queryCache[normalized] }
+        if (cached != null) return cached
+
+        val result = mutableListOf<ConversionCandidate>()
             val seenSurfaces = HashSet<String>()
 
             fun addCandidate(cand: ConversionCandidate) {
@@ -508,8 +524,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             }
 
             val otherExact = exactTrieWords.filter { it.source != "user" }.sortedWith { a, b ->
-                val histA = historyCache.get("${normalized}:${a.surface}") ?: 0
-                val histB = historyCache.get("${normalized}:${b.surface}") ?: 0
+                val histA = synchronized(historyLock) { historyMap["${normalized}:${a.surface}"] ?: 0 }
+                val histB = synchronized(historyLock) { historyMap["${normalized}:${b.surface}"] ?: 0 }
                 if (histA != histB) {
                     histB.compareTo(histA)
                 } else {
@@ -530,8 +546,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     }
                 }
                 voicedExactWords.sortWith { a, b ->
-                    val histA = historyCache.get("${a.first}:${a.second.surface}") ?: 0
-                    val histB = historyCache.get("${b.first}:${b.second.surface}") ?: 0
+                    val histA = synchronized(historyLock) { historyMap["${a.first}:${a.second.surface}"] ?: 0 }
+                    val histB = synchronized(historyLock) { historyMap["${b.first}:${b.second.surface}"] ?: 0 }
                     if (histA != histB) {
                         histB.compareTo(histA)
                     } else {
@@ -569,8 +585,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     }
                 }
                 voicedPrefixWords.sortWith { a, b ->
-                    val histA = historyCache.get("${a.first}:${a.second.surface}") ?: 0
-                    val histB = historyCache.get("${b.first}:${b.second.surface}") ?: 0
+                    val histA = synchronized(historyLock) { historyMap["${a.first}:${a.second.surface}"] ?: 0 }
+                    val histB = synchronized(historyLock) { historyMap["${b.first}:${b.second.surface}"] ?: 0 }
                     if (histA != histB) {
                         histB.compareTo(histA)
                     } else {
@@ -623,8 +639,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     }
                 }
                 flickExactWords.sortWith { a, b ->
-                    val histA = historyCache.get("${a.first}:${a.second.surface}") ?: 0
-                    val histB = historyCache.get("${b.first}:${b.second.surface}") ?: 0
+                    val histA = synchronized(historyLock) { historyMap["${a.first}:${a.second.surface}"] ?: 0 }
+                    val histB = synchronized(historyLock) { historyMap["${b.first}:${b.second.surface}"] ?: 0 }
                     if (histA != histB) {
                         histB.compareTo(histA)
                     } else {
@@ -681,9 +697,14 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
             // Sort non-user exact matches by selection history
             val ranked = prioritizeByHistory(result)
-            queryCache.put(normalized, ranked)
-            ranked
-        }
+            synchronized(queryCache) {
+                if (queryCache.size >= 300) {
+                    val oldestKey = queryCache.keys.firstOrNull()
+                    if (oldestKey != null) queryCache.remove(oldestKey)
+                }
+                queryCache[normalized] = ranked
+            }
+            return ranked
     }
 
     /**
@@ -796,8 +817,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val nonUserCandidates = candidates.filter { it.source != "user" }
 
         val sortedNonUser = nonUserCandidates.sortedWith { a, b ->
-            val histA = historyCache.get("${a.reading}:${a.surface}") ?: 0
-            val histB = historyCache.get("${b.reading}:${b.surface}") ?: 0
+            val histA = synchronized(historyLock) { historyMap["${a.reading}:${a.surface}"] ?: 0 }
+            val histB = synchronized(historyLock) { historyMap["${b.reading}:${b.surface}"] ?: 0 }
             histB.compareTo(histA)
         }
 
@@ -889,10 +910,67 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
      */
     fun commitCandidate(candidate: ConversionCandidate) {
         val key = "${candidate.reading}:${candidate.surface}"
-        val currentCount = historyCache.get(key) ?: 0
-        historyCache.put(key, currentCount + 1)
+        synchronized(historyLock) {
+            val currentCount = historyMap[key] ?: 0
+            historyMap[key] = (currentCount + 1).coerceAtMost(100_000)
+            if (historyMap.size > MAX_HISTORY_WORDS) {
+                val oldestKey = historyMap.keys.firstOrNull()
+                if (oldestKey != null) historyMap.remove(oldestKey)
+            }
+        }
         clearMemoryCache()
-        saveHistory()
+        scheduleSaveHistory()
+    }
+
+    /**
+     * Returns an immutable snapshot copy of current Unigram history.
+     */
+    fun getHistorySnapshot(): Map<String, Int> {
+        return synchronized(historyLock) {
+            LinkedHashMap(historyMap)
+        }
+    }
+
+    /**
+     * Safely merges remote unigram history entries using idempotent Max-Merge.
+     */
+    fun mergeHistory(remoteHistory: Map<String, Int>) {
+        if (remoteHistory.isEmpty()) return
+        synchronized(historyLock) {
+            for ((key, remoteCount) in remoteHistory) {
+                if (key.isBlank() || remoteCount <= 0) continue
+                val localCount = historyMap[key] ?: 0
+                val mergedCount = maxOf(localCount, remoteCount).coerceAtMost(100_000)
+                historyMap[key] = mergedCount
+            }
+            while (historyMap.size > MAX_HISTORY_WORDS) {
+                val oldestKey = historyMap.keys.firstOrNull() ?: break
+                historyMap.remove(oldestKey)
+            }
+        }
+        clearMemoryCache()
+        scheduleSaveHistory(immediate = true)
+    }
+
+    /**
+     * Clears all unigram user selection history.
+     */
+    fun clearHistory() {
+        synchronized(historyLock) {
+            historyMap.clear()
+        }
+        clearMemoryCache()
+        scheduleSaveHistory(immediate = true)
+    }
+
+    private fun scheduleSaveHistory(immediate: Boolean = false) {
+        saveHistoryJob?.cancel()
+        saveHistoryJob = ioScope.launch {
+            if (!immediate) {
+                delay(1200L) // 1.2s debounce to coalesce fast continuous typing commits
+            }
+            saveHistory()
+        }
     }
 
     private fun loadHistory() {
@@ -902,9 +980,12 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 val jsonStr = file.readText(Charsets.UTF_8)
                 val json = JSONObject(jsonStr)
                 val keys = json.keys()
-                while (keys.hasNext()) {
-                    val k = keys.next()
-                    historyCache.put(k, json.optInt(k, 1))
+                synchronized(historyLock) {
+                    historyMap.clear()
+                    while (keys.hasNext()) {
+                        val k = keys.next()
+                        historyMap[k] = json.optInt(k, 1)
+                    }
                 }
             }
         } catch (e: Exception) {
@@ -916,11 +997,18 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val file = historyFile ?: return
         try {
             val json = JSONObject()
-            val snapshot = historyCache.snapshot()
+            val snapshot = synchronized(historyLock) {
+                LinkedHashMap(historyMap)
+            }
             for ((k, v) in snapshot) {
                 json.put(k, v)
             }
-            file.writeText(json.toString(), Charsets.UTF_8)
+            val tempFile = File(file.parentFile, "${file.name}.tmp")
+            tempFile.writeText(json.toString(), Charsets.UTF_8)
+            if (!tempFile.renameTo(file)) {
+                tempFile.copyTo(file, overwrite = true)
+                tempFile.delete()
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Error saving history: ${e.message}")
         }
