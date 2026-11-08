@@ -26,6 +26,7 @@ This document records the core architectural decisions, design rationales, criti
    - [ADR-017: Mozc Bigram Connection Matrix APK Bundling and Continuous Remote Sync Policy](#adr-017-mozc-bigram-connection-matrix-apk-bundling-and-continuous-remote-sync-policy)
    - [ADR-018: LM-First Joint Scoring Architecture & Intra-Word Surprisal Clamping for Custom Dictionary](#adr-018-lm-first-joint-scoring-architecture--intra-word-surprisal-clamping-for-custom-dictionary)
    - [ADR-019: Principled Observation Normalization and Context-Aware SLM Reranking for English QWERTY Typing](#adr-019-principled-observation-normalization-and-context-aware-slm-reranking-for-english-qwerty-typing)
+   - [ADR-020: Span-Aware Bayesian Scoring, Unconsumed Suffix Penalization & Subsumption Dominance for Full-Span Priority](#adr-020-span-aware-bayesian-scoring-unconsumed-suffix-penalization--subsumption-dominance-for-full-span-priority)
 2. [Technical Findings & Post-Mortems](#2-technical-findings--post-mortems)
    - [Finding 1: Sherpa-ONNX `cjkchar` FST Hotword Space-Separation Bug](#finding-1-sherpa-onnx-cjkchar-fst-hotword-space-separation-bug)
    - [Finding 2: 5-Fold Stratified Cross-Validation on 1,000 Tricky Japanese Sentences](#finding-2-5-fold-stratified-cross-validation-on-1000-tricky-japanese-sentences)
@@ -1842,6 +1843,36 @@ Root-cause analysis revealed that:
    In [`llm_reranker.cc`](app/src/main/cpp/llm_reranker.cc), when context does not end in whitespace, evaluate both unspaced and leading-space tokens (`llama_tokenize(" " + cand)`), selecting the minimum NLL.
 4. **Strict Separation of Exact vs. Approximate User Words**:
    Intra-word surprisal clamping and user priority boosts are strictly restricted to exact matches (`obsPenalty == 0.0f`). Approximate or typo user matches must compete on raw Bayesian likelihood.
+
+---
+
+## ADR-020: Span-Aware Bayesian Scoring, Unconsumed Suffix Penalization & Subsumption Dominance for Full-Span Priority
+
+### 1. Context & Motivation
+1. **Partial-Prefix Priority Inversion on Japanese Particle Sequences (`さいしょの` $\to$ `最初` > `最初の`)**:
+   Under LM-First causal log-likelihood scoring, autoregressive negative log-likelihood is strictly monotonically non-decreasing ($\text{NLL}(W \oplus V \mid C) = \text{NLL}(W \mid C) + \text{NLL}(V \mid C, W) > \text{NLL}(W \mid C)$). When the candidate pool contains both full-span candidates ($m=n$, e.g. `最初の`) and partial-prefix candidates ($m<n$, e.g. `最初`), evaluating raw NLL without accounting for the unconsumed suffix span causes truncated stem words to systematically usurp Rank #1.
+2. **English Suffix and Contraction Degradation (`cant` $\to$ `can` > `can't`, `an` $\to$ `and`)**:
+   In English QWERTY mode, BPE tokenization splits contractions (`[" can", "'t"]`) and inflected forms (`[" talk", "ed"]`) into 2 tokens, while stems (`" can"`, `" talk"`) are single tokens with artificially lower NLLs. Simultaneously, short words (`an`) risk being overtaken by predictive extensions (`and`) if uninputted extension costs are omitted.
+
+### 2. Architecture & Decision
+1. **Unconsumed Span Penalization ($\Phi_{\text{span}}$)**:
+   For any candidate $W_i$ whose consumed span $m_i$ is less than the observed input span $n$:
+   $$\Phi_{\text{span}}(W_i) = \mu_{\text{span}} \cdot (n - m_i) + \kappa_{\text{commit}}$$
+   where $\mu_{\text{span}} = 2.20\text{ nats}$ (Japanese) / $1.40\text{ nats}$ (English) and $\kappa_{\text{commit}} = 1.50\text{ nats}$.
+2. **Subsumption Dominance Rule ($\Phi_{\text{sub}}$)**:
+   When a full-span candidate $W_j$ ($m_j = n$) subsumes a partial candidate $U_i$ ($m_i < n$) as a prefix, we compute the tail conditional surprisal:
+   $$\bar{s}_{\text{tail}} = \frac{\text{rawNll}(W_j) - \text{rawNll}(U_i)}{n - m_i}$$
+   If $\bar{s}_{\text{tail}} \le \theta_{\text{coherent}} = 4.0\text{ nats}$, the connection is grammatically natural (e.g. `最初の`, `can't`), and $U_i$'s effective NLL is clamped:
+   $$\text{EffectiveNLL}^*(U_i) = \max\Bigl( \text{rawNll}(U_i) + \Phi_{\text{span}}(U_i),\; \text{rawNll}(W_j) + \delta_{\text{sub}} \Bigr) \quad (\delta_{\text{sub}} = 0.80\text{ nats})$$
+   When the full-span candidate is a broken chimera ($\bar{s}_{\text{tail}} > 4.0\text{ nats}$), the rule fails-safe, promoting the clean stem $U_i$ to rescue the user.
+3. **Uninputted Prefix Extension Cost ($\Phi_{\text{ext}}$)**:
+   For predictive extension candidates ($m_i > n$ or `isPrediction == true`), apply $\Phi_{\text{ext}} = \lambda_{\text{ext}} \cdot (m_i - n)$ ($\lambda_{\text{ext}} = 1.20\text{ nats}$), protecting fully typed short words (`an`, `in`, `the`) from premature auto-completions (`and`, `into`, `there`).
+4. **Unified Cross-Modal Implementation**:
+   Implemented natively in `LlmReranker.scoreAndRankPool()`, seamlessly serving both synchronous Fast-Path (< 0.1ms) and background SLM re-ranking across Japanese Kana-Kanji and English QWERTY typing.
+
+### 3. Verification & Compliance
+- **Test Suite**: [`SpanAwareBayesianRerankingEvaluationTest.kt`](app/src/test/java/com/example/myasr/SpanAwareBayesianRerankingEvaluationTest.kt) passing 100% across all 8 test suites (Japanese full-span priority, particle chains, chimera fail-safe, English apostrophe contractions, exact short-word protection, inflection suffixes, and ADR-011/ADR-018 non-regression).
+- **Dual-Target Verification**: Deployed and verified on both Pixel 10 Pro and ARCVM via `./deploy.sh`.
 
 ---
 

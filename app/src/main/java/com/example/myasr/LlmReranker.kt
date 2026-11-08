@@ -58,6 +58,153 @@ class LlmReranker private constructor(private val context: Context) {
                 instance ?: LlmReranker(context.applicationContext).also { instance = it }
             }
         }
+
+        /**
+         * Unified Span-Aware Bayesian Scoring & Subsumption Dominance Engine.
+         * Evaluates candidates across full/partial/predictive spans with principled unconsumed penalties
+         * and intra-word surprisal clamping for user dictionaries.
+         */
+        internal fun scoreAndRankPool(
+            topPool: List<ConversionCandidate>,
+            scores: FloatArray,
+            currentShownTop1: String?,
+            weightAlpha: Float,
+            lambdaObs: Float,
+            gammaUser: Float,
+            targetInputLength: Int? = null,
+            hysteresisDelta: Float = -1.20f
+        ): List<ConversionCandidate> {
+            if (topPool.isEmpty()) return emptyList()
+
+            // 1. Detect if candidates are English or Japanese
+            val firstCand = topPool.first()
+            val isEnglishPool = firstCand.source in listOf("user_english", "english_typo", "english_cap", "english_gec", "raw") ||
+                    (firstCand.reading.isNotEmpty() && firstCand.reading.all { it.code < 128 && (it.isLetter() || it == '\'' || it == '-') })
+
+            // 2. Compute effective target input length N
+            val n: Int = if (targetInputLength != null && targetInputLength > 0) {
+                targetInputLength
+            } else if (isEnglishPool) {
+                val letters = firstCand.reading.filter { it.isLetter() }.length
+                if (letters > 0) letters else firstCand.reading.length
+            } else {
+                val fullCand = topPool.firstOrNull { it.source != "viterbi_prefix" && !it.isPrediction && it.reading.isNotEmpty() }
+                    ?: topPool.firstOrNull { it.reading.isNotEmpty() }
+                fullCand?.reading?.length ?: 0
+            }
+
+            val muSpan = if (isEnglishPool) 1.40f else 2.20f
+            val kappaCommit = 1.50f
+            val lambdaExt = 1.20f
+            val thetaCoherent = 4.0f
+            val deltaSub = 0.80f
+
+            // 3. Compute consumed lengths M_i and span deltas
+            val mLengths = IntArray(topPool.size) { i ->
+                val cand = topPool[i]
+                if (isEnglishPool) {
+                    if (cand.source == "raw") n else cand.surface.filter { it.isLetter() }.length
+                } else {
+                    if (cand.reading.isNotEmpty()) cand.reading.length else cand.surface.length
+                }
+            }
+            val unconsumedDeltas = IntArray(topPool.size) { i -> maxOf(0, n - mLengths[i]) }
+            val extDeltas = IntArray(topPool.size) { i -> maxOf(0, mLengths[i] - n) }
+
+            // 4. Find sysBestNll for user dictionary Intra-Word Surprisal Clamping
+            val sysNlls = topPool.mapIndexedNotNull { index, cand ->
+                if (cand.source != "user" && cand.source != "user_english") scores[index] else null
+            }
+            val sysBestNll = sysNlls.minOrNull() ?: 15.0f
+
+            // 5. Identify full-span candidates for prefix subsumption checks
+            val fullSpanIndices = topPool.indices.filter {
+                unconsumedDeltas[it] == 0 && extDeltas[it] == 0 && !topPool[it].isPrediction
+            }
+
+            val scored = topPool.mapIndexed { index, candidate ->
+                val rawNll = scores[index]
+                val isUser = candidate.source == "user" || candidate.source == "user_english"
+                val isExactUser = isUser && candidate.obsPenalty == 0.0f
+                val deltaUnconsumed = unconsumedDeltas[index]
+                val deltaExt = extDeltas[index]
+
+                val effectiveNll: Float
+                if (isExactUser) {
+                    val priority = if (candidate.priority > 0f) candidate.priority else 3.0f
+                    val clampedNll = minOf(sysBestNll, rawNll)
+                    val userBoost = gammaUser * priority
+                    val tieBreaker = 0.05f * rawNll
+                    effectiveNll = clampedNll - userBoost + tieBreaker
+                } else {
+                    // (a) Unconsumed span penalty
+                    val spanPenalty = if (deltaUnconsumed > 0 && n > 0) {
+                        muSpan * deltaUnconsumed + kappaCommit
+                    } else {
+                        0.0f
+                    }
+
+                    // (b) Subsumption Dominance Rule
+                    var clampedBaseNll = rawNll + spanPenalty
+                    if (deltaUnconsumed > 0 && fullSpanIndices.isNotEmpty()) {
+                        val candSurfaceClean = if (isEnglishPool) candidate.surface.filter { it.isLetter() }.lowercase() else candidate.surface
+                        val candReadingClean = if (isEnglishPool) candSurfaceClean else candidate.reading
+
+                        var bestSubsumingNll: Float? = null
+                        for (fIdx in fullSpanIndices) {
+                            val fullCand = topPool[fIdx]
+                            val fullSurfaceClean = if (isEnglishPool) fullCand.surface.filter { it.isLetter() }.lowercase() else fullCand.surface
+                            val fullReadingClean = if (isEnglishPool) fullSurfaceClean else fullCand.reading
+
+                            val isSubsumed = if (isEnglishPool) {
+                                fullSurfaceClean.startsWith(candSurfaceClean) && fullSurfaceClean.length > candSurfaceClean.length
+                            } else {
+                                (fullSurfaceClean.startsWith(candSurfaceClean) && fullSurfaceClean != candSurfaceClean) ||
+                                (fullReadingClean.startsWith(candReadingClean) && fullReadingClean != candReadingClean)
+                            }
+
+                            if (isSubsumed) {
+                                val fullNll = scores[fIdx]
+                                val tailSurprisal = (fullNll - rawNll) / deltaUnconsumed.toFloat()
+                                if (tailSurprisal <= thetaCoherent) {
+                                    if (bestSubsumingNll == null || fullNll < bestSubsumingNll) {
+                                        bestSubsumingNll = fullNll
+                                    }
+                                }
+                            }
+                        }
+                        if (bestSubsumingNll != null) {
+                            clampedBaseNll = maxOf(clampedBaseNll, bestSubsumingNll + deltaSub)
+                        }
+                    }
+
+                    // (c) Uninputted prefix extension cost
+                    val extPenalty = if (deltaExt > 0 && n > 0) {
+                        lambdaExt * deltaExt
+                    } else if (candidate.isPrediction) {
+                        lambdaExt * 1.0f
+                    } else {
+                        0.0f
+                    }
+
+                    effectiveNll = clampedBaseNll + extPenalty
+                }
+
+                val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f
+                val rankCost = (index * 1000.0f) / 1000.0f
+
+                val hysteresisBonus = if (currentShownTop1 != null && candidate.surface == currentShownTop1 && !isExactUser) {
+                    hysteresisDelta
+                } else {
+                    0.0f
+                }
+
+                val finalScore = (1.0f - weightAlpha) * (effectiveNll + effectiveObs + hysteresisBonus) + weightAlpha * rankCost
+                Pair(candidate, finalScore)
+            }
+
+            return scored.sortedBy { it.second }.map { it.first }
+        }
     }
 
     /**
@@ -228,7 +375,8 @@ class LlmReranker private constructor(private val context: Context) {
         currentShownTop1: String? = null,
         weightAlpha: Float = KeyboardHeightManager.DEFAULT_SLM_WEIGHT_ALPHA,
         lambdaObs: Float = KeyboardHeightManager.DEFAULT_SLM_LAMBDA_OBS,
-        gammaUser: Float = KeyboardHeightManager.DEFAULT_SLM_GAMMA_USER
+        gammaUser: Float = KeyboardHeightManager.DEFAULT_SLM_GAMMA_USER,
+        targetInputLength: Int? = null
     ): FastRerankResult? {
         if (state != State.READY || !nativeLibraryLoaded || candidates.size <= 1) {
             return null
@@ -288,42 +436,17 @@ class LlmReranker private constructor(private val context: Context) {
                 isFullyComplete = complete
             }
 
-            // Intra-Word Surprisal Clamping & Scoring
-            val sysNlls = topPool.mapIndexedNotNull { index, cand ->
-                if (cand.source != "user" && cand.source != "user_english") scores[index] else null
-            }
-            val sysBestNll = sysNlls.minOrNull() ?: 15.0f
+            val sortedPool = scoreAndRankPool(
+                topPool = topPool,
+                scores = scores,
+                currentShownTop1 = currentShownTop1,
+                weightAlpha = weightAlpha,
+                lambdaObs = lambdaObs,
+                gammaUser = gammaUser,
+                targetInputLength = targetInputLength,
+                hysteresisDelta = -0.35f
+            )
 
-            val scored = topPool.mapIndexed { index, candidate ->
-                val rawNll = scores[index]
-                val isUser = candidate.source == "user" || candidate.source == "user_english"
-                val isExactUser = isUser && candidate.obsPenalty == 0.0f
-
-                val effectiveNll = if (isExactUser) {
-                    val priority = if (candidate.priority > 0f) candidate.priority else 3.0f
-                    val clampedNll = minOf(sysBestNll, rawNll)
-                    val userBoost = gammaUser * priority
-                    val tieBreaker = 0.05f * rawNll
-                    clampedNll - userBoost + tieBreaker
-                } else {
-                    rawNll
-                }
-
-                val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f
-                val rankCost = (index * 1000.0f) / 1000.0f
-
-                // Hysteresis: Apply gentle anchor bonus (0.35 nats) to currently shown top1
-                val hysteresisBonus = if (currentShownTop1 != null && candidate.surface == currentShownTop1 && !isExactUser) {
-                    -0.35f
-                } else {
-                    0.0f
-                }
-
-                val finalScore = (1.0f - weightAlpha) * (effectiveNll + effectiveObs + hysteresisBonus) + weightAlpha * rankCost
-                Pair(candidate, finalScore)
-            }
-
-            val sortedPool = scored.sortedBy { it.second }.map { it.first }
             return FastRerankResult(
                 candidates = sortedPool + restPool,
                 isFullyComplete = isFullyComplete,
@@ -338,6 +461,7 @@ class LlmReranker private constructor(private val context: Context) {
     /**
      * Re-ranks conversion candidates based on preceding text context and SLM conditional log-likelihood.
      * Retains user-defined dictionary entries at absolute top priority via Intra-Word Surprisal Clamping (ADR-011 & Section 9.3).
+     * Implements span-aware unconsumed penalty and subsumption dominance for full-span candidate priority (ADR-020).
      * Returns a pair of (reranked candidates, whether SLM scoring was successfully applied).
      */
     fun rerankWithStatus(
@@ -346,7 +470,8 @@ class LlmReranker private constructor(private val context: Context) {
         weightAlpha: Float = KeyboardHeightManager.DEFAULT_SLM_WEIGHT_ALPHA,
         lambdaObs: Float = KeyboardHeightManager.DEFAULT_SLM_LAMBDA_OBS,
         gammaUser: Float = KeyboardHeightManager.DEFAULT_SLM_GAMMA_USER,
-        currentShownTop1: String? = null
+        currentShownTop1: String? = null,
+        targetInputLength: Int? = null
     ): Pair<List<ConversionCandidate>, Boolean> {
         if (state != State.READY || candidates.size <= 1) {
             return Pair(candidates, false)
@@ -384,49 +509,17 @@ class LlmReranker private constructor(private val context: Context) {
                 memoizedNllCache.put(key, scores[i])
             }
 
-            // Find best system NLL for Intra-Word Surprisal Clamping
-            val sysNlls = topPool.mapIndexedNotNull { index, cand ->
-                if (cand.source != "user" && cand.source != "user_english") scores[index] else null
-            }
-            val sysBestNll = sysNlls.minOrNull() ?: 15.0f
+            val sortedPool = scoreAndRankPool(
+                topPool = topPool,
+                scores = scores,
+                currentShownTop1 = currentShownTop1,
+                weightAlpha = weightAlpha,
+                lambdaObs = lambdaObs,
+                gammaUser = gammaUser,
+                targetInputLength = targetInputLength,
+                hysteresisDelta = -1.20f
+            )
 
-            // LM-First Unified Scoring
-            val scored = topPool.mapIndexed { index, candidate ->
-                val rawNll = scores[index] // -log P(W|C)
-                val isUser = candidate.source == "user" || candidate.source == "user_english"
-                val isExactUser = isUser && candidate.obsPenalty == 0.0f
-
-                // 1. Effective NLL with Clamped Floor and Priority Boost for user words
-                val effectiveNll = if (isExactUser) {
-                    val priority = if (candidate.priority > 0f) candidate.priority else 3.0f
-                    val clampedNll = minOf(sysBestNll, rawNll)
-                    val userBoost = gammaUser * priority
-                    val tieBreaker = 0.05f * rawNll
-                    clampedNll - userBoost + tieBreaker
-                } else {
-                    rawNll
-                }
-
-                // 2. Observation penalty (e.g. flick typo distance, voicing omission)
-                val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f
-
-                // 3. Base rank cost (index in candidate pool)
-                val rankCost = (index * 1000.0f) / 1000.0f
-
-                // 4. Hysteresis (Policy ④): Anchor currently shown Top-1 candidate with Δ_hysteresis
-                // Requires new candidate to beat currently shown top1 by at least 1.20 nats (~3.3x probability)
-                val hysteresisBonus = if (currentShownTop1 != null && candidate.surface == currentShownTop1 && !isExactUser) {
-                    -1.20f
-                } else {
-                    0.0f
-                }
-
-                // 5. Combined Score (lower is better)
-                val finalScore = (1.0f - weightAlpha) * (effectiveNll + effectiveObs + hysteresisBonus) + weightAlpha * rankCost
-                Pair(candidate, finalScore)
-            }
-
-            val sortedPool = scored.sortedBy { it.second }.map { it.first }
             return Pair(sortedPool + restPool, true)
         } catch (e: Exception) {
             Log.w(TAG, "Reranking failed: ${e.message}, falling back to original candidates.")

@@ -693,7 +693,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     fun tryFastRerankCandidatesWithStatus(
         contextPrefix: String,
         baseCandidates: List<ConversionCandidate>,
-        currentShownTop1: String? = null
+        currentShownTop1: String? = null,
+        targetInputLength: Int? = null
     ): LlmReranker.FastRerankResult? {
         val firstReading = baseCandidates.firstOrNull()?.reading
         val filtered = baseCandidates.filter {
@@ -719,6 +720,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val lambdaObs = KeyboardHeightManager.getSlmLambdaObs(ctx)
         val gammaUser = KeyboardHeightManager.getSlmGammaUser(ctx)
         val effectiveAlpha = if (engineType == RerankEngineType.HYBRID_RERANK) maxOf(alpha, 0.40f) else alpha
+        val effectiveTargetLength = targetInputLength ?: firstReading?.length
 
         return LlmReranker.getInstance(ctx).tryFastRerankWithStatus(
             contextPrefix = contextPrefix,
@@ -726,7 +728,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             currentShownTop1 = currentShownTop1,
             weightAlpha = effectiveAlpha,
             lambdaObs = lambdaObs,
-            gammaUser = gammaUser
+            gammaUser = gammaUser,
+            targetInputLength = effectiveTargetLength
         )
     }
 
@@ -738,7 +741,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     fun rerankCandidatesWithStatus(
         contextPrefix: String,
         baseCandidates: List<ConversionCandidate>,
-        currentShownTop1: String? = null
+        currentShownTop1: String? = null,
+        targetInputLength: Int? = null
     ): Pair<List<ConversionCandidate>, Boolean> {
         val firstReading = baseCandidates.firstOrNull()?.reading
         val filtered = baseCandidates.filter {
@@ -759,6 +763,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val lambdaObs = KeyboardHeightManager.getSlmLambdaObs(ctx)
         val gammaUser = KeyboardHeightManager.getSlmGammaUser(ctx)
         val engineType = KeyboardHeightManager.getRerankEngineType(ctx)
+        val effectiveTargetLength = targetInputLength ?: firstReading?.length
 
         return when (engineType) {
             RerankEngineType.NONE -> Pair(filtered, false)
@@ -773,7 +778,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     weightAlpha = effectiveAlpha,
                     lambdaObs = lambdaObs,
                     gammaUser = gammaUser,
-                    currentShownTop1 = currentShownTop1
+                    currentShownTop1 = currentShownTop1,
+                    targetInputLength = effectiveTargetLength
                 )
             }
         }
