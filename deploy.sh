@@ -16,50 +16,6 @@ if [ ! -f "$APK_PATH" ]; then
     exit 1
 fi
 
-echo ""
-echo "=== 1.5 Syncing APK to Google Drive / Shared Storage for Phone Sideloading ==="
-GDRIVE_SYNCED=false
-for GDRIVE_CANDIDATE in \
-    "/mnt/chromeos/GoogleDrive/MyDrive" \
-    "/mnt/chromeos/GoogleDrive" \
-    "/mnt/chromeos/MyFiles/Downloads" \
-    "/mnt/chromeos/MyFiles"; do
-    if [ -d "$GDRIVE_CANDIDATE" ]; then
-        DEST_DIR="$GDRIVE_CANDIDATE/JotInput"
-        mkdir -p "$DEST_DIR" 2>/dev/null || DEST_DIR="$GDRIVE_CANDIDATE"
-        cp "$APK_PATH" "$DEST_DIR/app-debug.apk"
-        echo "  ✓ APK copied to shared storage: $DEST_DIR/app-debug.apk"
-        GDRIVE_SYNCED=true
-        break
-    fi
-done
-
-# Check for official gdrive CLI integration
-GDRIVE_BIN="/home/kenichikurihara/.gemini/antigravity/bin/gdrive"
-if [ ! -x "$GDRIVE_BIN" ]; then
-    GDRIVE_BIN="$(command -v gdrive 2>/dev/null || true)"
-fi
-if [ -n "$GDRIVE_BIN" ] && [ -x "$GDRIVE_BIN" ]; then
-    if [ -f "/home/kenichikurihara/.gemini/antigravity/plugin_data/gdrive/token.json" ]; then
-        echo "  -> Syncing APK to Google Drive via gdrive CLI..."
-        JOT_FOLDER_ID=$("$GDRIVE_BIN" readonly search --name-contains "JotInput" 2>/dev/null | awk 'NR>2 {print $1; exit}')
-        if [ -n "$JOT_FOLDER_ID" ]; then
-            EXISTING_APK_ID=$("$GDRIVE_BIN" readonly search --parent-id "$JOT_FOLDER_ID" --name-contains "app-debug.apk" 2>/dev/null | awk 'NR>2 {print $1; exit}')
-            if [ -n "$EXISTING_APK_ID" ]; then
-                "$GDRIVE_BIN" mutate update "$EXISTING_APK_ID" "$APK_PATH" >/dev/null 2>&1 || true
-                echo "  ✓ APK updated on Google Drive (ID: $EXISTING_APK_ID)"
-            else
-                "$GDRIVE_BIN" mutate upload "$APK_PATH" --parent "$JOT_FOLDER_ID" >/dev/null 2>&1 || true
-                echo "  ✓ APK uploaded to Google Drive folder: $JOT_FOLDER_ID"
-            fi
-            GDRIVE_SYNCED=true
-        fi
-    fi
-fi
-
-if [ "$GDRIVE_SYNCED" = false ]; then
-    echo "  (Note: Google Drive is not currently mounted under /mnt/chromeos/ and gdrive CLI is unauthenticated. Right-click 'Google Drive' in ChromeOS Files app and select 'Share with Linux' for zero-friction auto-sync.)"
-fi
 
 echo ""
 echo "=== 2. Discovering Connected ADB Targets ==="
