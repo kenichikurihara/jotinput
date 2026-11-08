@@ -238,4 +238,126 @@ class JapanesePunctuationEvaluationTest {
         assertEquals("VAD should remain in SPEECH state so following words are captured seamlessly",
             StreamingVadProcessor.State.SPEECH, vad.state)
     }
+
+    // =========================================================================
+    // 8. ASR Output Canonicalizer (Stage 0: ASR Model-Agnostic Variations)
+    // =========================================================================
+
+    @Test
+    fun testAsrOutputCanonicalization() {
+        // CJK whitespace removal (e.g. Whisper / Seq2Seq spaced output)
+        assertEquals("今日は良い天気です。", JapanesePunctuationEngine.formatPunctuation("今日 は 良い 天気 です"))
+        assertEquals("お疲れ様でした。", JapanesePunctuationEngine.formatPunctuation("お疲れ様 でした"))
+
+        // Preservation of spaces around Alphanumeric / Latin
+        assertEquals("Google Cloud を活用します。", JapanesePunctuationEngine.formatPunctuation("Google Cloud を 活用します"))
+
+        // Normalization of half-width and full-width punctuation
+        assertEquals("こんにちは、元気ですか。", JapanesePunctuationEngine.formatPunctuation("こんにちは,元気ですか."))
+        assertEquals("了解しました、対応します。", JapanesePunctuationEngine.formatPunctuation("了解しました，対応します．"))
+
+        // Protection of numbers with decimal dots and commas
+        assertEquals("価格は1,000円です。", JapanesePunctuationEngine.formatPunctuation("価格は1,000円です"))
+        assertEquals("比率は3.14です。", JapanesePunctuationEngine.formatPunctuation("比率は3.14です"))
+
+        // Repeated dots normalization
+        assertEquals("少し考えます…", JapanesePunctuationEngine.formatPunctuation("少し考えます..."))
+    }
+
+    // =========================================================================
+    // 9. Cross-Chunk Retroactive Boundary Linker (Stage 2)
+    // =========================================================================
+
+    @Test
+    fun testCrossChunkRetroactiveBoundaryLinker() {
+        // Case A: Preceding chunk committed with "。" and following chunk starts with "が"
+        val meta1 = ProsodyBoundaryMetadata(precedingCommittedTail = "確認しました。")
+        val res1 = JapanesePunctuationEngine.formatPunctuation("が修正が必要です", meta1)
+        assertEquals(1, res1.deletePrecedingChars)
+        assertEquals("が、修正が必要です。", res1.formattedText)
+
+        // Case B: Preceding chunk committed with "。" and following chunk starts with "ので"
+        val meta2 = ProsodyBoundaryMetadata(precedingCommittedTail = "雨が降りました。")
+        val res2 = JapanesePunctuationEngine.formatPunctuation("ので傘を持っていきます", meta2)
+        assertEquals(1, res2.deletePrecedingChars)
+        assertEquals("ので、傘を持っていきます。", res2.formattedText)
+
+        // Case C: Preceding chunk ended with "。" and following chunk is a new sentence
+        val meta3 = ProsodyBoundaryMetadata(precedingCommittedTail = "お疲れ様でした。")
+        val res3 = JapanesePunctuationEngine.formatPunctuation("本日の議題に入ります", meta3)
+        assertEquals(0, res3.deletePrecedingChars)
+        assertEquals("本日の議題に入ります。", res3.formattedText)
+    }
+
+    // =========================================================================
+    // 10. Prosody-Aware Question Mark Promotion (Stage 3: Pitch Contour F0)
+    // =========================================================================
+
+    @Test
+    fun testProsodyPitchContourQuestionPromotion() {
+        // Flat/normal pitch intonation -> standard period "。"
+        val flatMeta = ProsodyBoundaryMetadata(terminalPitchSlopeSemitones = 0.5f)
+        assertEquals("明日の予定は10時からですね。", JapanesePunctuationEngine.formatPunctuation("明日の予定は10時からですね", flatMeta).formattedText)
+        assertEquals("これで準備完了だね。", JapanesePunctuationEngine.formatPunctuation("これで準備完了だね", flatMeta).formattedText)
+
+        // Rising pitch intonation (+3.5 semitones) -> promoted to question mark "？"
+        val risingMeta = ProsodyBoundaryMetadata(terminalPitchSlopeSemitones = 3.5f)
+        assertEquals("明日の予定は10時からですね？", JapanesePunctuationEngine.formatPunctuation("明日の予定は10時からですね", risingMeta).formattedText)
+        assertEquals("これで準備完了だね？", JapanesePunctuationEngine.formatPunctuation("これで準備完了だね", risingMeta).formattedText)
+        assertEquals("本当？", JapanesePunctuationEngine.formatPunctuation("本当", risingMeta).formattedText)
+        assertEquals("大丈夫？", JapanesePunctuationEngine.formatPunctuation("大丈夫", risingMeta).formattedText)
+    }
+
+    // =========================================================================
+    // 11. Prosody Pitch Estimator on Audio (Zero-Dependency F0 Contour)
+    // =========================================================================
+
+    @Test
+    fun testProsodyPitchEstimatorWithSyntheticAudio() {
+        val sampleRate = 16000
+        val durationSec = 0.35f
+        val numSamples = (sampleRate * durationSec).toInt()
+
+        // 1. Flat 200 Hz tone (flat intonation)
+        val flatSamples = FloatArray(numSamples) { i ->
+            (Math.sin(2.0 * Math.PI * 200.0 * i / sampleRate) * 0.5).toFloat()
+        }
+        val flatSlope = ProsodyPitchEstimator.estimateTerminalPitchSlope(flatSamples, sampleRate)
+        assertTrue("Flat tone must have slope near 0 (< 1.5 semitones), got $flatSlope", Math.abs(flatSlope) < 1.5f)
+
+        // 2. Rising tone from 180 Hz to 240 Hz in terminal section (+4.98 semitones)
+        val risingSamples = FloatArray(numSamples) { i ->
+            val t = i.toFloat() / numSamples
+            val freq = 180.0 + (60.0 * t) // sweeps from 180Hz to 240Hz
+            (Math.sin(2.0 * Math.PI * freq * i / sampleRate) * 0.5).toFloat()
+        }
+        val risingSlope = ProsodyPitchEstimator.estimateTerminalPitchSlope(risingSamples, sampleRate)
+        assertTrue("Rising tone must detect rising pitch slope (> 2.0 semitones), got $risingSlope", risingSlope > 2.0f)
+    }
+
+    // =========================================================================
+    // 12. Comma Spacing, Rhythm Budget, and Noun Endings (Stage 4 & 5)
+    // =========================================================================
+
+    @Test
+    fun testCommaSpacingAndRhythmBudget() {
+        // Anti-overpunctuation: closely packed subordinate clauses (< 5 chars apart)
+        // suppress redundant comma unless separated by pause
+        val denseText = "雨が降るので寒いので帰ります"
+        val formattedDense = JapanesePunctuationEngine.formatPunctuation(denseText)
+        assertEquals("雨が降るので、寒いので帰ります。", formattedDense)
+
+        // Long-span breathing comma (>= 18 chars without punctuation with topic marker)
+        val longText = "このプロジェクトの今後の計画については関係各所と慎重に協議します"
+        val formattedLong = JapanesePunctuationEngine.formatPunctuation(longText)
+        assertTrue("Long text should insert breathing comma after topic marker",
+            formattedLong.contains("については、"))
+
+        // Noun ending (体言止め) with full conversational pause (>= 500ms)
+        val nounPauseMeta = ProsodyBoundaryMetadata(trailingPauseMs = 600L)
+        val nounText = "本日の議題は以上"
+        val formattedNoun = JapanesePunctuationEngine.formatPunctuation(nounText, nounPauseMeta).formattedText
+        assertEquals("本日の議題は以上。", formattedNoun)
+        assertTrue(JapanesePunctuationEngine.isSentenceEnding("本日の議題は以上", nounPauseMeta))
+    }
 }

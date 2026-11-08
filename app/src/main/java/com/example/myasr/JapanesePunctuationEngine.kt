@@ -3,26 +3,52 @@ package com.example.myasr
 import java.util.regex.Pattern
 
 /**
- * High-performance Japanese punctuation restoration engine.
+ * Acoustic & prosodic boundary metadata associated with speech audio and cursor context.
+ */
+data class ProsodyBoundaryMetadata(
+    val trailingPauseMs: Long = 0L,              // 無音ポーズ長 (ms)
+    val isPacingForcedFlush: Boolean = false,     // 2400ms連続発話ペーシングによる分割か
+    val terminalPitchSlopeSemitones: Float = 0f, // 末尾200msのF0ピッチ勾配 (半音単位, >= +3.0 で疑問符)
+    val precedingCommittedTail: String = ""      // カーソル直前の確定済みテキスト末尾
+)
+
+/**
+ * Result of punctuation formatting, including text and retroactive edit instructions.
+ */
+data class PunctuationFormatResult(
+    val formattedText: String,
+    val deletePrecedingChars: Int = 0            // 直前チャンク末尾の「。」等を遡及削除する文字数
+)
+
+/**
+ * High-performance, ASR-model-agnostic Japanese punctuation restoration engine.
  *
  * Capabilities:
- * 1. Spoken Punctuation Commands (音声記号コマンド):
+ * 1. ASR Output Canonicalizer (Stage 0):
+ *    - Normalizes half/full-width comma/period artifacts (,, ., ，, ．, ...) across CTC/Whisper/Seq2Seq models.
+ *    - Collapses unnatural CJK whitespace while preserving alphanumeric/Latin boundaries.
+ * 2. Spoken Punctuation Commands (音声記号コマンド):
  *    - "まる" / "くてん" -> "。"
  *    - "てん" / "とうてん" -> "、"
  *    - "かいぎょう" -> "\n"
  *    - "はてな" / "ぎもんふ" -> "？"
  *    - "びっくりまーく" / "かんたんふ" -> "！"
  *    - Strict context validation to prevent false positives (e.g. てんき, まるで, 満点, 交差点, 一丸, 弾丸).
- * 2. Automatic 句点 (Period: '。') Insertion:
+ * 3. Cross-Chunk Retroactive Boundary Linker (Stage 2):
+ *    - Links continuous speech chunks by retroactively eliminating premature periods ("。")
+ *      when followed by subordinate particles (e.g. "確認しました。" + "が..." -> "確認しましたが、...").
+ * 4. Automatic 句点 (Period: '。') & 疑問符 ('？') Insertion (Stage 3):
  *    - Grammatical sentence-ending copulas & auxiliary verbs (です, ます, でした, ました, ません, である, だ).
  *    - Sentence-final particles (ね, よ, よね, わ, かな, なあ).
  *    - Polite request forms (ください, してください, お願いします).
  *    - Conversational greetings & closures (お疲れ様です, ありがとうございます, こんにちは, 失礼します).
- * 3. Automatic 読点 (Comma: '、') Insertion:
+ *    - Intonation-aware question mark promotion (terminal pitch slope >= +3.0 semitones).
+ *    - Noun endings with full pauses (体言止め + >=500ms silence).
+ * 5. Automatic 読点 (Comma: '、') Spacing & Rhythm Budget (Stage 4):
  *    - Subordinate conjunctive particles (ので, から, けど, けれど, けれども, のに, たら, なら).
  *    - Connective sentence/clause starters (しかし, そして, また, ただし, そのため, したがって, さらに, ちなみに, ところで, さて, まず, 次に, 最後に, 実は, もちろん).
- * 4. Sentence Boundary Detection & Progressive Committing:
- *    - Identifies completed sentence boundaries so speech can be committed immediately without waiting for pauses.
+ *    - Anti-overpunctuation distance budget (<5 chars) and long-span breathing comma (>=18 chars).
+ * 6. Sentence Boundary Detection & Progressive Committing.
  */
 object JapanesePunctuationEngine {
 
@@ -47,30 +73,51 @@ object JapanesePunctuationEngine {
      * natural commas ('、') and periods ('。').
      */
     fun formatPunctuation(text: String): String {
-        if (text.isBlank()) return text
+        return formatPunctuation(text, metadata = null).formattedText
+    }
+
+    /**
+     * Formats raw speech text using ASR-model-agnostic canonicalization, cross-chunk retroactive linking,
+     * prosody metadata (pause duration & F0 pitch slope), and rhythm-aware punctuation insertion.
+     */
+    fun formatPunctuation(
+        text: String,
+        metadata: ProsodyBoundaryMetadata? = null
+    ): PunctuationFormatResult {
+        if (text.isBlank()) return PunctuationFormatResult(text, 0)
 
         val leadingSpaces = text.takeWhile { it.isWhitespace() }
         var result = text.trim()
 
-        // 1. Spoken Punctuation Commands
+        // Stage 0: Canonicalize ASR variations (half-width, full-width, CJK whitespace, dots)
+        result = canonicalizeAsrArtifacts(result)
+
+        // Stage 1: Spoken Punctuation Commands with PRESERVED_WORDS protection
         result = convertSpokenPunctuationCommands(result)
 
-        // 2. Automatic Sentence Endings (句点 '。')
-        result = insertSentenceEndingPeriods(result)
+        // Stage 2: Cross-Chunk Retroactive Boundary Linker
+        val (linkedText, deletePreceding) = applyCrossChunkRetroactiveLink(result, metadata)
+        result = linkedText
 
-        // 3. Automatic Clause Boundaries (読点 '、')
-        result = insertClauseCommas(result)
+        // Stage 3: Automatic Sentence Endings (句点 '。' and 疑問符 '？' with F0 pitch contour)
+        result = insertSentenceEndingPeriods(result, metadata)
 
-        // 4. Cleanup redundant or adjacent punctuation marks
+        // Stage 4: Automatic Clause Boundaries (読点 '、') with distance/rhythm budget
+        result = insertClauseCommas(result, metadata)
+
+        // Stage 5: Cleanup redundant or adjacent punctuation marks
         result = cleanupPunctuation(result)
 
-        return leadingSpaces + result
+        return PunctuationFormatResult(
+            formattedText = leadingSpaces + result,
+            deletePrecedingChars = deletePreceding
+        )
     }
 
     /**
      * Checks if the given text ends with a completed sentence boundary ('。', '？', '！', '\n' or terminal predicate).
      */
-    fun isSentenceEnding(text: String): Boolean {
+    fun isSentenceEnding(text: String, metadata: ProsodyBoundaryMetadata? = null): Boolean {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) return false
         val lastChar = trimmed.last()
@@ -83,7 +130,15 @@ object JapanesePunctuationEngine {
             "である", "であった", "ください", "してください", "お願いします", "いたします",
             "ね", "よ", "よね", "かな", "わ", "ありがとう", "ありがとうございました", "お疲れ様でした", "お疲れ様です"
         )
-        return terminalEndings.any { trimmed.endsWith(it) }
+        if (terminalEndings.any { trimmed.endsWith(it) }) return true
+
+        // Pause >= 500ms allows noun-ending sentence boundaries (体言止め)
+        if (metadata != null && metadata.trailingPauseMs >= 500L) {
+            val nounEndings = listOf("以上", "件", "予定", "報告", "完了", "終了", "結果", "方針", "対策")
+            if (nounEndings.any { trimmed.endsWith(it) }) return true
+        }
+
+        return false
     }
 
     /**
@@ -303,6 +358,46 @@ object JapanesePunctuationEngine {
     // Internal Punctuation Rules & Replacements
     // =========================================================================
 
+    /**
+     * Stage 0: Canonicalizes ASR model-specific variations, whitespace, and punctuation artifacts.
+     */
+    fun canonicalizeAsrArtifacts(text: String): String {
+        var res = text
+
+        // 1. Full-width / half-width punctuation standardization
+        res = res.replace("，", "、")
+        res = res.replace("．", "。")
+
+        // 2. Normalize half-width commas and periods (e.g. Whisper / Seq2Seq outputs)
+        // Protect comma and dot between digits: e.g. "1,000" or "3.14"
+        res = res.replace(Regex("(?<=\\d),(?=\\d)"), "\uE102")
+        res = res.replace(Regex("(?<=\\d)\\.(?=\\d)"), "\uE103")
+
+        // Repeated dots e.g. "..." -> "…"
+        res = res.replace(Regex("\\.{2,}"), "…")
+
+        // Standalone commas and dots
+        res = res.replace(",", "、")
+        res = res.replace(".", "。")
+
+        // Restore protected numeric separators
+        res = res.replace("\uE102", ",")
+        res = res.replace("\uE103", ".")
+
+        // Half-width ? and ! to full-width ？ and ！
+        res = res.replace("?", "？")
+        res = res.replace("!", "！")
+
+        // 3. Remove whitespace between CJK characters (Hiragana, Katakana, Kanji)
+        // e.g. "今日 は 良い 天気 です" -> "今日は良い天気です"
+        res = res.replace(
+            Regex("(?<=[\\u3040-\\u309F\\u30A0-\\u30FF\\u4E00-\\u9FFF])\\s+(?=[\\u3040-\\u309F\\u30A0-\\u30FF\\u4E00-\\u9FFF])"),
+            ""
+        )
+
+        return res
+    }
+
     private fun convertSpokenPunctuationCommands(text: String): String {
         var res = text
 
@@ -347,8 +442,44 @@ object JapanesePunctuationEngine {
         return res
     }
 
-    private fun insertSentenceEndingPeriods(text: String): String {
+    private fun applyCrossChunkRetroactiveLink(
+        text: String,
+        metadata: ProsodyBoundaryMetadata?
+    ): Pair<String, Int> {
+        if (metadata == null || metadata.precedingCommittedTail.isEmpty()) {
+            return Pair(text, 0)
+        }
+
+        val tail = metadata.precedingCommittedTail.trimEnd()
+        if (!tail.endsWith("。")) {
+            return Pair(text, 0)
+        }
+
+        // Check if text begins with subordinate conjunctives or connective particles
+        // e.g. "が", "ので", "から", "けど", "けれど", "けれども", "のに", "し", "ため"
+        val connectiveRegex = Regex("^(が|ので|から|けど|けれど|けれども|のに|し|ため)(?=[^ぁ-んァ-ン]|$)")
+        val match = connectiveRegex.find(text)
+        if (match != null) {
+            val particle = match.groupValues[1]
+            val remainder = text.substring(particle.length).trimStart()
+            val linkedText = if (remainder.startsWith("、") || remainder.startsWith("。")) {
+                "$particle$remainder"
+            } else {
+                "$particle、$remainder"
+            }
+            return Pair(linkedText, 1)
+        }
+
+        return Pair(text, 0)
+    }
+
+    private fun insertSentenceEndingPeriods(
+        text: String,
+        metadata: ProsodyBoundaryMetadata? = null
+    ): String {
         var res = text
+        val isRisingPitch = metadata != null && metadata.terminalPitchSlopeSemitones >= 3.0f
+        val terminalMark = if (isRisingPitch) "？" else "。"
 
         // Sentence-ending markers:
         // Group A: Copula and auxiliary verbs
@@ -363,7 +494,7 @@ object JapanesePunctuationEngine {
         val sb1 = StringBuffer()
         while (m1.find()) {
             val matched = m1.group(1)
-            m1.appendReplacement(sb1, java.util.regex.Matcher.quoteReplacement("$matched。"))
+            m1.appendReplacement(sb1, java.util.regex.Matcher.quoteReplacement("$matched$terminalMark"))
         }
         m1.appendTail(sb1)
         res = sb1.toString()
@@ -377,7 +508,7 @@ object JapanesePunctuationEngine {
         val sb2 = StringBuffer()
         while (m2.find()) {
             val matched = m2.group(1)
-            m2.appendReplacement(sb2, java.util.regex.Matcher.quoteReplacement("$matched。"))
+            m2.appendReplacement(sb2, java.util.regex.Matcher.quoteReplacement("$matched$terminalMark"))
         }
         m2.appendTail(sb2)
         res = sb2.toString()
@@ -391,15 +522,50 @@ object JapanesePunctuationEngine {
         val sb3 = StringBuffer()
         while (m3.find()) {
             val matched = m3.group(1)
-            m3.appendReplacement(sb3, java.util.regex.Matcher.quoteReplacement("$matched。"))
+            m3.appendReplacement(sb3, java.util.regex.Matcher.quoteReplacement("$matched$terminalMark"))
         }
         m3.appendTail(sb3)
         res = sb3.toString()
 
+        // Group D: Rising intonation interrogation on expressive phrases (e.g. 本当, 大丈夫)
+        if (isRisingPitch) {
+            val expressivePattern = Pattern.compile(
+                "(^|[\\p{IsHan}\\u3040-\\u309F\\u30A0-\\u30FF\\s])(本当|大丈夫|平気|いい)(?![、。！？\n])(?=(?:\\s|$))"
+            )
+            val mExp = expressivePattern.matcher(res)
+            val sbExp = StringBuffer()
+            while (mExp.find()) {
+                val prefix = mExp.group(1) ?: ""
+                val matched = mExp.group(2) ?: ""
+                mExp.appendReplacement(sbExp, java.util.regex.Matcher.quoteReplacement("$prefix$matched？"))
+            }
+            mExp.appendTail(sbExp)
+            res = sbExp.toString()
+        }
+
+        // Group E: Noun endings with full pauses (体言止め + >=500ms silence)
+        if (metadata != null && metadata.trailingPauseMs >= 500L) {
+            val nounPattern = Pattern.compile(
+                "(^|[\\p{IsHan}\\u3040-\\u309F\\u30A0-\\u30FF\\s])(以上|予定|報告|完了|終了|方針|対策|こと)(?![、。！？\n])(?=(?:\\s|$))"
+            )
+            val mNoun = nounPattern.matcher(res)
+            val sbNoun = StringBuffer()
+            while (mNoun.find()) {
+                val prefix = mNoun.group(1) ?: ""
+                val matched = mNoun.group(2) ?: ""
+                mNoun.appendReplacement(sbNoun, java.util.regex.Matcher.quoteReplacement("$prefix$matched。"))
+            }
+            mNoun.appendTail(sbNoun)
+            res = sbNoun.toString()
+        }
+
         return res
     }
 
-    private fun insertClauseCommas(text: String): String {
+    private fun insertClauseCommas(
+        text: String,
+        metadata: ProsodyBoundaryMetadata? = null
+    ): String {
         var res = text
 
         // 1. Connective words at clause or sentence start
@@ -425,13 +591,46 @@ object JapanesePunctuationEngine {
         )
         val m2 = clausePattern.matcher(res)
         val sb2 = StringBuffer()
+        var lastCommaPos = -1
         while (m2.find()) {
             val particle = m2.group(1)
-            m2.appendReplacement(sb2, java.util.regex.Matcher.quoteReplacement("$particle、"))
+            val pos = m2.start()
+            // Anti-overpunctuation: If another comma was placed within 5 chars, suppress redundant comma
+            // unless separated by significant pause (>= 250ms)
+            val tooClose = lastCommaPos >= 0 && (pos - lastCommaPos) < 5
+            val hasPause = metadata != null && metadata.trailingPauseMs >= 250L
+            if (tooClose && !hasPause) {
+                m2.appendReplacement(sb2, java.util.regex.Matcher.quoteReplacement(particle ?: ""))
+            } else {
+                m2.appendReplacement(sb2, java.util.regex.Matcher.quoteReplacement("$particle、"))
+                lastCommaPos = pos
+            }
         }
         m2.appendTail(sb2)
         res = sb2.toString()
 
+        // 3. Long-Span Breathing Comma (>=18 characters without punctuation)
+        res = insertLongSpanBreathingCommas(res)
+
+        return res
+    }
+
+    private fun insertLongSpanBreathingCommas(text: String): String {
+        val spanBoundaryRegex = Regex("[、。！？\n]")
+        val segments = text.split(spanBoundaryRegex)
+        var res = text
+
+        val topicMarkers = listOf("については", "に関しては", "に対しては", "においては")
+        for (seg in segments) {
+            if (seg.length >= 18) {
+                for (marker in topicMarkers) {
+                    if (seg.contains(marker) && !seg.contains("$marker、")) {
+                        res = res.replace(marker, "$marker、")
+                        break
+                    }
+                }
+            }
+        }
         return res
     }
 
