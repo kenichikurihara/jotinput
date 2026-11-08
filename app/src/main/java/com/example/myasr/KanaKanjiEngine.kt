@@ -737,7 +737,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             return null
         }
         val engineType = KeyboardHeightManager.getRerankEngineType(ctx)
-        if (engineType != RerankEngineType.LOCAL_SLM && engineType != RerankEngineType.LOCAL_SLM_1_5B && engineType != RerankEngineType.HYBRID_RERANK) {
+        if (engineType != RerankEngineType.LOCAL_SLM && engineType != RerankEngineType.LOCAL_SLM_1_5B) {
             // Also allow fast rerank if AICore is selected but local SLM is ready as instant fallback
             val isSlmReady = LlmReranker.getInstance(ctx).isReady()
             if (!isSlmReady) return null
@@ -746,7 +746,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val alpha = KeyboardHeightManager.getSlmWeightAlpha(ctx)
         val lambdaObs = KeyboardHeightManager.getSlmLambdaObs(ctx)
         val gammaUser = KeyboardHeightManager.getSlmGammaUser(ctx)
-        val effectiveAlpha = if (engineType == RerankEngineType.HYBRID_RERANK) maxOf(alpha, 0.40f) else alpha
+        val effectiveAlpha = alpha
         val effectiveTargetLength = targetInputLength
             ?: filtered.filter { !it.isPrediction && it.source != "viterbi_prefix" }.maxOfOrNull { it.reading.length }
             ?: firstReading?.length
@@ -810,12 +810,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     targetInputLength = effectiveTargetLength
                 )
             }
-            RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B, RerankEngineType.HYBRID_RERANK -> {
-                val effectiveAlpha = if (engineType == RerankEngineType.HYBRID_RERANK) maxOf(alpha, 0.40f) else alpha
+            RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B -> {
                 LlmReranker.getInstance(ctx).rerankWithStatus(
                     contextPrefix,
                     filtered,
-                    weightAlpha = effectiveAlpha,
+                    weightAlpha = alpha,
                     lambdaObs = lambdaObs,
                     gammaUser = gammaUser,
                     currentShownTop1 = currentShownTop1,

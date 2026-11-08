@@ -16,16 +16,16 @@ enum class RerankEngineType(
 ) {
     LOCAL_SLM(
         id = "local_slm",
-        displayName = "言語モデル直接生成 (LM-First 0.5B)",
-        modelName = "Qwen2.5-0.5B (469MB • LM-First 高速標準)",
-        badgeLabel = "SLM",
+        displayName = "Qwen2.5-0.5B",
+        modelName = "Qwen2.5-0.5B (469MB • 高速標準)",
+        badgeLabel = "Qwen 0.5B",
         modelFileName = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
     ),
     LOCAL_SLM_1_5B(
         id = "local_slm_1_5b",
-        displayName = "言語モデル直接生成 (LM-First 1.5B)",
-        modelName = "Qwen2.5-1.5B (1.1GB • LM-First 高精度)",
-        badgeLabel = "1.5B",
+        displayName = "Qwen2.5-1.5B",
+        modelName = "Qwen2.5-1.5B (1.1GB • 高精度)",
+        badgeLabel = "Qwen 1.5B",
         modelFileName = "qwen2.5-1.5b-instruct-q4_k_m.gguf"
     ),
     AICORE_NANO_2(
@@ -40,16 +40,9 @@ enum class RerankEngineType(
         modelName = "Gemini Nano 1 (1.8B • AICore NPU)",
         badgeLabel = "n1"
     ),
-    HYBRID_RERANK(
-        id = "hybrid_rerank",
-        displayName = "辞書優先 ＋ 後段AIリランク (従来互換)",
-        modelName = "Mozc辞書優先 ＋ Qwen2.5リランク",
-        badgeLabel = "HYB",
-        modelFileName = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
-    ),
     NONE(
         id = "none",
-        displayName = "AI変換オフ (Viterbi単体)",
+        displayName = "AI変換オフ (Mozc辞書・Viterbiのみ)",
         modelName = "AI変換無効 (Mozc辞書・Viterbiのみ)",
         badgeLabel = "",
         modelFileName = ""
@@ -62,7 +55,7 @@ enum class RerankEngineType(
                 "local_slm_1_5b", "lm_first_1_5b" -> LOCAL_SLM_1_5B
                 "aicore_nano_2" -> AICORE_NANO_2
                 "aicore_nano_1" -> AICORE_NANO_1
-                "hybrid_rerank" -> HYBRID_RERANK
+                "hybrid_rerank" -> LOCAL_SLM
                 "none" -> NONE
                 else -> LOCAL_SLM
             }

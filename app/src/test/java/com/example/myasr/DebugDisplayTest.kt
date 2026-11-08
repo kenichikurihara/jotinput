@@ -30,8 +30,8 @@ class DebugDisplayTest {
     fun testRerankEngineTypeBadgeLabels() {
         assertEquals("n2", RerankEngineType.AICORE_NANO_2.badgeLabel)
         assertEquals("n1", RerankEngineType.AICORE_NANO_1.badgeLabel)
-        assertEquals("SLM", RerankEngineType.LOCAL_SLM.badgeLabel)
-        assertEquals("1.5B", RerankEngineType.LOCAL_SLM_1_5B.badgeLabel)
+        assertEquals("Qwen 0.5B", RerankEngineType.LOCAL_SLM.badgeLabel)
+        assertEquals("Qwen 1.5B", RerankEngineType.LOCAL_SLM_1_5B.badgeLabel)
         assertEquals("", RerankEngineType.NONE.badgeLabel)
         assertEquals(RerankEngineType.NONE, RerankEngineType.fromId("none"))
     }
