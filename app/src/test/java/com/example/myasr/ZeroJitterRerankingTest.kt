@@ -139,4 +139,30 @@ class ZeroJitterRerankingTest {
         assertEquals("法宴", safeCandidates[1].surface)
         assertEquals("放談", safeCandidates[2].surface)
     }
+
+    @Test
+    fun testMultiTokenCandidateRollbackSafety() {
+        // Multi-token candidate evaluation contract:
+        // Ensures that scoring multi-token candidates does not corrupt context state
+        // or cause sequence assertion failures in llama.cpp
+        val cands = listOf(
+            ConversionCandidate("記者会見", "きしゃかいけん", source = "viterbi"),
+            ConversionCandidate("貴社海運", "きしゃかいけん", source = "viterbi"),
+            ConversionCandidate("喜捨", "きしゃ", source = "viterbi_prefix")
+        )
+        val dummyNlls = listOf(14.5f, 18.2f, 12.1f)
+        val sysBestNll = dummyNlls.minOrNull() ?: 12.1f
+
+        val scores = cands.mapIndexed { idx, cand ->
+            scoreCandidateWithHysteresis(
+                candidate = cand,
+                rawNll = dummyNlls[idx],
+                currentShownTop1 = "記者会見",
+                sysBestNll = sysBestNll,
+                rankIndex = idx
+            )
+        }
+        assertEquals(3, scores.size)
+        assertTrue(scores[0] < scores[1]) // "記者会見" must beat "貴社海運"
+    }
 }

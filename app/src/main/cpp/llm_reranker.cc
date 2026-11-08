@@ -106,7 +106,6 @@ bool LlmReranker::Initialize(const std::string& model_path, int n_threads) {
   cparams.n_threads = config_.n_threads;
   cparams.n_threads_batch = config_.n_threads;
   cparams.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_ENABLED;
-  cparams.n_seq_max = 8; // Multi-sequence support for Tree Attention Batching
 
   ctx_ = llama_init_from_model(model_, cparams);
   if (!ctx_) {
@@ -421,28 +420,20 @@ bool LlmReranker::ScoreCandidates(const std::string& context,
     (*out_neg_logprobs)[info.index] = info.token0_neg_logprob;
   }
 
-  // Stage 2: Parallel Multi-Sequence Tree Attention Batch
-  // Evaluate multi-token candidates simultaneously using single llama_decode pass
+  // Stage 2: Full-Sequence Joint Negative Log-Likelihood with Admissible Lower-Bound Pruning
+  // Evaluates multi-token candidates using seq 0, rolling back speculative tokens after each candidate
   llama_memory_t mem = llama_get_memory(ctx_);
   int start_pos = cached_context_n_tokens_;
 
-  struct MultiTokenTask {
-    size_t cand_info_idx;
-    llama_seq_id seq_id;
-    int n_extra;
-    std::vector<int> token_batch_indices;
-  };
-
-  std::vector<MultiTokenTask> tasks;
-  int total_extra_tokens = 0;
-  llama_seq_id next_seq_id = 1;
-
-  for (size_t i = 0; i < cand_infos.size() && next_seq_id < 8; ++i) {
+  for (size_t i = 0; i < cand_infos.size(); ++i) {
+    if (abort_scoring_.load()) break;
     if (cand_infos[i].is_cached) continue;
     const auto& tokens = cand_infos[i].tokens;
     if (tokens.size() <= 1) continue;
 
-    // Admissible Lower-Bound Pruning
+    // Admissible Lower-Bound Pruning:
+    // If t_0 NLL is already > min_completed_nll + 8.0f (probability ratio > 2980x worse),
+    // subsequent non-negative token NLLs can never overtake the top candidate.
     if (min_completed_nll < 50.0f && cand_infos[i].token0_neg_logprob > min_completed_nll + 8.0f) {
       cached_candidate_nlls_[cand_infos[i].surface] = cand_infos[i].token0_neg_logprob;
       continue;
@@ -450,68 +441,33 @@ bool LlmReranker::ScoreCandidates(const std::string& context,
 
     size_t max_tokens = std::min<size_t>(8, tokens.size());
     int n_extra = static_cast<int>(max_tokens) - 1;
-    if (n_extra <= 0) continue;
 
-    MultiTokenTask task;
-    task.cand_info_idx = i;
-    task.seq_id = next_seq_id++;
-    task.n_extra = n_extra;
-    task.token_batch_indices.resize(n_extra);
-    total_extra_tokens += n_extra;
-    tasks.push_back(std::move(task));
-  }
-
-  if (!tasks.empty() && total_extra_tokens > 0) {
-    // 1. Copy context KV from seq 0 to each task's seq_id
-    for (const auto& task : tasks) {
-      llama_memory_seq_cp(mem, 0, task.seq_id, 0, start_pos);
+    llama_batch b = llama_batch_init(n_extra, 0, 1);
+    for (int t = 0; t < n_extra; ++t) {
+      b.token[t]     = tokens[t];
+      b.pos[t]       = start_pos + t;
+      b.n_seq_id[t]  = 1;
+      b.seq_id[t][0] = 0;
+      b.logits[t]    = true;
     }
+    b.n_tokens = n_extra;
 
-    // 2. Build combined llama_batch
-    llama_batch batch = llama_batch_init(total_extra_tokens, 0, 1);
-    int b_idx = 0;
-    for (auto& task : tasks) {
-      const auto& tokens = cand_infos[task.cand_info_idx].tokens;
-      for (int t = 0; t < task.n_extra; ++t) {
-        batch.token[b_idx]     = tokens[t];
-        batch.pos[b_idx]       = start_pos + t;
-        batch.n_seq_id[b_idx]  = 1;
-        batch.seq_id[b_idx][0] = task.seq_id;
-        batch.logits[b_idx]    = true;
-        task.token_batch_indices[t] = b_idx;
-        b_idx++;
+    if (llama_decode(ctx_, b) == 0 && !abort_scoring_.load()) {
+      float total_neg_logprob = cand_infos[i].token0_neg_logprob;
+      for (int t = 0; t < n_extra; ++t) {
+        float* step_logits = llama_get_logits_ith(ctx_, t);
+        if (!step_logits) continue;
+        float s_denom = ComputeLogDenominator(step_logits, n_vocab);
+        float t_lp = step_logits[tokens[t + 1]] - s_denom;
+        total_neg_logprob += (-t_lp);
       }
+      (*out_neg_logprobs)[cand_infos[i].index] = total_neg_logprob;
+      cached_candidate_nlls_[cand_infos[i].surface] = total_neg_logprob;
+      if (total_neg_logprob < min_completed_nll) min_completed_nll = total_neg_logprob;
     }
-    batch.n_tokens = total_extra_tokens;
+    llama_batch_free(b);
 
-    // 3. Single parallel llama_decode
-    int ret = llama_decode(ctx_, batch);
-
-    if (ret == 0 && !abort_scoring_.load()) {
-      for (const auto& task : tasks) {
-        const auto& info = cand_infos[task.cand_info_idx];
-        float total_neg_logprob = info.token0_neg_logprob;
-        for (int t = 0; t < task.n_extra; ++t) {
-          int b_pos = task.token_batch_indices[t];
-          float* step_logits = llama_get_logits_ith(ctx_, b_pos);
-          if (!step_logits) continue;
-          float s_denom = ComputeLogDenominator(step_logits, n_vocab);
-          float t_lp = step_logits[info.tokens[t + 1]] - s_denom;
-          total_neg_logprob += (-t_lp);
-        }
-        (*out_neg_logprobs)[info.index] = total_neg_logprob;
-        cached_candidate_nlls_[info.surface] = total_neg_logprob;
-        if (total_neg_logprob < min_completed_nll) min_completed_nll = total_neg_logprob;
-      }
-    }
-
-    llama_batch_free(batch);
-
-    // 4. Remove all temporary sequences
-    for (const auto& task : tasks) {
-      llama_memory_seq_rm(mem, task.seq_id, 0, -1);
-    }
-    // Keep seq 0 intact up to start_pos
+    // Roll back speculative tokens while retaining the cached context prefix KV
     llama_memory_seq_rm(mem, 0, start_pos, -1);
   }
 
