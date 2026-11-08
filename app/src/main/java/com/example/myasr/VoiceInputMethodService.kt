@@ -559,9 +559,8 @@ class VoiceInputMethodService : InputMethodService() {
                         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
                         val isRerankEnabled = KeyboardHeightManager.isSlmRerankEnabled(this@VoiceInputMethodService)
                         val isMandatoryEnabled = KeyboardHeightManager.isSlmMandatoryRerankEnabled(this@VoiceInputMethodService)
-                        val isContextFreeEnabled = KeyboardHeightManager.isSlmContextFreeRerankEnabled(this@VoiceInputMethodService)
                         val isSlmReady = LlmReranker.getInstance(this@VoiceInputMethodService).isReady()
-                        val canRerank = isRerankEnabled && (textBeforeCursor.isNotEmpty() || isContextFreeEnabled) && isSlmReady
+                        val canRerank = isRerankEnabled && isSlmReady
 
                         val baseCandidates = kanaKanjiEngine.getBaseCandidates(reading)
                         val displayCandidates = candidateStripView?.getCandidates() ?: emptyList()
@@ -801,9 +800,8 @@ class VoiceInputMethodService : InputMethodService() {
         val baseCandidates = kanaKanjiEngine.getBaseCandidates(reading)
 
         val isRerankEnabled = KeyboardHeightManager.isSlmRerankEnabled(this)
-        val isContextFreeEnabled = KeyboardHeightManager.isSlmContextFreeRerankEnabled(this)
         val isSlmReady = LlmReranker.getInstance(this).isReady()
-        val canRerank = isRerankEnabled && (textBeforeCursor.isNotBlank() || isContextFreeEnabled) && baseCandidates.size > 1 && isSlmReady
+        val canRerank = isRerankEnabled && baseCandidates.size > 1 && isSlmReady
 
         // 1. FAST ZERO-JITTER PATH (< 0.1ms synchronous on Main Thread, Policies ① & ②):
         // If context logits or memoized NLLs are available, compute ranking instantly before first render.
@@ -1208,8 +1206,7 @@ class VoiceInputMethodService : InputMethodService() {
                 slm != null &&
                 slm.state == LlmReranker.State.READY &&
                 KeyboardHeightManager.isSlmRerankEnabled(this@VoiceInputMethodService) &&
-                candidateList.size > 1 &&
-                (precedingContext.isNotBlank() || KeyboardHeightManager.isSlmContextFreeRerankEnabled(this@VoiceInputMethodService))
+                candidateList.size > 1
             ) {
                 slm.rerankWithStatus(precedingContext, candidateList.take(8), weightAlpha = alpha)
             } else {

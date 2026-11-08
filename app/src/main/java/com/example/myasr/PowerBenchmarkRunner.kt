@@ -85,7 +85,6 @@ object PowerBenchmarkRunner {
                 } else {
                     KeyboardHeightManager.setRerankEngineType(context, engineType)
                     KeyboardHeightManager.setSlmRerankEnabled(context, true)
-                    KeyboardHeightManager.setSlmContextFreeRerankEnabled(context, true)
                     val slm = LlmReranker.getInstance(context)
                     var done = false
                     var ok = false

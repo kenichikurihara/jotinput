@@ -35,11 +35,6 @@ class KeyboardHeightManagerTest {
     }
 
     @Test
-    fun testSlmContextFreePrefKey() {
-        assertEquals("slm_context_free_rerank", KeyboardHeightManager.KEY_SLM_CONTEXT_FREE_RERANK)
-    }
-
-    @Test
     fun testSlmWeightAlphaPrefKey() {
         assertEquals("slm_weight_alpha", KeyboardHeightManager.KEY_SLM_WEIGHT_ALPHA)
     }

@@ -436,10 +436,6 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         if (ctx != null && !KeyboardHeightManager.isSlmRerankEnabled(ctx)) {
             return baseCandidates
         }
-        val isContextFreeEnabled = ctx != null && KeyboardHeightManager.isSlmContextFreeRerankEnabled(ctx)
-        if (contextPrefix.isBlank() && !isContextFreeEnabled) {
-            return baseCandidates
-        }
         return rerankCandidates(contextPrefix, baseCandidates)
     }
 
@@ -711,8 +707,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         if (!KeyboardHeightManager.isSlmRerankEnabled(ctx)) {
             return null
         }
-        val isContextFreeEnabled = KeyboardHeightManager.isSlmContextFreeRerankEnabled(ctx)
-        if (contextPrefix.isBlank() && (!isContextFreeEnabled || firstReading == "（" || firstReading == "）" || firstReading == "(" || firstReading == ")")) {
+        if (contextPrefix.isBlank() && (firstReading == "（" || firstReading == "）" || firstReading == "(" || firstReading == ")")) {
             return null
         }
         val engineType = KeyboardHeightManager.getRerankEngineType(ctx)
@@ -757,8 +752,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         if (!KeyboardHeightManager.isSlmRerankEnabled(ctx)) {
             return Pair(filtered, false)
         }
-        val isContextFreeEnabled = KeyboardHeightManager.isSlmContextFreeRerankEnabled(ctx)
-        if (contextPrefix.isBlank() && (!isContextFreeEnabled || firstReading == "（" || firstReading == "）" || firstReading == "(" || firstReading == ")")) {
+        if (contextPrefix.isBlank() && (firstReading == "（" || firstReading == "）" || firstReading == "(" || firstReading == ")")) {
             return Pair(filtered, false)
         }
         val alpha = KeyboardHeightManager.getSlmWeightAlpha(ctx)

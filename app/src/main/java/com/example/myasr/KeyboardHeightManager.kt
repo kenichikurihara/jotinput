@@ -10,7 +10,6 @@ object KeyboardHeightManager {
     private const val KEY_QWERTY_NUMBER_ROW = "qwerty_show_number_row"
     private const val KEY_QWERTY_SWIPE_TYPING = "qwerty_swipe_typing_enabled"
     private const val KEY_LAST_KEYBOARD_MODE = "last_keyboard_mode"
-    const val KEY_SLM_CONTEXT_FREE_RERANK = "slm_context_free_rerank"
     const val KEY_SLM_MANDATORY_RERANK = "slm_mandatory_rerank"
     const val KEY_SLM_MANDATORY_RERANK_TIMEOUT_MS = "slm_mandatory_rerank_timeout_ms"
     const val DEFAULT_SLM_MANDATORY_RERANK_TIMEOUT_MS = 500L
@@ -106,15 +105,6 @@ object KeyboardHeightManager {
         prefs.edit().putBoolean(KEY_QWERTY_SWIPE_TYPING, enabled).apply()
     }
 
-    fun isSlmContextFreeRerankEnabled(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getBoolean(KEY_SLM_CONTEXT_FREE_RERANK, true)
-    }
-
-    fun setSlmContextFreeRerankEnabled(context: Context, enabled: Boolean) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_SLM_CONTEXT_FREE_RERANK, enabled).apply()
-    }
 
     fun isSlmMandatoryRerankEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
