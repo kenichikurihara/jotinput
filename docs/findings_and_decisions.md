@@ -27,6 +27,7 @@ This document records the core architectural decisions, design rationales, criti
    - [ADR-018: LM-First Joint Scoring Architecture & Intra-Word Surprisal Clamping for Custom Dictionary](#adr-018-lm-first-joint-scoring-architecture--intra-word-surprisal-clamping-for-custom-dictionary)
    - [ADR-019: Principled Observation Normalization and Context-Aware SLM Reranking for English QWERTY Typing](#adr-019-principled-observation-normalization-and-context-aware-slm-reranking-for-english-qwerty-typing)
    - [ADR-020: Span-Aware Bayesian Scoring, Unconsumed Suffix Penalization & Subsumption Dominance for Full-Span Priority](#adr-020-span-aware-bayesian-scoring-unconsumed-suffix-penalization--subsumption-dominance-for-full-span-priority)
+  - [ADR-021: Virtual Suffix-Completed LM Evaluation, Boltzmann Log-Sum-Exp Marginalization & 2D-MMR Stratified Interleaving](#adr-021-virtual-suffix-completed-lm-evaluation-boltzmann-log-sum-exp-marginalization--2d-mmr-stratified-interleaving)
 2. [Technical Findings & Post-Mortems](#2-technical-findings--post-mortems)
    - [Finding 1: Sherpa-ONNX `cjkchar` FST Hotword Space-Separation Bug](#finding-1-sherpa-onnx-cjkchar-fst-hotword-space-separation-bug)
    - [Finding 2: 5-Fold Stratified Cross-Validation on 1,000 Tricky Japanese Sentences](#finding-2-5-fold-stratified-cross-validation-on-1000-tricky-japanese-sentences)
@@ -2013,6 +2014,42 @@ F DEBUG   : #03 pc 00243842  libmyasr_llm.so (myasr::LlmReranker::ScoreCandidate
 ### 4. Verification & Non-Regression
 - **Unit Test Suite**: 191/191 unit tests passing 100% (including `ZeroJitterRerankingTest` and `JapanesePunctuationEvaluationTest`).
 - **Physical Device & Container Verification**: Verified clean initialization and on-device SLM execution (`Mozcは私の直感と挙動が` $\to$ `異なる`, `事故の目撃者から事故直後の` $\to$ `状況`) without any crashes or abort warnings in logcat.
+
+---
+
+## ADR-021: Virtual Suffix-Completed LM Evaluation, Boltzmann Log-Sum-Exp Marginalization & 2D-MMR Stratified Interleaving
+
+### 1. Problem Statement
+In ADR-020, static unconsumed span penalization was introduced. However, when users entered `さいしょの` (5 morae), `最初` (4 morae, unconsumed `の`) was still ranked ahead of `最初の` in real execution.
+Root-cause analysis revealed:
+1. **Unconsumed Span Omission in LM**: The Language Model only evaluated `最初` in isolation, neglecting conditional NLL $-\ln P_{\text{LM}}(\text{"の"} \mid C, \text{"最初"})$.
+2. **Diversity Collapse under LM**: Naively scoring partial prefix candidates with completed NLL caused identical stem collision (Slot 1 `最初の`, Slot 2 `最初` crowding out `最小の`), or complete eviction of partial candidates in compound words (`さいとうこうき`).
+3. **Pipeline Inconsistencies**: `prioritizeByHistory` boosted partial candidate `最初` to Rank 0 over full-span candidates due to partial history (`さいしょ:最初`), and Tap-Safe Window pinned partial candidates at Slot 0.
+
+### 2. Architecture & Implementation
+1. **Virtual Suffix-Completed LM Evaluation ($\widetilde{W}(U) = U \oplus V^*_{m:n}$)**:
+   - Evaluates partial prefix candidate $U$ by appending the 1-best backward Viterbi suffix $V^*_{m:n}$ from Backward DP.
+   - Zero-overhead deduplication: `nativeScoreCandidates` evaluates unique surfaces; both `最初の` and `最初` share the exact same 5-mora LM evaluation ($0\text{ ms}$ overhead).
+2. **Boltzmann Log-Sum-Exp Marginalization & Entropy Bonus**:
+   - Calculates effective branching factor $M_{\text{eff}}(m) = \sum \exp(-(Q - \beta_{\min})/\tau_{\text{mozc}})$.
+   - Low-entropy suffixes (`さいしょの` $\to$ `+の`, $M_{\text{eff}} \approx 1.05 < 1.80$) yield 0 bonus; high-entropy suffixes (`さいとうこうき` $\to$ `+こうき`, $M_{\text{eff}} \approx 6.5$) reward stem candidates with $-\tau_{\text{branch}} \ln M_{\text{eff}}$.
+3. **Sequential 2D-MMR Greedy Selection & Det-Sub Prevention**:
+   - Penalizes duplicate first bunsetsu stems $\sigma_{\text{first}}$ (+2.00 nats) and duplicate last content words $\sigma_{\text{last}}$ (+1.60 nats).
+   - Applies determined-suffix subsumption penalty (+2.50 nats) when a partial candidate stem is already covered by an upstream full-span candidate and $M_{\text{eff}} < 1.80$.
+4. **Adaptive Stratified Interleaving**:
+   - High-branching: Slots 1–2 Full $\to$ Slots 3–6 Partial $\to$ Slots 7–8 Full.
+   - Low-branching: Slots 1–3 Full $\to$ Slots 4–6 Partial $\to$ Slots 7–8 Full.
+   - **Hard Invariant**: Slot 1 is guaranteed to be a full candidate ($m = n$).
+5. **Pipeline Fixes**:
+   - `prioritizeByHistory(result, targetReading = normalized)` prevents partial candidate history from overtaking full-span inputs.
+   - `AiCoreReranker` forwards `targetInputLength` and `currentShownTop1`.
+   - `VoiceInputMethodService` unpins partial candidates when new top-1 is full-span.
+
+### 3. Verification & Metrics
+- **Non-Regression & Punctuation**: 213/213 unit tests passing 100% (including `JapanesePunctuationEvaluationTest` 67+ tests).
+- **Saishono Ranking**: `最初の` (#1) $\to$ `才女の` (#2) $\to$ `最初` (#3) $\to$ `最初の一歩` (#4).
+- **SaitouKouki Ranking**: Slots 1–2 full 2D-diverse (`斎藤工機`, `斉藤幸喜`), Slots 3–4 partial stems (`斎藤`, `斉藤`).
+
 
 
 

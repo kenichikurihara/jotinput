@@ -88,7 +88,8 @@ class LlmReranker private constructor(private val context: Context) {
                 val letters = firstCand.reading.filter { it.isLetter() }.length
                 if (letters > 0) letters else firstCand.reading.length
             } else {
-                val fullCand = topPool.firstOrNull { it.source != "viterbi_prefix" && !it.isPrediction && it.reading.isNotEmpty() }
+                val fullCand = topPool.filter { it.source != "viterbi_prefix" && !it.isPrediction && it.reading.isNotEmpty() }
+                    .maxByOrNull { it.reading.length }
                     ?: topPool.firstOrNull { it.reading.isNotEmpty() }
                 fullCand?.reading?.length ?: 0
             }
@@ -96,8 +97,6 @@ class LlmReranker private constructor(private val context: Context) {
             val muSpan = if (isEnglishPool) 1.40f else 2.20f
             val kappaCommit = 1.50f
             val lambdaExt = 1.20f
-            val thetaCoherent = 4.0f
-            val deltaSub = 0.80f
 
             // 3. Compute consumed lengths M_i and span deltas
             val mLengths = IntArray(topPool.size) { i ->
@@ -117,12 +116,40 @@ class LlmReranker private constructor(private val context: Context) {
             }
             val sysBestNll = sysNlls.minOrNull() ?: 15.0f
 
-            // 5. Identify full-span candidates for prefix subsumption checks
+            val thetaCoherent = 4.0f
+
+            // 5. Identify full-span candidates and chimera detection
             val fullSpanIndices = topPool.indices.filter {
                 unconsumedDeltas[it] == 0 && extDeltas[it] == 0 && !topPool[it].isPrediction
             }
 
-            val scored = topPool.mapIndexed { index, candidate ->
+            val isChimeraFull = BooleanArray(topPool.size)
+            for (fIdx in fullSpanIndices) {
+                val fullCand = topPool[fIdx]
+                val fullNll = scores[fIdx]
+                for (pIdx in topPool.indices) {
+                    if (unconsumedDeltas[pIdx] > 0) {
+                        val partCand = topPool[pIdx]
+                        val isPrefix = if (isEnglishPool) {
+                            fullCand.surface.lowercase().startsWith(partCand.surface.lowercase()) &&
+                                fullCand.surface.length > partCand.surface.length
+                        } else {
+                            fullCand.surface.startsWith(partCand.surface) && fullCand.surface != partCand.surface
+                        }
+                        if (isPrefix) {
+                            val partNll = scores[pIdx]
+                            val tailSurprisal = (fullNll - partNll) / unconsumedDeltas[pIdx].toFloat()
+                            if (tailSurprisal > thetaCoherent) {
+                                isChimeraFull[fIdx] = true
+                            }
+                        }
+                    }
+                }
+            }
+
+            val baseScores = FloatArray(topPool.size)
+            for (index in topPool.indices) {
+                val candidate = topPool[index]
                 val rawNll = scores[index]
                 val isUser = candidate.source == "user" || candidate.source == "user_english"
                 val isExactUser = isUser && candidate.obsPenalty == 0.0f
@@ -136,58 +163,34 @@ class LlmReranker private constructor(private val context: Context) {
                     val userBoost = gammaUser * priority
                     val tieBreaker = 0.05f * rawNll
                     effectiveNll = clampedNll - userBoost + tieBreaker
-                } else {
-                    // (a) Unconsumed span penalty
-                    val spanPenalty = if (deltaUnconsumed > 0 && n > 0) {
-                        muSpan * deltaUnconsumed + kappaCommit
+                } else if (deltaUnconsumed == 0 && deltaExt == 0 && !candidate.isPrediction) {
+                    // (a) Full-span exact candidate
+                    val chimeraPenalty = if (isChimeraFull[index]) 10.0f else 0.0f
+                    effectiveNll = rawNll + chimeraPenalty
+                } else if (deltaUnconsumed > 0) {
+                    // (b) Partial-prefix candidate (Virtual suffix completed or marginalized)
+                    if (candidate.completedSurface.isNotEmpty() && candidate.completedSurface != candidate.surface) {
+                        // Virtual completed full surface NLL has already been evaluated!
+                        val branchBonus = (0.55f * kotlin.math.ln(maxOf(1.0f, candidate.suffixBranchingFactor))).coerceAtMost(1.20f)
+                        effectiveNll = rawNll - branchBonus + kappaCommit
                     } else {
-                        0.0f
-                    }
-
-                    // (b) Subsumption Dominance Rule
-                    var clampedBaseNll = rawNll + spanPenalty
-                    if (deltaUnconsumed > 0 && fullSpanIndices.isNotEmpty()) {
-                        val candSurfaceClean = if (isEnglishPool) candidate.surface.filter { it.isLetter() }.lowercase() else candidate.surface
-                        val candReadingClean = if (isEnglishPool) candSurfaceClean else candidate.reading
-
-                        var bestSubsumingNll: Float? = null
-                        for (fIdx in fullSpanIndices) {
+                        // Fallback when completedSurface is absent (e.g. English typos, direct unit tests)
+                        val subsumingFullNll = fullSpanIndices.filter { !isChimeraFull[it] }.mapNotNull { fIdx ->
                             val fullCand = topPool[fIdx]
-                            val fullSurfaceClean = if (isEnglishPool) fullCand.surface.filter { it.isLetter() }.lowercase() else fullCand.surface
-                            val fullReadingClean = if (isEnglishPool) fullSurfaceClean else fullCand.reading
-
-                            val isSubsumed = if (isEnglishPool) {
-                                fullSurfaceClean.startsWith(candSurfaceClean) && fullSurfaceClean.length > candSurfaceClean.length
+                            val isSub = if (isEnglishPool) {
+                                fullCand.surface.lowercase().startsWith(candidate.surface.lowercase())
                             } else {
-                                (fullSurfaceClean.startsWith(candSurfaceClean) && fullSurfaceClean != candSurfaceClean) ||
-                                (fullReadingClean.startsWith(candReadingClean) && fullReadingClean != candReadingClean)
+                                fullCand.surface.startsWith(candidate.surface) || fullCand.reading.startsWith(candidate.reading)
                             }
+                            if (isSub) scores[fIdx] else null
+                        }.minOrNull()
 
-                            if (isSubsumed) {
-                                val fullNll = scores[fIdx]
-                                val tailSurprisal = (fullNll - rawNll) / deltaUnconsumed.toFloat()
-                                if (tailSurprisal <= thetaCoherent) {
-                                    if (bestSubsumingNll == null || fullNll < bestSubsumingNll) {
-                                        bestSubsumingNll = fullNll
-                                    }
-                                }
-                            }
-                        }
-                        if (bestSubsumingNll != null) {
-                            clampedBaseNll = maxOf(clampedBaseNll, bestSubsumingNll + deltaSub)
-                        }
+                        val baseCompNll = subsumingFullNll ?: (rawNll + muSpan * deltaUnconsumed)
+                        effectiveNll = baseCompNll + kappaCommit
                     }
-
+                } else {
                     // (c) Uninputted prefix extension cost
-                    val extPenalty = if (deltaExt > 0 && n > 0) {
-                        lambdaExt * deltaExt
-                    } else if (candidate.isPrediction) {
-                        lambdaExt * 1.0f
-                    } else {
-                        0.0f
-                    }
-
-                    effectiveNll = clampedBaseNll + extPenalty
+                    effectiveNll = rawNll + lambdaExt * maxOf(1, deltaExt)
                 }
 
                 val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f
@@ -199,11 +202,162 @@ class LlmReranker private constructor(private val context: Context) {
                     0.0f
                 }
 
-                val finalScore = (1.0f - weightAlpha) * (effectiveNll + effectiveObs + hysteresisBonus) + weightAlpha * rankCost
-                Pair(candidate, finalScore)
+                baseScores[index] = (1.0f - weightAlpha) * (effectiveNll + effectiveObs + hysteresisBonus) + weightAlpha * rankCost
             }
 
-            return scored.sortedBy { it.second }.map { it.first }
+            // 6. Strata Partitioning
+            val exactUserIndices = topPool.indices.filter {
+                val c = topPool[it]
+                (c.source == "user" || c.source == "user_english") && c.obsPenalty == 0.0f && unconsumedDeltas[it] == 0
+            }
+            val fullIndices = topPool.indices.filter {
+                unconsumedDeltas[it] == 0 && extDeltas[it] == 0 && !topPool[it].isPrediction && !isChimeraFull[it] && it !in exactUserIndices
+            }
+            val prefixIndices = topPool.indices.filter {
+                unconsumedDeltas[it] > 0 && it !in exactUserIndices
+            }
+            val extIndices = topPool.indices.filter {
+                it !in exactUserIndices && it !in fullIndices && it !in prefixIndices
+            }
+
+            // 7. Sequential 2D-MMR Greedy Selection for Full-Span Strata
+            val alphaDiv = minOf(0.5f, weightAlpha)
+            val rankedFull = mutableListOf<ConversionCandidate>()
+            val remainingFull = fullIndices.toMutableList()
+            val firstStemCounts = HashMap<String, Int>()
+            val lastContentCounts = HashMap<String, Int>()
+
+            while (remainingFull.isNotEmpty()) {
+                var bestIdx = -1
+                var bestScore = Float.MAX_VALUE
+                for (idx in remainingFull) {
+                    val cand = topPool[idx]
+                    val stem1 = cand.firstBunsetsuSurface.ifEmpty { cand.surface }
+                    val count1 = firstStemCounts[stem1] ?: 0
+                    val stemLast = cand.lastContentWordSurface
+                    val countLast = if (stemLast.isNotEmpty()) lastContentCounts[stemLast] ?: 0 else 0
+
+                    val divPenalty = (1.0f - alphaDiv) * (count1 * 2.00f + countLast * 1.60f)
+                    val score = baseScores[idx] + divPenalty
+                    if (score < bestScore) {
+                        bestScore = score
+                        bestIdx = idx
+                    }
+                }
+                if (bestIdx >= 0) {
+                    val chosen = topPool[bestIdx]
+                    rankedFull.add(chosen)
+                    remainingFull.remove(bestIdx)
+                    val stem1 = chosen.firstBunsetsuSurface.ifEmpty { chosen.surface }
+                    firstStemCounts[stem1] = (firstStemCounts[stem1] ?: 0) + 1
+                    val stemLast = chosen.lastContentWordSurface
+                    if (stemLast.isNotEmpty()) {
+                        lastContentCounts[stemLast] = (lastContentCounts[stemLast] ?: 0) + 1
+                    }
+                } else {
+                    break
+                }
+            }
+
+            // 8. Sequential Greedy Selection for Partial-Prefix Strata with Det-Sub Prevention
+            val partialStemCounts = HashMap<String, Int>()
+            val coveredFullStems = HashSet<String>()
+            for (c in rankedFull.take(3)) {
+                val s = c.firstBunsetsuSurface.ifEmpty { c.surface }
+                if (s.isNotEmpty()) coveredFullStems.add(s)
+                for (pIdx in prefixIndices) {
+                    val pCand = topPool[pIdx]
+                    if (c.surface.startsWith(pCand.surface) && c.surface != pCand.surface) {
+                        coveredFullStems.add(pCand.surface)
+                        if (pCand.firstBunsetsuSurface.isNotEmpty()) {
+                            coveredFullStems.add(pCand.firstBunsetsuSurface)
+                        }
+                    }
+                }
+            }
+
+            val rankedPartial = mutableListOf<ConversionCandidate>()
+            val remainingPartial = prefixIndices.toMutableList()
+
+            while (remainingPartial.isNotEmpty()) {
+                var bestIdx = -1
+                var bestScore = Float.MAX_VALUE
+                for (idx in remainingPartial) {
+                    val cand = topPool[idx]
+                    val stem1 = cand.firstBunsetsuSurface.ifEmpty { cand.surface }
+                    val count1 = partialStemCounts[stem1] ?: 0
+
+                    val isDetSub = coveredFullStems.contains(stem1) && cand.suffixBranchingFactor < 1.80f
+                    val detSubPenalty = if (isDetSub) 2.50f else 0.0f
+                    val divPenalty = (1.0f - alphaDiv) * (count1 * 2.00f + detSubPenalty)
+
+                    val score = baseScores[idx] + divPenalty
+                    if (score < bestScore) {
+                        bestScore = score
+                        bestIdx = idx
+                    }
+                }
+                if (bestIdx >= 0) {
+                    val chosen = topPool[bestIdx]
+                    rankedPartial.add(chosen)
+                    remainingPartial.remove(bestIdx)
+                    val stem1 = chosen.firstBunsetsuSurface.ifEmpty { chosen.surface }
+                    partialStemCounts[stem1] = (partialStemCounts[stem1] ?: 0) + 1
+                } else {
+                    break
+                }
+            }
+
+            // 9. Extensions / Predictions ranked by base score
+            val rankedExt = extIndices.sortedBy { baseScores[it] }.map { topPool[it] }
+
+            // 10. Adaptive Stratified Interleaving Schedule
+            val maxBranch = prefixIndices.map { topPool[it].suffixBranchingFactor }.maxOrNull() ?: 1.0f
+            val isHighBranch = maxBranch >= 1.80f
+            val topFullQuota = if (isHighBranch) 2 else 3
+            val midPartialQuota = if (isHighBranch) 4 else 3
+
+            val result = mutableListOf<ConversionCandidate>()
+            val seenSurfaces = HashSet<String>()
+            fun addCandidate(cand: ConversionCandidate) {
+                if (seenSurfaces.add(cand.surface)) {
+                    result.add(cand)
+                }
+            }
+
+            // Stratum 0: User exact entries
+            for (idx in exactUserIndices) {
+                addCandidate(topPool[idx])
+            }
+            // Stratum 1: Top full candidates
+            var fullIdx = 0
+            var partialIdx = 0
+            while (fullIdx < minOf(topFullQuota, rankedFull.size)) {
+                addCandidate(rankedFull[fullIdx++])
+            }
+            // Stratum 2: Mid partial candidates
+            while (partialIdx < minOf(midPartialQuota, rankedPartial.size)) {
+                addCandidate(rankedPartial[partialIdx++])
+            }
+            // Stratum 3: Next full candidates
+            val nextFullLimit = minOf(fullIdx + 2, rankedFull.size)
+            while (fullIdx < nextFullLimit) {
+                addCandidate(rankedFull[fullIdx++])
+            }
+            // Stratum 4: Remaining partial candidates
+            while (partialIdx < rankedPartial.size) {
+                addCandidate(rankedPartial[partialIdx++])
+            }
+            // Stratum 5: Remaining full candidates
+            while (fullIdx < rankedFull.size) {
+                addCandidate(rankedFull[fullIdx++])
+            }
+            // Stratum 6: Extension / prediction candidates
+            for (ext in rankedExt) {
+                addCandidate(ext)
+            }
+
+            return result
         }
     }
 
@@ -391,17 +545,39 @@ class LlmReranker private constructor(private val context: Context) {
                 return null
             }
 
-            val topPool = nonHiraganaCandidates.take(8)
-            val restPool = nonHiraganaCandidates.drop(8)
+            val fullCands = nonHiraganaCandidates.filter {
+                !it.isPrediction && (it.reading.isEmpty() || it.source != "viterbi_prefix")
+            }
+            val prefixCands = nonHiraganaCandidates.filter {
+                it.source == "viterbi_prefix" || it.isPrediction
+            }
+            val topPool = mutableListOf<ConversionCandidate>()
+            val topPoolSurfaces = HashSet<String>()
+            for (c in fullCands.take(6)) {
+                if (topPoolSurfaces.add(c.surface)) topPool.add(c)
+            }
+            for (c in prefixCands.take(6)) {
+                if (topPoolSurfaces.add(c.surface)) topPool.add(c)
+            }
+            for (c in nonHiraganaCandidates) {
+                if (topPool.size >= 12) break
+                if (topPoolSurfaces.add(c.surface)) topPool.add(c)
+            }
+            val restPool = nonHiraganaCandidates.filter { cand -> topPool.none { it.surface == cand.surface } }
 
             val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
             val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
+
+            val evalSurfaces = Array(topPool.size) { i ->
+                val c = topPool[i]
+                if (c.completedSurface.isNotEmpty()) c.completedSurface else c.surface
+            }
 
             // 1. Check if all candidates are already memoized in Kotlin cache
             var allCached = true
             val memoizedScores = FloatArray(topPool.size)
             for (i in topPool.indices) {
-                val key = "$effectiveContext:${topPool[i].surface}"
+                val key = "$effectiveContext:${evalSurfaces[i]}"
                 val cached = memoizedNllCache.get(key)
                 if (cached != null) {
                     memoizedScores[i] = cached
@@ -418,18 +594,24 @@ class LlmReranker private constructor(private val context: Context) {
                 scores = memoizedScores
                 isFullyComplete = true
             } else {
-                val surfaces = topPool.map { it.surface }.toTypedArray()
-                val isCompleteArray = BooleanArray(surfaces.size)
-                val fastScores = nativeTryFastScoreCandidates(effectiveContext, surfaces, isCompleteArray)
+                val uniqueSurfaces = evalSurfaces.distinct().toTypedArray()
+                val isCompleteArray = BooleanArray(uniqueSurfaces.size)
+                val fastScores = nativeTryFastScoreCandidates(effectiveContext, uniqueSurfaces, isCompleteArray)
                     ?: return null
-                scores = fastScores
+                val scoreMap = HashMap<String, Float>()
+                val completeMap = HashMap<String, Boolean>()
+                for (i in uniqueSurfaces.indices) {
+                    scoreMap[uniqueSurfaces[i]] = fastScores[i]
+                    completeMap[uniqueSurfaces[i]] = isCompleteArray[i]
+                    if (isCompleteArray[i]) {
+                        memoizedNllCache.put("$effectiveContext:${uniqueSurfaces[i]}", fastScores[i])
+                    }
+                }
+                scores = FloatArray(topPool.size) { scoreMap[evalSurfaces[it]] ?: 20.0f }
                 var complete = true
                 for (i in topPool.indices) {
-                    val key = "$effectiveContext:${topPool[i].surface}"
-                    val cached = memoizedNllCache.get(key)
-                    if (cached != null) {
-                        scores[i] = cached
-                    } else if (!isCompleteArray[i]) {
+                    val key = "$effectiveContext:${evalSurfaces[i]}"
+                    if (memoizedNllCache.get(key) == null && completeMap[evalSurfaces[i]] != true) {
                         complete = false
                     }
                 }
@@ -487,16 +669,36 @@ class LlmReranker private constructor(private val context: Context) {
                 return Pair(nonHiraganaCandidates, false)
             }
 
-            // Cap candidate evaluation pool to at most top 8 for low latency and zero UI lag
-            val topPool = nonHiraganaCandidates.take(8)
-            val restPool = nonHiraganaCandidates.drop(8)
+            val fullCands = nonHiraganaCandidates.filter {
+                !it.isPrediction && (it.reading.isEmpty() || it.source != "viterbi_prefix")
+            }
+            val prefixCands = nonHiraganaCandidates.filter {
+                it.source == "viterbi_prefix" || it.isPrediction
+            }
+            val topPool = mutableListOf<ConversionCandidate>()
+            val topPoolSurfaces = HashSet<String>()
+            for (c in fullCands.take(6)) {
+                if (topPoolSurfaces.add(c.surface)) topPool.add(c)
+            }
+            for (c in prefixCands.take(6)) {
+                if (topPoolSurfaces.add(c.surface)) topPool.add(c)
+            }
+            for (c in nonHiraganaCandidates) {
+                if (topPool.size >= 12) break
+                if (topPoolSurfaces.add(c.surface)) topPool.add(c)
+            }
+            val restPool = nonHiraganaCandidates.filter { cand -> topPool.none { it.surface == cand.surface } }
 
-            val surfaces = topPool.map { it.surface }.toTypedArray()
+            val evalSurfaces = Array(topPool.size) { i ->
+                val c = topPool[i]
+                if (c.completedSurface.isNotEmpty()) c.completedSurface else c.surface
+            }
+            val uniqueSurfaces = evalSurfaces.distinct().toTypedArray()
             val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
             val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
-            val scores = nativeScoreCandidates(effectiveContext, surfaces)
+            val uniqueScores = nativeScoreCandidates(effectiveContext, uniqueSurfaces)
 
-            if (scores == null || scores.size != topPool.size) {
+            if (uniqueScores == null || uniqueScores.size != uniqueSurfaces.size) {
                 // Safe fallback: user entries first
                 val userFallback = nonHiraganaCandidates.filter { it.source == "user" || it.source == "user_english" }
                 val otherFallback = nonHiraganaCandidates.filter { it.source != "user" && it.source != "user_english" }
@@ -504,10 +706,12 @@ class LlmReranker private constructor(private val context: Context) {
             }
 
             // Memoize completed scores in Kotlin cache for fast 0ms retrieval on subsequent typing
-            for (i in topPool.indices) {
-                val key = "$effectiveContext:${topPool[i].surface}"
-                memoizedNllCache.put(key, scores[i])
+            val scoreMap = HashMap<String, Float>()
+            for (i in uniqueSurfaces.indices) {
+                scoreMap[uniqueSurfaces[i]] = uniqueScores[i]
+                memoizedNllCache.put("$effectiveContext:${uniqueSurfaces[i]}", uniqueScores[i])
             }
+            val scores = FloatArray(topPool.size) { scoreMap[evalSurfaces[it]] ?: 20.0f }
 
             val sortedPool = scoreAndRankPool(
                 topPool = topPool,

@@ -812,9 +812,18 @@ class VoiceInputMethodService : InputMethodService() {
                             val isUserTouchingStrip = candidateStripView?.isUserInteracting == true
 
                             // Policy ⑤: Tap-Safe Window Protection
+                            val preservedCand = baseCandidates.find { it.surface == currentTop1ToPreserve }
+                            val isPreservedPartial = preservedCand != null &&
+                                (preservedCand.source == "viterbi_prefix" ||
+                                 (preservedCand.reading.isNotEmpty() && preservedCand.reading.length < reading.length))
+                            val isNewTopFull = reranked.firstOrNull()?.let {
+                                it.source != "viterbi_prefix" && !it.isPrediction && it.reading.length == reading.length
+                            } ?: false
+
                             val safeCandidates = if ((elapsedFromFirstRenderMs > 100L || isUserTouchingStrip) &&
                                 currentTop1ToPreserve != null &&
-                                reranked.firstOrNull()?.surface != currentTop1ToPreserve
+                                reranked.firstOrNull()?.surface != currentTop1ToPreserve &&
+                                !(isPreservedPartial && isNewTopFull)
                             ) {
                                 // Pin the initial Top-1 at Slot 0 to prevent mis-taps, inserting new Top-1 at Slot 1
                                 val pinnedTop = reranked.find { it.surface == currentTop1ToPreserve }
