@@ -297,6 +297,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 55. [LM-First リランキングにおける部分一致候補の順位逆転現象（「さいしょの」→「最初」＞「最初の」）の数学的解剖とアルゴリズム改善設計書](docs/lm_first_partial_prefix_ranking_analysis_and_solutions.md)
     - 自己回帰言語モデルの連鎖律による部分候補（`viterbi_prefix`, $m < n$）と全文候補（$m = n$）の NLL 単調性・未消費読みスパン欠落の解剖、BPE トークン長正規化（Finding 37）と読みモーラ長スパン整合の理論的区別、および5つのアルゴリズム改善案（未消費読み生成補完・包含優越ゲート・ホライズン層別リランキング・後方 LSE 周辺化統合・期待解決モーラ効用）の設計仕様。
 
+56. [ASRモデル非依存の自動句読点挿入アーキテクチャ・アイデア提案書](docs/asr_agnostic_punctuation_insertion_ideas.md)
+    - CTC/Transducer系（句読点なし）やSeq2Seq/Whisper系（記号揺れ・句点欠落）など任意のASRモデルに依存せず利用できる4大普遍シグナル（表層正規化、Mozc形態素・2D連接行列、VADポーズ長＆終端ピッチ $F_0$、オンデバイスSLMロジット）の整理、6つのコアアイデア（チャンク間遡及境界リライト、読点密度予算モデル等）、および5段階ハイブリッド・カスケード設計仕様。
+
 ---
 
 ## 📂 Source Code Layout
