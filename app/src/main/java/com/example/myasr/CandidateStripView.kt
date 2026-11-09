@@ -135,7 +135,13 @@ class CandidateStripView @JvmOverloads constructor(
 
         for (candidate in displayCandidates) {
             val tv = TextView(context).apply {
-                text = candidate.surface
+                val isClipboardRecent = candidate.source == "clipboard_recent"
+                val displayText = if (isClipboardRecent) {
+                    ClipboardUtils.formatCandidateChipPreview(candidate.surface, maxChars = 14)
+                } else {
+                    candidate.surface
+                }
+                text = displayText
                 textSize = textSizeSp
                 typeface = Typeface.DEFAULT
                 gravity = Gravity.CENTER
@@ -143,12 +149,16 @@ class CandidateStripView @JvmOverloads constructor(
                 // Quantized minimum width by character count: eliminates cumulative layout shifts (CLS)
                 // when homophones of the same character count exchange positions.
                 val charCount = candidate.surface.length
-                val minW = when (charCount) {
-                    1 -> (42 * density).toInt()
-                    2 -> (64 * density).toInt()
-                    3 -> (86 * density).toInt()
-                    4 -> (108 * density).toInt()
-                    else -> 0
+                val minW = if (isClipboardRecent) {
+                    0
+                } else {
+                    when (charCount) {
+                        1 -> (42 * density).toInt()
+                        2 -> (64 * density).toInt()
+                        3 -> (86 * density).toInt()
+                        4 -> (108 * density).toInt()
+                        else -> 0
+                    }
                 }
                 minWidth = minW
 

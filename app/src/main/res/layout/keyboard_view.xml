@@ -134,32 +134,36 @@
             android:background="?android:attr/selectableItemBackgroundBorderless"
             style="?android:attr/borderlessButtonStyle" />
 
-        <!-- Compact Header Shortcut: Clipboard Preview & Paste -->
+        <!-- Compact Header Shortcut: Clipboard History Access (Icon Only) -->
         <Button
             android:id="@+id/btnHeaderClipboard"
-            android:layout_width="wrap_content"
+            android:layout_width="32dp"
             android:layout_height="28dp"
-            android:minWidth="32dp"
-            android:maxWidth="86dp"
             android:layout_marginStart="2dp"
             android:text="📋"
-            android:textSize="11.5sp"
-            android:singleLine="true"
-            android:ellipsize="end"
-            android:textColor="@color/key_text"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:paddingTop="0dp"
-            android:paddingBottom="0dp"
-            android:background="@drawable/bg_candidate_pill"
+            android:textSize="13sp"
+            android:padding="0dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
             style="?android:attr/borderlessButtonStyle" />
     </LinearLayout>
 
-    <!-- Gboard-Inspired Flick & QWERTY Keyboard Surface -->
-    <com.example.myasr.FlickKeyboardView
-        android:id="@+id/flickKeyboardView"
+    <!-- Keyboard Body Surface (Flick & QWERTY Keyboard with ClipboardHistoryView Overlay) -->
+    <FrameLayout
+        android:id="@+id/keyboardBodyContainer"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1">
+
+        <com.example.myasr.FlickKeyboardView
+            android:id="@+id/flickKeyboardView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.example.myasr.ClipboardHistoryView
+            android:id="@+id/clipboardHistoryView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+    </FrameLayout>
 
 </LinearLayout>
