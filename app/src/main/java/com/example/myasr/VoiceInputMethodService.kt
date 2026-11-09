@@ -75,13 +75,12 @@ class VoiceInputMethodService : InputMethodService() {
     private var btnHeaderClipboard: Button? = null
     private var candidateStripView: CandidateStripView? = null
     private var flickKeyboardView: FlickKeyboardView? = null
+    private var clipboardHistoryView: ClipboardHistoryView? = null
     private var progressDecoding: ProgressBar? = null
     private var recordingIndicator: View? = null
 
     private var clipboardManager: android.content.ClipboardManager? = null
-    private val clipChangedListener = android.content.ClipboardManager.OnPrimaryClipChangedListener {
-        updateClipboardButton()
-    }
+    private var clipboardExpirationJob: Job? = null
 
     private val prefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
         applyKeyboardDimensions()
@@ -96,7 +95,9 @@ class VoiceInputMethodService : InputMethodService() {
             .registerOnSharedPreferenceChangeListener(prefsListener)
 
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-        clipboardManager?.addPrimaryClipChangedListener(clipChangedListener)
+        ClipboardHistoryRepository.getInstance(this).onHistoryChanged = {
+            checkAndRenderClipboardSuggestion()
+        }
 
         kanaKanjiEngine = KanaKanjiEngine.getInstance(this)
         nextPhrasePredictor = NextPhrasePredictor.getInstance(this)
@@ -163,6 +164,17 @@ class VoiceInputMethodService : InputMethodService() {
             updateDebugSlmBadge(null)
         }
         flickKeyboardView = view.findViewById(R.id.flickKeyboardView)
+        clipboardHistoryView = view.findViewById(R.id.clipboardHistoryView)
+        clipboardHistoryView?.listener = object : ClipboardHistoryView.Listener {
+            override fun onHistoryItemClicked(item: ClipboardHistoryItem) {
+                pasteTextFromHistory(item.text)
+                hideClipboardHistoryView()
+            }
+
+            override fun onCloseClicked() {
+                hideClipboardHistoryView()
+            }
+        }
         progressDecoding = view.findViewById(R.id.progressDecoding)
         recordingIndicator = view.findViewById(R.id.recordingIndicator)
 
@@ -182,12 +194,16 @@ class VoiceInputMethodService : InputMethodService() {
         isCurrentlySpeaking = false
         restartListeningAfterDecode = false
         arbitrator.resetAll()
+        hideClipboardHistoryView()
         flickKeyboardView?.syncPreferences()
         syncKeyboardState()
         candidateStripView?.showEmptyStatus(getIdleStatusPrompt())
         updateUiState(State.IDLE)
         applyKeyboardDimensions()
         updateClipboardButton()
+
+        ClipboardHistoryRepository.getInstance(this).setInputViewActive(true)
+        checkAndRenderClipboardSuggestion()
 
         // Trigger / verify early background warm-up of all models (non-blocking) and sync user dictionary
         ModelWarmUpManager.getInstance(this).startWarmUpAsync()
@@ -202,6 +218,8 @@ class VoiceInputMethodService : InputMethodService() {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
+        hideClipboardHistoryView()
+        ClipboardHistoryRepository.getInstance(this).setInputViewActive(false)
         flickKeyboardView?.dismissPopup()
         if (currentState == State.RECORDING) {
             cancelRecording()
@@ -388,10 +406,12 @@ class VoiceInputMethodService : InputMethodService() {
 
     private fun setupListeners() {
         btnVoiceToggle?.setOnClickListener {
+            hideClipboardHistoryView()
             handleVoiceToggleClicked()
         }
 
         btnHeaderDict?.setOnClickListener {
+            hideClipboardHistoryView()
             openDictionaryActivity()
         }
 
@@ -405,6 +425,19 @@ class VoiceInputMethodService : InputMethodService() {
                 val prevPhrase = arbitrator.previousCommittedPhrase
                 val committedSurface = candidate.surface
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
+
+                if (candidate.source == "clipboard_recent") {
+                    pasteTextFromHistory(committedSurface)
+                    serviceScope.launch {
+                        val repo = ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService)
+                        val item = repo.getRecentSuggestionCandidate()
+                        if (item != null) {
+                            repo.markDismissedFromStrip(item.id)
+                        }
+                    }
+                    candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                    return
+                }
 
                 if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET &&
                     candidate.source in listOf("english_typo", "english_gec", "user_english", "english_cap", "raw")
@@ -961,11 +994,18 @@ class VoiceInputMethodService : InputMethodService() {
 
         // 1. FAST PATH (Instant UI update on main thread, < 0.1ms):
         // Display user history bigrams, canonical collocations, and particle continuation
-        val fastPredictions = nextPhrasePredictor.predict(committedPhrase, textBeforeCursor)
+        val fastPredictions = nextPhrasePredictor.predict(committedPhrase, textBeforeCursor).toMutableList()
+        val recentClip = serviceScope.runCatching {
+            // Check in-memory cached recent clipboard item
+            runBlocking { ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService).getRecentSuggestionCandidate() }
+        }.getOrNull()
+        if (recentClip != null) {
+            fastPredictions.add(0, ConversionCandidate(surface = recentClip.text, reading = recentClip.text, isPrediction = true, source = "clipboard_recent"))
+        }
         if (fastPredictions.isNotEmpty()) {
             candidateStripView?.setCandidates(fastPredictions)
         } else {
-            candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+            checkAndRenderClipboardSuggestion()
         }
 
         // 2. SLM SPECULATIVE CONTINUATION & CONTEXTUAL RERANKING PATH (Async worker on Dispatchers.Default):
@@ -1568,31 +1608,77 @@ class VoiceInputMethodService : InputMethodService() {
         }
     }
 
-    private fun getClipboardText(): String? {
-        return try {
-            val clip = clipboardManager?.primaryClip ?: return null
-            if (clip.itemCount > 0) {
-                val item = clip.getItemAt(0)
-                item.text?.toString() ?: item.coerceToText(this)?.toString()
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Error accessing clipboard: ${e.message}")
-            null
+    private fun updateClipboardButton() {
+        btnHeaderClipboard?.text = "📋"
+        btnHeaderClipboard?.isEnabled = true
+        btnHeaderClipboard?.alpha = 1.0f
+    }
+
+    private fun isClipboardHistoryShowing(): Boolean {
+        return clipboardHistoryView?.visibility == View.VISIBLE
+    }
+
+    private fun showClipboardHistoryView() {
+        clipboardHistoryView?.refreshHistory()
+        clipboardHistoryView?.visibility = View.VISIBLE
+        flickKeyboardView?.visibility = View.GONE
+        btnHeaderClipboard?.setBackgroundResource(R.drawable.badge_background)
+    }
+
+    private fun hideClipboardHistoryView() {
+        if (clipboardHistoryView?.visibility == View.VISIBLE) {
+            clipboardHistoryView?.visibility = View.GONE
+            flickKeyboardView?.visibility = View.VISIBLE
+            btnHeaderClipboard?.setBackgroundResource(0)
         }
     }
 
-    private fun updateClipboardButton() {
-        val text = getClipboardText()
-        btnHeaderClipboard?.text = ClipboardUtils.formatClipboardPreview(text)
-        btnHeaderClipboard?.isEnabled = !text.isNullOrBlank()
-        btnHeaderClipboard?.alpha = if (text.isNullOrBlank()) 0.45f else 1.0f
+    private fun toggleClipboardHistoryView() {
+        if (isClipboardHistoryShowing()) {
+            hideClipboardHistoryView()
+        } else {
+            showClipboardHistoryView()
+        }
+    }
+
+    private fun checkAndRenderClipboardSuggestion() {
+        if (arbitrator.isKeyboardComposing() || arbitrator.isStreamingComposing()) {
+            return
+        }
+        clipboardExpirationJob?.cancel()
+        serviceScope.launch(Dispatchers.Main) {
+            val repo = ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService)
+            val nowMs = System.currentTimeMillis()
+            val candidateItem = repo.getRecentSuggestionCandidate(nowMs)
+            if (candidateItem != null) {
+                val clipCandidate = ConversionCandidate(
+                    surface = candidateItem.text,
+                    reading = candidateItem.text,
+                    isPrediction = true,
+                    source = "clipboard_recent"
+                )
+                candidateStripView?.setCandidates(listOf(clipCandidate))
+
+                // Schedule auto-dismiss when 60s expires
+                val remainingMs = (ClipboardHistoryRepository.CANDIDATE_SUGGEST_TTL_MS - (nowMs - candidateItem.discoveredAtMs)).coerceAtLeast(0L)
+                clipboardExpirationJob = serviceScope.launch {
+                    delay(remainingMs + 50L)
+                    if (!arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing()) {
+                        candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                    }
+                }
+            } else if (candidateStripView?.getCandidates()?.any { it.source == "clipboard_recent" } == true) {
+                candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+            }
+        }
     }
 
     private fun handleClipboardClicked() {
-        val text = getClipboardText()
-        if (!text.isNullOrEmpty()) {
+        toggleClipboardHistoryView()
+    }
+
+    private fun pasteTextFromHistory(text: String) {
+        if (text.isNotEmpty()) {
             val prevPhrase = arbitrator.previousCommittedPhrase
             val hadKeyboardComposing = arbitrator.isKeyboardComposing()
             val readingBefore = arbitrator.composingText.toString()
@@ -1690,7 +1776,7 @@ class VoiceInputMethodService : InputMethodService() {
     }
 
     override fun onDestroy() {
-        clipboardManager?.removePrimaryClipChangedListener(clipChangedListener)
+        clipboardExpirationJob?.cancel()
         rerankJob?.cancel()
         getSharedPreferences(KeyboardHeightManager.PREFS_NAME, Context.MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(prefsListener)

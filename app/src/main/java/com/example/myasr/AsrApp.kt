@@ -35,6 +35,8 @@ class AsrApp : Application() {
         private set
     lateinit var modelWarmUpManager: ModelWarmUpManager
         private set
+    lateinit var clipboardHistoryRepository: ClipboardHistoryRepository
+        private set
 
     companion object {
         lateinit var instance: AsrApp
@@ -61,6 +63,7 @@ class AsrApp : Application() {
         connectionDataManager = ConnectionDataManager(this)
         llmReranker = LlmReranker.getInstance(this)
         modelWarmUpManager = ModelWarmUpManager.getInstance(this)
+        clipboardHistoryRepository = ClipboardHistoryRepository.getInstance(this)
 
         // Asynchronously preload and warm up all core engines (KanaKanji, SLM, ASR) off the UI main thread
         modelWarmUpManager.startWarmUpAsync()

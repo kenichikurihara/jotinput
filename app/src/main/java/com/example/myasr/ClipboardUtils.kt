@@ -1,16 +1,15 @@
 package com.example.myasr
 
 object ClipboardUtils {
+
     /**
-     * Formats raw clipboard text for display inside the compact header button.
-     * Extracts approximately the first 3 characters with ellipsis, collapsing whitespace and newlines.
+     * Formats raw clipboard text into a compact single-line preview for CandidateStripView chip.
+     * Replaces newlines and consecutive whitespace with a single space, and trims to maxLength.
      * E.g.
-     *  - null or empty -> "📋"
-     *  - "こんにちは" -> "📋 こんに…"
-     *  - "OK" -> "📋 OK"
-     *  - "https://google.com" -> "📋 htt…"
+     *  - "こんにちは、世界" -> "📋 こんにちは、世界"
+     *  - "https://example.com/very/long/path" -> "📋 https://example.co…"
      */
-    fun formatClipboardPreview(rawText: String?): String {
+    fun formatCandidateChipPreview(rawText: String?, maxChars: Int = 16): String {
         if (rawText.isNullOrBlank()) {
             return "📋"
         }
@@ -18,10 +17,49 @@ object ClipboardUtils {
         if (clean.isEmpty()) {
             return "📋"
         }
-        return if (clean.length > 3) {
-            "📋 " + clean.take(3) + "…"
+        return if (clean.length > maxChars) {
+            "📋 " + clean.take(maxChars) + "…"
         } else {
             "📋 " + clean
         }
+    }
+
+    /**
+     * Formats raw clipboard text for display in the history list item.
+     * Preserves visual structure up to maxLines / maxChars, replacing newlines with visual arrow ↵.
+     */
+    fun formatHistoryItemPreview(rawText: String?, maxChars: Int = 120): String {
+        if (rawText.isNullOrBlank()) {
+            return ""
+        }
+        val sanitized = rawText.replace("\r\n", "\n").replace("\r", "\n")
+            .split("\n")
+            .filter { it.isNotBlank() }
+            .joinToString(" ↵ ") { it.trim() }
+
+        return if (sanitized.length > maxChars) {
+            sanitized.take(maxChars) + "…"
+        } else {
+            sanitized
+        }
+    }
+
+    /**
+     * Formats elapsed time since discovery (in milliseconds) into a friendly Japanese relative string.
+     */
+    fun formatElapsedTime(elapsedMs: Long, isCurrentOsClip: Boolean): String {
+        if (isCurrentOsClip) {
+            return "現在のクリップ"
+        }
+        val seconds = elapsedMs / 1000L
+        if (seconds < 60L) {
+            return "たった今"
+        }
+        val minutes = seconds / 60L
+        if (minutes < 60L) {
+            return "${minutes}分前"
+        }
+        val hours = minutes / 60L
+        return "${hours}時間前"
     }
 }
