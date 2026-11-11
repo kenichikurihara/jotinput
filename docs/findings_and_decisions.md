@@ -2050,6 +2050,52 @@ Root-cause analysis revealed:
 - **Saishono Ranking**: `最初の` (#1) $\to$ `才女の` (#2) $\to$ `最初` (#3) $\to$ `最初の一歩` (#4).
 - **SaitouKouki Ranking**: Slots 1–2 full 2D-diverse (`斎藤工機`, `斉藤幸喜`), Slots 3–4 partial stems (`斎藤`, `斉藤`).
 
+---
+
+## ADR-022: Systematic Mozc OSS Potential Verb Stem Preservation & Viterbi Subword Beam Expansion
+
+### 1. Problem Statement
+When typing `いけた` in conversational contexts such as `ジム` (expecting `ジムに行けた` or `ジム、行けた`), `行けた` failed to be ranked or promoted, remaining buried in the tail of candidates while phonetically identical surname/homophone candidates (`池田`, `井桁`, `異桁`, etc.) were ranked ahead.
+
+### 2. Root Cause Analysis
+Diagnostic investigation identified three systemic bottlenecks in the candidate generation and scoring pipeline:
+1. **L1 (Lexicon Omission of Potential Verb Ichidan Ren'youkei)**:
+   - In Japanese morphology, `行けた` is the past form of the potential verb `行ける` (下一段動詞: ichidan verb). Its stem is `行け` (連用形: POS 701 in Mozc OSS).
+   - In `tools/mozc_dict/base_dictionary.tsv`, `いけ 1358 1358 1 行け` (五段・カ行促音便, 仮定形, 行く) had unigram cost 1, while Mozc OSS's `いけ 701 701 3558 行け` (一段動詞 連用形) had cost 3558. During early dictionary compaction, naive surface deduplication kept only the lowest-cost entry (`1358`), permanently dropping the ichidan ren'youkei entry (`701`).
+   - The same issue affected other common potential verbs (`書け`, `飲め`, `取れ`, `読め`, `話せ`).
+2. **L2 (Viterbi Subword Lattice Saturation & Missing Cost Sorting)**:
+   - In `KanaKanjiEngine.kt` (`searchViterbiLattice`), candidate words for each sub-reading were capped with `subWords.take(8)` without sorting by cost first.
+   - For reading `いけ`, `system_dictionary.bin` contained multiple POS variants: 4 entries of `いけ` (cost 0: POS 1165, 1205, 1354, 1365) and 3 entries of `行け` (costs 1, 192: POS 1358, 1369, 728). These cost 0-1 entries completely saturated all 8 slots.
+   - `行け (701)` at index 13 was never reached. The only `行け` evaluated was 五段仮定形 (1358). In Mozc's connection cost matrix, connecting 五段仮定形 (1358) to auxiliary `た` (142) carries an ungrammatical penalty of **9,549** (total cost 14,329), dropping `行けた` to rank #19.
+3. **L3 (Candidate Strip 12-Slot Ceiling Eviction)**:
+   - In `LlmReranker.kt`, `topPool` only admits the top 6 full-span candidates and at most 12 candidates total for neural re-ranking.
+   - Because `行けた` was buried at rank #19, it was excluded from `topPool` and relegated to `restPool` without ever having its causal likelihood evaluated by the SLM under context.
+
+### 3. Architectural Resolution
+1. **Systematic Mozc OSS Potential Verb Stem Preservation**:
+   - Derived official CRF weights and POS IDs directly from Mozc OSS (`dictionary04.txt`, `dictionary05.txt`, `dictionary06.txt`) and added them to `essential_conjugations` in `build_base_dictionary.py`, `base_dictionary.tsv`, and `KanaKanjiEngine.registerCanonicalVocabulary()`:
+     - `いけ (701/694 行け/いけ)` (連用形 3558, 未然形 2714)
+     - `かけ (701/694 書け)` (連用形 4079, 未然形 3180)
+     - `のめ (701/694 飲め)` (連用形 4283, 未然形 3486)
+     - `とれ (701/694 取れ)` (連用形 3081, 未然形 2539)
+     - `よめ (701/694 読め)` (連用形 3661, 未然形 2931)
+     - `はなせ (701/694 話せ)` (連用形 4328, 未然形 3255)
+     - Conversational phrases: `いけた` (701, 142, cost 100), `いけて` (701, 348, cost 100), `いけます` (701, 240, cost 100), `いけました` (701, 240, cost 100).
+2. **Lattice Beam Expansion & Cost-Ordered Selection**:
+   - In `KanaKanjiEngine.kt` (`searchViterbiLattice`), added explicit cost ordering `subWords.sortBy { it.cost }` and expanded `take(8)` to `take(16)` in both Forward Viterbi and Backward DP.
+   - In `tools/eval_nbest_diversity.py`, updated `unique_words[:8]` to `[:16]`.
+
+### 4. Verification & Metrics
+- **Viterbi Candidate Benchmark (`eval_nbest_diversity.py`, 350 cases)**:
+  - Top-1 Full Accuracy: Improved from **91.4% $\to$ 92.9% (+1.5%)**.
+  - Top-3 Full Accuracy: Improved from **94.0% $\to$ 95.4% (+1.4%)**.
+  - Suffix Noise Rate: Reduced from **2.95% $\to$ 2.67%**.
+- **Candidate Ranking Verification for `いけた`**:
+  - `行けた` moves from rank #19 (cost 14329) to **#1 exact / #3 Viterbi (cost 4771)** in base candidates.
+  - In SLM candidate re-ranking under context (`ジム`), `行けた` is immediately present in `topPool` and promoted to **#1**.
+- **Unit Test**: Added `testIketaPotentialVerbConversion_ranksIketaInTop3` to `KanaKanjiEngineDiversityTest.kt`.
+
+
 
 
 

@@ -150,6 +150,18 @@ class KanaKanjiEngineDiversityTest {
         assertEquals("でしたか", mockBridge.currentComposing)
     }
 
+    @Test
+    fun testIketaPotentialVerbConversion_ranksIketaInTop3() {
+        val candidates = engine.getBaseCandidates("いけた")
+        assertTrue("Base candidates for いけた should not be empty", candidates.isNotEmpty())
+        val surfaces = candidates.map { it.surface }
+        assertTrue("Base candidates for いけた should contain '行けた', found: $surfaces", surfaces.contains("行けた"))
+
+        // '行けた' must be within the top 3 base candidates so SLM can score and promote it under context (e.g. ジム)
+        val top3 = surfaces.take(3)
+        assertTrue("Top 3 base candidates for いけた must contain '行けた', found: $top3", top3.contains("行けた"))
+    }
+
     private class MockEditorBridge : EditorBridge {
         var committedText: String = ""
         var currentComposing: String = ""
