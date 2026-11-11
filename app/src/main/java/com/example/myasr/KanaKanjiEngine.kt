@@ -302,7 +302,20 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             CanonicalWord("し", "し"),
             CanonicalWord("して", "して"),
             CanonicalWord("している", "している"),
-            CanonicalWord("しています", "しています")
+            CanonicalWord("しています", "しています"),
+            // Potential verb Ichidan ren'youkei stems with Mozc OSS POS IDs
+            CanonicalWord("いけ", "行け", 701, 701),
+            CanonicalWord("いけ", "いけ", 701, 701),
+            CanonicalWord("かけ", "書け", 701, 701),
+            CanonicalWord("のめ", "飲め", 701, 701),
+            CanonicalWord("とれ", "取れ", 701, 701),
+            CanonicalWord("よめ", "読め", 701, 701),
+            CanonicalWord("はなせ", "話せ", 701, 701),
+            // Conversational potential past & te-form phrases
+            CanonicalWord("いけた", "行けた", 701, 142),
+            CanonicalWord("いけて", "行けて", 701, 348),
+            CanonicalWord("いけます", "行けます", 701, 240),
+            CanonicalWord("いけました", "行けました", 701, 240)
         )
         for (item in highPriority) {
             insertWord(item.reading, item.surface, cost = 50, source = "canonical", lid = item.lid, rid = item.rid)
@@ -1147,7 +1160,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     }
 
                     if (subWords.isNotEmpty()) {
-                        for (w in subWords.take(8)) {
+                        subWords.sortBy { it.cost }
+                        for (w in subWords.take(16)) {
                             val lengthBonus = if (j - i > 1) (j - i - 1) * 2000 else 0
                             val isUser = w.source == "user"
                             val userBonus = if (isUser) 50000 else 0
@@ -1337,7 +1351,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     }
 
                     if (tokens.isNotEmpty()) {
-                        for (tok in tokens.take(8)) {
+                        tokens.sortBy { it.cost }
+                        for (tok in tokens.take(16)) {
                             val lengthBonus = if (j - m > 1) (j - m - 1) * 2000 else 0
                             val transCost = if (matrix != null) {
                                 if (j == n) matrix.getTransitionCost(tok.rid, 0) else 0

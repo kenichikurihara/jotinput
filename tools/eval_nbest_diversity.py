@@ -114,7 +114,7 @@ def viterbi_search(reading, find_tokens, get_trans, beam_width=12):
                         seen.add(k)
                         unique_words.append(w)
 
-                for surf, wcost, lid, rid in unique_words[:8]:
+                for surf, wcost, lid, rid in unique_words[:16]:
                     lbonus = (j - i - 1) * 2000 if (j - i > 1) else 0
                     tcost = get_trans(p.last_rid, lid if lid > 0 else 0)
                     ncost = p.cost + max(-50000, wcost - lbonus) + tcost
