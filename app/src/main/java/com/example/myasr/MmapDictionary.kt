@@ -101,7 +101,7 @@ class MmapDictionary private constructor(
      * Binary search for exact matching tokens corresponding to the query reading.
      * Evaluates in O(log N) comparisons (~19 steps for 750,000 readings, < 2 microseconds).
      */
-    fun getExactTokens(reading: String): List<Token>? {
+    fun getExactTokens(reading: String, maxTokens: Int = 128): List<Token>? {
         if (numReadings <= 0 || reading.isEmpty()) return null
         val queryBytes = reading.toByteArray(Charsets.UTF_8)
         val queryLen = queryBytes.size
@@ -125,9 +125,10 @@ class MmapDictionary private constructor(
                 // Found exact reading match
                 val tokenCount = buffer.getShort(midRecordOffset + 6).toInt() and 0xFFFF
                 val tokenStartIdx = buffer.getInt(midRecordOffset + 8)
+                val fetchCount = minOf(tokenCount, maxTokens)
 
-                val results = ArrayList<Token>(tokenCount)
-                for (i in 0 until tokenCount) {
+                val results = ArrayList<Token>(fetchCount)
+                for (i in 0 until fetchCount) {
                     val tokOffset = tokenTableOffset + (tokenStartIdx + i) * TOKEN_ENTRY_SIZE
                     val sStrOffset = buffer.getInt(tokOffset)
                     val sStrLen = buffer.getShort(tokOffset + 4).toInt() and 0xFFFF
@@ -147,6 +148,40 @@ class MmapDictionary private constructor(
             }
         }
         return null
+    }
+
+    /**
+     * Fast O(log N) check if any reading starts with prefixReading.
+     */
+    fun hasAnyPrefix(prefixReading: String): Boolean {
+        if (numReadings <= 0 || prefixReading.isEmpty()) return false
+        val queryBytes = prefixReading.toByteArray(Charsets.UTF_8)
+        val queryLen = queryBytes.size
+
+        var low = 0
+        var high = numReadings - 1
+        var startIdx = numReadings
+
+        while (low <= high) {
+            val mid = (low + high) ushr 1
+            val midRecordOffset = readingTableOffset + mid * READING_ENTRY_SIZE
+            val rStrOffset = buffer.getInt(midRecordOffset)
+            val rStrLen = buffer.getShort(midRecordOffset + 4).toInt() and 0xFFFF
+
+            val cmp = compareBytes(queryBytes, queryLen, stringPoolOffset + rStrOffset, rStrLen)
+            if (cmp <= 0) {
+                startIdx = mid
+                high = mid - 1
+            } else {
+                low = mid + 1
+            }
+        }
+
+        if (startIdx >= numReadings) return false
+        val midRecordOffset = readingTableOffset + startIdx * READING_ENTRY_SIZE
+        val rStrOffset = buffer.getInt(midRecordOffset)
+        val rStrLen = buffer.getShort(midRecordOffset + 4).toInt() and 0xFFFF
+        return hasPrefix(queryBytes, queryLen, stringPoolOffset + rStrOffset, rStrLen)
     }
 
     /**

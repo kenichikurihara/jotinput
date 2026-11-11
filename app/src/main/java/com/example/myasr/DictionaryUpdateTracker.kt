@@ -87,8 +87,8 @@ class DictionaryUpdateTracker(private val context: Context) {
         private val GIST_UPDATED_AT_REGEX = Regex(""""updated_at"\s*:\s*"([^"]+)"""")
 
         fun getRemoteCheckEndpoint(sourceId: String): String? {
-            return when (sourceId) {
-                BASE_DICT_ID -> "https://api.github.com/gists/39665c6e7ba6e63d6fe86c4c4b1bbd42"
+            val effectiveId = if (sourceId == BASE_DICT_ID) DictionaryType.MOZC_GENERAL.id else sourceId
+            return when (effectiveId) {
                 DictionaryType.MOZC_GENERAL.id -> "https://github.com/google/mozc/commits/master/src/data/dictionary_oss.atom"
                 DictionaryType.SUDACHIDICT.id -> "https://github.com/utuhiro78/mozcdic-ut-sudachidict/commits/main.atom"
                 DictionaryType.JAWIKI.id -> "https://github.com/utuhiro78/mozcdic-ut-jawiki/commits/main.atom"
@@ -100,9 +100,7 @@ class DictionaryUpdateTracker(private val context: Context) {
         }
 
         fun getAllSourceIds(): List<String> {
-            val list = mutableListOf(BASE_DICT_ID)
-            DictionaryType.values().forEach { list.add(it.id) }
-            return list
+            return DictionaryType.values().map { it.id }
         }
 
         fun parseAtomFeedUpdatedMillis(xmlContent: String): Long {
@@ -201,13 +199,24 @@ class DictionaryUpdateTracker(private val context: Context) {
         if (stored > 0L) return stored
 
         val fallbackFileMillis = when (sourceId) {
-            BASE_DICT_ID -> {
-                val f = KanaKanjiEngine.getInstance(context).getBaseDictionaryFile()
-                if (f.exists() && f.length() > 0L) f.lastModified() else 0L
+            BASE_DICT_ID, DictionaryType.MOZC_GENERAL.id -> {
+                val f1 = java.io.File(KanaKanjiEngine.getInstance(context).getMozcDir(), "dict_mozc_general.bin")
+                if (f1.exists() && f1.length() > 0L) f1.lastModified()
+                else {
+                    val f2 = KanaKanjiEngine.getInstance(context).getSystemDictionaryBinFile()
+                    if (f2.exists() && f2.length() > 0L) f2.lastModified()
+                    else {
+                        val f3 = KanaKanjiEngine.getInstance(context).getBaseDictionaryFile()
+                        if (f3.exists() && f3.length() > 0L) f3.lastModified() else 0L
+                    }
+                }
             }
             else -> {
-                val dbFile = context.getDatabasePath(DictionaryDatabaseHelper.DATABASE_NAME)
-                if (dbFile.exists() && dbFile.length() > 0L) dbFile.lastModified() else 0L
+                val type = DictionaryType.fromId(sourceId)
+                if (type != null) {
+                    val dictFile = (AsrApp.instanceOrNull?.multiDictionaryManager ?: MultiDictionaryManager(context)).getDictFile(type)
+                    if (dictFile.exists() && dictFile.length() > 0L) dictFile.lastModified() else 0L
+                } else 0L
             }
         }
         val resolved = if (fallbackFileMillis > 0L) fallbackFileMillis else System.currentTimeMillis()
@@ -233,23 +242,16 @@ class DictionaryUpdateTracker(private val context: Context) {
      * Builds the current status snapshot for a single dictionary source.
      */
     fun getStatusInfo(sourceId: String): DictionaryStatusInfo {
-        val engine = KanaKanjiEngine.getInstance(context)
         val manager = AsrApp.instanceOrNull?.multiDictionaryManager ?: MultiDictionaryManager(context)
 
         val isInstalled: Boolean
         val wordCount: Int
         val displayName: String
 
-        if (sourceId == BASE_DICT_ID) {
-            isInstalled = engine.isBaseDictionaryDownloaded()
-            wordCount = if (isInstalled) 131156 else 0
-            displayName = BASE_DICT_DISPLAY_NAME
-        } else {
-            val type = DictionaryType.fromId(sourceId)
-            wordCount = if (type != null) manager.getWordCount(type) else 0
-            isInstalled = wordCount > 0
-            displayName = type?.displayName ?: sourceId
-        }
+        val type = if (sourceId == BASE_DICT_ID) DictionaryType.MOZC_GENERAL else DictionaryType.fromId(sourceId)
+        wordCount = if (type != null) manager.getWordCount(type) else 0
+        isInstalled = wordCount > 0
+        displayName = type?.displayName ?: sourceId
 
         val localMs = getLocalUpdatedAtMillis(sourceId, isInstalled)
         val remoteMs = getRemoteUpdatedAtMillis(sourceId)

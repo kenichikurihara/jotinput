@@ -45,6 +45,10 @@ class MmapDictionaryTest {
         val tokensNashi = dict.getExactTokens("なし")
         assertNotNull(tokensNashi)
         assertTrue("Tokens should contain なし with lid=1975", tokensNashi!!.any { it.surface == "なし" && it.lid == 1975 })
+
+        val tokensIketa = dict.getExactTokens("いけた")
+        assertNotNull(tokensIketa)
+        assertTrue("Tokens should contain 行けた in unpruned dictionary", tokensIketa!!.any { it.surface == "行けた" })
     }
 
     @Test
@@ -52,5 +56,12 @@ class MmapDictionaryTest {
         val prefixes = dict.getPrefixTokens("とうきょう", maxCount = 10)
         assertTrue("Prefix matches for とうきょう should not be empty", prefixes.isNotEmpty())
         assertTrue("Prefix matches should start with とうきょう", prefixes.all { it.first.startsWith("とうきょう") })
+    }
+
+    @Test
+    fun testHasAnyPrefix() {
+        assertTrue("Should have prefix for とうきょう", dict.hasAnyPrefix("とうきょう"))
+        assertTrue("Should have prefix for いけ", dict.hasAnyPrefix("いけ"))
+        assertTrue("Should not have prefix for non-existent reading", !dict.hasAnyPrefix("んんんんんん"))
     }
 }
