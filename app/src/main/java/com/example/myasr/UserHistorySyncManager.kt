@@ -269,13 +269,10 @@ class UserHistorySyncManager private constructor(private val context: Context) {
                 // 5. Hot-reload in-memory dictionaries and ASR hotwords if mutated
                 if (dictMutations > 0) {
                     try {
-                        val active = app.dictionaryRepository.getActive()
-                        app.kanaKanjiEngine.syncUserDictionary(active)
-                        val hotwords = app.hotwordsGenerator.generateHotwordsString(active)
-                        app.asrManager.updateHotwords(hotwords)
-                        Log.i(TAG, "Hot-reloaded user dictionary and ASR hotwords after sync ($dictMutations changes)")
+                        app.syncAllUserDictionaries()
+                        Log.i(TAG, "Hot-reloaded all user dictionaries and ASR hotwords after sync ($dictMutations changes)")
                     } catch (e: Exception) {
-                        Log.w(TAG, "Could not hot-reload user dictionary or hotwords: ${e.message}")
+                        Log.w(TAG, "Could not hot-reload user dictionaries: ${e.message}")
                     }
                 }
 
@@ -481,7 +478,7 @@ class UserHistorySyncManager private constructor(private val context: Context) {
         return try {
             val content = file.readText(Charsets.UTF_8)
             val root = JSONObject(content)
-            val revisionId = root.optString("last_synced_revision_id", null)
+            val revisionId = if (root.has("last_synced_revision_id")) root.getString("last_synced_revision_id") else null
 
             val unigramMap = mutableMapOf<String, Int>()
             val uObj = root.optJSONObject("base_unigram")
