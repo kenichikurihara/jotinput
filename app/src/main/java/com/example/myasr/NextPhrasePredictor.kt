@@ -138,6 +138,13 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         }
 
         scheduleSaveHistory()
+        context?.let { ctx ->
+            try {
+                UserHistorySyncManager.getInstance(ctx).notifyHistoryMutated()
+            } catch (e: Exception) {
+                // Ignore if sync manager is not ready
+            }
+        }
     }
 
     /**
@@ -271,7 +278,87 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
     fun getPrefixKeyCount(): Int = bigramHistory.size
 
     /**
-     * Safely merges remote bigram history entries using idempotent Max-Merge.
+     * Safely merges remote bigram history entries using idempotent 3-Way Delta Merge:
+     * Delta_L(prev, curr) = max(0, L - B)
+     * M(prev, curr) = min(100_000, max(R, B) + Delta_L)
+     */
+    @Synchronized
+    fun mergeHistoryDelta(
+        remoteBigram: Map<String, Map<String, Int>>,
+        baseBigram: Map<String, Map<String, Int>>
+    ) {
+        if (remoteBigram.isEmpty() && baseBigram.isEmpty()) return
+
+        val allPrevKeys = LinkedHashSet<String>()
+        allPrevKeys.addAll(bigramHistory.keys)
+        allPrevKeys.addAll(remoteBigram.keys)
+        allPrevKeys.addAll(baseBigram.keys)
+
+        for (prev in allPrevKeys) {
+            if (prev.isBlank()) continue
+            val localNextMap = bigramHistory.getOrPut(prev) { LinkedHashMap(8, 0.75f, true) }
+            val remoteNextMap = remoteBigram[prev] ?: emptyMap()
+            val baseNextMap = baseBigram[prev] ?: emptyMap()
+
+            val allCurrKeys = LinkedHashSet<String>()
+            allCurrKeys.addAll(localNextMap.keys)
+            allCurrKeys.addAll(remoteNextMap.keys)
+            allCurrKeys.addAll(baseCurrKeys(baseNextMap))
+
+            for (curr in allCurrKeys) {
+                if (curr.isBlank()) continue
+                val localCount = localNextMap.getOrDefault(curr, 0)
+                val baseCount = baseNextMap.getOrDefault(curr, 0)
+                val remoteCount = remoteNextMap.getOrDefault(curr, 0)
+
+                val deltaL = maxOf(0, localCount - baseCount)
+                val baseOrRemote = maxOf(remoteCount, baseCount)
+                val merged = (baseOrRemote + deltaL).coerceIn(0, 100_000)
+
+                val existed = localNextMap.containsKey(curr)
+                if (merged > 0) {
+                    localNextMap[curr] = merged
+                    if (!existed) {
+                        totalBigramPairs++
+                    }
+                } else if (existed) {
+                    localNextMap.remove(curr)
+                    totalBigramPairs--
+                }
+            }
+
+            // Cap continuations for this key
+            if (localNextMap.size > MAX_CONTINUATIONS_PER_KEY) {
+                val toRemove = localNextMap.entries.sortedBy { it.value }
+                    .take(localNextMap.size - MAX_CONTINUATIONS_PER_KEY)
+                for (rem in toRemove) {
+                    localNextMap.remove(rem.key)
+                    totalBigramPairs--
+                }
+            }
+        }
+
+        // Cap prefix keys
+        while (bigramHistory.size > MAX_PREFIX_KEYS) {
+            val oldestKey = bigramHistory.keys.firstOrNull() ?: break
+            val removedMap = bigramHistory.remove(oldestKey)
+            if (removedMap != null) totalBigramPairs -= removedMap.size
+        }
+
+        // Cap global total pairs
+        while (totalBigramPairs > MAX_TOTAL_BIGRAM_PAIRS && bigramHistory.isNotEmpty()) {
+            val oldestKey = bigramHistory.keys.firstOrNull() ?: break
+            val removedMap = bigramHistory.remove(oldestKey)
+            if (removedMap != null) totalBigramPairs -= removedMap.size
+        }
+
+        scheduleSaveHistory(immediate = true)
+    }
+
+    private fun baseCurrKeys(baseNextMap: Map<String, Int>): Set<String> = baseNextMap.keys
+
+    /**
+     * Safely merges remote bigram history entries using idempotent Max-Merge (Fallback).
      */
     @Synchronized
     fun mergeHistory(remoteBigram: Map<String, Map<String, Int>>) {

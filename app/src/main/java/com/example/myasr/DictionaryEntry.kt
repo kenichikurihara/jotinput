@@ -20,7 +20,8 @@ data class DictionaryEntry(
     val word: String,           // Surface form: e.g. "中村", "ReazonSpeech", "貴社"
     val reading: String,        // Normalized reading: e.g. "なかむら", "reazonspeech"
     val priority: Priority = Priority.NORMAL,
-    val isEnabled: Boolean = true
+    val isEnabled: Boolean = true,
+    val updatedAtMillis: Long = System.currentTimeMillis()
 ) {
     val isJapaneseEntry: Boolean
         get() = JapaneseKanaUtils.isValidKana(reading)
@@ -38,6 +39,7 @@ data class DictionaryEntry(
             put("reading", reading)
             put("priority", priority.name)
             put("isEnabled", isEnabled)
+            put("updatedAtMillis", updatedAtMillis)
         }
     }
 
@@ -48,8 +50,37 @@ data class DictionaryEntry(
                 word = json.getString("word"),
                 reading = json.getString("reading"),
                 priority = Priority.fromString(json.optString("priority", "NORMAL")),
-                isEnabled = json.optBoolean("isEnabled", true)
+                isEnabled = json.optBoolean("isEnabled", true),
+                updatedAtMillis = json.optLong("updatedAtMillis", 0L)
             )
         }
     }
 }
+
+data class DictionaryTombstone(
+    val id: String,
+    val word: String,
+    val reading: String,
+    val deletedAtMillis: Long
+) {
+    fun toJson(): JSONObject {
+        return JSONObject().apply {
+            put("id", id)
+            put("word", word)
+            put("reading", reading)
+            put("deletedAtMillis", deletedAtMillis)
+        }
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject): DictionaryTombstone {
+            return DictionaryTombstone(
+                id = json.optString("id", UUID.randomUUID().toString()),
+                word = json.getString("word"),
+                reading = json.getString("reading"),
+                deletedAtMillis = json.optLong("deletedAtMillis", System.currentTimeMillis())
+            )
+        }
+    }
+}
+

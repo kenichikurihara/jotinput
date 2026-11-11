@@ -941,6 +941,13 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         }
         clearMemoryCache()
         scheduleSaveHistory()
+        context?.let { ctx ->
+            try {
+                UserHistorySyncManager.getInstance(ctx).notifyHistoryMutated()
+            } catch (e: Exception) {
+                // Ignore if sync manager is not ready
+            }
+        }
     }
 
     /**
@@ -953,7 +960,46 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     /**
-     * Safely merges remote unigram history entries using idempotent Max-Merge.
+     * Safely merges remote unigram history entries using idempotent 3-Way Delta Merge:
+     * Delta_L(k) = max(0, L(k) - B(k))
+     * M(k) = min(100_000, max(R(k), B(k)) + Delta_L(k))
+     */
+    fun mergeHistoryDelta(remoteHistory: Map<String, Int>, baseHistory: Map<String, Int>) {
+        if (remoteHistory.isEmpty() && baseHistory.isEmpty()) return
+        synchronized(historyLock) {
+            val allKeys = LinkedHashSet<String>()
+            allKeys.addAll(historyMap.keys)
+            allKeys.addAll(remoteHistory.keys)
+            allKeys.addAll(baseHistory.keys)
+
+            for (key in allKeys) {
+                if (key.isBlank()) continue
+                val localCount = historyMap[key] ?: 0
+                val baseCount = baseHistory[key] ?: 0
+                val remoteCount = remoteHistory[key] ?: 0
+
+                val deltaL = maxOf(0, localCount - baseCount)
+                val baseOrRemote = maxOf(remoteCount, baseCount)
+                val merged = (baseOrRemote + deltaL).coerceIn(0, 100_000)
+
+                if (merged > 0) {
+                    historyMap[key] = merged
+                } else {
+                    historyMap.remove(key)
+                }
+            }
+
+            while (historyMap.size > MAX_HISTORY_WORDS) {
+                val oldestKey = historyMap.keys.firstOrNull() ?: break
+                historyMap.remove(oldestKey)
+            }
+        }
+        clearMemoryCache()
+        scheduleSaveHistory(immediate = true)
+    }
+
+    /**
+     * Safely merges remote unigram history entries using idempotent Max-Merge (Fallback).
      */
     fun mergeHistory(remoteHistory: Map<String, Int>) {
         if (remoteHistory.isEmpty()) return

@@ -232,6 +232,11 @@ class VoiceInputMethodService : InputMethodService() {
         if (currentState == State.RECORDING) {
             cancelRecording()
         }
+        try {
+            UserHistorySyncManager.getInstance(this).triggerOpportunisticSyncIfNeeded()
+        } catch (e: Exception) {
+            // Ignore if sync manager fails
+        }
     }
 
     override fun onUpdateSelection(

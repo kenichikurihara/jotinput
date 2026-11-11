@@ -32,6 +32,8 @@ class DictionaryActivity : AppCompatActivity() {
     private lateinit var nestedScrollView: NestedScrollView
     private lateinit var tvHistoryStatsBadge: TextView
     private lateinit var tvSyncStatusSummary: TextView
+    private lateinit var layoutAutoSyncToggle: View
+    private lateinit var switchAutoSync: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var btnSyncGoogleDrive: MaterialButton
     private lateinit var btnSelectSyncFile: MaterialButton
     private lateinit var btnClearHistory: MaterialButton
@@ -93,6 +95,8 @@ class DictionaryActivity : AppCompatActivity() {
         nestedScrollView = findViewById(R.id.nestedScrollView)
         tvHistoryStatsBadge = findViewById(R.id.tvHistoryStatsBadge)
         tvSyncStatusSummary = findViewById(R.id.tvSyncStatusSummary)
+        layoutAutoSyncToggle = findViewById(R.id.layoutAutoSyncToggle)
+        switchAutoSync = findViewById(R.id.switchAutoSync)
         btnSyncGoogleDrive = findViewById(R.id.btnSyncGoogleDrive)
         btnSelectSyncFile = findViewById(R.id.btnSelectSyncFile)
         btnClearHistory = findViewById(R.id.btnClearHistory)
@@ -178,6 +182,10 @@ class DictionaryActivity : AppCompatActivity() {
         btnClearHistory.setOnClickListener {
             promptClearHistory()
         }
+
+        switchAutoSync.setOnCheckedChangeListener { _, isChecked ->
+            syncManager.setAutoSyncEnabled(isChecked)
+        }
     }
 
     private fun updateHistorySyncUI() {
@@ -194,9 +202,12 @@ class DictionaryActivity : AppCompatActivity() {
             val summary = stats.lastSyncSummary ?: "準備完了"
             tvSyncStatusSummary.text = "同期先設定済 • 最終同期: $dateStr ($summary)"
             btnSyncGoogleDrive.text = "Google Drive と同期 (安全マージ)"
+            layoutAutoSyncToggle.visibility = View.VISIBLE
+            switchAutoSync.isChecked = stats.isAutoSyncEnabled
         } else {
             tvSyncStatusSummary.text = "Google Driveの同期ファイルを選択すると、複数端末間で履歴を安全に統合できます。"
             btnSyncGoogleDrive.text = "同期先ファイルを選択して連携"
+            layoutAutoSyncToggle.visibility = View.GONE
         }
     }
 
