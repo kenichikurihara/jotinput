@@ -101,14 +101,63 @@ enum class DictionaryType(
 class MultiDictionaryManager(private val context: Context) {
 
     private val TAG = "MultiDictManager"
-    private val dbHelper = DictionaryDatabaseHelper.getInstance(context)
+
+    init {
+        cleanupLegacyDatabase()
+    }
+
+    private fun cleanupLegacyDatabase() {
+        try {
+            val dbFile = context.getDatabasePath("mozc_dictionaries.db")
+            if (dbFile.exists()) {
+                val sizeMb = dbFile.length() / (1024 * 1024)
+                context.deleteDatabase("mozc_dictionaries.db")
+                Log.i(TAG, "Deleted legacy SQLite database ($sizeMb MB freed)")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Legacy DB cleanup failed: ${e.message}")
+        }
+    }
+
+    fun getDictFile(type: DictionaryType): java.io.File {
+        val dir = KanaKanjiEngine.getInstance(context).getMozcDir()
+        return java.io.File(dir, "dict_${type.id}.bin")
+    }
+
+    private fun readTokensCountFromHeader(file: java.io.File): Int {
+        try {
+            java.io.RandomAccessFile(file, "r").use { raf ->
+                if (raf.length() >= 64) {
+                    raf.seek(16)
+                    val b0 = raf.read()
+                    val b1 = raf.read()
+                    val b2 = raf.read()
+                    val b3 = raf.read()
+                    if (b0 >= 0 && b1 >= 0 && b2 >= 0 && b3 >= 0) {
+                        return (b0) or (b1 shl 8) or (b2 shl 16) or (b3 shl 24)
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        return 0
+    }
 
     fun getWordCount(type: DictionaryType): Int {
-        return dbHelper.getWordCountBySource(type.id)
+        val file = getDictFile(type)
+        if (!file.exists() || file.length() < 64) {
+            if (type == DictionaryType.MOZC_GENERAL) {
+                val legacy = java.io.File(file.parentFile, "system_dictionary.bin")
+                if (legacy.exists() && legacy.length() >= 64) {
+                    return readTokensCountFromHeader(legacy)
+                }
+            }
+            return 0
+        }
+        return readTokensCountFromHeader(file)
     }
 
     fun getTotalWordCount(): Int {
-        return dbHelper.getTotalWordCount()
+        return DictionaryType.values().sumOf { getWordCount(it) }
     }
 
     fun isDownloaded(type: DictionaryType): Boolean {
@@ -116,9 +165,14 @@ class MultiDictionaryManager(private val context: Context) {
     }
 
     suspend fun deleteDictionary(type: DictionaryType) = withContext(Dispatchers.IO) {
-        dbHelper.deleteBySource(type.id)
+        val file = getDictFile(type)
+        if (file.exists()) file.delete()
+        if (type == DictionaryType.MOZC_GENERAL) {
+            val legacy = java.io.File(file.parentFile, "system_dictionary.bin")
+            if (legacy.exists()) legacy.delete()
+        }
         AsrApp.instanceOrNull?.dictionaryUpdateTracker?.clearLocalUpdatedAt(type.id)
-        KanaKanjiEngine.getInstance(context).clearMemoryCache()
+        KanaKanjiEngine.getInstance(context).reloadDictionaries()
     }
 
     suspend fun downloadDictionary(
@@ -129,18 +183,13 @@ class MultiDictionaryManager(private val context: Context) {
             Log.i(TAG, "Starting download for ${type.displayName} (${type.id})")
             onProgress(5, "${type.displayName} を準備中...")
 
-            // Clean previous entries for this source
-            dbHelper.deleteBySource(type.id)
-
-            var totalInserted = 0
+            val readingMap = HashMap<String, ArrayList<MmapDictionaryCompiler.RawToken>>()
+            var totalReadLines = 0
             val urlCount = type.downloadUrls.size
 
             type.downloadUrls.forEachIndexed { index, urlStr ->
-                val basePct = (index.toDouble() / urlCount * 85).toInt() + 5
+                val basePct = (index.toDouble() / urlCount * 80).toInt() + 5
                 onProgress(basePct, "${type.displayName} データ取得中 (${index + 1}/$urlCount)...")
-
-                val entries = mutableListOf<DictRecord>()
-                val BATCH_SIZE = 5000
 
                 openStreamForUrl(urlStr, type.isBz2) { inputStream ->
                     val reader = BufferedReader(InputStreamReader(inputStream, Charsets.UTF_8), 32768)
@@ -150,36 +199,36 @@ class MultiDictionaryManager(private val context: Context) {
                         val trimmed = line!!.trim()
                         if (trimmed.isEmpty() || trimmed.startsWith("#")) continue
 
+                        totalReadLines++
                         if (type.isCustomParser) {
-                            parseCustomSpecialLine(urlStr, trimmed, type.id, entries)
+                            parseCustomSpecialLine(urlStr, trimmed, readingMap)
                         } else {
-                            parseStandardMozcLine(trimmed, type.id, entries)
+                            parseStandardMozcLine(trimmed, readingMap)
                         }
 
-                        if (entries.size >= BATCH_SIZE) {
-                            dbHelper.insertBatch(entries)
-                            totalInserted += entries.size
-                            entries.clear()
-                            val curPct = basePct + ((entries.size.toDouble() / 10000) * 10).toInt().coerceIn(0, 10)
-                            onProgress(curPct.coerceIn(10, 90), "${type.displayName} 登録中... (${totalInserted}語)")
+                        if (totalReadLines % 50000 == 0) {
+                            onProgress(basePct + 2, "${type.displayName} 解析中... (${totalReadLines}行)")
                         }
-                    }
-
-                    if (entries.isNotEmpty()) {
-                        dbHelper.insertBatch(entries)
-                        totalInserted += entries.size
-                        entries.clear()
                     }
                 }
             }
 
-            onProgress(95, "変換エンジンへ反映中...")
-            KanaKanjiEngine.getInstance(context).clearMemoryCache()
+            onProgress(88, "バイナリ辞書をコンパイル中 (MYASRDIC v1)...")
+            val targetFile = getDictFile(type)
+            val compileResult = MmapDictionaryCompiler.compileToFile(readingMap, targetFile)
+
+            if (compileResult.isFailure) {
+                return@withContext compileResult
+            }
+            val totalTokens = compileResult.getOrDefault(0)
+
+            onProgress(96, "変換エンジンへ反映中...")
+            KanaKanjiEngine.getInstance(context).reloadDictionaries()
             AsrApp.instanceOrNull?.dictionaryUpdateTracker?.markDictionaryUpdated(type.id)
 
-            onProgress(100, "完了 (${totalInserted}語)")
-            Log.i(TAG, "Completed ${type.displayName}: $totalInserted words inserted")
-            Result.success(totalInserted)
+            onProgress(100, "完了 (${totalTokens}語)")
+            Log.i(TAG, "Completed ${type.displayName}: $totalTokens tokens compiled to ${targetFile.name}")
+            Result.success(totalTokens)
         } catch (e: Exception) {
             Log.e(TAG, "Failed downloading ${type.displayName}: ${e.message}", e)
             Result.failure(e)
@@ -211,7 +260,7 @@ class MultiDictionaryManager(private val context: Context) {
                 }
             }
 
-            KanaKanjiEngine.getInstance(context).clearMemoryCache()
+            KanaKanjiEngine.getInstance(context).reloadDictionaries()
             onProgress(100, "全辞書のインストールが完了しました (計 ${grandTotal}語)")
             Result.success(grandTotal)
         } catch (e: Exception) {
@@ -257,25 +306,27 @@ class MultiDictionaryManager(private val context: Context) {
 
     private fun parseStandardMozcLine(
         trimmed: String,
-        sourceType: String,
-        outList: MutableList<DictRecord>
+        readingMap: HashMap<String, ArrayList<MmapDictionaryCompiler.RawToken>>
     ) {
         val parts = trimmed.split("\t")
         if (parts.size >= 5) {
             // reading, left_id, right_id, cost, surface
-            val reading = parts[0]
-            val mozcCost = parts[3].toIntOrNull() ?: 8000
-            val score = (15000 - mozcCost).coerceIn(10, 10000)
+            val reading = JapaneseKanaUtils.normalizeReading(parts[0])
+            val lid = parts[1].toIntOrNull() ?: 1851
+            val rid = parts[2].toIntOrNull() ?: 1851
+            val cost = parts[3].toIntOrNull() ?: 8000
             val surface = parts[4]
             if (reading.isNotBlank() && surface.isNotBlank()) {
-                outList.add(DictRecord(reading, surface, score, sourceType))
+                val list = readingMap.getOrPut(reading) { ArrayList(2) }
+                list.add(MmapDictionaryCompiler.RawToken(surface, cost, lid, rid))
             }
         } else if (parts.size >= 2) {
-            val reading = parts[0]
+            val reading = JapaneseKanaUtils.normalizeReading(parts[0])
             val surface = parts[1]
-            val score = if (parts.size >= 3) parts[2].toIntOrNull() ?: 100 else 100
+            val cost = if (parts.size >= 3) parts[2].toIntOrNull() ?: 6000 else 6000
             if (reading.isNotBlank() && surface.isNotBlank()) {
-                outList.add(DictRecord(reading, surface, score, sourceType))
+                val list = readingMap.getOrPut(reading) { ArrayList(2) }
+                list.add(MmapDictionaryCompiler.RawToken(surface, cost, 1851, 1851))
             }
         }
     }
@@ -283,8 +334,7 @@ class MultiDictionaryManager(private val context: Context) {
     private fun parseCustomSpecialLine(
         urlStr: String,
         trimmed: String,
-        sourceType: String,
-        outList: MutableList<DictRecord>
+        readingMap: HashMap<String, ArrayList<MmapDictionaryCompiler.RawToken>>
     ) {
         when {
             urlStr.contains("emoji_data.tsv") -> {
@@ -295,7 +345,8 @@ class MultiDictionaryManager(private val context: Context) {
                     for (r in readings) {
                         val norm = JapaneseKanaUtils.normalizeReading(r)
                         if (norm.isNotBlank() && emoji.isNotBlank()) {
-                            outList.add(DictRecord(norm, emoji, 5500, sourceType))
+                            val list = readingMap.getOrPut(norm) { ArrayList(2) }
+                            list.add(MmapDictionaryCompiler.RawToken(emoji, 5500, 2632, 2632))
                         }
                     }
                 }
@@ -308,7 +359,8 @@ class MultiDictionaryManager(private val context: Context) {
                     for (r in readings) {
                         val norm = JapaneseKanaUtils.normalizeReading(r)
                         if (norm.isNotBlank() && emoticon.isNotBlank()) {
-                            outList.add(DictRecord(norm, emoticon, 4500, sourceType))
+                            val list = readingMap.getOrPut(norm) { ArrayList(2) }
+                            list.add(MmapDictionaryCompiler.RawToken(emoticon, 4500, 2632, 2632))
                         }
                     }
                 }
@@ -319,7 +371,8 @@ class MultiDictionaryManager(private val context: Context) {
                     val reading = JapaneseKanaUtils.normalizeReading(parts[0])
                     val kanjiString = parts[1]
                     for (ch in kanjiString) {
-                        outList.add(DictRecord(reading, ch.toString(), 3000, sourceType))
+                        val list = readingMap.getOrPut(reading) { ArrayList(2) }
+                        list.add(MmapDictionaryCompiler.RawToken(ch.toString(), 3000, 1851, 1851))
                     }
                 }
             }
@@ -329,7 +382,8 @@ class MultiDictionaryManager(private val context: Context) {
                     val reading = JapaneseKanaUtils.normalizeReading(parts[0])
                     val symbol = parts[1]
                     if (reading.isNotBlank() && symbol.isNotBlank()) {
-                        outList.add(DictRecord(reading, symbol, 4000, sourceType))
+                        val list = readingMap.getOrPut(reading) { ArrayList(2) }
+                        list.add(MmapDictionaryCompiler.RawToken(symbol, 4000, 2632, 2632))
                     }
                 }
             }

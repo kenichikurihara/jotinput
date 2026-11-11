@@ -68,6 +68,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     @Volatile
     private var connectionMatrix: ConnectionMatrix? = null
 
+    data class MmapEntry(val sourceId: String, val dict: MmapDictionary)
+    private val activeMmapDictionaries = java.util.concurrent.CopyOnWriteArrayList<MmapEntry>()
+
     @Volatile
     private var mmapDictionary: MmapDictionary? = null
 
@@ -88,11 +91,60 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
     fun setMmapDictionary(dict: MmapDictionary?) {
         this.mmapDictionary = dict
+        activeMmapDictionaries.clear()
+        if (dict != null) {
+            activeMmapDictionaries.add(MmapEntry("mozc_general", dict))
+        }
         clearMemoryCache()
         Log.i(TAG, "MmapDictionary updated (active: ${dict != null})")
     }
 
     fun getMmapDictionary(): MmapDictionary? = mmapDictionary
+
+    fun getActiveMmapDictionaries(): List<MmapEntry> = activeMmapDictionaries
+
+    fun getMozcDir(): File {
+        val ext = context?.getExternalFilesDir(null)
+        val extDir = if (ext != null) File(ext, "mozc") else null
+        if (extDir != null && (extDir.exists() || extDir.mkdirs())) return extDir
+        val internalDir = File(context?.filesDir, "mozc")
+        if (!internalDir.exists()) internalDir.mkdirs()
+        return internalDir
+    }
+
+    @Synchronized
+    fun reloadDictionaries() {
+        for (entry in activeMmapDictionaries) {
+            try { entry.dict.close() } catch (_: Exception) {}
+        }
+        activeMmapDictionaries.clear()
+
+        val mozcDir = getMozcDir()
+        val binFiles = mozcDir.listFiles { f -> f.name.endsWith(".bin") } ?: emptyArray()
+        for (f in binFiles) {
+            if (f.length() > 64L && f.name != "connection_data.bin") {
+                try {
+                    val mmap = MmapDictionary.loadFromFile(f)
+                    if (mmap != null) {
+                        val sourceId = when {
+                            f.name.startsWith("dict_") -> f.name.removePrefix("dict_").removeSuffix(".bin")
+                            f.name == "system_dictionary.bin" -> "mozc_general"
+                            else -> f.name.removeSuffix(".bin")
+                        }
+                        activeMmapDictionaries.add(MmapEntry(sourceId, mmap))
+                        Log.i(TAG, "Loaded MmapDictionary '$sourceId' from ${f.name} (${mmap.numTokens} tokens)")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed loading mmap dict ${f.name}: ${e.message}")
+                }
+            }
+        }
+
+        mmapDictionary = activeMmapDictionaries.firstOrNull { it.sourceId == "mozc_general" }?.dict
+            ?: activeMmapDictionaries.firstOrNull()?.dict
+
+        clearMemoryCache()
+    }
 
     companion object {
         const val MAX_HISTORY_WORDS = 10_000
@@ -120,34 +172,24 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
 
-            // 1. Load Base Dictionary from Storage (Mmap binary dictionary or TSV fallback)
-            var baseLoaded = false
+            // 1. Load Mmap Dictionaries from Storage (files/mozc/*.bin or system_dictionary.bin)
+            reloadDictionaries()
 
-            // Try zero-heap memory-mapped binary dictionary first
-            val binFile = getSystemDictionaryBinFile()
-            if (binFile.exists() && binFile.length() > 64L) {
-                try {
-                    val mmap = MmapDictionary.loadFromFile(binFile)
-                    if (mmap != null) {
-                        mmapDictionary = mmap
-                        baseLoaded = true
-                        Log.i(TAG, "MmapDictionary loaded from storage: ${binFile.absolutePath} (${binFile.length()} bytes)")
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to load MmapDictionary from storage: ${e.message}")
-                }
-            }
+            var baseLoaded = activeMmapDictionaries.isNotEmpty()
 
-            val storageFile = getBaseDictionaryFile()
-            if (storageFile.exists() && storageFile.length() > 0) {
-                try {
-                    storageFile.inputStream().use { inputStream ->
-                        loadTsv(inputStream, "base")
-                        baseLoaded = true
-                        Log.i(TAG, "Base dictionary loaded from storage: ${storageFile.absolutePath} (${storageFile.length()} bytes)")
+            // Only fallback to heavy TSV heap parsing if no zero-heap binary dictionary is present
+            if (!baseLoaded) {
+                val storageFile = getBaseDictionaryFile()
+                if (storageFile.exists() && storageFile.length() > 0) {
+                    try {
+                        storageFile.inputStream().use { inputStream ->
+                            loadTsv(inputStream, "base")
+                            baseLoaded = true
+                            Log.i(TAG, "Base dictionary loaded from storage: ${storageFile.absolutePath} (${storageFile.length()} bytes)")
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to load base dictionary from storage: ${e.message}")
                     }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to load base dictionary from storage: ${e.message}")
                 }
             }
             if (!baseLoaded) {
@@ -227,6 +269,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     fun isBaseDictionaryDownloaded(): Boolean {
+        if (activeMmapDictionaries.any { it.sourceId == "mozc_general" }) return true
+        val dictMozc = File(getMozcDir(), "dict_mozc_general.bin")
+        if (dictMozc.exists() && dictMozc.length() > 64L) return true
+        val bin = getSystemDictionaryBinFile()
+        if (bin.exists() && bin.length() > 64L) return true
         val f = getBaseDictionaryFile()
         return f.exists() && f.length() > 1024
     }
@@ -535,9 +582,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             }
 
             // 3. Base in-memory Trie & MmapDictionary exact matches
-            val mmapTokens = mmapDictionary?.getExactTokens(normalized) ?: emptyList()
+            val mmapTokens = queryAllMmapExactTokens(normalized)
             for (tok in mmapTokens) {
-                addCandidate(ConversionCandidate(surface = tok.surface, reading = normalized, isPrediction = false, source = "mmap"))
+                addCandidate(ConversionCandidate(surface = tok.surface, reading = normalized, isPrediction = false, source = tok.source))
             }
 
             val otherExact = exactTrieWords.filter { it.source != "user" }.sortedWith { a, b ->
@@ -576,8 +623,12 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 for ((reading, entry, vDist) in voicedExactWords) {
                     addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = 1.2f * vDist))
                 }
-                // Query SQLite exact matches for top voiced readings (up to 2 readings)
+                // Query Mmap & SQLite exact matches for top voiced readings (up to 2 readings)
                 for (vPath in voicedPaths.take(2)) {
+                    val mmapVoicedExact = queryAllMmapExactTokens(vPath.reading)
+                    for (tok in mmapVoicedExact) {
+                        addCandidate(ConversionCandidate(surface = tok.surface, reading = vPath.reading, isPrediction = true, source = tok.source, obsPenalty = 1.2f * vPath.voicingDistance))
+                    }
                     try {
                         val dbVoicedExact = dbHelper?.getExactMatches(vPath.reading, limit = 15) ?: emptyList()
                         for (cand in dbVoicedExact) {
@@ -694,7 +745,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
 
-            // 5.2. Predictive prefix matches from SQLite multi-dictionary (limited to 5)
+            // 5.2. Predictive prefix matches from Mmap dictionaries & SQLite
+            val mmapPrefixes = queryAllMmapPrefixTokens(normalized, maxCount = 10)
+            for (cand in mmapPrefixes) {
+                addCandidate(cand)
+            }
             try {
                 val dbPrefix = dbHelper?.getPrefixMatches(normalized, limit = 5) ?: emptyList()
                 for (cand in dbPrefix) {
@@ -1119,6 +1174,118 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return lid in 29..433
     }
 
+    fun queryAllMmapExactTokens(reading: String): List<WordEntry> {
+        val dicts = activeMmapDictionaries
+        if (dicts.isEmpty()) return emptyList()
+        val result = ArrayList<WordEntry>(16)
+        for (entry in dicts) {
+            val tokens = entry.dict.getExactTokens(reading) ?: continue
+            for (tok in tokens) {
+                result.add(
+                    WordEntry(
+                        surface = tok.surface,
+                        cost = tok.cost,
+                        source = entry.sourceId,
+                        lid = tok.lid,
+                        rid = tok.rid
+                    )
+                )
+            }
+        }
+        return result
+    }
+
+    fun queryAllMmapPrefixTokens(prefix: String, maxCount: Int = 10): List<ConversionCandidate> {
+        val dicts = activeMmapDictionaries
+        if (dicts.isEmpty()) return emptyList()
+        val result = ArrayList<ConversionCandidate>()
+        for (entry in dicts) {
+            val tokens = entry.dict.getPrefixTokens(prefix, maxCount)
+            for ((reading, token) in tokens) {
+                result.add(
+                    ConversionCandidate(
+                        surface = token.surface,
+                        reading = reading,
+                        isPrediction = true,
+                        source = entry.sourceId
+                    )
+                )
+            }
+        }
+        return result
+    }
+
+    /**
+     * Stratifies candidate subwords by part-of-speech (POS) classes to guarantee that
+     * verb/adjective inflections and functional particles are never crowded out by homophonic nouns
+     * in Viterbi lattice beam search.
+     */
+    private fun selectPosStratifiedSubwords(
+        candidates: List<WordEntry>,
+        maxTotal: Int = 24
+    ): List<WordEntry> {
+        if (candidates.size <= maxTotal) {
+            return candidates.sortedBy { it.cost }
+        }
+
+        val sorted = candidates.sortedBy { it.cost }
+        val selected = ArrayList<WordEntry>(maxTotal)
+        val overflow = ArrayList<WordEntry>()
+
+        val posPairCounts = HashMap<Int, Int>()
+        var generalNounCount = 0
+        var properNounCount = 0
+        var symbolCount = 0
+
+        for (w in sorted) {
+            val lid = w.lid
+            val posKey = (lid shl 16) or (w.rid and 0xFFFF)
+            val countForPos = posPairCounts.getOrDefault(posKey, 0)
+
+            val keep = when {
+                // Priority 0: User dictionary & canonical are always preserved
+                w.source == "user" || w.source == "canonical" -> true
+
+                // Priority 1: Particles / auxiliary verbs (29..433) -> up to 2 per POS pair
+                isFunctionalWord(lid) -> countForPos < 2
+
+                // Priority 2: Verbs (434..1840) & Adjectives (2196..2590) -> up to 2 per POS pair
+                (lid in 434..1840) || (lid in 2196..2590) -> countForPos < 2
+
+                // Priority 3: Proper nouns, personal/place names (1917..1940) -> up to 4 total, 2 per POS
+                lid in 1917..1940 -> properNounCount < 4 && countForPos < 2
+
+                // Priority 4: General nouns, suffixes, adverbs -> up to 8 total, 3 per POS
+                isContentWord(lid) || isSuffix(lid) -> generalNounCount < 8 && countForPos < 3
+
+                // Priority 5: Symbols / others -> up to 2
+                else -> symbolCount < 2
+            }
+
+            if (keep) {
+                selected.add(w)
+                posPairCounts[posKey] = countForPos + 1
+                when {
+                    lid in 1917..1940 -> properNounCount++
+                    isContentWord(lid) || isSuffix(lid) -> generalNounCount++
+                    !isFunctionalWord(lid) && lid !in 434..1840 && lid !in 2196..2590 -> symbolCount++
+                }
+                if (selected.size >= maxTotal) break
+            } else {
+                overflow.add(w)
+            }
+        }
+
+        if (selected.size < maxTotal && overflow.isNotEmpty()) {
+            for (w in overflow) {
+                selected.add(w)
+                if (selected.size >= maxTotal) break
+            }
+        }
+
+        return selected
+    }
+
     /**
      * Fast in-memory N-best Viterbi lattice beam search over Trie subwords.
      * Evaluates in < 0.3ms synchronously on the UI thread for long continuous phrases.
@@ -1149,19 +1316,17 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     val subWords = mutableListOf<WordEntry>()
                     node?.words?.let { subWords.addAll(it) }
 
-                    // Also query zero-heap mmap dictionary for subReading
-                    val mmapWords = mmapDictionary?.getExactTokens(subReading)
-                    if (mmapWords != null) {
-                        for (tok in mmapWords) {
-                            if (subWords.none { it.surface == tok.surface && it.lid == tok.lid }) {
-                                subWords.add(WordEntry(tok.surface, tok.cost, "mmap", tok.lid, tok.rid))
-                            }
+                    // Also query zero-heap mmap dictionaries for subReading
+                    val mmapWords = queryAllMmapExactTokens(subReading)
+                    for (tok in mmapWords) {
+                        if (subWords.none { it.surface == tok.surface && it.lid == tok.lid }) {
+                            subWords.add(tok)
                         }
                     }
 
                     if (subWords.isNotEmpty()) {
-                        subWords.sortBy { it.cost }
-                        for (w in subWords.take(16)) {
+                        val stratifiedWords = selectPosStratifiedSubwords(subWords, maxTotal = 24)
+                        for (w in stratifiedWords) {
                             val lengthBonus = if (j - i > 1) (j - i - 1) * 2000 else 0
                             val isUser = w.source == "user"
                             val userBonus = if (isUser) 50000 else 0
@@ -1342,17 +1507,16 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     val subReading = reading.substring(m, j)
                     val tokens = mutableListOf<WordEntry>()
                     node?.words?.let { tokens.addAll(it) }
-                    mmapDictionary?.getExactTokens(subReading)?.let { mmapToks ->
-                        for (tok in mmapToks) {
-                            if (tokens.none { it.surface == tok.surface && it.lid == tok.lid }) {
-                                tokens.add(WordEntry(tok.surface, tok.cost, "mmap", tok.lid, tok.rid))
-                            }
+                    val mmapToks = queryAllMmapExactTokens(subReading)
+                    for (tok in mmapToks) {
+                        if (tokens.none { it.surface == tok.surface && it.lid == tok.lid }) {
+                            tokens.add(tok)
                         }
                     }
 
                     if (tokens.isNotEmpty()) {
-                        tokens.sortBy { it.cost }
-                        for (tok in tokens.take(16)) {
+                        val stratifiedTokens = selectPosStratifiedSubwords(tokens, maxTotal = 20)
+                        for (tok in stratifiedTokens) {
                             val lengthBonus = if (j - m > 1) (j - m - 1) * 2000 else 0
                             val transCost = if (matrix != null) {
                                 if (j == n) matrix.getTransitionCost(tok.rid, 0) else 0

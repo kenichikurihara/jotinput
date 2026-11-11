@@ -709,9 +709,9 @@ class MainActivity : AppCompatActivity() {
                 hotwordsGenerator.reloadTokensSet()
                 if (!kanaKanjiEngine.isBaseDictionaryDownloaded()) {
                     withContext(Dispatchers.Main) {
-                        tvDownloadInfo.text = "Mozc 基本辞書 (約2MB) をダウンロード中..."
+                        tvDownloadInfo.text = "Mozc 基本辞書をダウンロード中..."
                     }
-                    val baseDictResult = AsrApp.instance.baseDictionaryDownloader.download { pct, statusText ->
+                    val baseDictResult = AsrApp.instance.multiDictionaryManager.downloadDictionary(DictionaryType.MOZC_GENERAL) { pct, statusText ->
                         lifecycleScope.launch(Dispatchers.Main) {
                             downloadProgress.progress = pct
                             tvDownloadInfo.text = "基本辞書: $statusText"
@@ -823,9 +823,7 @@ class MainActivity : AppCompatActivity() {
         val outdatedList = allStatuses.filter { it.state == DictUpdateState.UPDATE_AVAILABLE }
         val installedList = allStatuses.filter { it.isInstalled }
 
-        val totalWords = manager.getTotalWordCount()
-        val baseCount = if (kanaKanjiEngine.isBaseDictionaryDownloaded()) 131156 else 0
-        val totalCombined = totalWords + baseCount
+        val totalCombined = manager.getTotalWordCount()
         val totalFormatted = String.format(java.util.Locale.US, "%,d", totalCombined)
 
         if (outdatedList.isNotEmpty()) {
@@ -871,31 +869,6 @@ class MainActivity : AppCompatActivity() {
 
         layoutDictItemsContainer.removeAllViews()
         val inflater = LayoutInflater.from(this)
-
-        // 0. Base Mozc Core Dictionary (~131,156 words, ~5.1MB)
-        val baseItemView = inflater.inflate(R.layout.item_multi_dict, layoutDictItemsContainer, false)
-        val tvBaseTitle = baseItemView.findViewById<TextView>(R.id.tvDictTitle)
-        val tvBaseBadge = baseItemView.findViewById<TextView>(R.id.tvDictStatusBadge)
-        val tvBaseDesc = baseItemView.findViewById<TextView>(R.id.tvDictDescription)
-        val tvBaseDates = baseItemView.findViewById<TextView>(R.id.tvDictDates)
-        val tvBaseStats = baseItemView.findViewById<TextView>(R.id.tvDictStats)
-        val btnBaseAction = baseItemView.findViewById<MaterialButton>(R.id.btnDictAction)
-
-        val baseStatus = tracker.getStatusInfo(DictionaryUpdateTracker.BASE_DICT_ID)
-        tvBaseTitle.text = DictionaryUpdateTracker.BASE_DICT_DISPLAY_NAME
-        tvBaseDesc.text = "高速Trie・Viterbi連文節変換用の標準コア辞書 (~13.1万語)"
-        tvBaseStats.text = "約13.1万語 (約5.1 MB)"
-        bindDictItemDatesAndStatus(
-            statusInfo = baseStatus,
-            wordCountLabel = "~13.1万語",
-            tvStatusBadge = tvBaseBadge,
-            tvDates = tvBaseDates,
-            btnAction = btnBaseAction
-        )
-        btnBaseAction.setOnClickListener {
-            startDownloadBaseDict()
-        }
-        layoutDictItemsContainer.addView(baseItemView)
 
         for (dictType in DictionaryType.values()) {
             val itemView = inflater.inflate(R.layout.item_multi_dict, layoutDictItemsContainer, false)
@@ -959,38 +932,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startDownloadBaseDict() {
-        val downloader = AsrApp.instance.baseDictionaryDownloader
-        btnDownloadAllDicts.isEnabled = false
-        multiDictProgress.visibility = View.VISIBLE
-        multiDictProgress.isIndeterminate = false
-        multiDictProgress.progress = 0
-        tvMultiDictStatus.visibility = View.VISIBLE
-        tvMultiDictStatus.text = "基本辞書をダウンロード中..."
-
-        lifecycleScope.launch {
-            val result = downloader.download { pct, msg ->
-                lifecycleScope.launch(Dispatchers.Main) {
-                    multiDictProgress.progress = pct
-                    tvMultiDictStatus.text = msg
-                }
-            }
-            multiDictProgress.visibility = View.GONE
-            tvMultiDictStatus.visibility = View.GONE
-            btnDownloadAllDicts.isEnabled = true
-
-            if (result.isSuccess) {
-                val words = result.getOrDefault(0)
-                Toast.makeText(this@MainActivity, "Mozc 基本辞書をインストールしました (${words}語)", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this@MainActivity, "ダウンロード失敗: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-            }
-            refreshMultiDictionaryUI()
-        }
+        startDownloadSingleDict(DictionaryType.MOZC_GENERAL)
     }
 
     private fun startDownloadAllDicts() {
         val manager = AsrApp.instance.multiDictionaryManager
-        val baseDownloader = AsrApp.instance.baseDictionaryDownloader
         val tracker = AsrApp.instance.dictionaryUpdateTracker
         val outdatedStatuses = tracker.getAllStatusInfo().filter { it.state == DictUpdateState.UPDATE_AVAILABLE }
 
@@ -1012,25 +958,19 @@ class MainActivity : AppCompatActivity() {
                 outdatedStatuses.forEachIndexed { idx, status ->
                     val stepBase = (idx.toDouble() / totalSteps * 100).toInt()
                     val stepRange = (1.0 / totalSteps * 100).toInt()
-                    if (status.sourceId == DictionaryUpdateTracker.BASE_DICT_ID) {
-                        val res = baseDownloader.download { pct, msg ->
+                    val dictType = if (status.sourceId == DictionaryUpdateTracker.BASE_DICT_ID) {
+                        DictionaryType.MOZC_GENERAL
+                    } else {
+                        DictionaryType.fromId(status.sourceId)
+                    }
+                    if (dictType != null) {
+                        val res = manager.downloadDictionary(dictType) { pct, msg ->
                             lifecycleScope.launch(Dispatchers.Main) {
                                 multiDictProgress.progress = (stepBase + pct * stepRange / 100).coerceIn(0, 99)
                                 tvMultiDictStatus.text = msg
                             }
                         }
                         updatedTotalWords += res.getOrDefault(0)
-                    } else {
-                        val dictType = DictionaryType.fromId(status.sourceId)
-                        if (dictType != null) {
-                            val res = manager.downloadDictionary(dictType) { pct, msg ->
-                                lifecycleScope.launch(Dispatchers.Main) {
-                                    multiDictProgress.progress = (stepBase + pct * stepRange / 100).coerceIn(0, 99)
-                                    tvMultiDictStatus.text = msg
-                                }
-                            }
-                            updatedTotalWords += res.getOrDefault(0)
-                        }
                     }
                 }
                 multiDictProgress.visibility = View.GONE
@@ -1042,19 +982,9 @@ class MainActivity : AppCompatActivity() {
                     Toast.LENGTH_LONG
                 ).show()
             } else {
-                if (!kanaKanjiEngine.isBaseDictionaryDownloaded()) {
-                    tvMultiDictStatus.text = "基本辞書を取得中..."
-                    baseDownloader.download { pct, msg ->
-                        lifecycleScope.launch(Dispatchers.Main) {
-                            multiDictProgress.progress = (pct * 0.1).toInt()
-                            tvMultiDictStatus.text = msg
-                        }
-                    }
-                }
-
                 val result = manager.downloadAllDictionaries { pct, msg ->
                     lifecycleScope.launch(Dispatchers.Main) {
-                        multiDictProgress.progress = (pct).coerceIn(0, 100)
+                        multiDictProgress.progress = pct.coerceIn(0, 100)
                         tvMultiDictStatus.text = msg
                     }
                 }

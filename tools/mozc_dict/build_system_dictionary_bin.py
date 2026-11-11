@@ -44,13 +44,35 @@ def load_all_tokens():
 
     print(f"Loaded {len(reading_to_tokens)} readings from base_dictionary.tsv")
 
-    # 2. Enrich systematically with Mozc OSS general vocabulary up to cost <= 6000
-    # This expands coverage to ~226k tokens (including 好意 [4934], 好意的 [5736], 更衣 [5323] etc.)
-    # while preserving zero-heap mmap footprint (< 9MB on disk).
+    # 2. Enrich systematically with Mozc OSS general vocabulary (100% UNPRUNED, ALL TOKENS)
     mozc_dict_dir = os.path.join(REPO_ROOT, "tools/mozc/src/data/dictionary_oss")
+    os.makedirs(mozc_dict_dir, exist_ok=True)
     dict_files = sorted(glob.glob(os.path.join(mozc_dict_dir, "dictionary*.txt")))
+    if len(dict_files) < 10:
+        print(f"Downloading missing Mozc OSS dictionary files into {mozc_dict_dir}...")
+        import urllib.request
+        for i in range(10):
+            fname = f"dictionary{i:02d}.txt"
+            fpath = os.path.join(mozc_dict_dir, fname)
+            if not os.path.exists(fpath):
+                url = f"https://raw.githubusercontent.com/google/mozc/master/src/data/dictionary_oss/{fname}"
+                print(f"  Downloading {fname} from {url}...")
+                urllib.request.urlretrieve(url, fpath)
+        dict_files = sorted(glob.glob(os.path.join(mozc_dict_dir, "dictionary*.txt")))
+
+    # Also download reading_correction.tsv if missing
+    corr_file = os.path.join(mozc_dict_dir, "reading_correction.tsv")
+    if not os.path.exists(corr_file):
+        try:
+            url = "https://raw.githubusercontent.com/google/mozc/master/src/data/dictionary_oss/reading_correction.tsv"
+            print(f"  Downloading reading_correction.tsv from {url}...")
+            import urllib.request
+            urllib.request.urlretrieve(url, corr_file)
+        except Exception as e:
+            print(f"Warning: Failed to download reading_correction.tsv: {e}")
+
     if dict_files:
-        print(f"Enriching with Mozc OSS vocabulary (cost <= 6000) from {len(dict_files)} files...")
+        print(f"Enriching with Mozc OSS vocabulary (ALL TOKENS, 100% UNPRUNED) from {len(dict_files)} files...")
         added_count = 0
         existing_keys = set()
         for r, toks in reading_to_tokens.items():
@@ -66,13 +88,44 @@ def load_all_tokens():
                     parts = line.split("\t")
                     if len(parts) >= 5:
                         r, lid, rid, cost, s = parts[0], int(parts[1]), int(parts[2]), int(parts[3]), parts[4]
-                        if cost <= 6000:
-                            key = (r, s, lid, rid)
-                            if key not in existing_keys:
-                                reading_to_tokens.setdefault(r, []).append((s, cost, lid, rid))
-                                existing_keys.add(key)
-                                added_count += 1
+                        key = (r, s, lid, rid)
+                        if key not in existing_keys:
+                            reading_to_tokens.setdefault(r, []).append((s, cost, lid, rid))
+                            existing_keys.add(key)
+                            added_count += 1
         print(f"Enriched with {added_count} additional Mozc OSS tokens (total: {sum(len(v) for v in reading_to_tokens.values())}).")
+
+    # Integrate reading_correction.tsv
+    if os.path.exists(corr_file):
+        print(f"Integrating reading correction entries from {corr_file}...")
+        # Map surface to best POS info
+        surface_to_pos = {}
+        for r, toks in reading_to_tokens.items():
+            for s, cost, lid, rid in toks:
+                if s not in surface_to_pos or cost < surface_to_pos[s][2]:
+                    surface_to_pos[s] = (lid, rid, cost)
+
+        corr_added = 0
+        with open(corr_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split("\t")
+                if len(parts) >= 3:
+                    surface, error_reading, _ = parts[0], parts[1], parts[2]
+                    pos_info = surface_to_pos.get(surface)
+                    if pos_info:
+                        lid, rid, base_cost = pos_info
+                        corr_cost = min(32767, base_cost + 3000)
+                    else:
+                        lid, rid, corr_cost = 1851, 1851, 7500
+                    key = (error_reading, surface, lid, rid)
+                    if key not in existing_keys:
+                        reading_to_tokens.setdefault(error_reading, []).append((surface, corr_cost, lid, rid))
+                        existing_keys.add(key)
+                        corr_added += 1
+        print(f"Integrated {corr_added} reading correction entries.")
 
     return reading_to_tokens
 

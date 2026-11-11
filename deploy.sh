@@ -90,10 +90,11 @@ for DEV in $DEVICES; do
     # Ensure Mozc memory-mapped binary dictionary is up-to-date in device storage
     if [ -f "$REPO_DIR/tools/mozc_dict/system_dictionary.bin" ]; then
         LOCAL_BIN_SIZE=$(wc -c < "$REPO_DIR/tools/mozc_dict/system_dictionary.bin" | tr -d ' ')
-        REMOTE_BIN_SIZE=$(adb -s "$DEV" shell "wc -c < /sdcard/Android/data/com.example.myasr/files/mozc/system_dictionary.bin 2>/dev/null" | tr -d '\r ')
+        REMOTE_BIN_SIZE=$(adb -s "$DEV" shell "wc -c < /sdcard/Android/data/com.example.myasr/files/mozc/dict_mozc_general.bin 2>/dev/null" | tr -d '\r ')
         if [ "$LOCAL_BIN_SIZE" != "$REMOTE_BIN_SIZE" ]; then
-            echo "  -> Updating Mozc system_dictionary.bin in device storage ($LOCAL_BIN_SIZE bytes)..."
+            echo "  -> Updating Mozc dict_mozc_general.bin in device storage ($LOCAL_BIN_SIZE bytes)..."
             adb -s "$DEV" shell "mkdir -p /sdcard/Android/data/com.example.myasr/files/mozc" || true
+            adb -s "$DEV" push "$REPO_DIR/tools/mozc_dict/system_dictionary.bin" "/sdcard/Android/data/com.example.myasr/files/mozc/dict_mozc_general.bin"
             adb -s "$DEV" push "$REPO_DIR/tools/mozc_dict/system_dictionary.bin" "/sdcard/Android/data/com.example.myasr/files/mozc/system_dictionary.bin"
         fi
     fi

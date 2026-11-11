@@ -91,6 +91,55 @@ class ViterbiPath:
         self.fb_len = fb_len
         self.closed = closed
 
+def select_pos_stratified_subwords(unique_words, max_total=24):
+    if len(unique_words) <= max_total:
+        return unique_words
+    
+    selected = []
+    overflow = []
+    pos_pair_counts = {}
+    general_noun_count = 0
+    proper_noun_count = 0
+    symbol_count = 0
+    
+    for w in unique_words:
+        surf, cost, lid, rid = w
+        pos_key = (lid, rid)
+        cnt = pos_pair_counts.get(pos_key, 0)
+        
+        keep = False
+        if is_functional_word(lid):
+            keep = (cnt < 2)
+        elif (434 <= lid <= 1840) or (2196 <= lid <= 2590):
+            keep = (cnt < 2)
+        elif 1917 <= lid <= 1940:
+            keep = (proper_noun_count < 4 and cnt < 2)
+        elif is_content_word(lid) or is_suffix(lid):
+            keep = (general_noun_count < 8 and cnt < 3)
+        else:
+            keep = (symbol_count < 2)
+            
+        if keep:
+            selected.append(w)
+            pos_pair_counts[pos_key] = cnt + 1
+            if 1917 <= lid <= 1940:
+                proper_noun_count += 1
+            elif is_content_word(lid) or is_suffix(lid):
+                general_noun_count += 1
+            elif not is_functional_word(lid) and not (434 <= lid <= 1840) and not (2196 <= lid <= 2590):
+                symbol_count += 1
+            if len(selected) >= max_total:
+                break
+        else:
+            overflow.append(w)
+            
+    if len(selected) < max_total and overflow:
+        for w in overflow:
+            selected.append(w)
+            if len(selected) >= max_total:
+                break
+    return selected
+
 def viterbi_search(reading, find_tokens, get_trans, beam_width=12):
     n = len(reading)
     if n < 3: return []
@@ -114,7 +163,9 @@ def viterbi_search(reading, find_tokens, get_trans, beam_width=12):
                         seen.add(k)
                         unique_words.append(w)
 
-                for surf, wcost, lid, rid in unique_words[:16]:
+                stratified = select_pos_stratified_subwords(unique_words, max_total=24)
+
+                for surf, wcost, lid, rid in stratified:
                     lbonus = (j - i - 1) * 2000 if (j - i > 1) else 0
                     tcost = get_trans(p.last_rid, lid if lid > 0 else 0)
                     ncost = p.cost + max(-50000, wcost - lbonus) + tcost
