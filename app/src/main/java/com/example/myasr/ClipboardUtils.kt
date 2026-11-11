@@ -10,6 +10,13 @@ object ClipboardUtils {
      *  - "https://example.com/very/long/path" -> "📋 https://example.co…"
      */
     fun formatCandidateChipPreview(rawText: String?, maxChars: Int = 16): String {
+        return formatClipboardPreview(rawText, maxChars)
+    }
+
+    /**
+     * Compact preview with default 3 chars for candidate strip icon/chip.
+     */
+    fun formatClipboardPreview(rawText: String?, maxChars: Int = 3): String {
         if (rawText.isNullOrBlank()) {
             return "📋"
         }
