@@ -69,7 +69,6 @@ object PowerBenchmarkRunner {
             val engineType = when (engineStr.lowercase()) {
                 "none" -> RerankEngineType.NONE
                 "local_slm_1_5b", "1.5b" -> RerankEngineType.LOCAL_SLM_1_5B
-                "aicore_nano_2", "nano2" -> RerankEngineType.AICORE_NANO_2
                 else -> RerankEngineType.LOCAL_SLM
             }
 

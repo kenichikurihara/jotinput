@@ -58,7 +58,7 @@ Use this skill whenever investigating:
   1. **Mozc Bigram Connection Cost**:
      - Check left/right IDs (`lid`/`rid`) and bigram transition score from Mozc matrix (`connection_data.bin`).
   2. **Intra-Word Surprisal Clamping (ADR-018)**:
-     - Check if Gemini Nano / SLM out-of-vocabulary penalty disproportionately penalized common kanji morphemes.
+     - Check if SLM out-of-vocabulary penalty disproportionately penalized common kanji morphemes.
      - Verify $sysBestNll$ floor clamping in [`LlmReranker.kt`](file:///home/kenichikurihara/repos/myasr/app/src/main/java/com/example/myasr/LlmReranker.kt).
 
 #### Quick On-Device Logit Inspection Recipe
