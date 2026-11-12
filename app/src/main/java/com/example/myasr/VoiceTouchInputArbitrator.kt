@@ -70,7 +70,12 @@ class VoiceTouchInputArbitrator {
     enum class SpaceOutcome {
         COMMITTED_KEYBOARD_AND_SPACE,
         COMMITTED_STREAMING_AND_SPACE,
-        COMMITTED_IDLE_SPACE
+        COMMITTED_IDLE_SPACE,
+        CONVERTED_DOUBLE_SPACE_TO_PERIOD
+    }
+
+    companion object {
+        const val DOUBLE_SPACE_TIMEOUT_MS = 1000L
     }
 
     data class InFlightDecode(
@@ -99,6 +104,12 @@ class VoiceTouchInputArbitrator {
     var lastCommittedReading: String = ""
         private set
     var lastCommittedSurface: String = ""
+        private set
+
+    // Holistic English Auto-Space & Auto-Period state
+    var pendingAutoSpaceAfterWord: Boolean = false
+        private set
+    var lastAutoPeriodEligibleSpaceTimeMs: Long = 0L
         private set
 
     // Bigram phrase tracking for next-phrase continuation prediction
@@ -143,6 +154,11 @@ class VoiceTouchInputArbitrator {
         lastCommittedWasSwipe = false
     }
 
+    private fun clearAutoAssistState() {
+        pendingAutoSpaceAfterWord = false
+        lastAutoPeriodEligibleSpaceTimeMs = 0L
+    }
+
     fun resetAll() {
         composingText.clear()
         activeComposingSessionId = 0L
@@ -151,6 +167,7 @@ class VoiceTouchInputArbitrator {
         streamingLastComposingText = ""
         streamingInferenceHistory.clear()
         clearUndoState()
+        clearAutoAssistState()
         previousCommittedPhrase = ""
         pendingVoiceQueue.clear()
         synchronized(inFlightLock) {
@@ -242,20 +259,44 @@ class VoiceTouchInputArbitrator {
             activeComposingSessionId = ++composingSessionCounter
         }
         clearUndoState()
+        clearAutoAssistState()
         composingText.append(text)
         lastImeComposingEditTimeMs = System.currentTimeMillis()
         editor?.setComposingText(composingText.toString(), 1)
     }
 
+    private fun isAutoSpacePrecedingChar(ch: Char): Boolean {
+        return Character.isLetterOrDigit(ch) ||
+            ch == '.' || ch == ',' || ch == '!' || ch == '?' ||
+            ch == ';' || ch == ':' || ch == ')' || ch == ']' ||
+            ch == '}' || ch == '%' || ch == '"' || ch == '\''
+    }
+
+    private fun isAutoPeriodEligiblePrecedingChar(ch: Char): Boolean {
+        return Character.isLetterOrDigit(ch) ||
+            ch == ')' || ch == ']' || ch == '}' ||
+            ch == '"' || ch == '\'' || ch == '%'
+    }
+
+    private fun isSentenceEndPunctuation(text: String): Boolean {
+        val trimmed = text.trimEnd()
+        if (trimmed.isEmpty()) return false
+        val last = trimmed.last()
+        return last == '.' || last == '!' || last == '?'
+    }
+
     /**
      * Handles a direct-commit character (QWERTY, Symbols, or Numpad mode).
-     * If the preceding input was a swipe-typed word, automatically inserts a space (" ")
-     * before typing alphanumeric or word characters, while allowing punctuation / symbols
+     * If the preceding input was a swipe-typed word or an accepted English candidate
+     * (`pendingAutoSpaceAfterWord`), automatically inserts a space (" ") before typing
+     * alphanumeric or word characters, while allowing punctuation / symbols
      * (e.g. '.', ',', '!', '?', etc.) to attach immediately without a space.
      */
     fun onTypeDirectChar(
         editor: EditorBridge?,
         text: String,
+        autoSpaceEnabled: Boolean = true,
+        bypassAutoAssist: Boolean = false,
         onFlushPreTypingSpeech: () -> Unit = {},
         onResetStreamingUtterance: () -> Unit = {}
     ) {
@@ -267,11 +308,17 @@ class VoiceTouchInputArbitrator {
         }
         onFlushPreTypingSpeech()
 
-        val shouldPrependSpace = lastCommittedWasSwipe &&
+        val textBefore = editor?.getTextBeforeCursor(1, 0) ?: ""
+        val alreadyEndsWithWhitespace = textBefore.lastOrNull()?.isWhitespace() == true
+        val shouldPrependSpace = autoSpaceEnabled &&
+            !bypassAutoAssist &&
+            (pendingAutoSpaceAfterWord || lastCommittedWasSwipe) &&
+            !alreadyEndsWithWhitespace &&
             text.isNotEmpty() &&
             Character.isLetterOrDigit(text.codePointAt(0))
         val textToCommit = if (shouldPrependSpace) " $text" else text
         clearUndoState()
+        clearAutoAssistState()
         editor?.commitText(textToCommit, 1)
         recordDirectCommitForInFlightDecodes(textToCommit)
         flushPendingVoice(editor)
@@ -282,14 +329,15 @@ class VoiceTouchInputArbitrator {
 
     /**
      * Handles commit of a swipe-typed English word.
-     * If the preceding input was also a swipe word, automatically inserts a space (" ")
-     * before this word.
-     * Does NOT add a trailing space after the word, leaving cursor directly at the end of the word.
+     * Holistically inspects the preceding text (letters, digits, sentence/clause punctuation)
+     * to prepend a space (" ") when appropriate, without adding a trailing space prematurely.
      * Records the word in recent commit history and provides full-word deletion/replace capabilities.
      */
     fun onCommitSwipeWord(
         editor: EditorBridge?,
         word: String,
+        autoSpaceEnabled: Boolean = true,
+        bypassAutoAssist: Boolean = false,
         onFlushPreTypingSpeech: () -> Unit = {},
         onResetStreamingUtterance: () -> Unit = {}
     ) {
@@ -301,14 +349,72 @@ class VoiceTouchInputArbitrator {
         }
         onFlushPreTypingSpeech()
 
-        val textToCommit = if (lastCommittedWasSwipe) " $word" else word
+        val textBefore = editor?.getTextBeforeCursor(2, 0) ?: ""
+        val shouldPrependSpace = if (autoSpaceEnabled && !bypassAutoAssist) {
+            if (textBefore.isNotEmpty()) {
+                val lastChar = textBefore.last()
+                !lastChar.isWhitespace() && isAutoSpacePrecedingChar(lastChar)
+            } else {
+                lastCommittedWasSwipe
+            }
+        } else {
+            false
+        }
+
+        val textToCommit = if (shouldPrependSpace) " $word" else word
         clearUndoState()
+        lastAutoPeriodEligibleSpaceTimeMs = 0L
 
         editor?.commitText(textToCommit, 1)
         recordDirectCommitForInFlightDecodes(textToCommit)
         previousCommittedPhrase = word
         lastCommittedSurface = word
         lastCommittedWasSwipe = true
+        pendingAutoSpaceAfterWord = autoSpaceEnabled && !bypassAutoAssist && word.isNotEmpty() && !isSentenceEndPunctuation(word)
+        flushPendingVoice(editor)
+    }
+
+    /**
+     * Handles selection of an English candidate chip (typo correction, capitalization, GEC, etc.)
+     * in QWERTY mode while keeping Arbitrator state and pending auto-space synchronized.
+     */
+    fun onEnglishCandidateSelected(
+        editor: EditorBridge?,
+        replaceLength: Int,
+        candidateSurface: String,
+        autoSpaceEnabled: Boolean = true,
+        bypassAutoAssist: Boolean = false,
+        onFlushPreTypingSpeech: () -> Unit = {},
+        onResetStreamingUtterance: () -> Unit = {}
+    ) {
+        if (streamingLastComposingText.isNotEmpty()) {
+            commitActiveStreamingComposing(editor, onResetStreamingUtterance)
+        }
+        if (composingText.isNotEmpty()) {
+            commitKeyboardComposing(editor)
+        }
+        onFlushPreTypingSpeech()
+
+        clearUndoState()
+        lastAutoPeriodEligibleSpaceTimeMs = 0L
+
+        editor?.beginBatchEdit()
+        try {
+            if (replaceLength > 0) {
+                editor?.deleteSurroundingText(replaceLength, 0)
+                recordDeleteCharsForInFlightDecodes(replaceLength)
+            }
+            editor?.commitText(candidateSurface, 1)
+            recordDirectCommitForInFlightDecodes(candidateSurface)
+        } finally {
+            editor?.endBatchEdit()
+        }
+
+        previousCommittedPhrase = candidateSurface
+        pendingAutoSpaceAfterWord = autoSpaceEnabled &&
+            !bypassAutoAssist &&
+            candidateSurface.isNotEmpty() &&
+            !isSentenceEndPunctuation(candidateSurface)
         flushPendingVoice(editor)
     }
 
@@ -351,6 +457,7 @@ class VoiceTouchInputArbitrator {
         onDiscardUnflushedSpeech: () -> Unit = {},
         onResetStreamingUtterance: () -> Unit = {}
     ): DeleteOutcome {
+        clearAutoAssistState()
         if (composingText.isNotEmpty()) {
             clearUndoState()
             previousCommittedPhrase = ""
@@ -425,6 +532,7 @@ class VoiceTouchInputArbitrator {
         onResetStreamingUtterance: () -> Unit = {},
         formatStreamingFn: (String) -> String = { it }
     ): EnterOutcome {
+        clearAutoAssistState()
         if (composingText.isNotEmpty()) {
             if (hasUnflushedSpeech) {
                 onFlushPreTypingSpeech()
@@ -452,16 +560,22 @@ class VoiceTouchInputArbitrator {
     }
 
     /**
-     * Handles Space (`␣`) button press. Always commits text and enters a space character.
+     * Handles Space (`␣`) button press. Always commits text and enters a space character,
+     * or converts a rapid double-space into `". "` (Gboard-style Auto-Period) when eligible.
      */
     fun onSpacePressed(
         editor: EditorBridge?,
         spaceCharWhenIdle: String,
         hasUnflushedSpeech: Boolean = false,
+        autoPeriodEnabled: Boolean = false,
+        bypassAutoAssist: Boolean = false,
+        nowMs: Long = System.currentTimeMillis(),
         onFlushPreTypingSpeech: () -> Unit = {},
         onResetStreamingUtterance: () -> Unit = {},
         formatStreamingFn: (String) -> String = { it }
     ): SpaceOutcome {
+        pendingAutoSpaceAfterWord = false
+
         if (composingText.isNotEmpty()) {
             val reading = composingText.toString()
             if (hasUnflushedSpeech) {
@@ -474,27 +588,71 @@ class VoiceTouchInputArbitrator {
             editor?.commitText(spaceCharWhenIdle, 1)
             recordDirectCommitForInFlightDecodes(spaceCharWhenIdle)
             flushPendingVoice(editor)
+            val prevChar = reading.lastOrNull()
+            lastAutoPeriodEligibleSpaceTimeMs = if (
+                autoPeriodEnabled && !bypassAutoAssist && spaceCharWhenIdle == " " &&
+                prevChar != null && isAutoPeriodEligiblePrecedingChar(prevChar)
+            ) nowMs else 0L
             return SpaceOutcome.COMMITTED_KEYBOARD_AND_SPACE
         }
 
         if (streamingLastComposingText.isNotEmpty()) {
-            commitActiveStreamingComposing(editor, onResetStreamingUtterance, formatStreamingFn)
+            val finalized = commitActiveStreamingComposing(editor, onResetStreamingUtterance, formatStreamingFn)
             clearUndoState()
             previousCommittedPhrase = ""
             editor?.commitText(spaceCharWhenIdle, 1)
             recordDirectCommitForInFlightDecodes(spaceCharWhenIdle)
             flushPendingVoice(editor)
+            val prevChar = finalized?.lastOrNull()
+            lastAutoPeriodEligibleSpaceTimeMs = if (
+                autoPeriodEnabled && !bypassAutoAssist && spaceCharWhenIdle == " " &&
+                prevChar != null && isAutoPeriodEligiblePrecedingChar(prevChar)
+            ) nowMs else 0L
             return SpaceOutcome.COMMITTED_STREAMING_AND_SPACE
+        }
+
+        // Check Gboard-style Double-Space Auto-Period when idle
+        if (!hasUnflushedSpeech &&
+            autoPeriodEnabled &&
+            !bypassAutoAssist &&
+            spaceCharWhenIdle == " " &&
+            lastAutoPeriodEligibleSpaceTimeMs > 0L &&
+            (nowMs - lastAutoPeriodEligibleSpaceTimeMs) in 0L..DOUBLE_SPACE_TIMEOUT_MS
+        ) {
+            val before = editor?.getTextBeforeCursor(2, 0)
+            val editorEligible = before == null ||
+                (before.length >= 2 && before.last() == ' ' && isAutoPeriodEligiblePrecedingChar(before[before.length - 2]))
+            if (editorEligible) {
+                clearUndoState()
+                lastAutoPeriodEligibleSpaceTimeMs = 0L
+                previousCommittedPhrase = "."
+                editor?.beginBatchEdit()
+                try {
+                    editor?.deleteSurroundingText(1, 0)
+                    editor?.commitText(". ", 1)
+                } finally {
+                    editor?.endBatchEdit()
+                }
+                recordDeleteCharsForInFlightDecodes(1)
+                recordDirectCommitForInFlightDecodes(". ")
+                flushPendingVoice(editor)
+                return SpaceOutcome.CONVERTED_DOUBLE_SPACE_TO_PERIOD
+            }
         }
 
         if (hasUnflushedSpeech) {
             onFlushPreTypingSpeech()
         }
+        val prevCharBeforeSpace = editor?.getTextBeforeCursor(1, 0)?.lastOrNull()
         clearUndoState()
         previousCommittedPhrase = ""
         editor?.commitText(spaceCharWhenIdle, 1)
         recordDirectCommitForInFlightDecodes(spaceCharWhenIdle)
         flushPendingVoice(editor)
+        lastAutoPeriodEligibleSpaceTimeMs = if (
+            autoPeriodEnabled && !bypassAutoAssist && spaceCharWhenIdle == " " &&
+            prevCharBeforeSpace != null && isAutoPeriodEligiblePrecedingChar(prevCharBeforeSpace)
+        ) nowMs else 0L
         return SpaceOutcome.COMMITTED_IDLE_SPACE
     }
 
@@ -615,6 +773,7 @@ class VoiceTouchInputArbitrator {
         }
         flushPendingVoice(editor)
         clearUndoState()
+        clearAutoAssistState()
         previousCommittedPhrase = ""
         if (isCursorMove) {
             clearInFlightCommittedTracking()
@@ -834,10 +993,13 @@ class VoiceTouchInputArbitrator {
         candidatesEnd: Int,
         onResetStreamingUtterance: () -> Unit = {}
     ): Boolean {
+        val selectionChanged = (oldSelStart != newSelStart || oldSelEnd != newSelEnd)
         if (composingText.isEmpty() && streamingLastComposingText.isEmpty()) {
+            if (selectionChanged && System.currentTimeMillis() - lastImeComposingEditTimeMs > 80L) {
+                clearAutoAssistState()
+            }
             return false
         }
-        val selectionChanged = (oldSelStart != newSelStart || oldSelEnd != newSelEnd)
         if (!selectionChanged) return false
 
         val cursorOutsideComposingSpan = if (candidatesStart != -1 && candidatesEnd != -1) {
@@ -861,6 +1023,7 @@ class VoiceTouchInputArbitrator {
         pendingVoiceQueue.clear()
         clearInFlightCommittedTracking()
         clearUndoState()
+        clearAutoAssistState()
         previousCommittedPhrase = ""
         return true
     }
