@@ -87,8 +87,8 @@ class DictionaryUpdateTracker(private val context: Context) {
         private val GIST_UPDATED_AT_REGEX = Regex(""""updated_at"\s*:\s*"([^"]+)"""")
 
         fun getRemoteCheckEndpoint(sourceId: String): String? {
-            val effectiveId = if (sourceId == BASE_DICT_ID) DictionaryType.MOZC_GENERAL.id else sourceId
-            return when (effectiveId) {
+            return when (sourceId) {
+                BASE_DICT_ID -> "https://api.github.com/gists/39665c6e7ba6e63d6fe86c4c4b1bbd42"
                 DictionaryType.MOZC_GENERAL.id -> "https://github.com/google/mozc/commits/master/src/data/dictionary_oss.atom"
                 DictionaryType.SUDACHIDICT.id -> "https://github.com/utuhiro78/mozcdic-ut-sudachidict/commits/main.atom"
                 DictionaryType.JAWIKI.id -> "https://github.com/utuhiro78/mozcdic-ut-jawiki/commits/main.atom"
@@ -100,7 +100,9 @@ class DictionaryUpdateTracker(private val context: Context) {
         }
 
         fun getAllSourceIds(): List<String> {
-            return DictionaryType.values().map { it.id }
+            val list = mutableListOf(BASE_DICT_ID)
+            DictionaryType.values().forEach { list.add(it.id) }
+            return list
         }
 
         fun parseAtomFeedUpdatedMillis(xmlContent: String): Long {
