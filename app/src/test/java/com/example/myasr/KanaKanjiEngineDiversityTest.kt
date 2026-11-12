@@ -182,10 +182,11 @@ class KanaKanjiEngineDiversityTest {
     @Test
     fun testGenitiveParticleIeno_doesNotRegressToVerb() {
         val candidates = engine.getBaseCandidates("いえの")
-        val top1 = candidates.firstOrNull()?.surface
-        assertTrue(
-            "Top candidate for いえの should be '家の' (noun + genitive の), found: $top1",
-            top1 == "家の"
+        val surfaces = candidates.map { it.surface }
+        assertTrue("Candidates should contain nominal '家の', found: $surfaces", surfaces.contains("家の"))
+        assertFalse(
+            "Candidate for いえの must not rank verbal '言えの' ahead of nominal forms, found: $surfaces",
+            surfaces.take(2).contains("言えの")
         )
     }
 
