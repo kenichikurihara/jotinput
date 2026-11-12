@@ -1559,8 +1559,15 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 val readingLen: Int,
                 val score: Int
             )
-            val candidatePrefixList = mutableListOf<ScoredPrefix>()
-            val seenPrefixSurface = HashSet<String>()
+            val bestPrefixMap = LinkedHashMap<String, ScoredPrefix>()
+
+            fun recordPrefix(surface: String, readingLen: Int, score: Int) {
+                if (surface.isBlank() || JapaneseKanaUtils.isAllHiragana(surface)) return
+                val existing = bestPrefixMap[surface]
+                if (existing == null || score < existing.score) {
+                    bestPrefixMap[surface] = ScoredPrefix(surface, readingLen, score)
+                }
+            }
 
             val minPrefixLen = if (n >= 6) 3 else 2
             // Pass 1: Source A (Direct exact dictionary tokens for all horizons m)
@@ -1585,27 +1592,22 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     if (node == null) break
                 }
                 node?.words?.let { directTokens.addAll(it) }
-                mmapDictionary?.getExactTokens(subReading)?.let { mmapToks ->
-                    for (tok in mmapToks) {
-                        if (directTokens.none { it.surface == tok.surface && it.lid == tok.lid }) {
-                            directTokens.add(WordEntry(tok.surface, tok.cost, "mmap", tok.lid, tok.rid))
-                        }
+                val mmapToks = queryAllMmapExactTokens(subReading)
+                for (tok in mmapToks) {
+                    if (directTokens.none { it.surface == tok.surface && it.lid == tok.lid }) {
+                        directTokens.add(tok)
                     }
                 }
 
                 directTokens.sortBy { it.cost }
                 for ((rank, tok) in directTokens.take(8).withIndex()) {
-                    if (tok.surface.isNotBlank() &&
-                        !JapaneseKanaUtils.isAllHiragana(tok.surface) &&
-                        seenPrefixSurface.add(tok.surface)) {
-                        val transCost = if (matrix != null) matrix.getTransitionCost(0, tok.lid) else 0
-                        val score = (tok.cost - lengthBonus) + transCost + suffixCost - branchBonus + rank * 200
-                        candidatePrefixList.add(ScoredPrefix(tok.surface, m, score))
-                    }
+                    val transCost = if (matrix != null) matrix.getTransitionCost(0, tok.lid) else 0
+                    val score = (tok.cost - lengthBonus) + transCost + suffixCost - branchBonus + rank * 200
+                    recordPrefix(tok.surface, m, score)
                 }
             }
 
-            // Pass 2: Source B (Intermediate beam[m] paths for composite inflected bunsetsu prefixes)
+            // Pass 2: Source B (Intermediate beam[m] paths for composite inflected bunsetsu prefixes of length m)
             for (m in (n - 1) downTo minPrefixLen) {
                 val mBranch = branchFactor[m]
                 val branchBonus = when {
@@ -1617,14 +1619,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
                 for (p in beam[m]) {
                     val surf = if (p.firstBunsetsuSurface.isNotBlank()) p.firstBunsetsuSurface else p.surface
-                    val rLen = if (p.firstBunsetsuReadingLen in minPrefixLen..m) p.firstBunsetsuReadingLen else if (p.surface == surf) m else 0
-                    if (rLen in minPrefixLen..m &&
-                        surf.isNotBlank() &&
-                        !JapaneseKanaUtils.isAllHiragana(surf) &&
-                        seenPrefixSurface.add(surf)) {
-                        val compositePenalty = if (p.words.size > 1) 3000 * (p.words.size - 1) else 0
-                        val score = p.cost + compositePenalty + betaMin[rLen] - branchBonus
-                        candidatePrefixList.add(ScoredPrefix(surf, rLen, score))
+                    val rLen = if (p.firstBunsetsuReadingLen == m) m else if (p.surface == surf) m else 0
+                    if (rLen == m) {
+                        val compositePenalty = if (p.words.size > 1) 1500 * (p.words.size - 1) else 0
+                        val score = p.cost + compositePenalty + betaMin[m] - branchBonus
+                        recordPrefix(surf, m, score)
                     }
                 }
             }
@@ -1633,15 +1632,13 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             for (sc in scoredFullCandidates) {
                 val fb = sc.path.firstBunsetsuSurface
                 val fbLen = sc.path.firstBunsetsuReadingLen
-                if (fb.isNotBlank() &&
-                    fbLen in 2 until n &&
-                    !JapaneseKanaUtils.isAllHiragana(fb) &&
-                    seenPrefixSurface.add(fb)) {
+                if (fb.isNotBlank() && fbLen in 2 until n) {
                     val score = sc.path.cost - branchFactor[fbLen] * 200
-                    candidatePrefixList.add(ScoredPrefix(fb, fbLen, score))
+                    recordPrefix(fb, fbLen, score)
                 }
             }
 
+            val candidatePrefixList = bestPrefixMap.values.toMutableList()
             candidatePrefixList.sortBy { it.score }
             for (sp in candidatePrefixList) {
                 val matchingFull = scoredFullCandidates.firstOrNull {
