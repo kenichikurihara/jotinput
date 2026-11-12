@@ -582,24 +582,6 @@
                                 android:textSize="12sp" />
 
                             <RadioButton
-                                android:id="@+id/rbEngineNano2"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:paddingVertical="4dp"
-                                android:text="Gemini Nano 2 (3.2B • Tensor G5 NPU)\n・Android AICore システム常駐モデル"
-                                android:textColor="@color/text_primary"
-                                android:textSize="12sp" />
-
-                            <RadioButton
-                                android:id="@+id/rbEngineNano1"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:paddingVertical="4dp"
-                                android:text="Gemini Nano 1 (1.8B • AICore NPU)\n・Android AICore NPU加速"
-                                android:textColor="@color/text_primary"
-                                android:textSize="12sp" />
-
-                            <RadioButton
                                 android:id="@+id/rbEngineNone"
                                 android:layout_width="match_parent"
                                 android:layout_height="34dp"

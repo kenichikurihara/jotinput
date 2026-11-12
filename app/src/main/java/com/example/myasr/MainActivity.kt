@@ -67,8 +67,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchSlmRerankEnabled: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var layoutRerankEngineSelector: LinearLayout
     private lateinit var rgRerankEngine: android.widget.RadioGroup
-    private lateinit var rbEngineNano2: android.widget.RadioButton
-    private lateinit var rbEngineNano1: android.widget.RadioButton
     private lateinit var rbEngineLocalSlm: android.widget.RadioButton
     private lateinit var rbEngineLocalSlm15B: android.widget.RadioButton
     private lateinit var rbEngineNone: android.widget.RadioButton
@@ -182,20 +180,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupRerankEngineUI() {
         val current = KeyboardHeightManager.getRerankEngineType(this)
-        val isNano2 = RerankEngineType.isNano2Supported(this)
-        val isAiCore = RerankEngineType.isAiCoreSupported(this)
 
-        rbEngineNano2.isEnabled = isNano2
-        rbEngineNano2.visibility = if (isNano2) View.VISIBLE else View.GONE
-        rbEngineNano1.isEnabled = isAiCore
-        rbEngineNano1.visibility = if (isAiCore) View.VISIBLE else View.GONE
         rbEngineLocalSlm.isEnabled = true
         rbEngineLocalSlm15B.isEnabled = true
         rbEngineNone.isEnabled = true
 
         when (current) {
-            RerankEngineType.AICORE_NANO_2 -> rbEngineNano2.isChecked = true
-            RerankEngineType.AICORE_NANO_1 -> rbEngineNano1.isChecked = true
             RerankEngineType.LOCAL_SLM -> rbEngineLocalSlm.isChecked = true
             RerankEngineType.LOCAL_SLM_1_5B -> rbEngineLocalSlm15B.isChecked = true
             RerankEngineType.NONE -> rbEngineNone.isChecked = true
@@ -206,8 +196,6 @@ class MainActivity : AppCompatActivity() {
         rgRerankEngine.setOnCheckedChangeListener { _, checkedId ->
             if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
             val selected = when (checkedId) {
-                R.id.rbEngineNano2 -> RerankEngineType.AICORE_NANO_2
-                R.id.rbEngineNano1 -> RerankEngineType.AICORE_NANO_1
                 R.id.rbEngineLocalSlm15B -> RerankEngineType.LOCAL_SLM_1_5B
                 R.id.rbEngineNone -> RerankEngineType.NONE
                 else -> RerankEngineType.LOCAL_SLM
@@ -291,36 +279,6 @@ class MainActivity : AppCompatActivity() {
 
         when (selectedEngine) {
             RerankEngineType.NONE -> {}
-            RerankEngineType.AICORE_NANO_2 -> {
-                tvSlmStatusBadge.text = "Nano 2 (Active)"
-                tvSlmStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                    ContextCompat.getColor(this, R.color.badge_success_bg)
-                )
-                tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-                tvSlmStatusDesc.text = "Android AICore: Gemini Nano 2 (3.2B • Tensor G5 NPU)"
-                if (::tvCard1AiStatusBadge.isInitialized) {
-                    tvCard1AiStatusBadge.text = "AI: Nano 2"
-                    tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                        ContextCompat.getColor(this, R.color.badge_success_bg)
-                    )
-                    tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-                }
-            }
-            RerankEngineType.AICORE_NANO_1 -> {
-                tvSlmStatusBadge.text = "Nano 1 (Active)"
-                tvSlmStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                    ContextCompat.getColor(this, R.color.badge_success_bg)
-                )
-                tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-                tvSlmStatusDesc.text = "Android AICore: Gemini Nano 1 (1.8B • NPU 加速)"
-                if (::tvCard1AiStatusBadge.isInitialized) {
-                    tvCard1AiStatusBadge.text = "AI: Nano 1"
-                    tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                        ContextCompat.getColor(this, R.color.badge_success_bg)
-                    )
-                    tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-                }
-            }
             RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B -> {
                 val modelName = if (selectedEngine == RerankEngineType.LOCAL_SLM_1_5B) "Qwen2.5-1.5B" else "Qwen2.5-0.5B"
                 val badgeText = if (selectedEngine == RerankEngineType.LOCAL_SLM_1_5B) "Qwen 1.5B" else "Qwen 0.5B"
@@ -522,8 +480,6 @@ class MainActivity : AppCompatActivity() {
         switchSlmRerankEnabled = findViewById(R.id.switchSlmRerankEnabled)
         layoutRerankEngineSelector = findViewById(R.id.layoutRerankEngineSelector)
         rgRerankEngine = findViewById(R.id.rgRerankEngine)
-        rbEngineNano2 = findViewById(R.id.rbEngineNano2)
-        rbEngineNano1 = findViewById(R.id.rbEngineNano1)
         rbEngineLocalSlm = findViewById(R.id.rbEngineLocalSlm)
         rbEngineLocalSlm15B = findViewById(R.id.rbEngineLocalSlm15B)
         rbEngineNone = findViewById(R.id.rbEngineNone)

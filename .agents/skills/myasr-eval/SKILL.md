@@ -19,7 +19,7 @@ This skill documents all evaluation suites, datasets, metrics, and command-line 
 | **1. Japanese ASR & Custom Dictionary** | Acoustic decoding, hotword biasing, phonetic substitution | `eval/dataset.json` (1,000 cases), 20-case custom dict matrix | TWRR, CER, FPR, RTF | Python (`eval/evaluate_1000.py`) |
 | **2. Spoken Punctuation & Boundary Input** | Spoken punctuation commands (`、`, `。`, `！`, 改行) vs protected homophones | [`JapanesePunctuationEvaluationTest.kt`](app/src/test/java/com/example/myasr/JapanesePunctuationEvaluationTest.kt) (67+ cases) | 100% Pass, False-Positive Rate | Gradle JVM UnitTest |
 | **3. Kana-Kanji Conversion & Bigram Costs** | Mozc Viterbi, Bigram connection matrix, morpheme splitting | `eval/connection_matrix_eval_results.json`, [`ConnectionMatrixTest.kt`](app/src/test/java/com/example/myasr/ConnectionMatrixTest.kt) | Top-1 / Top-3 Accuracy, Boundary Acc | Python & JVM UnitTest |
-| **4. On-Device SLM Candidate Re-ranking** | Disambiguating homophones, context-free evaluation, Gemini Nano vs Local SLM | `tools/eval_1000_cases.tsv`, `tools/eval_500_natural_empty.tsv`, `tools/eval_dataset_10000.jsonl` | Top-1, Top-3, MRR, Latency, Energy (mJ) | C++ CLI & Python |
+| **4. On-Device SLM Candidate Re-ranking** | Disambiguating homophones, context-free evaluation, Qwen2.5-0.5B vs 1.5B | `tools/eval_1000_cases.tsv`, `tools/eval_500_natural_empty.tsv`, `tools/eval_dataset_10000.jsonl` | Top-1, Top-3, MRR, Latency, Energy (mJ) | C++ CLI & Python |
 | **5. Multimodal Voice & Touch Arbitration** | State machine transitions, voice streaming while typing, Undo/Delete/Space/Punctuation | [`VoiceInputArbitratorTest.kt`](app/src/test/java/com/example/myasr/VoiceInputArbitratorTest.kt), [`FutoSwipeIntegrationTest.kt`](app/src/test/java/com/example/myasr/FutoSwipeIntegrationTest.kt) | 100% Pass, Zero Inconsistency | Gradle JVM UnitTest |
 | **6. Streaming Prefix Freeze & Filler Removal** | Live speech partial commit, flicker suppression, filler filtering | [`StreamingPrefixFreezeEvaluationTest.kt`](app/src/test/java/com/example/myasr/StreamingPrefixFreezeEvaluationTest.kt), 120-case filler suite | Edit Distance, Revision Rate, Latency | Gradle JVM UnitTest |
 | **7. English QWERTY Neural Swipe Typing** | 1D-CNN/DFSMN spatial CTC beam search + ContextLM re-ranking | `eval/futo_swipe/swipe_eval_1000.jsonl` (1,000 cases) | Top-1 / Top-3 / Top-5 Acc, NN Latency (ms) | Python & Native C++ |
@@ -104,7 +104,7 @@ python3 eval/evaluate_connection_matrix.py
 ## 4. On-Device SLM Candidate Re-ranking Evaluation
 
 ### Purpose
-Evaluates homophone semantic disambiguation across Qwen2.5-0.5B, Qwen2.5-1.5B, and Gemini Nano (AICore).
+Evaluates homophone semantic disambiguation across Qwen2.5-0.5B and Qwen2.5-1.5B.
 
 ### Standard Datasets
 1. **`tools/eval_1000_cases.tsv`**: 1,000 realistic Japanese sentences with preceding context, challenging homophones (`異動` vs `移動`, `確信` vs `核心`, `対象` vs `対照`).
@@ -120,9 +120,6 @@ Evaluates homophone semantic disambiguation across Qwen2.5-0.5B, Qwen2.5-1.5B, a
 ```bash
 # Python evaluation of SLM mandatory rerank:
 python3 eval/evaluate_slm_mandatory_rerank.py
-
-# Python evaluation of Local SLM vs Gemini Nano:
-python3 eval/evaluate_slm_vs_nano.py
 
 # Evaluate Qwen 1.5B:
 python3 eval/evaluate_qwen1_5b.py

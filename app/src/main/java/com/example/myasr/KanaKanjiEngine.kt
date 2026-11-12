@@ -809,9 +809,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         }
         val engineType = KeyboardHeightManager.getRerankEngineType(ctx)
         if (engineType != RerankEngineType.LOCAL_SLM && engineType != RerankEngineType.LOCAL_SLM_1_5B) {
-            // Also allow fast rerank if AICore is selected but local SLM is ready as instant fallback
-            val isSlmReady = LlmReranker.getInstance(ctx).isReady()
-            if (!isSlmReady) return null
+            return null
         }
 
         val alpha = KeyboardHeightManager.getSlmWeightAlpha(ctx)
@@ -834,7 +832,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     /**
-     * Contextual candidate re-ranking using SLM or Android AICore (Gemini Nano 1 / 2).
+     * Contextual candidate re-ranking using on-device SLM (Qwen2.5-0.5B / 1.5B).
      * Designed to be executed asynchronously on Dispatchers.Default.
      * Returns a pair of (reranked candidates, whether scoring was successfully applied).
      */
@@ -869,18 +867,6 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
         return when (engineType) {
             RerankEngineType.NONE -> Pair(filtered, false)
-            RerankEngineType.AICORE_NANO_2, RerankEngineType.AICORE_NANO_1 -> {
-                AiCoreReranker.getInstance(ctx).rerankWithStatus(
-                    engineType,
-                    contextPrefix,
-                    filtered,
-                    weightAlpha = alpha,
-                    lambdaObs = lambdaObs,
-                    gammaUser = gammaUser,
-                    currentShownTop1 = currentShownTop1,
-                    targetInputLength = effectiveTargetLength
-                )
-            }
             RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B -> {
                 LlmReranker.getInstance(ctx).rerankWithStatus(
                     contextPrefix,

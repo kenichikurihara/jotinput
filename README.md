@@ -52,7 +52,7 @@ flowchart LR
     Asr --> Post[DictionaryPostProcessor + JapanesePunctuationEngine]
     Post --> IME[VoiceInputMethodService]
     Keys[FlickKeyboardView] --> Kana[KanaKanjiEngine]
-    Kana --> SLM[LlmReranker / AiCoreReranker]
+    Kana --> SLM[LlmReranker (Qwen2.5-0.5B / 1.5B)]
     SLM --> IME
     Kana --> IME
     IME --> App[Target app text field]
