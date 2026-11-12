@@ -113,7 +113,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     @Synchronized
-    fun reloadDictionaries() {
+    fun reloadMmapDictionaries() {
         for (entry in activeMmapDictionaries) {
             try { entry.dict.close() } catch (_: Exception) {}
         }
@@ -173,7 +173,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             }
 
             // 1. Load Mmap Dictionaries from Storage (files/mozc/*.bin or system_dictionary.bin)
-            reloadDictionaries()
+            reloadMmapDictionaries()
 
             var baseLoaded = activeMmapDictionaries.isNotEmpty()
 
@@ -405,6 +405,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         isInitialized = false
         root.children.clear()
         root.words.clear()
+        reloadMmapDictionaries()
         clearMemoryCache()
         initializeIfNeeded()
     }
@@ -1174,7 +1175,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return lid in 29..433
     }
 
-    fun queryAllMmapExactTokens(reading: String): List<WordEntry> {
+    private fun queryAllMmapExactTokens(reading: String): List<WordEntry> {
         val dicts = activeMmapDictionaries
         if (dicts.isEmpty()) return emptyList()
         val result = ArrayList<WordEntry>(16)
@@ -1195,7 +1196,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return result
     }
 
-    fun queryAllMmapPrefixTokens(prefix: String, maxCount: Int = 10): List<ConversionCandidate> {
+    private fun queryAllMmapPrefixTokens(prefix: String, maxCount: Int = 10): List<ConversionCandidate> {
         val dicts = activeMmapDictionaries
         if (dicts.isEmpty()) return emptyList()
         val result = ArrayList<ConversionCandidate>()
