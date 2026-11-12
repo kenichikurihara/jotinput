@@ -448,17 +448,25 @@ class VoiceInputMethodService : InputMethodService() {
                     candidate.source in listOf("english_typo", "english_gec", "user_english", "english_cap", "raw")
                 ) {
                     val rawWord = candidate.reading
-                    if (candidate.source == "english_gec") {
-                        // Replace clause/sentence
+                    val replaceLength = if (candidate.source == "english_gec") {
                         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
                         val lastSentenceStart = textBeforeCursor.lastIndexOfAny(charArrayOf('.', '!', '?', '\n'))
                         val clause = if (lastSentenceStart >= 0) textBeforeCursor.substring(lastSentenceStart + 1) else textBeforeCursor
-                        editorBridge.deleteSurroundingText(clause.length, 0)
-                        editorBridge.commitText(committedSurface, 1)
-                    } else if (rawWord.isNotEmpty()) {
-                        // Delete typed raw word before cursor and replace with corrected surface
-                        editorBridge.deleteSurroundingText(rawWord.length, 0)
-                        editorBridge.commitText(committedSurface, 1)
+                        clause.length
+                    } else {
+                        rawWord.length
+                    }
+                    if (replaceLength > 0 || committedSurface.isNotEmpty()) {
+                        arbitrator.onEnglishCandidateSelected(
+                            editor = editorBridge,
+                            replaceLength = replaceLength,
+                            candidateSurface = committedSurface,
+                            autoSpaceEnabled = KeyboardHeightManager.isEnglishAutoSpaceEnabled(this@VoiceInputMethodService),
+                            bypassAutoAssist = shouldBypassEnglishAutoAssist(),
+                            onFlushPreTypingSpeech = { flushPreTypingSpeechIfNeeded() },
+                            onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() }
+                        )
+                        syncKeyboardState()
                     }
                     candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                     return
@@ -516,6 +524,8 @@ class VoiceInputMethodService : InputMethodService() {
                     arbitrator.onTypeDirectChar(
                         editor = editorBridge,
                         text = text,
+                        autoSpaceEnabled = KeyboardHeightManager.isEnglishAutoSpaceEnabled(this@VoiceInputMethodService),
+                        bypassAutoAssist = shouldBypassEnglishAutoAssist(),
                         onFlushPreTypingSpeech = { flushPreTypingSpeechIfNeeded() },
                         onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() }
                     )
@@ -587,12 +597,19 @@ class VoiceInputMethodService : InputMethodService() {
             override fun onSpacePressed() {
                 val prevPhrase = arbitrator.previousCommittedPhrase
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
-                val spaceChar = if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.KANA) "　" else " "
+                val currentMode = flickKeyboardView?.currentMode
+                val spaceChar = if (currentMode == JapaneseKanaUtils.KeyboardMode.KANA) "　" else " "
+                val isEnglishMode = currentMode == JapaneseKanaUtils.KeyboardMode.QWERTY ||
+                    currentMode == JapaneseKanaUtils.KeyboardMode.QWERTY_SYMBOLS
+                val autoPeriodEnabled = isEnglishMode &&
+                    KeyboardHeightManager.isEnglishAutoPeriodEnabled(this@VoiceInputMethodService)
 
                 val outcome = arbitrator.onSpacePressed(
                     editor = editorBridge,
                     spaceCharWhenIdle = spaceChar,
                     hasUnflushedSpeech = hadUnflushed,
+                    autoPeriodEnabled = autoPeriodEnabled,
+                    bypassAutoAssist = shouldBypassEnglishAutoAssist(),
                     onFlushPreTypingSpeech = { flushPreTypingSpeechIfNeeded() },
                     onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() },
                     formatStreamingFn = { formatVoiceText(it) }
@@ -603,6 +620,9 @@ class VoiceInputMethodService : InputMethodService() {
                 syncKeyboardState()
 
                 when (outcome) {
+                    VoiceTouchInputArbitrator.SpaceOutcome.CONVERTED_DOUBLE_SPACE_TO_PERIOD -> {
+                        candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                    }
                     VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_KEYBOARD_AND_SPACE,
                     VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_STREAMING_AND_SPACE,
                     VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_IDLE_SPACE -> {
@@ -732,6 +752,8 @@ class VoiceInputMethodService : InputMethodService() {
                             arbitrator.onCommitSwipeWord(
                                 editor = editorBridge,
                                 word = top1,
+                                autoSpaceEnabled = KeyboardHeightManager.isEnglishAutoSpaceEnabled(this@VoiceInputMethodService),
+                                bypassAutoAssist = shouldBypassEnglishAutoAssist(),
                                 onFlushPreTypingSpeech = { flushPreTypingSpeechIfNeeded() },
                                 onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() }
                             )
@@ -992,14 +1014,28 @@ class VoiceInputMethodService : InputMethodService() {
         }
     }
 
+    private fun shouldBypassEnglishAutoAssist(): Boolean {
+        val mode = flickKeyboardView?.currentMode
+        if (mode != JapaneseKanaUtils.KeyboardMode.QWERTY && mode != JapaneseKanaUtils.KeyboardMode.QWERTY_SYMBOLS) {
+            return true
+        }
+        val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(64, 0)?.toString() ?: ""
+        return EnglishCapitalizationAnalyzer.shouldBypassCapitalization(currentInputEditorInfo, textBeforeCursor)
+    }
+
     private fun showNextPhrasePredictions(committedPhrase: String) {
         rerankJob?.cancel()
         updateDebugSlmBadge(null)
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+        val suggestJpPeriod = KeyboardHeightManager.isJapanesePeriodSuggestionEnabled(this)
 
         // 1. FAST PATH (Instant UI update on main thread, < 0.1ms):
-        // Display user history bigrams, canonical collocations, and particle continuation
-        val fastPredictions = nextPhrasePredictor.predict(committedPhrase, textBeforeCursor).toMutableList()
+        // Display user history bigrams, canonical collocations, sentence-ending period, and particle continuation
+        val fastPredictions = nextPhrasePredictor.predict(
+            committedPhrase,
+            textBeforeCursor,
+            suggestPeriod = suggestJpPeriod
+        ).toMutableList()
         val recentClip = serviceScope.runCatching {
             // Check in-memory cached recent clipboard item
             runBlocking { ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService).getRecentSuggestionCandidate() }

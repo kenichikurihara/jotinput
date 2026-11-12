@@ -102,4 +102,33 @@ class NextPhrasePredictorTest {
         println("Average prediction latency: $avgMicros µs")
         assertTrue("Latency must be < 1000 µs (sub-millisecond), got ${avgMicros} µs", avgMicros < 1000.0)
     }
+
+    @Test
+    fun testJapanesePeriodSuggestionAndSuppression() {
+        // 1. Sentence-ending predicate ("完了しました"): '。' is suggested at the very top
+        val donePreds = predictor.predict("完了しました")
+        assertTrue("Expected '。' in suggestions for '完了しました'", donePreds.any { it.surface == "。" })
+        assertEquals("。", donePreds.first().surface)
+        assertEquals("punctuation_suggestion", donePreds.first().source)
+
+        // 2. Question ending ("大丈夫ですか"): both '。' and '？' are suggested before particles
+        val qPreds = predictor.predict("大丈夫ですか").map { it.surface }
+        assertTrue("Expected '。' for '大丈夫ですか'", qPreds.contains("。"))
+        assertTrue("Expected '？' for '大丈夫ですか'", qPreds.contains("？"))
+        assertTrue("Expected '。' before particles", qPreds.indexOf("。") < qPreds.indexOf("は"))
+
+        // 3. Noun ("会議"): particles first, '。' still available as fallback
+        val nounPreds = predictor.predict("会議").map { it.surface }
+        assertTrue("Expected '。' in suggestions for '会議'", nounPreds.contains("。"))
+        assertTrue("Expected particles before '。' for noun '会議'", nounPreds.indexOf("は") < nounPreds.indexOf("。"))
+
+        // 4. Suppression cases: sentence start, already ending in '。', comma '、', or case particle '会議で'
+        assertFalse("Should not suggest '。' at sentence start", predictor.predict("").any { it.surface == "。" })
+        assertFalse("Should not suggest '。' after '。'", predictor.predict("完了しました。").any { it.surface == "。" })
+        assertFalse("Should not suggest '。' after '、'", predictor.predict("また、").any { it.surface == "。" })
+        assertFalse("Should not suggest '。' after case particle '会議で'", predictor.predict("会議で").any { it.surface == "。" })
+
+        // 5. Opt-out flag
+        assertFalse("Should respect suggestPeriod = false", predictor.predict("完了しました", suggestPeriod = false).any { it.surface == "。" })
+    }
 }

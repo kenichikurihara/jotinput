@@ -84,6 +84,25 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         private val COMMON_PARTICLES = listOf(
             "は", "が", "を", "に", "で", "の", "と", "も", "へ", "から", "まで", "より", "ので"
         )
+
+        // Sentence-ending predicates/auxiliaries where '。' is highly likely
+        private val SENTENCE_ENDING_PREDICATES = listOf(
+            "ます", "ました", "ません", "ませんでした", "でした", "です",
+            "ございます", "ございました", "いたします", "いたしました",
+            "おります", "おりました", "あります", "ありました", "います", "いました",
+            "ください", "下さい", "でしょう", "ましょう", "たい", "たいです",
+            "ない", "なかった", "ないです", "なかったです",
+            "った", "いた", "んだ", "のだ", "だ",
+            "ますか", "ましたか", "ですか", "でしょうか", "かな", "よね", "だよ", "だね"
+        )
+
+        private val QUESTION_ENDINGS = listOf(
+            "ですか", "でしょうか", "ますか", "ましたか", "ませんか", "かな"
+        )
+
+        private val PERIOD_SUPPRESSING_SUFFIXES = listOf(
+            "、", ",", "・", "（", "「", "『", "【", "(", "[", "{"
+        )
     }
 
     // Access-ordered LinkedHashMap for LRU prefix keys (prevPhrase -> (nextPhrase -> count))
@@ -152,7 +171,11 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
      * Guaranteed sub-millisecond execution (< 0.1 ms) safe for direct UI invocation.
      */
     @Synchronized
-    fun predict(lastPhrase: String, textBeforeCursor: String = ""): List<ConversionCandidate> {
+    fun predict(
+        lastPhrase: String,
+        textBeforeCursor: String = "",
+        suggestPeriod: Boolean = true
+    ): List<ConversionCandidate> {
         val result = mutableListOf<ConversionCandidate>()
         val seenSurfaces = HashSet<String>()
 
@@ -204,8 +227,13 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 cleanLast.endsWith("。") ||
                 cleanLast.endsWith("！") ||
                 cleanLast.endsWith("？") ||
+                cleanLast.endsWith(".") ||
+                cleanLast.endsWith("!") ||
+                cleanLast.endsWith("?") ||
                 cleanLast.endsWith("\n") ||
                 textBeforeCursor.endsWith("。") ||
+                textBeforeCursor.endsWith("！") ||
+                textBeforeCursor.endsWith("？") ||
                 textBeforeCursor.endsWith("\n")
 
         if (isSentenceStart) {
@@ -219,6 +247,31 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             addCandidate(ConversionCandidate("また、", "また、", true, "time_heuristic"))
             addCandidate(ConversionCandidate("つきましては、", "つきましては、", true, "time_heuristic"))
             addCandidate(ConversionCandidate("なお、", "なお、", true, "time_heuristic"))
+        }
+
+        val allowPeriod = suggestPeriod && !shouldSuppressPeriodSuggestion(cleanLast, isSentenceStart)
+        val isPredicateEnd = allowPeriod && isSentenceEndingPredicate(cleanLast)
+
+        // 3.5 High-priority Japanese Period ('。') suggestion immediately after sentence-ending predicates
+        if (isPredicateEnd) {
+            addCandidate(
+                ConversionCandidate(
+                    surface = "。",
+                    reading = "。",
+                    isPrediction = true,
+                    source = "punctuation_suggestion"
+                )
+            )
+            if (isQuestionEnding(cleanLast)) {
+                addCandidate(
+                    ConversionCandidate(
+                        surface = "？",
+                        reading = "？",
+                        isPrediction = true,
+                        source = "punctuation_suggestion"
+                    )
+                )
+            }
         }
 
         // 4. Particle Continuation
@@ -236,6 +289,18 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             }
         }
 
+        // 5. General Japanese Period ('。') suggestion after non-particle phrases (e.g. nouns, short clauses)
+        if (allowPeriod && !isPredicateEnd) {
+            addCandidate(
+                ConversionCandidate(
+                    surface = "。",
+                    reading = "。",
+                    isPrediction = true,
+                    source = "punctuation_suggestion"
+                )
+            )
+        }
+
         return result
     }
 
@@ -244,6 +309,21 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 phrase.endsWith("は") || phrase.endsWith("が") || phrase.endsWith("を") ||
                 phrase.endsWith("に") || phrase.endsWith("で") || phrase.endsWith("と") ||
                 phrase.endsWith("の") || phrase.endsWith("も") || phrase.endsWith("へ")
+    }
+
+    private fun shouldSuppressPeriodSuggestion(cleanLast: String, isSentenceStart: Boolean): Boolean {
+        if (isSentenceStart || cleanLast.isEmpty()) return true
+        if (PERIOD_SUPPRESSING_SUFFIXES.any { cleanLast.endsWith(it) }) return true
+        if (isParticle(cleanLast)) return true
+        return false
+    }
+
+    private fun isSentenceEndingPredicate(cleanLast: String): Boolean {
+        return SENTENCE_ENDING_PREDICATES.any { cleanLast.endsWith(it) }
+    }
+
+    private fun isQuestionEnding(cleanLast: String): Boolean {
+        return QUESTION_ENDINGS.any { cleanLast.endsWith(it) }
     }
 
     @Synchronized

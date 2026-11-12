@@ -63,34 +63,133 @@ class FutoSwipeIntegrationTest {
         assertEquals("hello.", editor.text.toString())
         assertFalse(arbitrator.lastCommittedWasSwipe)
 
-        // 3. Commit another swipe word "world"
+        // 3. Commit another swipe word "world" after '.' -> holistic auto-space inserts " world"
         arbitrator.onCommitSwipeWord(editor, "world")
-        assertEquals("hello.world", editor.text.toString())
+        assertEquals("hello. world", editor.text.toString())
         assertTrue(arbitrator.lastCommittedWasSwipe)
 
         // 4. Consecutive swipe word "again": automatically inserts space between words
         arbitrator.onCommitSwipeWord(editor, "again")
-        assertEquals("hello.world again", editor.text.toString())
+        assertEquals("hello. world again", editor.text.toString())
         assertTrue(arbitrator.lastCommittedWasSwipe)
 
         // 5. Candidate selection replaces the recent swipe word
         arbitrator.onCandidateSelected(editor, candidateSurface = "ahead", isPrediction = false)
-        assertEquals("hello.world ahead", editor.text.toString())
+        assertEquals("hello. world ahead", editor.text.toString())
         assertTrue(arbitrator.lastCommittedWasSwipe)
 
         // 6. Delete key deletes the ENTIRE swipe word rather than just one letter
         val outcome = arbitrator.onDeletePressed(editor)
         assertEquals(VoiceTouchInputArbitrator.DeleteOutcome.DELETED_ENTIRE_SWIPE_WORD, outcome)
-        assertEquals("hello.world ", editor.text.toString())
+        assertEquals("hello. world ", editor.text.toString())
         assertFalse(arbitrator.lastCommittedWasSwipe)
 
         // 7. Typing key tap (letter/digit) after swipe word inserts a leading space
         arbitrator.onCommitSwipeWord(editor, "foo")
-        assertEquals("hello.world foo", editor.text.toString())
+        assertEquals("hello. world foo", editor.text.toString())
         assertTrue(arbitrator.lastCommittedWasSwipe)
 
         arbitrator.onTypeDirectChar(editor, "b")
-        assertEquals("hello.world foo b", editor.text.toString())
+        assertEquals("hello. world foo b", editor.text.toString())
         assertFalse(arbitrator.lastCommittedWasSwipe)
+    }
+
+    @Test
+    fun testTapThenSwipeAndEnglishCandidateAutoSpace() {
+        val arbitrator = VoiceTouchInputArbitrator()
+        val editor = MockEditorBridge()
+
+        // Tap-typing "hel" then selecting English candidate "hello"
+        arbitrator.onTypeDirectChar(editor, "h")
+        arbitrator.onTypeDirectChar(editor, "e")
+        arbitrator.onTypeDirectChar(editor, "l")
+        assertEquals("hel", editor.text.toString())
+
+        arbitrator.onEnglishCandidateSelected(editor, replaceLength = 3, candidateSurface = "hello")
+        assertEquals("hello", editor.text.toString())
+
+        // Next letter tap auto-inserts a space
+        arbitrator.onTypeDirectChar(editor, "w")
+        assertEquals("hello w", editor.text.toString())
+
+        // Swiping a word after tap-typed letters also auto-inserts a space
+        arbitrator.onCommitSwipeWord(editor, "world")
+        assertEquals("hello w world", editor.text.toString())
+
+        // Punctuation attaches immediately after candidate selection without space
+        arbitrator.onEnglishCandidateSelected(editor, replaceLength = 5, candidateSurface = "earth")
+        arbitrator.onTypeDirectChar(editor, ",")
+        assertEquals("hello w earth,", editor.text.toString())
+
+        // Tap-typing URLs/decimals without swipe or candidate tap does NOT auto-space after '.'
+        val urlEditor = MockEditorBridge()
+        val urlArb = VoiceTouchInputArbitrator()
+        for (ch in "google.com") {
+            urlArb.onTypeDirectChar(urlEditor, ch.toString())
+        }
+        assertEquals("google.com", urlEditor.text.toString())
+    }
+
+    @Test
+    fun testGboardStyleDoubleSpaceAutoPeriod() {
+        val arbitrator = VoiceTouchInputArbitrator()
+        val editor = MockEditorBridge()
+
+        // Type "hello"
+        for (ch in "hello") {
+            arbitrator.onTypeDirectChar(editor, ch.toString())
+        }
+
+        // First space at t=1000ms -> commits " "
+        val o1 = arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = 1000L)
+        assertEquals(VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_IDLE_SPACE, o1)
+        assertEquals("hello ", editor.text.toString())
+
+        // Second space at t=1300ms (within 1000ms) -> converts to ". "
+        val o2 = arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = 1300L)
+        assertEquals(VoiceTouchInputArbitrator.SpaceOutcome.CONVERTED_DOUBLE_SPACE_TO_PERIOD, o2)
+        assertEquals("hello. ", editor.text.toString())
+
+        // Third space at t=1500ms -> should NOT become ".. ", just adds a space
+        val o3 = arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = 1500L)
+        assertEquals(VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_IDLE_SPACE, o3)
+        assertEquals("hello.  ", editor.text.toString())
+
+        // Sentence-start capitalization after auto-period
+        val cap = EnglishCapitalizationAnalyzer.analyze("world", editor.text.toString(), isShiftActive = false)
+        assertEquals(EnglishCapitalizationAnalyzer.CapitalizationType.SENTENCE_START, cap.type)
+        assertEquals("World", cap.primaryCandidate)
+    }
+
+    @Test
+    fun testAutoPeriodTimeoutAndSuppressionCases() {
+        val arbitrator = VoiceTouchInputArbitrator()
+        val editor = MockEditorBridge()
+
+        // 1. Timeout exceeded (> 1000ms): does NOT insert period
+        arbitrator.onTypeDirectChar(editor, "hi")
+        arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = 1000L)
+        val slow = arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = 2500L)
+        assertEquals(VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_IDLE_SPACE, slow)
+        assertEquals("hi  ", editor.text.toString())
+
+        // 2. After existing punctuation (e.g. "ok."): double-space does NOT insert another period
+        val puncEditor = MockEditorBridge()
+        val puncArb = VoiceTouchInputArbitrator()
+        puncArb.onTypeDirectChar(puncEditor, "ok.")
+        puncArb.onSpacePressed(puncEditor, " ", autoPeriodEnabled = true, nowMs = 1000L)
+        val afterPunc = puncArb.onSpacePressed(puncEditor, " ", autoPeriodEnabled = true, nowMs = 1200L)
+        assertEquals(VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_IDLE_SPACE, afterPunc)
+        assertEquals("ok.  ", puncEditor.text.toString())
+
+        // 3. Bypass mode (password/URI/email): neither auto-space nor auto-period triggers
+        val bypassEditor = MockEditorBridge()
+        val bypassArb = VoiceTouchInputArbitrator()
+        bypassArb.onCommitSwipeWord(bypassEditor, "user", autoSpaceEnabled = true, bypassAutoAssist = true)
+        bypassArb.onCommitSwipeWord(bypassEditor, "name", autoSpaceEnabled = true, bypassAutoAssist = true)
+        assertEquals("username", bypassEditor.text.toString())
+        bypassArb.onSpacePressed(bypassEditor, " ", autoPeriodEnabled = true, bypassAutoAssist = true, nowMs = 1000L)
+        bypassArb.onSpacePressed(bypassEditor, " ", autoPeriodEnabled = true, bypassAutoAssist = true, nowMs = 1100L)
+        assertEquals("username  ", bypassEditor.text.toString())
     }
 }

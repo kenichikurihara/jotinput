@@ -9,6 +9,9 @@ object KeyboardHeightManager {
     private const val KEY_HEIGHT_SCALE = "keyboard_height_scale"
     private const val KEY_QWERTY_NUMBER_ROW = "qwerty_show_number_row"
     private const val KEY_QWERTY_SWIPE_TYPING = "qwerty_swipe_typing_enabled"
+    private const val KEY_ENGLISH_AUTO_SPACE = "english_auto_space_enabled"
+    private const val KEY_ENGLISH_AUTO_PERIOD = "english_auto_period_enabled"
+    private const val KEY_JAPANESE_PERIOD_SUGGESTION = "japanese_period_suggestion_enabled"
     private const val KEY_LAST_KEYBOARD_MODE = "last_keyboard_mode"
     const val KEY_SLM_WEIGHT_ALPHA = "slm_weight_alpha"
     const val DEFAULT_SLM_WEIGHT_ALPHA = 0.20f
@@ -100,6 +103,36 @@ object KeyboardHeightManager {
     fun setQwertySwipeTypingEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_QWERTY_SWIPE_TYPING, enabled).apply()
+    }
+
+    fun isEnglishAutoSpaceEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_ENGLISH_AUTO_SPACE, true)
+    }
+
+    fun setEnglishAutoSpaceEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ENGLISH_AUTO_SPACE, enabled).apply()
+    }
+
+    fun isEnglishAutoPeriodEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_ENGLISH_AUTO_PERIOD, true)
+    }
+
+    fun setEnglishAutoPeriodEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ENGLISH_AUTO_PERIOD, enabled).apply()
+    }
+
+    fun isJapanesePeriodSuggestionEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_JAPANESE_PERIOD_SUGGESTION, true)
+    }
+
+    fun setJapanesePeriodSuggestionEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_JAPANESE_PERIOD_SUGGESTION, enabled).apply()
     }
 
 
