@@ -2,6 +2,7 @@ package com.example.myasr
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -160,6 +161,32 @@ class KanaKanjiEngineDiversityTest {
         // '行けた' must be within the top 3 base candidates so SLM can score and promote it under context (e.g. ジム)
         val top3 = surfaces.take(3)
         assertTrue("Top 3 base candidates for いけた must contain '行けた', found: $top3", top3.contains("行けた"))
+    }
+
+    @Test
+    fun testJimuIketaColloquialCompound_ranksJimuIketaInTopCandidates() {
+        val candidates = engine.getBaseCandidates("じむいけた")
+        val surfaces = candidates.map { it.surface }
+        assertTrue(
+            "Base candidates for じむいけた must contain 'ジム行けた', found: $surfaces",
+            surfaces.contains("ジム行けた")
+        )
+        // Check predicate metadata on 'ジム行けた'
+        val jimuIketa = candidates.firstOrNull { it.surface == "ジム行けた" }
+        assertNotNull("Candidate 'ジム行けた' must exist", jimuIketa)
+        assertTrue("Candidate 'ジム行けた' should be marked as predicate", jimuIketa!!.isPredicate)
+        assertEquals("Predicate tail should be '行けた'", "行けた", jimuIketa.predicateTailSurface)
+        assertEquals("First bunsetsu should be 'ジム'", "ジム", jimuIketa.firstBunsetsuSurface)
+    }
+
+    @Test
+    fun testGenitiveParticleIeno_doesNotRegressToVerb() {
+        val candidates = engine.getBaseCandidates("いえの")
+        val top1 = candidates.firstOrNull()?.surface
+        assertTrue(
+            "Top candidate for いえの should be '家の' (noun + genitive の), found: $top1",
+            top1 == "家の"
+        )
     }
 
     private class MockEditorBridge : EditorBridge {

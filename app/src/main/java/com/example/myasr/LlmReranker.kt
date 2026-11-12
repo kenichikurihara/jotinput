@@ -40,6 +40,8 @@ class LlmReranker private constructor(private val context: Context) {
     private var currentModelPath: String? = null
 
     companion object {
+        private val CASE_PARTICLES = listOf("に", "を", "が")
+
         @Volatile
         private var instance: LlmReranker? = null
         private var nativeLibraryLoaded = false
@@ -518,6 +520,33 @@ class LlmReranker private constructor(private val context: Context) {
         }
     }
 
+    private fun getLatentParticleVariants(
+        candidate: ConversionCandidate,
+        contextPrefix: String
+    ): List<String> {
+        if (!candidate.isPredicate) return emptyList()
+
+        val variants = ArrayList<String>(3)
+        val fb = candidate.firstBunsetsuSurface
+        val tail = candidate.predicateTailSurface
+
+        // 1. Continuous input (D2): e.g. "ジム行けた" (firstBunsetsu: "ジム", tail: "行けた")
+        if (fb.isNotEmpty() && tail.isNotEmpty() && candidate.surface.length > fb.length && candidate.surface.startsWith(fb)) {
+            for (p in CASE_PARTICLES) {
+                variants.add("$fb$p$tail")
+            }
+        } else if (contextPrefix.isNotBlank()) {
+            // 2. Split context (D1): contextPrefix ends in a noun without particle or punctuation
+            val lastChar = contextPrefix.trimEnd().lastOrNull()
+            if (lastChar != null && lastChar !in "、。！？!? \n\t，．・はがをにでもとやかへの") {
+                for (p in CASE_PARTICLES) {
+                    variants.add("$p${candidate.surface}")
+                }
+            }
+        }
+        return variants
+    }
+
     /**
      * Tries fast synchronous candidate scoring directly from cached context logits on Main Thread (< 0.1ms).
      * If all candidates are 1-token or already memoized, returns complete final ranking immediately.
@@ -573,6 +602,18 @@ class LlmReranker private constructor(private val context: Context) {
                 if (c.completedSurface.isNotEmpty()) c.completedSurface else c.surface
             }
 
+            val latentVariantsMap = HashMap<String, List<String>>()
+            val surfacesToScore = ArrayList<String>(topPool.size * 2)
+            for (i in topPool.indices) {
+                val evalSurf = evalSurfaces[i]
+                surfacesToScore.add(evalSurf)
+                val variants = getLatentParticleVariants(topPool[i], contextPrefix)
+                if (variants.isNotEmpty()) {
+                    latentVariantsMap[evalSurf] = variants
+                    surfacesToScore.addAll(variants)
+                }
+            }
+
             // 1. Check if all candidates are already memoized in Kotlin cache
             var allCached = true
             val memoizedScores = FloatArray(topPool.size)
@@ -594,7 +635,7 @@ class LlmReranker private constructor(private val context: Context) {
                 scores = memoizedScores
                 isFullyComplete = true
             } else {
-                val uniqueSurfaces = evalSurfaces.distinct().toTypedArray()
+                val uniqueSurfaces = surfacesToScore.distinct().toTypedArray()
                 val isCompleteArray = BooleanArray(uniqueSurfaces.size)
                 val fastScores = nativeTryFastScoreCandidates(effectiveContext, uniqueSurfaces, isCompleteArray)
                     ?: return null
@@ -607,7 +648,15 @@ class LlmReranker private constructor(private val context: Context) {
                         memoizedNllCache.put("$effectiveContext:${uniqueSurfaces[i]}", fastScores[i])
                     }
                 }
-                scores = FloatArray(topPool.size) { scoreMap[evalSurfaces[it]] ?: 20.0f }
+                scores = FloatArray(topPool.size) { idx ->
+                    val evalSurf = evalSurfaces[idx]
+                    val baseNll = scoreMap[evalSurf] ?: 20.0f
+                    val variants = latentVariantsMap[evalSurf]
+                    val minLatentNll = variants?.mapNotNull { scoreMap[it] }?.minOrNull()
+                    val finalNll = if (minLatentNll != null) minOf(baseNll, minLatentNll) else baseNll
+                    memoizedNllCache.put("$effectiveContext:$evalSurf", finalNll)
+                    finalNll
+                }
                 var complete = true
                 for (i in topPool.indices) {
                     val key = "$effectiveContext:${evalSurfaces[i]}"
@@ -693,7 +742,20 @@ class LlmReranker private constructor(private val context: Context) {
                 val c = topPool[i]
                 if (c.completedSurface.isNotEmpty()) c.completedSurface else c.surface
             }
-            val uniqueSurfaces = evalSurfaces.distinct().toTypedArray()
+
+            val latentVariantsMap = HashMap<String, List<String>>()
+            val surfacesToScore = ArrayList<String>(topPool.size * 2)
+            for (i in topPool.indices) {
+                val evalSurf = evalSurfaces[i]
+                surfacesToScore.add(evalSurf)
+                val variants = getLatentParticleVariants(topPool[i], contextPrefix)
+                if (variants.isNotEmpty()) {
+                    latentVariantsMap[evalSurf] = variants
+                    surfacesToScore.addAll(variants)
+                }
+            }
+
+            val uniqueSurfaces = surfacesToScore.distinct().toTypedArray()
             val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
             val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
             val uniqueScores = nativeScoreCandidates(effectiveContext, uniqueSurfaces)
@@ -711,7 +773,15 @@ class LlmReranker private constructor(private val context: Context) {
                 scoreMap[uniqueSurfaces[i]] = uniqueScores[i]
                 memoizedNllCache.put("$effectiveContext:${uniqueSurfaces[i]}", uniqueScores[i])
             }
-            val scores = FloatArray(topPool.size) { scoreMap[evalSurfaces[it]] ?: 20.0f }
+            val scores = FloatArray(topPool.size) { idx ->
+                val evalSurf = evalSurfaces[idx]
+                val baseNll = scoreMap[evalSurf] ?: 20.0f
+                val variants = latentVariantsMap[evalSurf]
+                val minLatentNll = variants?.mapNotNull { scoreMap[it] }?.minOrNull()
+                val finalNll = if (minLatentNll != null) minOf(baseNll, minLatentNll) else baseNll
+                memoizedNllCache.put("$effectiveContext:$evalSurf", finalNll)
+                finalNll
+            }
 
             val sortedPool = scoreAndRankPool(
                 topPool = topPool,
