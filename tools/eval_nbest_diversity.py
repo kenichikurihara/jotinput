@@ -211,9 +211,10 @@ def viterbi_search(reading, find_tokens, get_trans, beam_width=12):
                         fb_len = p.fb_len
                         closed = True
 
-                    second_lid = p.second_lid
-                    if second_lid < 0 and i > 0 and closed and is_content_word(lid):
+                    if i > 0 and not p.closed and is_content_word(lid):
                         second_lid = lid
+                    else:
+                        second_lid = p.second_lid
                     beam[j].append(ViterbiPath(ncost, p.surface + surf, p.words + [surf], nrid, fb, fb_len, closed, second_lid))
 
             ch = reading[i]

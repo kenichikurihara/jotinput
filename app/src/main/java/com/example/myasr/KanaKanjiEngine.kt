@@ -1385,7 +1385,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                 path.lastContentWordSurface
                             }
 
-                            val nextSecondProper = path.secondBunsetsuIsProper || (i > 0 && path.isFirstBunsetsuClosed && isProperNoun(w.lid))
+                            val nextSecondProper = if (i > 0 && !path.isFirstBunsetsuClosed && isContentWord(w.lid)) {
+                                isProperNoun(w.lid)
+                            } else {
+                                path.secondBunsetsuIsProper
+                            }
 
                             beam[j].add(
                                 ViterbiPath(
