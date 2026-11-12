@@ -81,8 +81,24 @@ def is_suffix(lid):
 def is_functional_word(lid):
     return 29 <= lid <= 433
 
+# Mozc OSS id.def POS ranges (src/data/dictionary_oss/id.def)
+def is_auxiliary_verb(lid):
+    return 29 <= lid <= 267      # 助動詞
+
+def is_predicate_pos(pos_id):
+    return (434 <= pos_id <= 1840) or (2196 <= pos_id <= 2590)  # 動詞 / 形容詞
+
+def is_proper_noun(lid):
+    return 1917 <= lid <= 1940   # 名詞,固有名詞
+
+# Engine features (see docs/colloquial_predicate_ranking_design.md)
+IDEA_A_PREDICATE_BUNSETSU_BONUS = True
+IDEA_B_PROPER_DIVERSITY_KEY = True
+PREDICATE_BUNSETSU_BONUS = 2000
+
 class ViterbiPath:
-    def __init__(self, cost, surface, words, last_rid, fb, fb_len, closed):
+    def __init__(self, cost, surface, words, last_rid, fb, fb_len, closed, second_lid=-1):
+        self.second_lid = second_lid
         self.cost = cost
         self.surface = surface
         self.words = words
@@ -167,6 +183,8 @@ def viterbi_search(reading, find_tokens, get_trans, beam_width=12):
 
                 for surf, wcost, lid, rid in stratified:
                     lbonus = (j - i - 1) * 2000 if (j - i > 1) else 0
+                    if IDEA_A_PREDICATE_BUNSETSU_BONUS and i > 0 and is_auxiliary_verb(lid) and is_predicate_pos(p.last_rid):
+                        lbonus += PREDICATE_BUNSETSU_BONUS
                     tcost = get_trans(p.last_rid, lid if lid > 0 else 0)
                     ncost = p.cost + max(-50000, wcost - lbonus) + tcost
                     nrid = rid if rid > 0 else p.last_rid
@@ -193,12 +211,15 @@ def viterbi_search(reading, find_tokens, get_trans, beam_width=12):
                         fb_len = p.fb_len
                         closed = True
 
-                    beam[j].append(ViterbiPath(ncost, p.surface + surf, p.words + [surf], nrid, fb, fb_len, closed))
+                    second_lid = p.second_lid
+                    if second_lid < 0 and i > 0 and closed and is_content_word(lid):
+                        second_lid = lid
+                    beam[j].append(ViterbiPath(ncost, p.surface + surf, p.words + [surf], nrid, fb, fb_len, closed, second_lid))
 
             ch = reading[i]
             fb = p.fb if i > 0 else ch
             fb_len = p.fb_len if i > 0 else 1
-            beam[i+1].append(ViterbiPath(p.cost + 18000, p.surface + ch, p.words + [ch], p.last_rid, fb, fb_len, True))
+            beam[i+1].append(ViterbiPath(p.cost + 18000, p.surface + ch, p.words + [ch], p.last_rid, fb, fb_len, True, p.second_lid))
 
         for k in range(1, n + 1):
             if len(beam[k]) > beam_width * 2:
@@ -223,6 +244,8 @@ def viterbi_search(reading, find_tokens, get_trans, beam_width=12):
         if p.surface not in seen_surf and p.surface != reading:
             seen_surf.add(p.surface)
             stem = p.fb if p.fb else p.surface
+            if IDEA_B_PROPER_DIVERSITY_KEY:
+                stem = (stem, is_proper_noun(p.second_lid))
             cnt = stem_count.get(stem, 0)
             stem_count[stem] = cnt + 1
             penalty = cnt * 3000
@@ -275,10 +298,23 @@ def evaluate():
     parser.add_argument("--dict", default=DEFAULT_DICT)
     parser.add_argument("--matrix", default=DEFAULT_MATRIX)
     parser.add_argument("--beam_width", type=int, default=12)
+    parser.add_argument("--baseline", action="store_true", help="Disable Idea A and Idea B to evaluate legacy baseline")
+    parser.add_argument("--exclude_hand_phrases", action="store_true",
+                        help="Drop hand-added potential-verb phrase entries (cost 100) to evaluate pure Mozc OSS costs")
+    parser.add_argument("--show_failures", action="store_true")
     args = parser.parse_args()
+    global IDEA_A_PREDICATE_BUNSETSU_BONUS, IDEA_B_PROPER_DIVERSITY_KEY
+    if args.baseline:
+        IDEA_A_PREDICATE_BUNSETSU_BONUS = False
+        IDEA_B_PROPER_DIVERSITY_KEY = False
 
     print(f"Loading system dictionary from {args.dict}...")
     find_tokens = load_system_dictionary(args.dict)
+    if args.exclude_hand_phrases:
+        raw_find = find_tokens
+        hand = {("いけた", "行けた"), ("いけて", "行けて"), ("いけます", "行けます"), ("いけました", "行けました")}
+        def find_tokens(sub, _raw=raw_find):
+            return [t for t in _raw(sub) if not ((sub, t[0]) in hand and t[1] == 100)]
     print(f"Loading connection matrix from {args.matrix}...")
     get_trans = load_connection_matrix(args.matrix)
 
@@ -301,6 +337,8 @@ def evaluate():
         latencies.append(elapsed_ms)
 
         top6 = cands[:6]
+        if args.show_failures and (not top6 or top6[0] not in r["acceptable_full"]):
+            print(f"  MISS {r['reading']}: expected {r['acceptable_full'][0]} got {top6}")
 
         # Top-1 & Top-3 Full Accuracy
         if top6:

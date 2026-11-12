@@ -26,7 +26,9 @@ data class ConversionCandidate(
     val firstBunsetsuSurface: String = "",
     val lastContentWordSurface: String = "",
     val completedSurface: String = "",
-    val suffixBranchingFactor: Float = 1.0f
+    val suffixBranchingFactor: Float = 1.0f,
+    val isPredicate: Boolean = false,
+    val predicateTailSurface: String = ""
 )
 
 class KanaKanjiEngine internal constructor(private val context: Context? = null) {
@@ -1159,7 +1161,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val firstBunsetsuSurface: String = "",
         val firstBunsetsuReadingLen: Int = 0,
         val isFirstBunsetsuClosed: Boolean = false,
-        val lastContentWordSurface: String = ""
+        val lastContentWordSurface: String = "",
+        val secondBunsetsuIsProper: Boolean = false
     )
 
     private fun isContentWord(lid: Int): Boolean {
@@ -1173,6 +1176,18 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
     private fun isFunctionalWord(lid: Int): Boolean {
         return lid in 29..433
+    }
+
+    private fun isAuxiliaryVerb(lid: Int): Boolean {
+        return lid in 29..267
+    }
+
+    private fun isPredicatePos(posId: Int): Boolean {
+        return (posId in 434..1840) || (posId in 2196..2590)
+    }
+
+    private fun isProperNoun(lid: Int): Boolean {
+        return lid in 1917..1940
     }
 
     private fun queryAllMmapExactTokens(reading: String): List<WordEntry> {
@@ -1297,7 +1312,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         if (n < 3) return emptyList()
 
         val beam = Array(n + 1) { mutableListOf<ViterbiPath>() }
-        beam[0].add(ViterbiPath(0, "", emptyList(), false, lastRid = 0, firstBunsetsuSurface = "", firstBunsetsuReadingLen = 0, isFirstBunsetsuClosed = false, lastContentWordSurface = ""))
+        beam[0].add(ViterbiPath(0, "", emptyList(), false, lastRid = 0, firstBunsetsuSurface = "", firstBunsetsuReadingLen = 0, isFirstBunsetsuClosed = false, lastContentWordSurface = "", secondBunsetsuIsProper = false))
 
         val matrix = connectionMatrix
 
@@ -1328,7 +1343,10 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     if (subWords.isNotEmpty()) {
                         val stratifiedWords = selectPosStratifiedSubwords(subWords, maxTotal = 24)
                         for (w in stratifiedWords) {
-                            val lengthBonus = if (j - i > 1) (j - i - 1) * 2000 else 0
+                            val baseBonus = if (j - i > 1) (j - i - 1) * 2000 else 0
+                            // Idea A: Additive Bunsetsu-level Length Bonus Normalization for auxiliary verbs attaching to verb/adj stems
+                            val predicateBunsetsuBonus = if (i > 0 && isAuxiliaryVerb(w.lid) && isPredicatePos(path.lastRid)) 2000 else 0
+                            val lengthBonus = baseBonus + predicateBunsetsuBonus
                             val isUser = w.source == "user"
                             val userBonus = if (isUser) 50000 else 0
 
@@ -1367,6 +1385,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                 path.lastContentWordSurface
                             }
 
+                            val nextSecondProper = path.secondBunsetsuIsProper || (i > 0 && path.isFirstBunsetsuClosed && isProperNoun(w.lid))
+
                             beam[j].add(
                                 ViterbiPath(
                                     cost = newCost,
@@ -1377,7 +1397,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                     firstBunsetsuSurface = nextFb,
                                     firstBunsetsuReadingLen = nextFbLen,
                                     isFirstBunsetsuClosed = nextClosed,
-                                    lastContentWordSurface = nextLastContent
+                                    lastContentWordSurface = nextLastContent,
+                                    secondBunsetsuIsProper = nextSecondProper
                                 )
                             )
                         }
@@ -1399,7 +1420,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                         firstBunsetsuSurface = fb,
                         firstBunsetsuReadingLen = fbLen,
                         isFirstBunsetsuClosed = true,
-                        lastContentWordSurface = path.lastContentWordSurface
+                        lastContentWordSurface = path.lastContentWordSurface,
+                        secondBunsetsuIsProper = path.secondBunsetsuIsProper
                     )
                 )
             }
@@ -1432,10 +1454,12 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         }
 
         // 1. Bilateral 2D Diversity for Full-Sentence Candidates (m = n):
-        // Penalize repetitive first bunsetsu stems AND repetitive last content words (e.g. avoid repeating "〜幸喜").
+        // Penalize repetitive first bunsetsu stems AND repetitive last content words.
+        // Idea B: Partition first bunsetsu diversity key by (firstBunsetsuSurface, secondBunsetsuIsProper)
+        // so compound surnames (ジム池田) and predicate phrases (ジム行けた) do not penalize each other.
         data class ScoredCandidate(val path: ViterbiPath, val effectiveCost: Int)
         val seenFullSurfaces = HashSet<String>()
-        val firstStemCounts = HashMap<String, Int>()
+        val firstStemCounts = HashMap<Pair<String, Boolean>, Int>()
         val lastContentCounts = HashMap<String, Int>()
         val scoredFullCandidates = mutableListOf<ScoredCandidate>()
 
@@ -1445,8 +1469,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 !JapaneseKanaUtils.isAllHiragana(path.surface) &&
                 seenFullSurfaces.add(path.surface)) {
                 val stem1 = if (path.firstBunsetsuSurface.isNotEmpty()) path.firstBunsetsuSurface else path.surface
-                val count1 = firstStemCounts[stem1] ?: 0
-                firstStemCounts[stem1] = count1 + 1
+                val diversityKey = Pair(stem1, path.secondBunsetsuIsProper)
+                val count1 = firstStemCounts.getOrDefault(diversityKey, 0)
+                firstStemCounts[diversityKey] = count1 + 1
 
                 val stemLast = if (path.lastContentWordSurface.isNotEmpty()) path.lastContentWordSurface else path.surface
                 val countLast = lastContentCounts[stemLast] ?: 0
@@ -1466,6 +1491,14 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             } else {
                 ""
             }
+            val isPred = isPredicatePos(it.path.lastRid) || isAuxiliaryVerb(it.path.lastRid)
+            val tailSurface = if (isPred && fb.isNotEmpty() && it.path.surface.length > fb.length) {
+                it.path.surface.substring(fb.length)
+            } else if (isPred) {
+                it.path.surface
+            } else {
+                ""
+            }
             ConversionCandidate(
                 surface = it.path.surface,
                 reading = reading,
@@ -1474,7 +1507,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 firstBunsetsuSurface = fb,
                 lastContentWordSurface = lastCw,
                 completedSurface = it.path.surface,
-                suffixBranchingFactor = 1.0f
+                suffixBranchingFactor = 1.0f,
+                isPredicate = isPred,
+                predicateTailSurface = tailSurface
             )
         }
 

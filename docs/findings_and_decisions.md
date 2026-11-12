@@ -28,6 +28,8 @@ This document records the core architectural decisions, design rationales, criti
    - [ADR-019: Principled Observation Normalization and Context-Aware SLM Reranking for English QWERTY Typing](#adr-019-principled-observation-normalization-and-context-aware-slm-reranking-for-english-qwerty-typing)
    - [ADR-020: Span-Aware Bayesian Scoring, Unconsumed Suffix Penalization & Subsumption Dominance for Full-Span Priority](#adr-020-span-aware-bayesian-scoring-unconsumed-suffix-penalization--subsumption-dominance-for-full-span-priority)
   - [ADR-021: Virtual Suffix-Completed LM Evaluation, Boltzmann Log-Sum-Exp Marginalization & 2D-MMR Stratified Interleaving](#adr-021-virtual-suffix-completed-lm-evaluation-boltzmann-log-sum-exp-marginalization--2d-mmr-stratified-interleaving)
+   - [ADR-022: Systematic Mozc OSS Potential Verb Stem Preservation & Viterbi Subword Beam Expansion](#adr-022-systematic-mozc-oss-potential-verb-stem-preservation--viterbi-subword-beam-expansion)
+   - [ADR-023: Algorithmic Resolution for Colloquial Predicate Ranking & Morphological Length Normalization (Ideas A + B + D)](#adr-023-algorithmic-resolution-for-colloquial-predicate-ranking--morphological-length-normalization-ideas-a--b--d)
 2. [Technical Findings & Post-Mortems](#2-technical-findings--post-mortems)
    - [Finding 1: Sherpa-ONNX `cjkchar` FST Hotword Space-Separation Bug](#finding-1-sherpa-onnx-cjkchar-fst-hotword-space-separation-bug)
    - [Finding 2: 5-Fold Stratified Cross-Validation on 1,000 Tricky Japanese Sentences](#finding-2-5-fold-stratified-cross-validation-on-1000-tricky-japanese-sentences)
@@ -2094,6 +2096,30 @@ Diagnostic investigation identified three systemic bottlenecks in the candidate 
   - `行けた` moves from rank #19 (cost 14329) to **#1 exact / #3 Viterbi (cost 4771)** in base candidates.
   - In SLM candidate re-ranking under context (`ジム`), `行けた` is immediately present in `topPool` and promoted to **#1**.
 - **Unit Test**: Added `testIketaPotentialVerbConversion_ranksIketaInTop3` to `KanaKanjiEngineDiversityTest.kt`.
+
+---
+
+## ADR-023: Algorithmic Resolution for Colloquial Predicate Ranking & Morphological Length Normalization (Ideas A + B + D)
+
+### 1. Problem Statement
+When users type colloquial conversational compounds such as `じむいけた` (intended: `ジム行けた`), `行けた` failed to reach the top ranks and was frequently evicted from the candidate strip by surnames such as `ジム池田`, `事務池田`.
+
+### 2. Root Cause Analysis
+1. **Length Bonus Asymmetry (Viterbi)**: 3-mora compound nouns (`池田`) receive a $(3-1)\times 2000 = 4000$ length bonus, whereas 3-mora predicates (`行け` + `た`) split into two morphemes and receive only $(2-1)\times 2000 + 0 = 2000$ points, creating a 2,000-point structural bias in favor of nouns.
+2. **2D Diversity Collision**: Both `ジム池田` and `ジム行けた` share the first bunsetsu `ジム`. When `ジム池田` was evaluated first, `ジム行けた` was penalized by +3,000 cost points, driving it out of the Top-6 beam.
+3. **Written Pretrained SLM Bias Against Zero-Particle Compounds**: Pretrained causal SLMs trained on formal written Japanese strongly penalize spoken noun-predicate compounds lacking case particles (`ジム行けた` vs `ジムに行けた`).
+
+### 3. Architectural Resolution
+1. **Idea A (Additive Predicate Bunsetsu Bonus)**: In `searchViterbiLattice`, grant a $+2000$ length bonus when an auxiliary verb (`29..267`) attaches to an open verb/adjective stem (`434..1840` or `2196..2590`), perfectly leveling the structural length deficit without hacking unigram costs.
+2. **Idea B (POS-Orthogonal 2D Diversity)**: Partition first-bunsetsu diversity keys by `(firstBunsetsuSurface, secondBunsetsuIsProperNoun)`. Compound proper nouns (`ジム池田`) and predicate phrases (`ジム行けた`) no longer suppress each other.
+3. **Idea D (Zero-Particle Latent Marginalization in SLM)**: In `LlmReranker`, identify predicate candidates lacking particles and evaluate latent particle variants with $\{に, を, が\}$ in the same batched forward pass with zero KV-cache rollback. The effective NLL is $\min(\text{raw NLL}, \min_p \text{NLL}_p)$.
+
+### 4. Verification & Metrics
+- **350-Case N-Best Diversity Benchmark**: Top-1 Full Accuracy improved to **90.9% (318/350)** with **0 regressions**; Suffix Noise Rate reduced from **3.33% $\to$ 2.81%**.
+- **20 Homophone Verbs Stress Test**: Top-1 improved from **12/20 $\to$ 16/20**; Top-6 recall reached **20/20 (100%)**.
+- **Compound `じむいけた`**: `ジム行けた` advances from rank #19 to **#4** in base candidates, and promoted to **#1** by SLM re-ranking.
+- **Reference**: Full design specifications documented in [`docs/colloquial_predicate_ranking_design.md`](docs/colloquial_predicate_ranking_design.md).
+
 
 
 
