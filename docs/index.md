@@ -6,6 +6,8 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 
 ## 📚 Table of Contents
 
+> 🎯 **[評価セット・評価方法 統合ガイド (Master Evaluation Index)](docs/evaluation_suites_and_methods.md)** — リポジトリ内の全評価データセット・評価スクリプト・JVM単体テスト・C++ベンチマーク・形式検証の全体マップ
+
 0. [Domain-Driven Design (DDD) Architecture](docs/ddd/README.md)
    - [Context Map & Integration Patterns](docs/ddd/context_map.md)
    - [Bounded Context Canvases (8 Contexts)](docs/ddd/bounded_context_canvases.md)
@@ -308,6 +310,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 
 57. [未消費スパンの言語モデル評価と言語モデル下での多様性確保に関する設計書 (LM Evaluation of Unconsumed Spans & Diversity-Preserving Reranking)](docs/lm_unconsumed_span_evaluation_and_diversity_design.md)
     - 静的スパンペナルティ（ADR-020）でも「さいしょの」が解決しなかった根本原因（未消費スパンのLM未評価＋`prioritizeByHistory` による部分候補のRank 0昇格＋2フェーズTap-Safeピン留め＋フラットソートによる多様性破壊）の解剖、後方Viterbi最良接尾辞を用いた仮想全文補完LM評価（$\widetilde{W}(U) = U \oplus V^*_{m:n}$）、後方ラティスLSE周辺化エントロピーボーナス（$-\tau_{\text{branch}} \ln M_{\text{eff}}$）、および非LM時の多様性議論（[`prd_and_design_viterbi_nbest_diversity.md`](docs/prd_and_design_viterbi_nbest_diversity.md) / [`prd_and_design_multi_length_prefix_diversity.md`](docs/prd_and_design_multi_length_prefix_diversity.md)）をLM事後確率空間へ一般化した2次元MMR・劣モジュラ多様性選択＋後続エントロピー適応型層化スロットインターリーブの設計仕様。
+
+58. [評価セット・評価方法 統合ガイド (Master Evaluation Index)](docs/evaluation_suites_and_methods.md)
+    - リポジトリ内の全7ドメイン（日本語ASR・音声入力UX/句読点・音声×タッチ調停/Alloy形式検証・かな漢字変換/Mozc連接行列/N-Best多様性・SLMリランキング/LM-First・英語Swipe/補完/スペル・実機ODPM電力/レイテンシ）の評価データセット、スクリプト、C++ベンチマーク、JVM単体テスト、実行コマンド、および運用ルールを統合整理したマスターインデックス。
 
 ---
 
