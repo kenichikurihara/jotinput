@@ -118,25 +118,33 @@ class ModelWarmUpManager private constructor(private val context: Context) {
                 Log.w(TAG, "SLM Reranker warm-up error: ${e.message}")
             }
 
-            // 3. ASR Manager (Sherpa-onnx ReazonSpeech offline transducer)
+            // 3. ASR Manager (Sherpa-onnx ReazonSpeech Japanese + Parakeet 110M English)
             try {
                 asrStatus = Status.WARMING
                 val a0 = System.currentTimeMillis()
                 val app = context.applicationContext as? AsrApp
                 val asr = app?.asrManager ?: AsrManager(context)
-                if (asr.isModelAvailable()) {
+                if (asr.isModelAvailable(com.example.myasr.context.speech.domain.AsrLanguage.JAPANESE)) {
                     val ok = withTimeout(3000L) {
                         val hotwordsFile = app?.let {
                             val activeEntries = it.dictionaryRepository.getActive()
                             it.hotwordsGenerator.generate(activeEntries)
                         }
-                        asr.warmUp(hotwordsFile)
+                        asr.warmUp(hotwordsFile, com.example.myasr.context.speech.domain.AsrLanguage.JAPANESE)
                     }
                     asrStatus = if (ok) Status.READY else Status.FAILED
-                    Log.i(TAG, "AsrManager warmed up in ${System.currentTimeMillis() - a0}ms (status=$asrStatus)")
+                    Log.i(TAG, "AsrManager (JA) warmed up in ${System.currentTimeMillis() - a0}ms (status=$asrStatus)")
                 } else {
                     asrStatus = Status.READY // Model not downloaded yet
-                    Log.d(TAG, "ASR model not downloaded, skipping ASR warm-up.")
+                    Log.d(TAG, "Japanese ASR model not downloaded, skipping ASR warm-up.")
+                }
+
+                if (asr.isEnglishModelAvailable()) {
+                    val e0 = System.currentTimeMillis()
+                    val okEn = withTimeout(3000L) {
+                        asr.warmUp(null, com.example.myasr.context.speech.domain.AsrLanguage.ENGLISH)
+                    }
+                    Log.i(TAG, "AsrManager (EN) warmed up in ${System.currentTimeMillis() - e0}ms (ok=$okEn)")
                 }
             } catch (e: TimeoutCancellationException) {
                 asrStatus = Status.FAILED

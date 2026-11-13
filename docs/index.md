@@ -23,6 +23,7 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
    - Zipformer transducer architecture (`reazonspeech-k2-v2`)
    - Quantization strategy (int8 encoder, float32 decoder & joiner)
    - Memory footprint, CPU utilization, and RTF (Real-Time Factor)
+   - [English On-Device ASR Model Selection & System Design](docs/english_asr_model_selection_and_design.md) — NVIDIA Parakeet TDT-CTC 110M (`CC-BY-4.0`, ~126 MB int8, RTF ~0.066, native PnC)
 
 3. [Setup, Build, and Deployment Guide](docs/setup_and_development.md)
    - Prerequisites (Java 21, Android SDK, Gradle)

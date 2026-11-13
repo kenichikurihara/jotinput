@@ -855,6 +855,92 @@
                                     app:strokeColor="@color/border" />
                             </LinearLayout>
                         </LinearLayout>
+
+                        <!-- English On-Device ASR Model Subsection (Parakeet TDT-CTC 110M) -->
+                        <LinearLayout
+                            android:id="@+id/cardEnglishAsr"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:background="@drawable/result_background"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="英語音声認識モデル (Parakeet 110M)"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvEnglishAsrSummary"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="オフライン英語音声認識 (~126MB, CC-BY-4.0)。QWERTYモードで句読点・大文字付き英語入力が可能です。"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="11sp" />
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/englishAsrProgress"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:indeterminate="false"
+                                android:max="100"
+                                android:progress="0"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:id="@+id/tvEnglishAsrStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text=""
+                                android:textColor="@color/primary"
+                                android:textSize="11sp"
+                                android:visibility="gone" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnDownloadEnglishAsr"
+                                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                    android:layout_width="0dp"
+                                    android:layout_height="36dp"
+                                    android:layout_marginEnd="6dp"
+                                    android:layout_weight="1"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:text="英語ASRモデルを取得 (~126MB)"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/primary"
+                                    android:textSize="12sp"
+                                    app:cornerRadius="8dp"
+                                    app:strokeColor="@color/primary" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnDeleteEnglishAsr"
+                                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:text="削除"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="12sp"
+                                    android:visibility="gone"
+                                    app:cornerRadius="8dp"
+                                    app:strokeColor="@color/border" />
+                            </LinearLayout>
+                        </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

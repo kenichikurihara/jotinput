@@ -99,14 +99,17 @@ class AsrApp : Application() {
     }
 
     @Synchronized
-    fun ensureModelInitialized(): Boolean {
-        if (!asrManager.isModelAvailable()) {
-            Log.w(TAG, "ASR Model files not available yet")
+    fun ensureModelInitialized(language: com.example.myasr.context.speech.domain.AsrLanguage = com.example.myasr.context.speech.domain.AsrLanguage.JAPANESE): Boolean {
+        if (!asrManager.isModelAvailable(language)) {
+            Log.w(TAG, "ASR Model ($language) files not available yet")
             return false
+        }
+        if (language == com.example.myasr.context.speech.domain.AsrLanguage.ENGLISH) {
+            return asrManager.initialize(null, language)
         }
         val activeEntries = dictionaryRepository.getActive()
         val hotwordsFile = hotwordsGenerator.generate(activeEntries)
-        return asrManager.initialize(hotwordsFile)
+        return asrManager.initialize(hotwordsFile, language)
     }
 
     fun syncAllUserDictionaries() {

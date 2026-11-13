@@ -23,6 +23,9 @@ import com.example.myasr.context.provisioning.domain.ModelWarmUpManager
 import com.example.myasr.context.reranking.domain.CandidateRerankJudgement
 import com.example.myasr.context.reranking.domain.ContextWindowTrimmer
 import com.example.myasr.context.reranking.infrastructure.LlmReranker
+import com.example.myasr.context.speech.domain.AsrLanguage
+import com.example.myasr.context.speech.domain.AsrLanguagePolicy
+import com.example.myasr.context.speech.domain.EnglishVoicePostProcessor
 import com.example.myasr.context.speech.domain.JapanesePunctuationEngine
 import com.example.myasr.context.speech.domain.ProsodyBoundaryMetadata
 import com.example.myasr.context.speech.domain.ProsodyPitchEstimator
@@ -399,17 +402,35 @@ class VoiceInputMethodService : InputMethodService() {
         )
     }
 
-    private fun formatVoiceText(text: String, textBeforeCursor: String = ""): String {
+    private fun resolveCurrentAsrLanguage(): AsrLanguage {
+        val mode = flickKeyboardView?.currentMode
+        val isEnglishMode = mode == JapaneseKanaUtils.KeyboardMode.QWERTY ||
+            mode == JapaneseKanaUtils.KeyboardMode.QWERTY_SYMBOLS ||
+            mode == JapaneseKanaUtils.KeyboardMode.ALPHABET
+        return AsrLanguagePolicy.resolveLanguage(
+            isEnglishKeyboardMode = isEnglishMode,
+            isEnglishModelAvailable = AsrApp.instance.asrManager.isEnglishModelAvailable()
+        )
+    }
+
+    private fun formatVoiceText(
+        text: String,
+        textBeforeCursor: String = "",
+        language: AsrLanguage = resolveCurrentAsrLanguage()
+    ): String {
+        val ctx = if (textBeforeCursor.isNotEmpty()) {
+            textBeforeCursor
+        } else {
+            currentInputConnection?.getTextBeforeCursor(500, 0)?.toString() ?: ""
+        }
+        if (language == AsrLanguage.ENGLISH) {
+            return EnglishVoicePostProcessor.format(text, ctx)
+        }
         val app = AsrApp.instance
         val activeEntries = try {
             app.dictionaryRepository.getActive()
         } catch (e: Exception) {
             emptyList()
-        }
-        val ctx = if (textBeforeCursor.isNotEmpty()) {
-            textBeforeCursor
-        } else {
-            currentInputConnection?.getTextBeforeCursor(500, 0)?.toString() ?: ""
         }
         return app.contextAwareProcessor.process(text, ctx, activeEntries)
     }
@@ -983,37 +1004,53 @@ class VoiceInputMethodService : InputMethodService() {
         val decodeId = arbitrator.onSpeechChunkCapturedForDecode()
         serviceScope.launch(Dispatchers.Default) {
             asrDecodingMutex.withLock {
-                val textBeforeCursor = withContext(Dispatchers.Main) {
+                val (textBeforeCursor, asrLanguage) = withContext(Dispatchers.Main) {
                     progressDecoding?.visibility = View.VISIBLE
                     syncKeyboardState()
-                    currentInputConnection?.getTextBeforeCursor(500, 0)?.toString() ?: ""
+                    Pair(
+                        currentInputConnection?.getTextBeforeCursor(500, 0)?.toString() ?: "",
+                        resolveCurrentAsrLanguage()
+                    )
                 }
                 var recognizedText = ""
                 var deletePreceding = 0
                 var error: String? = null
                 try {
                     val app = AsrApp.instance
-                    if (!app.ensureModelInitialized()) {
+                    if (!app.ensureModelInitialized(asrLanguage)) {
                         error = getString(R.string.error_model_not_initialized)
                     } else {
-                        val activeEntries = app.dictionaryRepository.getActive()
-                        val hotwordsStr = app.hotwordsGenerator.getHotwordsString(activeEntries)
-                        val rawText = withTimeout(3000L) {
-                            app.asrManager.transcribe(samples, 16000, hotwordsStr)
+                        val activeEntries = if (asrLanguage == AsrLanguage.JAPANESE) {
+                            app.dictionaryRepository.getActive()
+                        } else {
+                            emptyList()
                         }
-                        val pitchSlope = ProsodyPitchEstimator.estimateTerminalPitchSlope(samples, 16000)
-                        val prosodyMetadata = ProsodyBoundaryMetadata(
-                            terminalPitchSlopeSemitones = pitchSlope,
-                            precedingCommittedTail = textBeforeCursor
-                        )
-                        val pResult = app.contextAwareProcessor.processWithPunctuationResult(
-                            rawText = rawText,
-                            contextBefore = textBeforeCursor,
-                            entries = activeEntries,
-                            metadata = prosodyMetadata
-                        )
-                        recognizedText = pResult.formattedText
-                        deletePreceding = pResult.deletePrecedingChars
+                        val hotwordsStr = if (asrLanguage == AsrLanguage.JAPANESE) {
+                            app.hotwordsGenerator.getHotwordsString(activeEntries)
+                        } else {
+                            ""
+                        }
+                        val rawText = withTimeout(3000L) {
+                            app.asrManager.transcribe(samples, 16000, hotwordsStr, asrLanguage)
+                        }
+                        if (asrLanguage == AsrLanguage.ENGLISH) {
+                            recognizedText = EnglishVoicePostProcessor.format(rawText, textBeforeCursor)
+                            deletePreceding = 0
+                        } else {
+                            val pitchSlope = ProsodyPitchEstimator.estimateTerminalPitchSlope(samples, 16000)
+                            val prosodyMetadata = ProsodyBoundaryMetadata(
+                                terminalPitchSlopeSemitones = pitchSlope,
+                                precedingCommittedTail = textBeforeCursor
+                            )
+                            val pResult = app.contextAwareProcessor.processWithPunctuationResult(
+                                rawText = rawText,
+                                contextBefore = textBeforeCursor,
+                                entries = activeEntries,
+                                metadata = prosodyMetadata
+                            )
+                            recognizedText = pResult.formattedText
+                            deletePreceding = pResult.deletePrecedingChars
+                        }
                     }
                 } catch (e: TimeoutCancellationException) {
                     Log.w(TAG, "Streaming chunk transcription timed out (>3000ms)")
@@ -1445,10 +1482,11 @@ class VoiceInputMethodService : InputMethodService() {
 
             while (isActive && currentState == State.RECORDING && isStreamingActive) {
                 // Suspend streaming ASR updates while user is actively composing on the keyboard
-                val (isKeyComposing, textBeforeCursor) = withContext(Dispatchers.Main) {
-                    Pair(
+                val (isKeyComposing, textBeforeCursor, asrLanguage) = withContext(Dispatchers.Main) {
+                    Triple(
                         arbitrator.isKeyboardComposing(),
-                        currentInputConnection?.getTextBeforeCursor(500, 0)?.toString() ?: ""
+                        currentInputConnection?.getTextBeforeCursor(500, 0)?.toString() ?: "",
+                        resolveCurrentAsrLanguage()
                     )
                 }
                 if (isKeyComposing) {
@@ -1462,15 +1500,21 @@ class VoiceInputMethodService : InputMethodService() {
 
                 if (samples.size >= 3200 && genId == arbitrator.streamingGenerationId) { // At least 200ms of audio
                     try {
-                        val activeEntries = app.dictionaryRepository.getActive()
-                        val hotwordsStr = app.hotwordsGenerator.getHotwordsString(activeEntries)
-
                         val rawText = asrDecodingMutex.withLock {
-                            app.asrManager.transcribe(samples, 16000, hotwordsStr)
+                            if (!app.ensureModelInitialized(asrLanguage)) {
+                                ""
+                            } else {
+                                val hotwordsStr = if (asrLanguage == AsrLanguage.JAPANESE) {
+                                    app.hotwordsGenerator.getHotwordsString(app.dictionaryRepository.getActive())
+                                } else {
+                                    ""
+                                }
+                                app.asrManager.transcribe(samples, 16000, hotwordsStr, asrLanguage)
+                            }
                         }
 
                         if (rawText.isNotBlank() && genId == arbitrator.streamingGenerationId) {
-                            val formatted = formatVoiceText(rawText, textBeforeCursor)
+                            val formatted = formatVoiceText(rawText, textBeforeCursor, asrLanguage)
 
                             withContext(Dispatchers.Main) {
                                 if (currentState == State.RECORDING && isStreamingActive && genId == arbitrator.streamingGenerationId && !arbitrator.isKeyboardComposing()) {
@@ -1479,15 +1523,24 @@ class VoiceInputMethodService : InputMethodService() {
                                         arbitrator.streamingInferenceHistory.removeAt(0)
                                     }
 
-                                    // Hybrid Morpheme-Aware Horizon partitioning:
-                                    // Combines N-Step LCP stability agreement, clause/morpheme boundary snapping,
+                                    // Hybrid Morpheme/Word-Aware Horizon partitioning:
+                                    // Combines N-Step LCP stability agreement, boundary snapping,
                                     // and active horizon clamping (protects trailing ~12 chars).
-                                    val (frozen, active) = JapanesePunctuationEngine.extractMorphemeAwareFreezePrefix(
-                                        history = arbitrator.streamingInferenceHistory,
-                                        currentFormatted = formatted,
-                                        minConsecutiveSteps = 3,
-                                        protectTrailingChars = 12
-                                    )
+                                    val (frozen, active) = if (asrLanguage == AsrLanguage.ENGLISH) {
+                                        EnglishVoicePostProcessor.extractWordAwareFreezePrefix(
+                                            history = arbitrator.streamingInferenceHistory,
+                                            currentFormatted = formatted,
+                                            minConsecutiveSteps = 3,
+                                            protectTrailingChars = 12
+                                        )
+                                    } else {
+                                        JapanesePunctuationEngine.extractMorphemeAwareFreezePrefix(
+                                            history = arbitrator.streamingInferenceHistory,
+                                            currentFormatted = formatted,
+                                            minConsecutiveSteps = 3,
+                                            protectTrailingChars = 12
+                                        )
+                                    }
 
                                     val changed = arbitrator.onStreamingStepResult(
                                         editor = editorBridge,
@@ -1522,6 +1575,7 @@ class VoiceInputMethodService : InputMethodService() {
         isCurrentlySpeaking = false
 
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(500, 0)?.toString() ?: ""
+        val asrLanguage = resolveCurrentAsrLanguage()
         val hadStreamingComposing = wasStreaming && arbitrator.isStreamingComposing()
         val hadUnflushedBeforeStop = audioRecorder.hasUnflushedSpeech()
 
@@ -1531,7 +1585,7 @@ class VoiceInputMethodService : InputMethodService() {
             arbitrator.commitActiveStreamingComposing(
                 editor = editorBridge,
                 onResetAudioUtterance = {},
-                formatFn = { formatVoiceText(it, textBeforeCursor) }
+                formatFn = { formatVoiceText(it, textBeforeCursor, asrLanguage) }
             )
             if (!arbitrator.isKeyboardComposing() && arbitrator.previousCommittedPhrase.isNotEmpty()) {
                 showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
@@ -1566,27 +1620,40 @@ class VoiceInputMethodService : InputMethodService() {
 
                         try {
                             val app = AsrApp.instance
-                            if (!app.ensureModelInitialized()) {
+                            if (!app.ensureModelInitialized(asrLanguage)) {
                                 error = getString(R.string.error_model_not_initialized)
                             } else {
-                                val activeEntries = app.dictionaryRepository.getActive()
-                                val hotwordsStr = app.hotwordsGenerator.getHotwordsString(activeEntries)
-                                val rawText = withTimeout(3000L) {
-                                    app.asrManager.transcribe(samples, 16000, hotwordsStr)
+                                val activeEntries = if (asrLanguage == AsrLanguage.JAPANESE) {
+                                    app.dictionaryRepository.getActive()
+                                } else {
+                                    emptyList()
                                 }
-                                val pitchSlope = ProsodyPitchEstimator.estimateTerminalPitchSlope(samples, 16000)
-                                val prosodyMetadata = ProsodyBoundaryMetadata(
-                                    terminalPitchSlopeSemitones = pitchSlope,
-                                    precedingCommittedTail = textBeforeCursor
-                                )
-                                val pResult = app.contextAwareProcessor.processWithPunctuationResult(
-                                    rawText = rawText,
-                                    contextBefore = textBeforeCursor,
-                                    entries = activeEntries,
-                                    metadata = prosodyMetadata
-                                )
-                                recognizedText = pResult.formattedText
-                                deletePreceding = pResult.deletePrecedingChars
+                                val hotwordsStr = if (asrLanguage == AsrLanguage.JAPANESE) {
+                                    app.hotwordsGenerator.getHotwordsString(activeEntries)
+                                } else {
+                                    ""
+                                }
+                                val rawText = withTimeout(3000L) {
+                                    app.asrManager.transcribe(samples, 16000, hotwordsStr, asrLanguage)
+                                }
+                                if (asrLanguage == AsrLanguage.ENGLISH) {
+                                    recognizedText = EnglishVoicePostProcessor.format(rawText, textBeforeCursor)
+                                    deletePreceding = 0
+                                } else {
+                                    val pitchSlope = ProsodyPitchEstimator.estimateTerminalPitchSlope(samples, 16000)
+                                    val prosodyMetadata = ProsodyBoundaryMetadata(
+                                        terminalPitchSlopeSemitones = pitchSlope,
+                                        precedingCommittedTail = textBeforeCursor
+                                    )
+                                    val pResult = app.contextAwareProcessor.processWithPunctuationResult(
+                                        rawText = rawText,
+                                        contextBefore = textBeforeCursor,
+                                        entries = activeEntries,
+                                        metadata = prosodyMetadata
+                                    )
+                                    recognizedText = pResult.formattedText
+                                    deletePreceding = pResult.deletePrecedingChars
+                                }
                             }
                         } catch (e: TimeoutCancellationException) {
                             Log.w(TAG, "IME Transcription timed out (>3000ms)")

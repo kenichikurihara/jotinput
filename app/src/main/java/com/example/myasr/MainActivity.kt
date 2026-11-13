@@ -7,12 +7,14 @@ import com.example.myasr.context.provisioning.domain.DictUpdateState
 import com.example.myasr.context.provisioning.domain.DictionaryStatusInfo
 import com.example.myasr.context.provisioning.domain.DictionaryUpdateTracker
 import com.example.myasr.context.provisioning.infrastructure.DictionaryType
+import com.example.myasr.context.provisioning.infrastructure.EnglishAsrModelDownloader
 import com.example.myasr.context.provisioning.infrastructure.EnglishSpellDownloader
 import com.example.myasr.context.provisioning.infrastructure.ModelDownloader
 import com.example.myasr.context.reranking.domain.RerankEngineType
 import com.example.myasr.context.reranking.infrastructure.LlmReranker
 import com.example.myasr.context.reranking.infrastructure.PowerBenchmarkRunner
 import com.example.myasr.context.speech.application.HotwordsGenerator
+import com.example.myasr.context.speech.domain.AsrLanguage
 import com.example.myasr.context.speech.infrastructure.AsrManager
 import com.example.myasr.context.vocabulary.infrastructure.DictionaryRepository
 
@@ -114,6 +116,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvEnglishSpellingStatus: TextView
     private lateinit var btnDownloadEnglishSpelling: MaterialButton
     private lateinit var btnDeleteEnglishSpelling: MaterialButton
+
+    private lateinit var tvEnglishAsrSummary: TextView
+    private lateinit var englishAsrProgress: LinearProgressIndicator
+    private lateinit var tvEnglishAsrStatus: TextView
+    private lateinit var btnDownloadEnglishAsr: MaterialButton
+    private lateinit var btnDeleteEnglishAsr: MaterialButton
 
     private lateinit var asrManager: AsrManager
     private val kanaKanjiEngine get() = AsrApp.instance.kanaKanjiEngine
@@ -534,6 +542,12 @@ class MainActivity : AppCompatActivity() {
         tvEnglishSpellingStatus = findViewById(R.id.tvEnglishSpellingStatus)
         btnDownloadEnglishSpelling = findViewById(R.id.btnDownloadEnglishSpelling)
         btnDeleteEnglishSpelling = findViewById(R.id.btnDeleteEnglishSpelling)
+
+        tvEnglishAsrSummary = findViewById(R.id.tvEnglishAsrSummary)
+        englishAsrProgress = findViewById(R.id.englishAsrProgress)
+        tvEnglishAsrStatus = findViewById(R.id.tvEnglishAsrStatus)
+        btnDownloadEnglishAsr = findViewById(R.id.btnDownloadEnglishAsr)
+        btnDeleteEnglishAsr = findViewById(R.id.btnDeleteEnglishAsr)
     }
 
     private fun setupListeners() {
@@ -543,6 +557,7 @@ class MainActivity : AppCompatActivity() {
 
         setupMultiDictionaryUI()
         setupEnglishSpellingUI()
+        setupEnglishAsrUI()
 
         btnToggleDictDetails.setOnClickListener {
             val isVisible = layoutDictDetailsContainer.visibility == View.VISIBLE
@@ -1053,6 +1068,69 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupEnglishAsrUI() {
+        btnDownloadEnglishAsr.setOnClickListener {
+            startDownloadEnglishAsr()
+        }
+        btnDeleteEnglishAsr.setOnClickListener {
+            asrManager.release(AsrLanguage.ENGLISH)
+            EnglishAsrModelDownloader(asrManager.getEnglishStorageModelDir()).deleteModel()
+            Toast.makeText(this, "英語音声認識モデルを削除しました", Toast.LENGTH_SHORT).show()
+            refreshEnglishAsrUI()
+        }
+        refreshEnglishAsrUI()
+    }
+
+    private fun refreshEnglishAsrUI() {
+        val isInstalled = asrManager.isEnglishModelAvailable()
+        val dir = asrManager.getEnglishStorageModelDir()
+        if (isInstalled) {
+            val totalSize = (dir.listFiles()?.sumOf { it.length() } ?: 0L)
+            val sizeMb = String.format(java.util.Locale.US, "%.1f", totalSize / (1024.0 * 1024.0))
+            tvEnglishAsrSummary.text = "Parakeet TDT-CTC 110M (${sizeMb} MB, CC-BY-4.0) が有効です。QWERTYモードの音声入力で使用されます。"
+            btnDownloadEnglishAsr.text = "英語ASRモデルを再取得"
+            btnDeleteEnglishAsr.visibility = View.VISIBLE
+        } else {
+            tvEnglishAsrSummary.text = "オフライン英語音声認識 (~126MB, CC-BY-4.0)。QWERTYモードで句読点・大文字付き英語入力が可能です。"
+            btnDownloadEnglishAsr.text = "英語ASRモデルを取得 (~126MB)"
+            btnDeleteEnglishAsr.visibility = View.GONE
+        }
+    }
+
+    private fun startDownloadEnglishAsr() {
+        val downloader = EnglishAsrModelDownloader(asrManager.getEnglishStorageModelDir())
+        btnDownloadEnglishAsr.isEnabled = false
+        btnDeleteEnglishAsr.isEnabled = false
+        englishAsrProgress.visibility = View.VISIBLE
+        tvEnglishAsrStatus.visibility = View.VISIBLE
+        englishAsrProgress.progress = 0
+        tvEnglishAsrStatus.text = "準備中..."
+
+        lifecycleScope.launch {
+            val result = downloader.download { statusText, pct ->
+                runOnUiThread {
+                    englishAsrProgress.progress = pct
+                    tvEnglishAsrStatus.text = "$statusText ($pct%)"
+                }
+            }
+
+            if (result.isSuccess) {
+                withContext(Dispatchers.Default) {
+                    asrManager.reload(null, AsrLanguage.ENGLISH)
+                }
+                Toast.makeText(this@MainActivity, "英語音声認識モデルのインストールが完了しました", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this@MainActivity, "ダウンロードに失敗しました: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+            }
+
+            englishAsrProgress.visibility = View.GONE
+            tvEnglishAsrStatus.visibility = View.GONE
+            btnDownloadEnglishAsr.isEnabled = true
+            btnDeleteEnglishAsr.isEnabled = true
+            refreshEnglishAsrUI()
+        }
+    }
+
     private fun updateKeyboardHeightUI() {
         isUpdatingUiFromPrefs = true
         try {
@@ -1085,6 +1163,13 @@ class MainActivity : AppCompatActivity() {
             (Reazon Holdings, Inc.)
             License: Apache License, Version 2.0
             https://github.com/reazon-research/ReazonSpeech
+
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            ■ NVIDIA Parakeet TDT-CTC 110M (English ASR)
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            Copyright (c) NVIDIA Corporation
+            License: Creative Commons Attribution 4.0 (CC-BY-4.0)
+            https://huggingface.co/nvidia/parakeet-tdt_ctc-110m
 
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             ■ sherpa-onnx Offline Speech Recognition Engine

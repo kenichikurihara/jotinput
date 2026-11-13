@@ -2,7 +2,9 @@ package com.example.myasr.context.speech.infrastructure
 
 import android.content.Context
 import android.util.Log
+import com.example.myasr.context.speech.domain.AsrLanguage
 import com.k2fsa.sherpa.onnx.OfflineModelConfig
+import com.k2fsa.sherpa.onnx.OfflineNemoEncDecCtcModelConfig
 import com.k2fsa.sherpa.onnx.OfflineRecognizer
 import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineTransducerModelConfig
@@ -10,9 +12,11 @@ import java.io.File
 
 class AsrManager(private val context: Context) {
     private val TAG = "AsrManager"
-    private var recognizer: OfflineRecognizer? = null
+    private var japaneseRecognizer: OfflineRecognizer? = null
+    private var englishRecognizer: OfflineRecognizer? = null
 
     companion object {
+        // Japanese ReazonSpeech (Zipformer Transducer)
         const val MODEL_DIR_NAME = "reazonspeech"
         const val ENCODER_INT8 = "encoder-epoch-99-avg-1.int8.onnx"
         const val ENCODER_FP32 = "encoder-epoch-99-avg-1.onnx"
@@ -20,6 +24,12 @@ class AsrManager(private val context: Context) {
         const val JOINER_INT8 = "joiner-epoch-99-avg-1.int8.onnx"
         const val JOINER_FP32 = "joiner-epoch-99-avg-1.onnx"
         const val TOKENS = "tokens.txt"
+
+        // English NVIDIA Parakeet TDT-CTC 110M (FastConformer NeMo CTC, CC-BY-4.0)
+        const val ENGLISH_MODEL_DIR_NAME = "parakeet-en-110m"
+        const val ENGLISH_MODEL_INT8 = "model.int8.onnx"
+        const val ENGLISH_MODEL_FP32 = "model.onnx"
+        const val ENGLISH_TOKENS = "tokens.txt"
 
         /**
          * Determines optimal CPU inference threads for ONNX Runtime based on available physical cores.
@@ -31,9 +41,14 @@ class AsrManager(private val context: Context) {
         }
     }
 
-    fun isModelAvailable(): Boolean {
-        return isModelInAssets() || isModelInStorage()
+    fun isModelAvailable(language: AsrLanguage = AsrLanguage.JAPANESE): Boolean {
+        return when (language) {
+            AsrLanguage.JAPANESE -> isModelInAssets() || isModelInStorage()
+            AsrLanguage.ENGLISH -> isEnglishModelInStorage()
+        }
     }
+
+    fun isEnglishModelAvailable(): Boolean = isModelAvailable(AsrLanguage.ENGLISH)
 
     fun isModelInAssets(): Boolean {
         return try {
@@ -48,13 +63,19 @@ class AsrManager(private val context: Context) {
         }
     }
 
-    fun getStorageModelDir(): File {
+    fun getStorageModelDir(language: AsrLanguage = AsrLanguage.JAPANESE): File {
         val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
-        return File(baseDir, MODEL_DIR_NAME)
+        val dirName = when (language) {
+            AsrLanguage.JAPANESE -> MODEL_DIR_NAME
+            AsrLanguage.ENGLISH -> ENGLISH_MODEL_DIR_NAME
+        }
+        return File(baseDir, dirName)
     }
 
+    fun getEnglishStorageModelDir(): File = getStorageModelDir(AsrLanguage.ENGLISH)
+
     fun isModelInStorage(): Boolean {
-        val dir = getStorageModelDir()
+        val dir = getStorageModelDir(AsrLanguage.JAPANESE)
         if (!dir.exists() || !dir.isDirectory) return false
 
         val tokens = File(dir, TOKENS).exists()
@@ -64,9 +85,25 @@ class AsrManager(private val context: Context) {
         return tokens && encoder && decoder && joiner
     }
 
+    fun isEnglishModelInStorage(): Boolean {
+        val dir = getEnglishStorageModelDir()
+        if (!dir.exists() || !dir.isDirectory) return false
+
+        val tokens = File(dir, ENGLISH_TOKENS).exists()
+        val model = File(dir, ENGLISH_MODEL_INT8).exists() || File(dir, ENGLISH_MODEL_FP32).exists()
+        return tokens && model
+    }
+
     @Synchronized
-    fun initialize(hotwordsFile: File? = null): Boolean {
-        if (recognizer != null) return true
+    fun initialize(hotwordsFile: File? = null, language: AsrLanguage = AsrLanguage.JAPANESE): Boolean {
+        return when (language) {
+            AsrLanguage.JAPANESE -> initializeJapanese(hotwordsFile)
+            AsrLanguage.ENGLISH -> initializeEnglish()
+        }
+    }
+
+    private fun initializeJapanese(hotwordsFile: File?): Boolean {
+        if (japaneseRecognizer != null) return true
 
         return try {
             if (isModelInAssets()) {
@@ -96,11 +133,11 @@ class AsrManager(private val context: Context) {
                     hotwordsFile = "",
                     hotwordsScore = 3.5f
                 )
-                recognizer = OfflineRecognizer(context.assets, config)
+                japaneseRecognizer = OfflineRecognizer(context.assets, config)
                 Log.i(TAG, "ReazonSpeech model successfully loaded from assets with modified_beam_search")
                 true
             } else if (isModelInStorage()) {
-                val dir = getStorageModelDir()
+                val dir = getStorageModelDir(AsrLanguage.JAPANESE)
                 val effectiveHotwordsFile = hotwordsFile
                     ?: File(context.filesDir, "hotwords.txt").takeIf { it.exists() && it.length() > 0 }
                 val hasHotwords = effectiveHotwordsFile != null && effectiveHotwordsFile.exists() && effectiveHotwordsFile.length() > 0
@@ -130,7 +167,7 @@ class AsrManager(private val context: Context) {
                     hotwordsFile = hotwordsPath,
                     hotwordsScore = 3.5f
                 )
-                recognizer = OfflineRecognizer(null, config)
+                japaneseRecognizer = OfflineRecognizer(null, config)
                 Log.i(TAG, "ReazonSpeech model successfully loaded from storage with hotwords: $hasHotwords")
                 true
             } else {
@@ -138,48 +175,96 @@ class AsrManager(private val context: Context) {
                 false
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize OfflineRecognizer: ${e.message}", e)
-            recognizer = null
+            Log.e(TAG, "Failed to initialize Japanese OfflineRecognizer: ${e.message}", e)
+            japaneseRecognizer = null
+            false
+        }
+    }
+
+    private fun initializeEnglish(): Boolean {
+        if (englishRecognizer != null) return true
+
+        return try {
+            if (!isEnglishModelInStorage()) {
+                Log.w(TAG, "No English Parakeet model files found in storage")
+                return false
+            }
+            val dir = getEnglishStorageModelDir()
+            val modelFile = if (File(dir, ENGLISH_MODEL_INT8).exists()) {
+                File(dir, ENGLISH_MODEL_INT8)
+            } else {
+                File(dir, ENGLISH_MODEL_FP32)
+            }
+            val tokensFile = File(dir, ENGLISH_TOKENS)
+            Log.i(TAG, "Initializing English Parakeet TDT-CTC 110M from storage: ${dir.absolutePath}")
+
+            val modelConfig = OfflineModelConfig(
+                nemoCtc = OfflineNemoEncDecCtcModelConfig(
+                    model = modelFile.absolutePath
+                ),
+                tokens = tokensFile.absolutePath,
+                numThreads = getOptimalThreadCount(),
+                provider = "cpu"
+            )
+            val config = OfflineRecognizerConfig(
+                modelConfig = modelConfig,
+                decodingMethod = "greedy_search"
+            )
+            englishRecognizer = OfflineRecognizer(null, config)
+            Log.i(TAG, "English Parakeet TDT-CTC 110M model successfully loaded")
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize English OfflineRecognizer: ${e.message}", e)
+            englishRecognizer = null
             false
         }
     }
 
     @Synchronized
-    fun reload(hotwordsFile: File? = null): Boolean {
-        release()
-        return initialize(hotwordsFile)
+    fun reload(hotwordsFile: File? = null, language: AsrLanguage = AsrLanguage.JAPANESE): Boolean {
+        release(language)
+        return initialize(hotwordsFile, language)
     }
 
     /**
      * Non-blocking or background warm-up: ensures model is loaded into memory
      * and performs a micro inference pass (0.1s silence) to prime ONNX Runtime
-     * memory allocators, thread pools, and transducer decoder graphs.
+     * memory allocators, thread pools, and decoder graphs.
      */
     @Synchronized
-    fun warmUp(hotwordsFile: File? = null): Boolean {
-        if (!isModelAvailable()) {
-            Log.d(TAG, "AsrManager warmUp skipped: model files not available yet")
+    fun warmUp(hotwordsFile: File? = null, language: AsrLanguage = AsrLanguage.JAPANESE): Boolean {
+        if (!isModelAvailable(language)) {
+            Log.d(TAG, "AsrManager warmUp ($language) skipped: model files not available yet")
             return false
         }
-        val ok = initialize(hotwordsFile)
+        val ok = initialize(hotwordsFile, language)
         if (!ok) return false
         return try {
             val dummyAudio = FloatArray(1600) // 0.1s silence at 16kHz
-            transcribe(dummyAudio, 16000)
-            Log.i(TAG, "AsrManager warm-up inference completed successfully.")
+            transcribe(dummyAudio, 16000, "", language)
+            Log.i(TAG, "AsrManager warm-up ($language) inference completed successfully.")
             true
         } catch (e: Exception) {
-            Log.w(TAG, "AsrManager warm-up inference failed: ${e.message}")
+            Log.w(TAG, "AsrManager warm-up ($language) inference failed: ${e.message}")
             false
         }
     }
 
     @Synchronized
-    fun transcribe(samples: FloatArray, sampleRate: Int = 16000, hotwords: String = ""): String {
-        val rec = recognizer ?: throw IllegalStateException("ASR model is not initialized")
+    fun transcribe(
+        samples: FloatArray,
+        sampleRate: Int = 16000,
+        hotwords: String = "",
+        language: AsrLanguage = AsrLanguage.JAPANESE
+    ): String {
+        val rec = when (language) {
+            AsrLanguage.JAPANESE -> japaneseRecognizer
+            AsrLanguage.ENGLISH -> englishRecognizer
+        } ?: throw IllegalStateException("ASR model ($language) is not initialized")
+
         if (samples.isEmpty()) return ""
 
-        val stream = if (hotwords.isNotBlank()) {
+        val stream = if (language == AsrLanguage.JAPANESE && hotwords.isNotBlank()) {
             try {
                 Log.d(TAG, "Creating OfflineStream with dynamic hotwords (${hotwords.length} chars)")
                 rec.createStream(hotwords)
@@ -201,8 +286,23 @@ class AsrManager(private val context: Context) {
         }
     }
 
-    fun release() {
-        recognizer?.release()
-        recognizer = null
+    @Synchronized
+    fun release(language: AsrLanguage? = null) {
+        when (language) {
+            AsrLanguage.JAPANESE -> {
+                japaneseRecognizer?.release()
+                japaneseRecognizer = null
+            }
+            AsrLanguage.ENGLISH -> {
+                englishRecognizer?.release()
+                englishRecognizer = null
+            }
+            null -> {
+                japaneseRecognizer?.release()
+                japaneseRecognizer = null
+                englishRecognizer?.release()
+                englishRecognizer = null
+            }
+        }
     }
 }
