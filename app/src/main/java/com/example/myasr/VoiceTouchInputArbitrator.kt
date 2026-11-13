@@ -126,6 +126,9 @@ class VoiceTouchInputArbitrator {
     // Timestamp of last IME-initiated composing edit to distinguish external cursor taps in onUpdateSelection
     var lastImeComposingEditTimeMs: Long = 0L
         private set
+    // Timestamp of last IME-initiated direct commit/delete to avoid clearing auto-assist on async onUpdateSelection
+    var lastImeDirectEditTimeMs: Long = 0L
+        private set
 
     fun isKeyboardComposing(): Boolean = composingText.isNotEmpty()
 
@@ -319,6 +322,7 @@ class VoiceTouchInputArbitrator {
         val textToCommit = if (shouldPrependSpace) " $text" else text
         clearUndoState()
         clearAutoAssistState()
+        lastImeDirectEditTimeMs = System.currentTimeMillis()
         editor?.commitText(textToCommit, 1)
         recordDirectCommitForInFlightDecodes(textToCommit)
         flushPendingVoice(editor)
@@ -364,6 +368,7 @@ class VoiceTouchInputArbitrator {
         val textToCommit = if (shouldPrependSpace) " $word" else word
         clearUndoState()
         lastAutoPeriodEligibleSpaceTimeMs = 0L
+        lastImeDirectEditTimeMs = System.currentTimeMillis()
 
         editor?.commitText(textToCommit, 1)
         recordDirectCommitForInFlightDecodes(textToCommit)
@@ -397,6 +402,7 @@ class VoiceTouchInputArbitrator {
 
         clearUndoState()
         lastAutoPeriodEligibleSpaceTimeMs = 0L
+        lastImeDirectEditTimeMs = System.currentTimeMillis()
 
         editor?.beginBatchEdit()
         try {
@@ -585,6 +591,7 @@ class VoiceTouchInputArbitrator {
             commitKeyboardSurface(editor, reading, reading)
             clearUndoState()
             previousCommittedPhrase = ""
+            lastImeDirectEditTimeMs = System.currentTimeMillis()
             editor?.commitText(spaceCharWhenIdle, 1)
             recordDirectCommitForInFlightDecodes(spaceCharWhenIdle)
             flushPendingVoice(editor)
@@ -600,6 +607,7 @@ class VoiceTouchInputArbitrator {
             val finalized = commitActiveStreamingComposing(editor, onResetStreamingUtterance, formatStreamingFn)
             clearUndoState()
             previousCommittedPhrase = ""
+            lastImeDirectEditTimeMs = System.currentTimeMillis()
             editor?.commitText(spaceCharWhenIdle, 1)
             recordDirectCommitForInFlightDecodes(spaceCharWhenIdle)
             flushPendingVoice(editor)
@@ -626,6 +634,7 @@ class VoiceTouchInputArbitrator {
                 clearUndoState()
                 lastAutoPeriodEligibleSpaceTimeMs = 0L
                 previousCommittedPhrase = "."
+                lastImeDirectEditTimeMs = System.currentTimeMillis()
                 editor?.beginBatchEdit()
                 try {
                     editor?.deleteSurroundingText(1, 0)
@@ -646,6 +655,7 @@ class VoiceTouchInputArbitrator {
         val prevCharBeforeSpace = editor?.getTextBeforeCursor(1, 0)?.lastOrNull()
         clearUndoState()
         previousCommittedPhrase = ""
+        lastImeDirectEditTimeMs = System.currentTimeMillis()
         editor?.commitText(spaceCharWhenIdle, 1)
         recordDirectCommitForInFlightDecodes(spaceCharWhenIdle)
         flushPendingVoice(editor)

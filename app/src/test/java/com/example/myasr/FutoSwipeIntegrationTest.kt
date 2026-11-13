@@ -192,4 +192,46 @@ class FutoSwipeIntegrationTest {
         bypassArb.onSpacePressed(bypassEditor, " ", autoPeriodEnabled = true, bypassAutoAssist = true, nowMs = 1100L)
         assertEquals("username  ", bypassEditor.text.toString())
     }
+
+    @Test
+    fun testAsyncOnUpdateSelectionDoesNotClearAutoPeriodOrAutoSpace() {
+        val arbitrator = VoiceTouchInputArbitrator()
+        val editor = MockEditorBridge()
+
+        // 1. Type "hello" and press Space 1
+        arbitrator.onTypeDirectChar(editor, "hello")
+        val now = System.currentTimeMillis()
+        arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = now)
+        assertEquals("hello ", editor.text.toString())
+
+        // Simulate Android EditText asynchronously firing onUpdateSelection after commitText(" ", 1)
+        arbitrator.onExternalSelectionUpdated(
+            editor = editor,
+            oldSelStart = 5,
+            oldSelEnd = 5,
+            newSelStart = 6,
+            newSelEnd = 6,
+            candidatesStart = -1,
+            candidatesEnd = -1
+        )
+
+        // Pressing Space 2 within timeout must still trigger Auto-Period!
+        val o2 = arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = now + 150L)
+        assertEquals(VoiceTouchInputArbitrator.SpaceOutcome.CONVERTED_DOUBLE_SPACE_TO_PERIOD, o2)
+        assertEquals("hello. ", editor.text.toString())
+
+        // 2. Swipe word "world", simulate async onUpdateSelection, then tap "a" -> must auto-space
+        arbitrator.onCommitSwipeWord(editor, "world")
+        arbitrator.onExternalSelectionUpdated(
+            editor = editor,
+            oldSelStart = 7,
+            oldSelEnd = 7,
+            newSelStart = 12,
+            newSelEnd = 12,
+            candidatesStart = -1,
+            candidatesEnd = -1
+        )
+        arbitrator.onTypeDirectChar(editor, "a")
+        assertEquals("hello. world a", editor.text.toString())
+    }
 }
