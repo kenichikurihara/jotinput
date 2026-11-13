@@ -57,7 +57,6 @@ class CandidateStripView @JvmOverloads constructor(
     }
 
     private var currentCandidates: List<ConversionCandidate> = emptyList()
-    private var lastRenderedBadge: String? = null
 
     fun getCandidates(): List<ConversionCandidate> = currentCandidates
 
@@ -71,7 +70,6 @@ class CandidateStripView @JvmOverloads constructor(
 
     fun showEmptyStatus(text: String) {
         currentCandidates = emptyList()
-        lastRenderedBadge = null
         container.removeAllViews()
         emptyStatusView.text = text
         emptyStatusView.setTextColor(ContextCompat.getColor(context, R.color.candidate_empty_text))
@@ -79,7 +77,7 @@ class CandidateStripView @JvmOverloads constructor(
         onEmptyStatusShown?.invoke()
     }
 
-    fun setCandidates(candidates: List<ConversionCandidate>, debugBadge: String? = null) {
+    fun setCandidates(candidates: List<ConversionCandidate>) {
         // Retain candidates from engine (redundant Hiragana matching composing text is already excluded by engine)
         val displayCandidates = candidates.filter { it.isPrediction || it.reading != it.surface || !JapaneseKanaUtils.isAllHiragana(it.surface) }
         if (displayCandidates.isEmpty()) {
@@ -87,16 +85,15 @@ class CandidateStripView @JvmOverloads constructor(
             return
         }
 
-        // Zero-Jitter optimization: If surfaces and debugBadge are identical to current strip, skip DOM recreation
+        // Zero-Jitter optimization: If surfaces are identical to current strip, skip DOM recreation
         val currentSurfaces = currentCandidates.filter { it.isPrediction || it.reading != it.surface || !JapaneseKanaUtils.isAllHiragana(it.surface) }.map { it.surface }
         val newSurfaces = displayCandidates.map { it.surface }
-        if (currentSurfaces == newSurfaces && lastRenderedBadge == debugBadge && container.childCount > 0) {
+        if (currentSurfaces == newSurfaces && container.childCount > 0) {
             currentCandidates = candidates
             return
         }
 
         currentCandidates = candidates
-        lastRenderedBadge = debugBadge
         container.removeAllViews()
 
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -106,32 +103,6 @@ class CandidateStripView @JvmOverloads constructor(
         val padH = (12 * density).toInt()
         val padV = (3 * density).toInt()
         val marginH = (3 * density).toInt()
-
-        // Debug badge chip at the front (non-clickable dummy chip)
-        if (!debugBadge.isNullOrBlank()) {
-            val debugTv = TextView(context).apply {
-                text = debugBadge
-                textSize = if (isLandscape) 12f else 13f
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-                setTextColor(ContextCompat.getColor(context, R.color.primary))
-                setBackgroundResource(R.drawable.bg_candidate_pill)
-                setPadding((padH * 0.8f).toInt(), padV, (padH * 0.8f).toInt(), padV)
-
-                val lp = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    pillHeight
-                ).apply {
-                    setMargins(marginH, 0, marginH, 0)
-                }
-                layoutParams = lp
-
-                isClickable = false
-                isFocusable = false
-                isEnabled = false
-            }
-            container.addView(debugTv)
-        }
 
         for (candidate in displayCandidates) {
             val tv = TextView(context).apply {
