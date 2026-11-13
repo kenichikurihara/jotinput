@@ -17,6 +17,8 @@
 - **`CandidateSource`** (`enum class`): `KANA_KANJI`, `SLM_RERANKED`, `ENGLISH_SWIPE`, `ENGLISH_SPELL`, `VOICE_ASR`, `USER_DICTIONARY`, `NEXT_PHRASE`, `CLIPBOARD`
 - **`ConversionCandidate`** (`data class` — Published Language):
   - `surface: String`, `reading: String`, `score: Float`, `source: CandidateSource`, `metadata: Map<String, String> = emptyMap()`
+- **`Judgement<in I, out O>` / `JudgementResult<out T>` / `Specification<in T>`** (`shared/domain/Judgement.kt`):
+  - ドメイン上の意思決定・判定ロジック（Policy / Specification / Decision）を Android UI / `InputMethodService` から分離し、理由付き判定結果と合成可能な仕様ルールを提供する基底契約。
 
 ### 1.2 `shared.event`
 - **`DomainEvent`** (`interface`): `val occurredAtMillis: Long`
@@ -59,12 +61,12 @@
 | **BC-1: Kana-Kanji** | `context.kanakanji.domain` | `KanaKanjiEngine`, `ConnectionMatrix`, `MmapDictionary`, `NextPhrasePredictor`, `JapaneseKanaUtils`, `JapaneseNumeralUtils` |
 | | `context.kanakanji.application` | `UserHistorySyncManager`, `KanaKanjiVocabularySyncAdapter` |
 | | `context.kanakanji.infrastructure` | `MmapDictionaryCompiler` |
-| **BC-2: Neural Reranking** | `context.reranking.domain` | `RerankEngineType`, `ContextWindowTrimmer`, `CandidateRerankingService` |
+| **BC-2: Neural Reranking** | `context.reranking.domain` | `RerankEngineType`, `ContextWindowTrimmer`, `CandidateRerankingService`, `CandidateRerankJudgement` |
 | | `context.reranking.infrastructure` | `LlmReranker`, `PowerBenchmarkRunner` |
 | **BC-3: Speech Recognition** | `context.speech.domain` | `StreamingVadProcessor`, `ProsodyPitchEstimator`, `JapanesePunctuationEngine`, `ContextAwareProcessor` |
 | | `context.speech.application` | `HotwordsGenerator`, `DictionaryPostProcessor` |
 | | `context.speech.infrastructure` | `AsrManager`, `AudioRecorder` |
-| **BC-4: English Typing** | `context.english.domain` | `EnglishCapitalizationAnalyzer`, `EnglishDictionaryUtils` |
+| **BC-4: English Typing** | `context.english.domain` | `EnglishCapitalizationAnalyzer`, `EnglishDictionaryUtils`, `EnglishAssistJudgement` |
 | | `context.english.infrastructure` | `FutoSwipeEngine`, `EnglishSpellEngine` |
 | **BC-5: Custom Vocabulary** | `context.vocabulary.domain` | `DictionaryEntry` |
 | | `context.vocabulary.infrastructure` | `DictionaryRepository`, `DictionaryDatabaseHelper` |

@@ -37,7 +37,7 @@ com.example.myasr
 ├── VoiceInputMethodService.kt         # Android InputMethodService Entrypoint
 │
 ├── shared/                            # Shared Kernel & Published Language
-│   ├── domain/                        #   値オブジェクト (InputLanguage, VocabularyItem, ConversionCandidate 等)
+│   ├── domain/                        #   値オブジェクト・Judgement/Specification (InputLanguage, VocabularyItem, Judgement 等)
 │   └── event/                         #   軽量インメモリ DomainEvent & DomainEventBus
 │
 └── context/                           # Bounded Contexts
@@ -47,7 +47,7 @@ com.example.myasr
     │   └── infrastructure/            #   MmapDictionaryCompiler
     │
     ├── reranking/                     # BC-2: Neural Language Modeling & Reranking [Core]
-    │   ├── domain/                    #   RerankEngineType, ContextWindowTrimmer, CandidateRerankingService
+    │   ├── domain/                    #   RerankEngineType, ContextWindowTrimmer, CandidateRerankingService, CandidateRerankJudgement
     │   └── infrastructure/            #   LlmReranker (JNI -> libmyasr_llm.so), PowerBenchmarkRunner
     │
     ├── speech/                        # BC-3: Speech Recognition & Voice Input [Supporting]
@@ -56,7 +56,7 @@ com.example.myasr
     │   └── infrastructure/            #   AsrManager (Sherpa-ONNX), AudioRecorder
     │
     ├── english/                       # BC-4: English Typing & Swipe [Supporting]
-    │   ├── domain/                    #   EnglishCapitalizationAnalyzer, EnglishDictionaryUtils
+    │   ├── domain/                    #   EnglishCapitalizationAnalyzer, EnglishDictionaryUtils, EnglishAssistJudgement
     │   └── infrastructure/            #   FutoSwipeEngine (JNI), EnglishSpellEngine (JNI)
     │
     ├── vocabulary/                    # BC-5: Custom Vocabulary [Supporting]

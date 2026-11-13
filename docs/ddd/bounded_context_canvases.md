@@ -63,7 +63,7 @@ DDD Crew の **Bounded Context Canvas** 形式に基づき、JotInput の全 8 �
 - **Outbound**: `RerankResult`（スコア・確定フラグ・レイテンシ）, `RerankCompletedEvent`
 
 ### Tactical Building Blocks
-- **Domain Service / OHS**: `CandidateRerankingService`, `RerankEngineType`, `ContextWindowTrimmer`
+- **Domain Service / OHS / Judgement**: `CandidateRerankingService`, `CandidateRerankJudgement`, `RerankEngineType`, `ContextWindowTrimmer`
 - **Infrastructure (JNI)**: `LlmReranker` (`libmyasr_llm.so`), `PowerBenchmarkRunner`
 
 ---
@@ -123,7 +123,7 @@ DDD Crew の **Bounded Context Canvas** 形式に基づき、JotInput の全 8 �
 - **Outbound**: `List<ConversionCandidate>`
 
 ### Tactical Building Blocks
-- **Domain Services**: `EnglishCapitalizationAnalyzer`, `EnglishDictionaryUtils`
+- **Domain Services / Judgement**: `EnglishCapitalizationAnalyzer`, `EnglishDictionaryUtils`, `EnglishAssistJudgement`
 - **Infrastructure (JNI)**: `FutoSwipeEngine` (`libfuto_swipe.so`), `EnglishSpellEngine` (`libenglish_spell.so`)
 
 ---

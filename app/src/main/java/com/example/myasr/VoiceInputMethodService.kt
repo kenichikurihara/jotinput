@@ -4,6 +4,7 @@ import com.example.myasr.context.clipboard.domain.ClipboardSuggestionPolicy
 import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryItem
 import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryRepository
 import com.example.myasr.context.clipboard.presentation.ClipboardHistoryView
+import com.example.myasr.context.english.domain.EnglishAssistJudgement
 import com.example.myasr.context.english.domain.EnglishCapitalizationAnalyzer
 import com.example.myasr.context.english.domain.EnglishDictionaryUtils
 import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
@@ -19,6 +20,7 @@ import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
 import com.example.myasr.context.kanakanji.domain.NextPhrasePredictor
 import com.example.myasr.context.provisioning.domain.ModelWarmUpManager
+import com.example.myasr.context.reranking.domain.CandidateRerankJudgement
 import com.example.myasr.context.reranking.domain.ContextWindowTrimmer
 import com.example.myasr.context.reranking.infrastructure.LlmReranker
 import com.example.myasr.context.speech.domain.JapanesePunctuationEngine
@@ -860,7 +862,16 @@ class VoiceInputMethodService : InputMethodService() {
 
         val isRerankEnabled = KeyboardHeightManager.isSlmRerankEnabled(this)
         val isSlmReady = LlmReranker.getInstance(this).isReady()
-        val canRerank = isRerankEnabled && baseCandidates.size > 1 && isSlmReady
+        val execDecision = CandidateRerankJudgement.judgeExecution(
+            CandidateRerankJudgement.ExecutionInput(
+                isRerankEnabled = isRerankEnabled,
+                candidateCount = baseCandidates.size,
+                isSlmReady = isSlmReady,
+                interKeyIntervalMs = ikiMs,
+                readingLength = reading.length
+            )
+        )
+        val canRerank = execDecision.shouldRerank
 
         // 1. FAST ZERO-JITTER PATH (< 0.1ms synchronous on Main Thread, Policies ① & ②):
         // If context logits or memoized NLLs are available, compute ranking instantly before first render.
@@ -895,8 +906,7 @@ class VoiceInputMethodService : InputMethodService() {
         }
 
         // 2. ADAPTIVE BACKGROUND RERANKING PATH (Policies ③, ④, ⑤, ⑥):
-        // Adaptive debounce: 40ms during rapid typing (iki < 140ms and short reading), 4ms when typing pauses
-        val debounceMs = if (ikiMs < 140L && reading.length <= 2) 40L else 4L
+        val debounceMs = execDecision.debounceMs
         val currentTop1ToPreserve = initialRenderedTop1
 
         rerankJob = serviceScope.launch(Dispatchers.Default) {
@@ -916,34 +926,23 @@ class VoiceInputMethodService : InputMethodService() {
                             val elapsedFromFirstRenderMs = android.os.SystemClock.uptimeMillis() - firstRenderUptimeMs
                             val isUserTouchingStrip = candidateStripView?.isUserInteracting == true
 
-                            // Policy ⑤: Tap-Safe Window Protection
-                            val preservedCand = baseCandidates.find { it.surface == currentTop1ToPreserve }
-                            val isPreservedPartial = preservedCand != null &&
-                                (preservedCand.source == "viterbi_prefix" ||
-                                 (preservedCand.reading.isNotEmpty() && preservedCand.reading.length < reading.length))
-                            val isNewTopFull = reranked.firstOrNull()?.let {
-                                it.source != "viterbi_prefix" && !it.isPrediction && it.reading.length == reading.length
-                            } ?: false
-
-                            val safeCandidates = if ((elapsedFromFirstRenderMs > 100L || isUserTouchingStrip) &&
-                                currentTop1ToPreserve != null &&
-                                reranked.firstOrNull()?.surface != currentTop1ToPreserve &&
-                                !(isPreservedPartial && isNewTopFull)
-                            ) {
-                                // Pin the initial Top-1 at Slot 0 to prevent mis-taps, inserting new Top-1 at Slot 1
-                                val pinnedTop = reranked.find { it.surface == currentTop1ToPreserve }
-                                    ?: ConversionCandidate(surface = currentTop1ToPreserve, reading = reading, isPrediction = false)
-                                val otherCands = reranked.filter { it.surface != currentTop1ToPreserve }
-                                listOf(pinnedTop) + otherCands
-                            } else {
-                                reranked
-                            }
+                            // Policy ⑤: Tap-Safe Window Protection via CandidateRerankJudgement
+                            val tapSafeDecision = CandidateRerankJudgement.judgeTapSafeOrdering(
+                                CandidateRerankJudgement.TapSafeOrderingInput(
+                                    baseCandidates = baseCandidates,
+                                    rerankedCandidates = reranked,
+                                    initialRenderedTop1 = currentTop1ToPreserve,
+                                    reading = reading,
+                                    elapsedFromFirstRenderMs = elapsedFromFirstRenderMs,
+                                    isUserTouchingStrip = isUserTouchingStrip
+                                )
+                            )
 
                             isCurrentCandidatesReranked = true
                             val engineType = KeyboardHeightManager.getRerankEngineType(this@VoiceInputMethodService)
                             val debugBadge = if (slmUsed) engineType.badgeLabel else null
                             updateDebugSlmBadge(debugBadge)
-                            candidateStripView?.setCandidates(safeCandidates)
+                            candidateStripView?.setCandidates(tapSafeDecision.finalCandidates)
                         }
                     }
                 }
@@ -1061,11 +1060,9 @@ class VoiceInputMethodService : InputMethodService() {
 
     private fun shouldBypassEnglishAutoAssist(): Boolean {
         val mode = flickKeyboardView?.currentMode
-        if (mode != JapaneseKanaUtils.KeyboardMode.QWERTY && mode != JapaneseKanaUtils.KeyboardMode.QWERTY_SYMBOLS) {
-            return true
-        }
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(64, 0)?.toString() ?: ""
-        return EnglishCapitalizationAnalyzer.shouldBypassCapitalization(currentInputEditorInfo, textBeforeCursor)
+        val isFieldBypassed = EnglishCapitalizationAnalyzer.shouldBypassCapitalization(currentInputEditorInfo, textBeforeCursor)
+        return EnglishAssistJudgement.judgeAutoAssistBypass(mode, isFieldBypassed).decision
     }
 
     private fun showNextPhrasePredictions(committedPhrase: String) {
@@ -1088,11 +1085,15 @@ class VoiceInputMethodService : InputMethodService() {
         }
 
         // 2. SLM SPECULATIVE CONTINUATION & CONTEXTUAL RERANKING PATH (Async worker on Dispatchers.Default):
-        if (!KeyboardHeightManager.isSlmRerankEnabled(this)) {
-            return
-        }
         val slm = LlmReranker.getInstance(this)
-        if (!slm.isReady() || textBeforeCursor.isBlank()) {
+        val nextPhraseDecision = CandidateRerankJudgement.judgeNextPhraseRerank(
+            CandidateRerankJudgement.NextPhraseRerankInput(
+                isRerankEnabled = KeyboardHeightManager.isSlmRerankEnabled(this),
+                isSlmReady = slm.isReady(),
+                textBeforeCursor = textBeforeCursor
+            )
+        )
+        if (!nextPhraseDecision.decision) {
             return
         }
 
@@ -1159,8 +1160,8 @@ class VoiceInputMethodService : InputMethodService() {
 
     private fun updateEnglishTypoAndSpellingCandidates() {
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
-        val lastWordMatch = Regex("[A-Za-z']+$").find(textBeforeCursor)
-        val rawWord = lastWordMatch?.value ?: ""
+        val extracted = EnglishAssistJudgement.extractTrailingWord(textBeforeCursor)
+        val rawWord = extracted.rawWord
 
         if (rawWord.isEmpty()) {
             updateDebugSlmBadge(null)
@@ -1178,7 +1179,11 @@ class VoiceInputMethodService : InputMethodService() {
         }
 
         // For very short words (length < 2), only show candidates if capitalization or acronym applies (e.g. "i" -> "I")
-        if (rawWord.length < 2 && capResult.primaryCandidate == null) {
+        val wordEligibility = EnglishAssistJudgement.judgeWordCandidateEligibility(
+            rawWord = rawWord,
+            hasPrimaryCapitalizationCandidate = capResult.primaryCandidate != null
+        )
+        if (!wordEligibility.decision) {
             updateDebugSlmBadge(null)
             candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
             return
@@ -1315,12 +1320,11 @@ class VoiceInputMethodService : InputMethodService() {
 
             val displayList = finalCandidates.take(5)
             if (displayList.isNotEmpty()) {
-                val badge = when {
-                    slmUsed -> "SLM"
-                    userCandidates.isNotEmpty() -> "USER"
-                    capResult.primaryCandidate != null -> "CAPS"
-                    else -> "SPELL"
-                }
+                val badge = EnglishAssistJudgement.judgeCandidateBadge(
+                    slmUsed = slmUsed,
+                    hasUserCandidates = userCandidates.isNotEmpty(),
+                    hasPrimaryCapitalization = capResult.primaryCandidate != null
+                )
                 Log.i(TAG, "English candidates for '$rawWord' (context='$precedingContext', slm=$slmUsed): ${displayList.map { it.surface }}")
                 withContext(Dispatchers.Main) {
                     if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
@@ -1348,13 +1352,12 @@ class VoiceInputMethodService : InputMethodService() {
         }
 
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
-        val lastSentenceStart = textBeforeCursor.lastIndexOfAny(charArrayOf('.', '!', '?', '\n'))
-        val clause = if (lastSentenceStart >= 0) textBeforeCursor.substring(lastSentenceStart + 1).trim() else textBeforeCursor.trim()
-
-        if (clause.length < 3 || !clause.contains(" ")) {
+        val gecDecision = EnglishAssistJudgement.judgeGecClause(textBeforeCursor)
+        if (!gecDecision.shouldCorrect) {
             candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
             return
         }
+        val clause = gecDecision.clause
 
         serviceScope.launch(Dispatchers.Default) {
             val corrected = spellEngine.correctSentence(clause, "en")
