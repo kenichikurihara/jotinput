@@ -81,6 +81,7 @@ class VoiceInputMethodService : InputMethodService() {
 
     private var clipboardManager: android.content.ClipboardManager? = null
     private var clipboardExpirationJob: Job? = null
+    private val clipboardSuggestionPolicy = ClipboardSuggestionPolicy()
 
     private val prefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
         applyKeyboardDimensions()
@@ -95,7 +96,10 @@ class VoiceInputMethodService : InputMethodService() {
             .registerOnSharedPreferenceChangeListener(prefsListener)
 
         clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
-        ClipboardHistoryRepository.getInstance(this).onHistoryChanged = {
+        ClipboardHistoryRepository.getInstance(this).onHistoryChanged = { hasNewClip ->
+            if (hasNewClip) {
+                clipboardSuggestionPolicy.onNewClipDiscovered(android.os.SystemClock.uptimeMillis())
+            }
             checkAndRenderClipboardSuggestion()
         }
 
@@ -202,6 +206,7 @@ class VoiceInputMethodService : InputMethodService() {
         applyKeyboardDimensions()
         updateClipboardButton()
 
+        clipboardSuggestionPolicy.onStartInputView()
         ClipboardHistoryRepository.getInstance(this).setInputViewActive(true)
         checkAndRenderClipboardSuggestion()
 
@@ -219,6 +224,7 @@ class VoiceInputMethodService : InputMethodService() {
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
         hideClipboardHistoryView()
+        clipboardSuggestionPolicy.onFinishInputView()
         ClipboardHistoryRepository.getInstance(this).setInputViewActive(false)
         flickKeyboardView?.dismissPopup()
         if (currentState == State.RECORDING) {
@@ -444,6 +450,8 @@ class VoiceInputMethodService : InputMethodService() {
                     return
                 }
 
+                clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
+
                 if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET &&
                     candidate.source in listOf("english_typo", "english_gec", "user_english", "english_cap", "raw")
                 ) {
@@ -504,6 +512,7 @@ class VoiceInputMethodService : InputMethodService() {
 
         flickKeyboardView?.listener = object : FlickKeyboardView.OnKeyboardActionListener {
             override fun onTextChar(text: String) {
+                clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.KANA) {
                     arbitrator.onTypeKana(
                         editor = editorBridge,
@@ -546,6 +555,7 @@ class VoiceInputMethodService : InputMethodService() {
             }
 
             override fun onModifierPressed(direction: JapaneseKanaUtils.FlickDirection) {
+                clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 audioRecorder.notifyUserTyping(350L)
                 val wasStreaming = arbitrator.isStreamingComposing()
                 val modifiedKeyboardComposing = arbitrator.onModifierPressed(
@@ -562,6 +572,7 @@ class VoiceInputMethodService : InputMethodService() {
             }
 
             override fun onDeletePressed() {
+                clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 audioRecorder.notifyUserTyping(350L)
                 val outcome = arbitrator.onDeletePressed(
                     editor = editorBridge,
@@ -595,6 +606,7 @@ class VoiceInputMethodService : InputMethodService() {
             }
 
             override fun onSpacePressed() {
+                clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 val prevPhrase = arbitrator.previousCommittedPhrase
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
                 val currentMode = flickKeyboardView?.currentMode
@@ -636,6 +648,7 @@ class VoiceInputMethodService : InputMethodService() {
             }
 
             override fun onEnterPressed() {
+                clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 val prevPhrase = arbitrator.previousCommittedPhrase
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
 
@@ -678,6 +691,7 @@ class VoiceInputMethodService : InputMethodService() {
             }
 
             override fun onCursorLeft() {
+                clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
                 arbitrator.onBeforeNavigationOrAction(
                     editor = editorBridge,
@@ -697,6 +711,7 @@ class VoiceInputMethodService : InputMethodService() {
             }
 
             override fun onCursorRight() {
+                clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
                 arbitrator.onBeforeNavigationOrAction(
                     editor = editorBridge,
@@ -716,6 +731,7 @@ class VoiceInputMethodService : InputMethodService() {
             }
 
             override fun onUndoPressed() {
+                clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 audioRecorder.notifyUserTyping(350L)
                 if (arbitrator.onUndoPressed(editorBridge)) {
                     syncKeyboardState()
@@ -733,6 +749,7 @@ class VoiceInputMethodService : InputMethodService() {
 
             override fun onSwipeInput(trajectory: List<FutoSwipeEngine.SwipePoint>) {
                 if (trajectory.size < 2) return
+                clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 audioRecorder.notifyUserTyping(500L)
                 val engine = FutoSwipeEngine.getInstance(this@VoiceInputMethodService)
                 if (!engine.isReady()) {
@@ -1036,18 +1053,11 @@ class VoiceInputMethodService : InputMethodService() {
             committedPhrase,
             textBeforeCursor,
             suggestPeriod = suggestJpPeriod
-        ).toMutableList()
-        val recentClip = serviceScope.runCatching {
-            // Check in-memory cached recent clipboard item
-            runBlocking { ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService).getRecentSuggestionCandidate() }
-        }.getOrNull()
-        if (recentClip != null) {
-            fastPredictions.add(0, ConversionCandidate(surface = recentClip.text, reading = recentClip.text, isPrediction = true, source = "clipboard_recent"))
-        }
+        )
         if (fastPredictions.isNotEmpty()) {
             candidateStripView?.setCandidates(fastPredictions)
         } else {
-            checkAndRenderClipboardSuggestion()
+            candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
         }
 
         // 2. SLM SPECULATIVE CONTINUATION & CONTEXTUAL RERANKING PATH (Async worker on Dispatchers.Default):
@@ -1356,6 +1366,7 @@ class VoiceInputMethodService : InputMethodService() {
     }
 
     private fun startListening() {
+        clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, getString(R.string.keyboard_mic_permission_needed), Toast.LENGTH_LONG).show()
             val intent = Intent(this, MainActivity::class.java).apply {
@@ -1685,8 +1696,20 @@ class VoiceInputMethodService : InputMethodService() {
         }
     }
 
+    private fun canShowClipboardSuggestion(): Boolean {
+        val hasNonClipboardCandidates = candidateStripView?.getCandidates()?.any { it.source != "clipboard_recent" } == true
+        return clipboardSuggestionPolicy.shouldShowSuggestion(
+            isVoiceIdle = (currentState == State.IDLE),
+            isClipboardHistoryShowing = isClipboardHistoryShowing(),
+            isKeyboardComposing = arbitrator.isKeyboardComposing(),
+            isStreamingComposing = arbitrator.isStreamingComposing(),
+            hasActiveNonClipboardCandidates = hasNonClipboardCandidates
+        )
+    }
+
     private fun checkAndRenderClipboardSuggestion() {
-        if (arbitrator.isKeyboardComposing() || arbitrator.isStreamingComposing()) {
+        val currentlyShowingClipboard = candidateStripView?.getCandidates()?.any { it.source == "clipboard_recent" } == true
+        if (!canShowClipboardSuggestion() && !currentlyShowingClipboard) {
             return
         }
         clipboardExpirationJob?.cancel()
@@ -1694,7 +1717,7 @@ class VoiceInputMethodService : InputMethodService() {
             val repo = ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService)
             val nowMs = System.currentTimeMillis()
             val candidateItem = repo.getRecentSuggestionCandidate(nowMs)
-            if (candidateItem != null) {
+            if (candidateItem != null && canShowClipboardSuggestion()) {
                 val clipCandidate = ConversionCandidate(
                     surface = candidateItem.text,
                     reading = candidateItem.text,
@@ -1707,7 +1730,7 @@ class VoiceInputMethodService : InputMethodService() {
                 val remainingMs = (ClipboardHistoryRepository.CANDIDATE_SUGGEST_TTL_MS - (nowMs - candidateItem.discoveredAtMs)).coerceAtLeast(0L)
                 clipboardExpirationJob = serviceScope.launch {
                     delay(remainingMs + 50L)
-                    if (!arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing()) {
+                    if (candidateStripView?.getCandidates()?.any { it.source == "clipboard_recent" } == true) {
                         candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                     }
                 }
@@ -1723,6 +1746,7 @@ class VoiceInputMethodService : InputMethodService() {
 
     private fun pasteTextFromHistory(text: String) {
         if (text.isNotEmpty()) {
+            clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
             val prevPhrase = arbitrator.previousCommittedPhrase
             val hadKeyboardComposing = arbitrator.isKeyboardComposing()
             val readingBefore = arbitrator.composingText.toString()
@@ -1739,6 +1763,14 @@ class VoiceInputMethodService : InputMethodService() {
             audioRecorder.notifyUserTyping(350L)
             rerankJob?.cancel()
             isCurrentCandidatesReranked = false
+
+            serviceScope.launch {
+                val repo = ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService)
+                val recent = repo.getRecentSuggestionCandidate()
+                if (recent != null && recent.text == text) {
+                    repo.markDismissedFromStrip(recent.id)
+                }
+            }
 
             if (hadKeyboardComposing && prevPhrase.isNotEmpty() && readingBefore.isNotEmpty()) {
                 nextPhrasePredictor.recordTransition(prevPhrase, readingBefore)
