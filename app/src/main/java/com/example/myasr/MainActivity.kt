@@ -111,13 +111,23 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var tvConnectionMatrixBadge: TextView
 
+    private lateinit var tvJapaneseAsrStatusBadge: TextView
+    private lateinit var tvJapaneseAsrStats: TextView
+    private lateinit var japaneseAsrProgress: LinearProgressIndicator
+    private lateinit var tvJapaneseAsrDownloadStatus: TextView
+    private lateinit var btnDownloadJapaneseAsr: MaterialButton
+
+    private lateinit var tvEnglishSpellingStatusBadge: TextView
     private lateinit var tvEnglishSpellingSummary: TextView
+    private lateinit var tvEnglishSpellingStats: TextView
     private lateinit var englishSpellingProgress: LinearProgressIndicator
     private lateinit var tvEnglishSpellingStatus: TextView
     private lateinit var btnDownloadEnglishSpelling: MaterialButton
     private lateinit var btnDeleteEnglishSpelling: MaterialButton
 
+    private lateinit var tvEnglishAsrStatusBadge: TextView
     private lateinit var tvEnglishAsrSummary: TextView
+    private lateinit var tvEnglishAsrStats: TextView
     private lateinit var englishAsrProgress: LinearProgressIndicator
     private lateinit var tvEnglishAsrStatus: TextView
     private lateinit var btnDownloadEnglishAsr: MaterialButton
@@ -537,13 +547,23 @@ class MainActivity : AppCompatActivity() {
 
         tvConnectionMatrixBadge = findViewById(R.id.tvConnectionMatrixBadge)
 
+        tvJapaneseAsrStatusBadge = findViewById(R.id.tvJapaneseAsrStatusBadge)
+        tvJapaneseAsrStats = findViewById(R.id.tvJapaneseAsrStats)
+        japaneseAsrProgress = findViewById(R.id.japaneseAsrProgress)
+        tvJapaneseAsrDownloadStatus = findViewById(R.id.tvJapaneseAsrDownloadStatus)
+        btnDownloadJapaneseAsr = findViewById(R.id.btnDownloadJapaneseAsr)
+
+        tvEnglishSpellingStatusBadge = findViewById(R.id.tvEnglishSpellingStatusBadge)
         tvEnglishSpellingSummary = findViewById(R.id.tvEnglishSpellingSummary)
+        tvEnglishSpellingStats = findViewById(R.id.tvEnglishSpellingStats)
         englishSpellingProgress = findViewById(R.id.englishSpellingProgress)
         tvEnglishSpellingStatus = findViewById(R.id.tvEnglishSpellingStatus)
         btnDownloadEnglishSpelling = findViewById(R.id.btnDownloadEnglishSpelling)
         btnDeleteEnglishSpelling = findViewById(R.id.btnDeleteEnglishSpelling)
 
+        tvEnglishAsrStatusBadge = findViewById(R.id.tvEnglishAsrStatusBadge)
         tvEnglishAsrSummary = findViewById(R.id.tvEnglishAsrSummary)
+        tvEnglishAsrStats = findViewById(R.id.tvEnglishAsrStats)
         englishAsrProgress = findViewById(R.id.englishAsrProgress)
         tvEnglishAsrStatus = findViewById(R.id.tvEnglishAsrStatus)
         btnDownloadEnglishAsr = findViewById(R.id.btnDownloadEnglishAsr)
@@ -556,6 +576,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         setupMultiDictionaryUI()
+        setupJapaneseAsrUI()
         setupEnglishSpellingUI()
         setupEnglishAsrUI()
 
@@ -563,9 +584,9 @@ class MainActivity : AppCompatActivity() {
             val isVisible = layoutDictDetailsContainer.visibility == View.VISIBLE
             layoutDictDetailsContainer.visibility = if (isVisible) View.GONE else View.VISIBLE
             btnToggleDictDetails.text = if (isVisible) {
-                "個別の拡張辞書を管理 ▼"
+                "個別の拡張辞書・音声モデルを管理 ▼"
             } else {
-                "個別の拡張辞書を閉じる ▲"
+                "個別の拡張辞書・音声モデルを閉じる ▲"
             }
         }
 
@@ -663,7 +684,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupJapaneseAsrUI() {
+        btnDownloadJapaneseAsr.setOnClickListener {
+            startModelDownload()
+        }
+        refreshJapaneseAsrUI()
+    }
+
+    private fun refreshJapaneseAsrUI() {
+        val isInstalled = asrManager.isModelAvailable(AsrLanguage.JAPANESE)
+        val dir = asrManager.getStorageModelDir()
+        if (isInstalled) {
+            val totalSize = (dir.listFiles()?.sumOf { it.length() } ?: 0L)
+            val sizeMb = String.format(java.util.Locale.US, "%.1f", totalSize / (1024.0 * 1024.0))
+            tvJapaneseAsrStatusBadge.text = "導入済"
+            tvJapaneseAsrStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
+            tvJapaneseAsrStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+            tvJapaneseAsrStats.text = "約160MB (導入済: ${sizeMb} MB, Apache-2.0)"
+            btnDownloadJapaneseAsr.text = "再取得"
+        } else {
+            tvJapaneseAsrStatusBadge.text = "未取得"
+            tvJapaneseAsrStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
+            tvJapaneseAsrStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+            tvJapaneseAsrStats.text = "約160MB (Apache-2.0)"
+            btnDownloadJapaneseAsr.text = "取得"
+        }
+    }
+
     private fun checkAndInitializeModel() {
+        refreshJapaneseAsrUI()
         if (asrManager.isModelAvailable()) {
             cardDownload.visibility = View.GONE
             tvModelStatus.text = "音声認識: 読込中…"
@@ -677,6 +726,7 @@ class MainActivity : AppCompatActivity() {
                     } else {
                         tvModelStatus.text = "音声認識: エラー"
                     }
+                    refreshJapaneseAsrUI()
                 }
             }
         } else {
@@ -688,9 +738,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun startModelDownload() {
         btnDownloadModel.isEnabled = false
+        btnDownloadJapaneseAsr.isEnabled = false
         downloadProgress.visibility = View.VISIBLE
         downloadProgress.progress = 0
         tvDownloadInfo.text = "Connecting to repository…"
+
+        japaneseAsrProgress.visibility = View.VISIBLE
+        japaneseAsrProgress.progress = 0
+        tvJapaneseAsrDownloadStatus.visibility = View.VISIBLE
+        tvJapaneseAsrDownloadStatus.text = "準備中..."
 
         val downloader = ModelDownloader(asrManager.getStorageModelDir())
 
@@ -699,6 +755,8 @@ class MainActivity : AppCompatActivity() {
                 lifecycleScope.launch(Dispatchers.Main) {
                     downloadProgress.progress = percent
                     tvDownloadInfo.text = "Downloading [$fileIdx/$totalFiles] $fileName ($percent%)"
+                    japaneseAsrProgress.progress = percent
+                    tvJapaneseAsrDownloadStatus.text = "[$fileIdx/$totalFiles] $fileName ($percent%)"
                 }
             }
 
@@ -707,11 +765,14 @@ class MainActivity : AppCompatActivity() {
                 if (!kanaKanjiEngine.isBaseDictionaryDownloaded()) {
                     withContext(Dispatchers.Main) {
                         tvDownloadInfo.text = "Mozc 基本辞書をダウンロード中..."
+                        tvJapaneseAsrDownloadStatus.text = "Mozc 基本辞書をダウンロード中..."
                     }
                     val baseDictResult = AsrApp.instance.multiDictionaryManager.downloadDictionary(DictionaryType.MOZC_GENERAL) { pct, statusText ->
                         lifecycleScope.launch(Dispatchers.Main) {
                             downloadProgress.progress = pct
                             tvDownloadInfo.text = "基本辞書: $statusText"
+                            japaneseAsrProgress.progress = pct
+                            tvJapaneseAsrDownloadStatus.text = "基本辞書: $statusText"
                         }
                     }
                     if (baseDictResult.isSuccess) {
@@ -720,13 +781,25 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                 }
+                withContext(Dispatchers.Default) {
+                    currentHotwordsFile = hotwordsGenerator.generate(dictionaryRepository.getActive())
+                    asrManager.reload(currentHotwordsFile, AsrLanguage.JAPANESE)
+                }
+                downloadProgress.visibility = View.GONE
+                japaneseAsrProgress.visibility = View.GONE
+                tvJapaneseAsrDownloadStatus.visibility = View.GONE
+                btnDownloadModel.isEnabled = true
+                btnDownloadJapaneseAsr.isEnabled = true
                 Toast.makeText(this@MainActivity, "モデルと辞書のダウンロードが完了しました！", Toast.LENGTH_LONG).show()
                 checkAndInitializeModel()
             } else {
                 val error = result.exceptionOrNull()?.message ?: "Unknown error"
                 tvDownloadInfo.text = "Download failed: $error"
                 btnDownloadModel.isEnabled = true
+                btnDownloadJapaneseAsr.isEnabled = true
                 downloadProgress.visibility = View.GONE
+                japaneseAsrProgress.visibility = View.GONE
+                tvJapaneseAsrDownloadStatus.visibility = View.GONE
                 Toast.makeText(this@MainActivity, "Download failed: $error", Toast.LENGTH_LONG).show()
             }
         }
@@ -1038,12 +1111,18 @@ class MainActivity : AppCompatActivity() {
         if (isInstalled) {
             val totalSize = (dir.listFiles()?.sumOf { it.length() } ?: 0L)
             val sizeMb = String.format(java.util.Locale.US, "%.1f", totalSize / (1024.0 * 1024.0))
-            tvEnglishSpellingSummary.text = "QWERTY英語スペリングコレクション (${sizeMb} MB) が有効です。"
-            btnDownloadEnglishSpelling.text = "スペルモデルを再取得"
+            tvEnglishSpellingStatusBadge.text = "導入済"
+            tvEnglishSpellingStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
+            tvEnglishSpellingStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+            tvEnglishSpellingStats.text = "約27MB (導入済: ${sizeMb} MB)"
+            btnDownloadEnglishSpelling.text = "再取得"
             btnDeleteEnglishSpelling.visibility = View.VISIBLE
         } else {
-            tvEnglishSpellingSummary.text = "オフライン文脈スペル補正モデル (~27MB)。QWERTYキーボードで誤字を自動補正します。"
-            btnDownloadEnglishSpelling.text = "スペルモデルを取得 (~27MB)"
+            tvEnglishSpellingStatusBadge.text = "未取得"
+            tvEnglishSpellingStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
+            tvEnglishSpellingStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+            tvEnglishSpellingStats.text = "約27MB"
+            btnDownloadEnglishSpelling.text = "取得"
             btnDeleteEnglishSpelling.visibility = View.GONE
         }
     }
@@ -1098,12 +1177,18 @@ class MainActivity : AppCompatActivity() {
         if (isInstalled) {
             val totalSize = (dir.listFiles()?.sumOf { it.length() } ?: 0L)
             val sizeMb = String.format(java.util.Locale.US, "%.1f", totalSize / (1024.0 * 1024.0))
-            tvEnglishAsrSummary.text = "導入済み・有効 (${sizeMb} MB, Parakeet 110M, CC-BY-4.0)。QWERTYモードの音声入力で使用されます。"
-            btnDownloadEnglishAsr.text = "英語ASRモデルを再取得"
+            tvEnglishAsrStatusBadge.text = "導入済"
+            tvEnglishAsrStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
+            tvEnglishAsrStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+            tvEnglishAsrStats.text = "約126MB (導入済: ${sizeMb} MB, CC-BY-4.0)"
+            btnDownloadEnglishAsr.text = "再取得"
             btnDeleteEnglishAsr.visibility = View.VISIBLE
         } else {
-            tvEnglishAsrSummary.text = "未導入（QWERTY英語音声入力を使うには下のボタンから取得してください / ~126MB, CC-BY-4.0）"
-            btnDownloadEnglishAsr.text = "英語ASRモデルを取得 (~126MB)"
+            tvEnglishAsrStatusBadge.text = "未取得"
+            tvEnglishAsrStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
+            tvEnglishAsrStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+            tvEnglishAsrStats.text = "約126MB (CC-BY-4.0)"
+            btnDownloadEnglishAsr.text = "取得"
             btnDeleteEnglishAsr.visibility = View.GONE
         }
         updateModelStatusBadge()

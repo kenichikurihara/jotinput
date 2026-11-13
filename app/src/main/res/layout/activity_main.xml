@@ -739,93 +739,7 @@
                         android:textSize="13sp"
                         app:cornerRadius="10dp" />
 
-                    <!-- English On-Device ASR Model Subsection (Visible in Card 3 so users can see status & download) -->
-                    <LinearLayout
-                        android:id="@+id/cardEnglishAsr"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:background="@drawable/result_background"
-                        android:orientation="vertical"
-                        android:padding="12dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="英語音声認識モデル (Parakeet 110M)"
-                            android:textColor="@color/text_primary"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tvEnglishAsrSummary"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="未導入（QWERTY英語音声入力を使うには下のボタンから取得してください / ~126MB, CC-BY-4.0）"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11sp" />
-
-                        <com.google.android.material.progressindicator.LinearProgressIndicator
-                            android:id="@+id/englishAsrProgress"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:indeterminate="false"
-                            android:max="100"
-                            android:progress="0"
-                            android:visibility="gone" />
-
-                        <TextView
-                            android:id="@+id/tvEnglishAsrStatus"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text=""
-                            android:textColor="@color/primary"
-                            android:textSize="11sp"
-                            android:visibility="gone" />
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:orientation="horizontal">
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnDownloadEnglishAsr"
-                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                                android:layout_width="0dp"
-                                android:layout_height="36dp"
-                                android:layout_marginEnd="6dp"
-                                android:layout_weight="1"
-                                android:insetTop="0dp"
-                                android:insetBottom="0dp"
-                                android:text="英語ASRモデルを取得 (~126MB)"
-                                android:textAllCaps="false"
-                                android:textColor="@color/primary"
-                                android:textSize="12sp"
-                                app:cornerRadius="8dp"
-                                app:strokeColor="@color/primary" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnDeleteEnglishAsr"
-                                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="36dp"
-                                android:insetTop="0dp"
-                                android:insetBottom="0dp"
-                                android:text="削除"
-                                android:textAllCaps="false"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="12sp"
-                                android:visibility="gone"
-                                app:cornerRadius="8dp"
-                                app:strokeColor="@color/border" />
-                        </LinearLayout>
-                    </LinearLayout>
-
-                    <!-- Progressive Disclosure Toggle for Individual Dictionaries -->
+                    <!-- Progressive Disclosure Toggle for Individual Dictionaries & Models -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnToggleDictDetails"
                         style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -834,7 +748,7 @@
                         android:layout_marginTop="4dp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
-                        android:text="個別の拡張辞書を管理 ▼"
+                        android:text="個別の拡張辞書・音声モデルを管理 ▼"
                         android:textAllCaps="false"
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp" />
@@ -856,38 +770,280 @@
                             android:layout_marginTop="6dp"
                             android:orientation="vertical" />
 
-                        <!-- English Neural Spelling Correction Subsection -->
+                        <!-- Japanese On-Device ASR Model Row (Unified with item_multi_dict.xml style) -->
+                        <LinearLayout
+                            android:id="@+id/cardJapaneseAsr"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingTop="10dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="日本語音声認識モデル (ReazonSpeech)"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvJapaneseAsrStatusBadge"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/badge_background"
+                                    android:backgroundTint="@color/badge_neutral_bg"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="3dp"
+                                    android:text="未取得"
+                                    android:textColor="@color/badge_neutral_text"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvJapaneseAsrSummary"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="高精度なオフライン日本語音声認識モデル (Apache-2.0)。日本語キーボードの音声入力で使用されます。"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp" />
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/japaneseAsrProgress"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:indeterminate="false"
+                                android:max="100"
+                                android:progress="0"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:id="@+id/tvJapaneseAsrDownloadStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text=""
+                                android:textColor="@color/primary"
+                                android:textSize="11sp"
+                                android:visibility="gone" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/tvJapaneseAsrStats"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="約160MB (Apache-2.0)"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="11sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnDownloadJapaneseAsr"
+                                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:minHeight="36dp"
+                                    android:paddingHorizontal="12dp"
+                                    android:paddingVertical="0dp"
+                                    android:text="取得"
+                                    android:textAllCaps="false"
+                                    android:textSize="12sp"
+                                    app:cornerRadius="8dp" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginTop="10dp"
+                                android:background="@color/border" />
+                        </LinearLayout>
+
+                        <!-- English On-Device ASR Model Row (Unified with item_multi_dict.xml style) -->
+                        <LinearLayout
+                            android:id="@+id/cardEnglishAsr"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingTop="10dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="英語音声認識モデル (Parakeet 110M)"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvEnglishAsrStatusBadge"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/badge_background"
+                                    android:backgroundTint="@color/badge_neutral_bg"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="3dp"
+                                    android:text="未取得"
+                                    android:textColor="@color/badge_neutral_text"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tvEnglishAsrSummary"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="高精度なオフライン英語音声認識モデル (CC-BY-4.0)。QWERTYキーボードの音声入力で使用されます。"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp" />
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/englishAsrProgress"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:indeterminate="false"
+                                android:max="100"
+                                android:progress="0"
+                                android:visibility="gone" />
+
+                            <TextView
+                                android:id="@+id/tvEnglishAsrStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text=""
+                                android:textColor="@color/primary"
+                                android:textSize="11sp"
+                                android:visibility="gone" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/tvEnglishAsrStats"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="約126MB (CC-BY-4.0)"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="11sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnDownloadEnglishAsr"
+                                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:minHeight="36dp"
+                                    android:paddingHorizontal="12dp"
+                                    android:paddingVertical="0dp"
+                                    android:text="取得"
+                                    android:textAllCaps="false"
+                                    android:textSize="12sp"
+                                    app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnDeleteEnglishAsr"
+                                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="36dp"
+                                    android:layout_marginStart="6dp"
+                                    android:minHeight="36dp"
+                                    android:paddingHorizontal="10dp"
+                                    android:paddingVertical="0dp"
+                                    android:text="削除"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="12sp"
+                                    android:visibility="gone"
+                                    app:cornerRadius="8dp"
+                                    app:strokeColor="@color/border" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginTop="10dp"
+                                android:background="@color/border" />
+                        </LinearLayout>
+
+                        <!-- English Neural Spelling Correction Row (Unified with item_multi_dict.xml style) -->
                         <LinearLayout
                             android:id="@+id/cardEnglishSpelling"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:background="@drawable/result_background"
                             android:orientation="vertical"
-                            android:padding="12dp">
+                            android:paddingTop="10dp">
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="QWERTY英語スペリングコレクション AIモデル"
-                                android:textColor="@color/text_primary"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="QWERTY英語スペリングコレクション AIモデル"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/tvEnglishSpellingStatusBadge"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/badge_background"
+                                    android:backgroundTint="@color/badge_neutral_bg"
+                                    android:paddingHorizontal="8dp"
+                                    android:paddingVertical="3dp"
+                                    android:text="未取得"
+                                    android:textColor="@color/badge_neutral_text"
+                                    android:textSize="11sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
 
                             <TextView
                                 android:id="@+id/tvEnglishSpellingSummary"
-                                android:layout_width="wrap_content"
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="オフライン文脈スペル補正モデル (~27MB)。QWERTYキーボードで誤字を自動補正します。"
+                                android:layout_marginTop="4dp"
+                                android:text="オフライン文脈スペル補正モデル。QWERTYキーボードで誤字を自動補正します。"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="11sp" />
+                                android:textSize="12sp" />
 
                             <com.google.android.material.progressindicator.LinearProgressIndicator
                                 android:id="@+id/englishSpellingProgress"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
+                                android:layout_marginTop="6dp"
                                 android:indeterminate="false"
                                 android:max="100"
                                 android:progress="0"
@@ -906,32 +1062,41 @@
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
+                                android:layout_marginTop="6dp"
+                                android:gravity="center_vertical"
                                 android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/tvEnglishSpellingStats"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="約27MB"
+                                    android:textColor="@color/text_muted"
+                                    android:textSize="11sp" />
 
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/btnDownloadEnglishSpelling"
                                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                                    android:layout_width="0dp"
+                                    android:layout_width="wrap_content"
                                     android:layout_height="36dp"
-                                    android:layout_marginEnd="6dp"
-                                    android:layout_weight="1"
-                                    android:insetTop="0dp"
-                                    android:insetBottom="0dp"
-                                    android:text="スペルモデルを取得"
+                                    android:minHeight="36dp"
+                                    android:paddingHorizontal="12dp"
+                                    android:paddingVertical="0dp"
+                                    android:text="取得"
                                     android:textAllCaps="false"
-                                    android:textColor="@color/primary"
                                     android:textSize="12sp"
-                                    app:cornerRadius="8dp"
-                                    app:strokeColor="@color/primary" />
+                                    app:cornerRadius="8dp" />
 
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/btnDeleteEnglishSpelling"
                                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                                     android:layout_width="wrap_content"
                                     android:layout_height="36dp"
-                                    android:insetTop="0dp"
-                                    android:insetBottom="0dp"
+                                    android:layout_marginStart="6dp"
+                                    android:minHeight="36dp"
+                                    android:paddingHorizontal="10dp"
+                                    android:paddingVertical="0dp"
                                     android:text="削除"
                                     android:textAllCaps="false"
                                     android:textColor="@color/text_secondary"
