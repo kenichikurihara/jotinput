@@ -1,5 +1,8 @@
 package com.example.myasr
 
+import com.example.myasr.context.kanakanji.domain.JapaneseNumeralUtils
+import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

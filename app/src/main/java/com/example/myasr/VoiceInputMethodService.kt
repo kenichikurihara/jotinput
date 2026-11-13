@@ -1,5 +1,32 @@
 package com.example.myasr
 
+import com.example.myasr.context.clipboard.domain.ClipboardSuggestionPolicy
+import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryItem
+import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryRepository
+import com.example.myasr.context.clipboard.presentation.ClipboardHistoryView
+import com.example.myasr.context.english.domain.EnglishCapitalizationAnalyzer
+import com.example.myasr.context.english.domain.EnglishDictionaryUtils
+import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
+import com.example.myasr.context.english.infrastructure.FutoSwipeEngine
+import com.example.myasr.context.ime.domain.InputConnectionEditorBridge
+import com.example.myasr.context.ime.domain.VoiceTouchInputArbitrator
+import com.example.myasr.context.ime.presentation.CandidateStripView
+import com.example.myasr.context.ime.presentation.FlickKeyboardView
+import com.example.myasr.context.ime.presentation.KeyboardHeightManager
+import com.example.myasr.context.kanakanji.application.UserHistorySyncManager
+import com.example.myasr.context.kanakanji.domain.ConversionCandidate
+import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
+import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.kanakanji.domain.NextPhrasePredictor
+import com.example.myasr.context.provisioning.domain.ModelWarmUpManager
+import com.example.myasr.context.reranking.domain.ContextWindowTrimmer
+import com.example.myasr.context.reranking.infrastructure.LlmReranker
+import com.example.myasr.context.speech.domain.JapanesePunctuationEngine
+import com.example.myasr.context.speech.domain.ProsodyBoundaryMetadata
+import com.example.myasr.context.speech.domain.ProsodyPitchEstimator
+import com.example.myasr.context.speech.infrastructure.AudioRecorder
+import com.example.myasr.context.vocabulary.domain.Priority
+
 import android.Manifest
 import android.content.Context
 import android.content.Intent

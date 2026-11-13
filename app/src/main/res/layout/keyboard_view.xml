@@ -107,7 +107,7 @@
         </FrameLayout>
 
         <!-- Candidate Strip View -->
-        <com.example.myasr.CandidateStripView
+        <com.example.myasr.context.ime.presentation.CandidateStripView
             android:id="@+id/candidateStripView"
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -154,12 +154,12 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <com.example.myasr.FlickKeyboardView
+        <com.example.myasr.context.ime.presentation.FlickKeyboardView
             android:id="@+id/flickKeyboardView"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
-        <com.example.myasr.ClipboardHistoryView
+        <com.example.myasr.context.clipboard.presentation.ClipboardHistoryView
             android:id="@+id/clipboardHistoryView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"

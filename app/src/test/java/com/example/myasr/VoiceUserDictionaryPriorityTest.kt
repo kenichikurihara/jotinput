@@ -1,5 +1,12 @@
 package com.example.myasr
 
+import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.speech.application.DictionaryPostProcessor
+import com.example.myasr.context.speech.application.HotwordsGenerator
+import com.example.myasr.context.speech.domain.ContextAwareProcessor
+import com.example.myasr.context.vocabulary.domain.DictionaryEntry
+import com.example.myasr.context.vocabulary.domain.Priority
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before

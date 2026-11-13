@@ -1,5 +1,26 @@
 package com.example.myasr
 
+import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryRepository
+import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
+import com.example.myasr.context.english.infrastructure.FutoSwipeEngine
+import com.example.myasr.context.kanakanji.application.KanaKanjiVocabularySyncAdapter
+import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.kanakanji.domain.NextPhrasePredictor
+import com.example.myasr.context.provisioning.domain.DictionaryUpdateTracker
+import com.example.myasr.context.provisioning.domain.ModelWarmUpManager
+import com.example.myasr.context.provisioning.infrastructure.BaseDictionaryDownloader
+import com.example.myasr.context.provisioning.infrastructure.ConnectionDataManager
+import com.example.myasr.context.provisioning.infrastructure.MultiDictionaryManager
+import com.example.myasr.context.reranking.infrastructure.LlmReranker
+import com.example.myasr.context.speech.application.DictionaryPostProcessor
+import com.example.myasr.context.speech.application.HotwordsGenerator
+import com.example.myasr.context.speech.domain.ContextAwareProcessor
+import com.example.myasr.context.speech.infrastructure.AsrManager
+import com.example.myasr.context.vocabulary.domain.VocabularyMapper
+import com.example.myasr.context.vocabulary.infrastructure.DictionaryRepository
+import com.example.myasr.shared.event.DomainEventBus
+import com.example.myasr.shared.event.UserDictionaryChangedEvent
+
 import android.app.Application
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
@@ -9,6 +30,7 @@ import kotlinx.coroutines.launch
 class AsrApp : Application() {
     private val TAG = "AsrApp"
 
+    val eventBus: DomainEventBus = DomainEventBus.global
     lateinit var dictionaryRepository: DictionaryRepository
         private set
     lateinit var hotwordsGenerator: HotwordsGenerator
@@ -28,6 +50,8 @@ class AsrApp : Application() {
     lateinit var connectionDataManager: ConnectionDataManager
         private set
     lateinit var kanaKanjiEngine: KanaKanjiEngine
+        private set
+    lateinit var kanaKanjiVocabularySyncAdapter: KanaKanjiVocabularySyncAdapter
         private set
     lateinit var nextPhrasePredictor: NextPhrasePredictor
         private set
@@ -53,6 +77,9 @@ class AsrApp : Application() {
         dictionaryRepository = DictionaryRepository(this)
         hotwordsGenerator = HotwordsGenerator(this)
         kanaKanjiEngine = KanaKanjiEngine.getInstance(this)
+        kanaKanjiVocabularySyncAdapter = KanaKanjiVocabularySyncAdapter(kanaKanjiEngine, eventBus).apply {
+            register()
+        }
         nextPhrasePredictor = NextPhrasePredictor.getInstance(this)
         postProcessor = DictionaryPostProcessor { kanaKanjiEngine }
         contextAwareProcessor = ContextAwareProcessor { kanaKanjiEngine }
@@ -85,7 +112,8 @@ class AsrApp : Application() {
     fun syncAllUserDictionaries() {
         val activeEntries = dictionaryRepository.getActive()
         val hotwordsFile = hotwordsGenerator.generate(activeEntries)
-        kanaKanjiEngine.syncUserDictionary(activeEntries)
+        val publishedItems = activeEntries.map { VocabularyMapper.toPublishedItem(it) }
+        eventBus.publish(UserDictionaryChangedEvent(publishedItems))
         try {
             FutoSwipeEngine.getInstance(this).syncUserDictionary(activeEntries)
         } catch (e: Exception) {

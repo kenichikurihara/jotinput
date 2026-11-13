@@ -1,5 +1,9 @@
 package com.example.myasr
 
+import com.example.myasr.context.clipboard.domain.ClipboardUtils
+import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryItem
+import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryRepository
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

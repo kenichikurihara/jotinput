@@ -58,7 +58,7 @@ static std::string SanitizeUtf8(const std::string& str) {
 extern "C" {
 
 JNIEXPORT jboolean JNICALL
-Java_com_example_myasr_LlmReranker_nativeInit(JNIEnv* env, jobject /* thiz */,
+Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeInit(JNIEnv* env, jobject /* thiz */,
                                               jstring jModelPath, jint nThreads) {
   if (jModelPath == nullptr) {
     LOGE("nativeInit: modelPath is null");
@@ -75,7 +75,7 @@ Java_com_example_myasr_LlmReranker_nativeInit(JNIEnv* env, jobject /* thiz */,
 }
 
 JNIEXPORT jfloatArray JNICALL
-Java_com_example_myasr_LlmReranker_nativeScoreCandidates(JNIEnv* env, jobject /* thiz */,
+Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeScoreCandidates(JNIEnv* env, jobject /* thiz */,
                                                          jstring jContext,
                                                          jobjectArray jCandidates) {
   if (jCandidates == nullptr) {
@@ -121,7 +121,7 @@ Java_com_example_myasr_LlmReranker_nativeScoreCandidates(JNIEnv* env, jobject /*
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_example_myasr_LlmReranker_nativeWarmContext(JNIEnv* env, jobject /* thiz */,
+Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeWarmContext(JNIEnv* env, jobject /* thiz */,
                                                      jstring jContext) {
   std::string context_str = "";
   if (jContext != nullptr) {
@@ -134,7 +134,7 @@ Java_com_example_myasr_LlmReranker_nativeWarmContext(JNIEnv* env, jobject /* thi
 }
 
 JNIEXPORT jobjectArray JNICALL
-Java_com_example_myasr_LlmReranker_nativePredictNextPhrases(JNIEnv* env, jobject /* thiz */,
+Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativePredictNextPhrases(JNIEnv* env, jobject /* thiz */,
                                                             jstring jContext,
                                                             jint maxCandidates,
                                                             jint maxTokens) {
@@ -181,7 +181,7 @@ Java_com_example_myasr_LlmReranker_nativePredictNextPhrases(JNIEnv* env, jobject
 }
 
 JNIEXPORT jfloatArray JNICALL
-Java_com_example_myasr_LlmReranker_nativeTryFastScoreCandidates(JNIEnv* env, jobject /* thiz */,
+Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeTryFastScoreCandidates(JNIEnv* env, jobject /* thiz */,
                                                                  jstring jContext,
                                                                  jobjectArray jCandidates,
                                                                  jbooleanArray outIsComplete) {
@@ -241,17 +241,17 @@ Java_com_example_myasr_LlmReranker_nativeTryFastScoreCandidates(JNIEnv* env, job
 }
 
 JNIEXPORT void JNICALL
-Java_com_example_myasr_LlmReranker_nativeRequestAbortScoring(JNIEnv* /* env */, jobject /* thiz */) {
+Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeRequestAbortScoring(JNIEnv* /* env */, jobject /* thiz */) {
   myasr::LlmReranker::GetInstance().RequestAbortScoring();
 }
 
 JNIEXPORT void JNICALL
-Java_com_example_myasr_LlmReranker_nativeRelease(JNIEnv* /* env */, jobject /* thiz */) {
+Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeRelease(JNIEnv* /* env */, jobject /* thiz */) {
   myasr::LlmReranker::GetInstance().Release();
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_example_myasr_LlmReranker_nativeIsReady(JNIEnv* /* env */, jobject /* thiz */) {
+Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeIsReady(JNIEnv* /* env */, jobject /* thiz */) {
   return myasr::LlmReranker::GetInstance().IsReady() ? JNI_TRUE : JNI_FALSE;
 }
 

@@ -1,5 +1,8 @@
 package com.example.myasr
 
+import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.provisioning.domain.ModelWarmUpManager
+
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test

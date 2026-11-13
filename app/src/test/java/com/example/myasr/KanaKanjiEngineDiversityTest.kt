@@ -1,5 +1,11 @@
 package com.example.myasr
 
+import com.example.myasr.context.ime.domain.EditorBridge
+import com.example.myasr.context.ime.domain.VoiceTouchInputArbitrator
+import com.example.myasr.context.kanakanji.domain.ConnectionMatrix
+import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.kanakanji.domain.MmapDictionary
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -88,8 +94,6 @@ class KanaKanjiEngineDiversityTest {
         val surfaces = candidates.map { it.surface }
         val candidateDetails = candidates.map { "${it.surface}(${it.reading},${it.source})" }
         println("Candidates for さいとうこうき:\n" + candidateDetails.joinToString("\n"))
-
-
 
         // 1. Check multi-horizon prefix candidates are present:
         // m = 4 ("さいとう") should have 斎藤, 斉藤, 齋藤, 齊藤

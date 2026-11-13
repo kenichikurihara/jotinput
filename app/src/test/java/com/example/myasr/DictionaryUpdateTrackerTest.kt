@@ -1,5 +1,9 @@
 package com.example.myasr
 
+import com.example.myasr.context.provisioning.domain.DictUpdateState
+import com.example.myasr.context.provisioning.domain.DictionaryStatusInfo
+import com.example.myasr.context.provisioning.domain.DictionaryUpdateTracker
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

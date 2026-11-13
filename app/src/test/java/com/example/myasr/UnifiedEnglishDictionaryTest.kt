@@ -1,5 +1,10 @@
 package com.example.myasr
 
+import com.example.myasr.context.english.domain.EnglishDictionaryUtils
+import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.vocabulary.domain.DictionaryEntry
+import com.example.myasr.context.vocabulary.domain.Priority
+
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals

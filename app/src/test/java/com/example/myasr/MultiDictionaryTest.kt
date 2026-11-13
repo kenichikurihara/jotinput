@@ -1,5 +1,7 @@
 package com.example.myasr
 
+import com.example.myasr.context.provisioning.infrastructure.DictionaryType
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

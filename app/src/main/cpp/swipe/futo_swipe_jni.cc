@@ -14,7 +14,7 @@ static myasr::swipe::FutoSwipeEngine* g_swipe_engine = nullptr;
 extern "C" {
 
 JNIEXPORT jboolean JNICALL
-Java_com_example_myasr_FutoSwipeEngine_nativeInitialize(
+Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeInitialize(
     JNIEnv* env,
     jobject /* this */,
     jstring model_dir_jstr
@@ -34,7 +34,7 @@ Java_com_example_myasr_FutoSwipeEngine_nativeInitialize(
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_example_myasr_FutoSwipeEngine_nativeIsReady(
+Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeIsReady(
     JNIEnv* /* env */,
     jobject /* this */
 ) {
@@ -42,7 +42,7 @@ Java_com_example_myasr_FutoSwipeEngine_nativeIsReady(
 }
 
 JNIEXPORT void JNICALL
-Java_com_example_myasr_FutoSwipeEngine_nativeSyncUserDictionary(
+Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeSyncUserDictionary(
     JNIEnv* env,
     jobject /* this */,
     jobjectArray words_jarr,
@@ -75,7 +75,7 @@ Java_com_example_myasr_FutoSwipeEngine_nativeSyncUserDictionary(
 }
 
 JNIEXPORT jobjectArray JNICALL
-Java_com_example_myasr_FutoSwipeEngine_nativeDecode(
+Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeDecode(
     JNIEnv* env,
     jobject /* this */,
     jfloatArray xs_jarr,
@@ -135,7 +135,7 @@ Java_com_example_myasr_FutoSwipeEngine_nativeDecode(
 }
 
 JNIEXPORT void JNICALL
-Java_com_example_myasr_FutoSwipeEngine_nativeRelease(
+Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeRelease(
     JNIEnv* /* env */,
     jobject /* this */
 ) {

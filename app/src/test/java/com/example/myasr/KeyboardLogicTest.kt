@@ -1,5 +1,10 @@
 package com.example.myasr
 
+import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
+import com.example.myasr.context.speech.application.DictionaryPostProcessor
+import com.example.myasr.context.vocabulary.domain.DictionaryEntry
+import com.example.myasr.context.vocabulary.domain.Priority
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

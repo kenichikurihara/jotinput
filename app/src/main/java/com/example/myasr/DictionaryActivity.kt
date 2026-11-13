@@ -1,5 +1,14 @@
 package com.example.myasr
 
+import com.example.myasr.context.english.domain.EnglishDictionaryUtils
+import com.example.myasr.context.kanakanji.application.UserHistorySyncManager
+import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
+import com.example.myasr.context.speech.application.HotwordsGenerator
+import com.example.myasr.context.vocabulary.domain.DictionaryEntry
+import com.example.myasr.context.vocabulary.domain.Priority
+import com.example.myasr.context.vocabulary.infrastructure.DictionaryRepository
+import com.example.myasr.context.vocabulary.presentation.DictionaryAdapter
+
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle

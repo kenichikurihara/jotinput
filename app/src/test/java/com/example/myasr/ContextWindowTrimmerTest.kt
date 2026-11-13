@@ -1,5 +1,7 @@
 package com.example.myasr
 
+import com.example.myasr.context.reranking.domain.ContextWindowTrimmer
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

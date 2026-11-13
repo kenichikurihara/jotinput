@@ -1,5 +1,8 @@
 package com.example.myasr
 
+import com.example.myasr.context.kanakanji.domain.ConversionCandidate
+import com.example.myasr.context.speech.infrastructure.AudioRecorder
+
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking

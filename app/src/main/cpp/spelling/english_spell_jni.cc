@@ -13,7 +13,7 @@ static std::unique_ptr<myasr::spelling::EnglishSpellEngine> g_spell_engine;
 extern "C" {
 
 JNIEXPORT jboolean JNICALL
-Java_com_example_myasr_EnglishSpellEngine_nativeInitialize(
+Java_com_example_myasr_context_english_infrastructure_EnglishSpellEngine_nativeInitialize(
     JNIEnv* env,
     jobject /* thiz */,
     jstring model_dir
@@ -32,7 +32,7 @@ Java_com_example_myasr_EnglishSpellEngine_nativeInitialize(
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_example_myasr_EnglishSpellEngine_nativeIsReady(
+Java_com_example_myasr_context_english_infrastructure_EnglishSpellEngine_nativeIsReady(
     JNIEnv* /* env */,
     jobject /* thiz */
 ) {
@@ -40,7 +40,7 @@ Java_com_example_myasr_EnglishSpellEngine_nativeIsReady(
 }
 
 JNIEXPORT void JNICALL
-Java_com_example_myasr_EnglishSpellEngine_nativeSyncUserDictionary(
+Java_com_example_myasr_context_english_infrastructure_EnglishSpellEngine_nativeSyncUserDictionary(
     JNIEnv* env,
     jobject /* thiz */,
     jobjectArray words_jarr,
@@ -73,7 +73,7 @@ Java_com_example_myasr_EnglishSpellEngine_nativeSyncUserDictionary(
 }
 
 JNIEXPORT jobjectArray JNICALL
-Java_com_example_myasr_EnglishSpellEngine_nativeSuggestTypo(
+Java_com_example_myasr_context_english_infrastructure_EnglishSpellEngine_nativeSuggestTypo(
     JNIEnv* env,
     jobject /* thiz */,
     jstring word,
@@ -100,7 +100,7 @@ Java_com_example_myasr_EnglishSpellEngine_nativeSuggestTypo(
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_example_myasr_EnglishSpellEngine_nativeCorrectSentence(
+Java_com_example_myasr_context_english_infrastructure_EnglishSpellEngine_nativeCorrectSentence(
     JNIEnv* env,
     jobject /* thiz */,
     jstring text,

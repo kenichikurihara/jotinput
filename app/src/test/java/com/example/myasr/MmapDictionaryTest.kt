@@ -1,5 +1,7 @@
 package com.example.myasr
 
+import com.example.myasr.context.kanakanji.domain.MmapDictionary
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

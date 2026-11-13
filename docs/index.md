@@ -6,6 +6,11 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 
 ## 📚 Table of Contents
 
+0. [Domain-Driven Design (DDD) Architecture](docs/ddd/README.md)
+   - [Context Map & Integration Patterns](docs/ddd/context_map.md)
+   - [Bounded Context Canvases (8 Contexts)](docs/ddd/bounded_context_canvases.md)
+   - [Tactical Design & Refactoring Plan](docs/ddd/tactical_design_and_refactoring_plan.md)
+
 1. [System Architecture](docs/architecture.md)
    - High-level pipeline and data flow
    - Audio recording subsystem ([`AudioRecorder`](app/src/main/java/com/example/myasr/AudioRecorder.kt))

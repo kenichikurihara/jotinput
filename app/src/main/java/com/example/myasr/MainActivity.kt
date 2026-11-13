@@ -1,5 +1,21 @@
 package com.example.myasr
 
+import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
+import com.example.myasr.context.ime.presentation.KeyboardHeightManager
+import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.provisioning.domain.DictUpdateState
+import com.example.myasr.context.provisioning.domain.DictionaryStatusInfo
+import com.example.myasr.context.provisioning.domain.DictionaryUpdateTracker
+import com.example.myasr.context.provisioning.infrastructure.DictionaryType
+import com.example.myasr.context.provisioning.infrastructure.EnglishSpellDownloader
+import com.example.myasr.context.provisioning.infrastructure.ModelDownloader
+import com.example.myasr.context.reranking.domain.RerankEngineType
+import com.example.myasr.context.reranking.infrastructure.LlmReranker
+import com.example.myasr.context.reranking.infrastructure.PowerBenchmarkRunner
+import com.example.myasr.context.speech.application.HotwordsGenerator
+import com.example.myasr.context.speech.infrastructure.AsrManager
+import com.example.myasr.context.vocabulary.infrastructure.DictionaryRepository
+
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -603,7 +619,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-
         btnEnableIme.setOnClickListener {
             startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
         }
@@ -1037,7 +1052,6 @@ class MainActivity : AppCompatActivity() {
             refreshEnglishSpellingUI()
         }
     }
-
 
     private fun updateKeyboardHeightUI() {
         isUpdatingUiFromPrefs = true

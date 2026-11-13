@@ -1,5 +1,8 @@
 package com.example.myasr
 
+import com.example.myasr.context.kanakanji.domain.ConversionCandidate
+import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

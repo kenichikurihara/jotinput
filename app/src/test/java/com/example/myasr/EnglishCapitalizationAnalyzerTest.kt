@@ -1,5 +1,7 @@
 package com.example.myasr
 
+import com.example.myasr.context.english.domain.EnglishCapitalizationAnalyzer
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
