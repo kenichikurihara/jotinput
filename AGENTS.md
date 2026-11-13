@@ -60,3 +60,13 @@ Whenever any code, resource, or configuration change is pushed or tested:
 - **Mandatory CI/CD Completion & Success Verification**:
   - After pushing commits to remote, **always monitor and verify that GitHub Actions CI/CD (`Android CI`) completes with success (`gh run watch <run_id>` or `gh run list` / `gh run view`)**.
   - Never finish or conclude a task while CI/CD is failing or unresolved. If CI/CD fails, immediately investigate the failure logs, fix the root cause, and re-push until CI/CD is all green.
+
+## 🏛️ DDD / DSL Boundary Review & Architecture Enforcement (Mandatory)
+- **Pre-Commit Review for DDD / DSL Boundary Changes**:
+  - Whenever a change modifies **DDD / DSL boundaries** — including `shared/domain/`, `shared/event/`, Bounded Context public contracts (OHS, ACL, Published Language DTOs), `Judgement` / `Specification` contracts, cross-context dependencies, or `docs/ddd/` — **always perform an explicit architectural review before committing**:
+    1. Verify alignment with [`docs/ddd/context_map.md`](docs/ddd/context_map.md) and [`docs/ddd/README.md`](docs/ddd/README.md) dependency rules.
+    2. Confirm no `domain` or `shared` package introduces dependencies on `infrastructure`, `presentation`, or Android UI (`android.view.*`, `android.widget.*`).
+    3. Update `docs/ddd/` and unit tests in the same change when boundary contracts evolve.
+- **Automated Konsist Enforcement**:
+  - [`DddArchitectureKonsistTest`](app/src/test/java/com/example/myasr/ddd/DddArchitectureKonsistTest.kt) enforces Shared Kernel purity, `Judgement` placement/purity, domain UI-independence, and repository placement on every `./gradlew testDebugUnitTest` run. Never weaken or bypass these rules without explicit review.
+

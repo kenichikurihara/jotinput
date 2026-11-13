@@ -1,7 +1,5 @@
 package com.example.myasr.context.english.domain
 
-import com.example.myasr.context.ime.presentation.CandidateStripView
-
 import android.view.inputmethod.EditorInfo
 
 /**

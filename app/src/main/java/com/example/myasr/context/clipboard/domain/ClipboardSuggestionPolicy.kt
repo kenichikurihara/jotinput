@@ -1,11 +1,10 @@
 package com.example.myasr.context.clipboard.domain
 
 import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryRepository
-import com.example.myasr.context.ime.presentation.CandidateStripView
 
 /**
  * Holistic state machine governing when a fresh (<60s) clipboard suggestion chip
- * (`clipboard_recent`) is allowed to appear on [CandidateStripView].
+ * (`clipboard_recent`) is allowed to appear on `CandidateStripView`.
  *
  * Core principles:
  * 1. Show proactively at idle entry (`onStartInputView`) before the user starts typing.

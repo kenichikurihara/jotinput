@@ -1,7 +1,5 @@
 package com.example.myasr.shared.domain
 
-import com.example.myasr.context.kanakanji.domain.ConversionCandidate
-
 /**
  * Shared Kernel: 言語種別を表す値オブジェクト。
  */

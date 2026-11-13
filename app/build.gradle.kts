@@ -86,4 +86,5 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
+    testImplementation("com.lemonappdev:konsist:0.17.3")
 }
