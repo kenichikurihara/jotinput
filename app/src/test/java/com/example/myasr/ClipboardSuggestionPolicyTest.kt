@@ -2,6 +2,7 @@ package com.example.myasr
 
 import com.example.myasr.context.clipboard.domain.ClipboardSuggestionPolicy
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -138,5 +139,23 @@ class ClipboardSuggestionPolicyTest {
                 hasActiveNonClipboardCandidates = false
             )
         )
+    }
+
+    @Test
+    fun testClipboardSuggestionJudgementDmnTrace() {
+        val blocked = com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.judgeEligibilityWithTrace(
+            com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.SuggestionEligibilityInput(
+                isInputViewActive = true,
+                isVoiceIdle = true,
+                isClipboardHistoryShowing = false,
+                isKeyboardComposing = true,
+                isStreamingComposing = false,
+                isTypingSessionActive = false,
+                hasActiveNonClipboardCandidates = false
+            )
+        )
+        assertFalse(blocked.result.decision)
+        assertEquals("CLIP_R4", blocked.selectedRuleId)
+        assertEquals("keyboard_composing_active", blocked.result.reason)
     }
 }

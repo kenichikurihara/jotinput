@@ -22,6 +22,7 @@ JotInput は、完全オンデバイスで動作する日本語音声認識（Re
 | [`context_map.md`](./context_map.md) | **コンテキストマップ**：8つの Bounded Context の関係性、統合パターン（ACL / OHS / Published Language / Shared Kernel）、イベントフロー |
 | [`bounded_context_canvases.md`](./bounded_context_canvases.md) | **Bounded Context Canvas**：全8コンテキストの Purpose、ユビキタス言語、ビジネスルール、入出力、戦術的モデル |
 | [`tactical_design_and_refactoring_plan.md`](./tactical_design_and_refactoring_plan.md) | **戦術的設計と移行計画**：Shared Kernel、Domain Event Bus、ACL、全クラス/JNI/XML/テストの移行マッピング |
+| [`dmn_decision_models.md`](./dmn_decision_models.md) | **DMN (Decision Model and Notation)**：Hit Policy、決定表 DSL、各コンテキストの DecisionTable 一覧 |
 
 ---
 
@@ -37,7 +38,8 @@ com.example.myasr
 ├── VoiceInputMethodService.kt         # Android InputMethodService Entrypoint
 │
 ├── shared/                            # Shared Kernel & Published Language
-│   ├── domain/                        #   値オブジェクト・Judgement/Specification (InputLanguage, VocabularyItem, Judgement 等)
+│   ├── domain/                        #   値オブジェクト・Judgement/Specification・DMN (DmnEngine 等)
+│   │   └── dmn/                       #     DMN DecisionTable, HitPolicy, DmnFeel, DecisionTrace
 │   └── event/                         #   軽量インメモリ DomainEvent & DomainEventBus
 │
 └── context/                           # Bounded Contexts
@@ -74,7 +76,7 @@ com.example.myasr
     │   └── presentation/              #   FlickKeyboardView, FlickPopup*, CandidateStripView, KeyboardHeightManager
     │
     └── clipboard/                     # BC-8: Clipboard History [Generic]
-        ├── domain/                    #   ClipboardSuggestionPolicy, ClipboardUtils
+        ├── domain/                    #   ClipboardSuggestionPolicy, ClipboardSuggestionJudgement, ClipboardUtils
         ├── infrastructure/            #   ClipboardHistoryRepository
         └── presentation/              #   ClipboardHistoryView
 ```

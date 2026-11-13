@@ -80,4 +80,17 @@ class EnglishAssistJudgementTest {
         assertEquals("CAPS", EnglishAssistJudgement.judgeCandidateBadge(false, false, true))
         assertEquals("SPELL", EnglishAssistJudgement.judgeCandidateBadge(false, false, false))
     }
+
+    @Test
+    fun `DMN candidateBadgeDecisionTable uses PRIORITY hit policy with auditable trace`() {
+        val trace = EnglishAssistJudgement.judgeCandidateBadgeWithTrace(
+            slmUsed = true,
+            hasUserCandidates = true,
+            hasPrimaryCapitalization = true
+        )
+        assertEquals("EnglishCandidateBadge", trace.decisionName)
+        assertEquals("SLM", trace.result)
+        assertEquals("EN_BADGE_SLM", trace.selectedRuleId)
+        assertEquals(listOf("EN_BADGE_SLM", "EN_BADGE_USER", "EN_BADGE_CAPS"), trace.matchedRuleIds)
+    }
 }

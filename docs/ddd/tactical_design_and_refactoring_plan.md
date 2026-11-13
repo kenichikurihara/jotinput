@@ -19,6 +19,8 @@
   - `surface: String`, `reading: String`, `score: Float`, `source: CandidateSource`, `metadata: Map<String, String> = emptyMap()`
 - **`Judgement<in I, out O>` / `JudgementResult<out T>` / `Specification<in T>`** (`shared/domain/Judgement.kt`):
   - ドメイン上の意思決定・判定ロジック（Policy / Specification / Decision）を Android UI / `InputMethodService` から分離し、理由付き判定結果と合成可能な仕様ルールを提供する基底契約。
+- **DMN Engine (`DecisionTable<in I, out O>`, `HitPolicy`, `DecisionTrace`, `DmnFeel`)** (`shared/domain/dmn/DmnEngine.kt`):
+  - `Judgement<I, O>` を実装する宣言的 DMN 決定表エンジン（`UNIQUE` / `FIRST` / `PRIORITY` / `ANY` / `COLLECT` / `RULE_ORDER`、監査トレース、DRG 合成）。詳細は [`dmn_decision_models.md`](./dmn_decision_models.md) を参照。
 
 ### 1.2 `shared.event`
 - **`DomainEvent`** (`interface`): `val occurredAtMillis: Long`
@@ -75,7 +77,7 @@
 | | `context.provisioning.infrastructure` | `ModelDownloader`, `BaseDictionaryDownloader`, `MultiDictionaryManager`, `ConnectionDataManager`, `FutoSwipeDownloader`, `EnglishSpellDownloader` |
 | **BC-7: IME Session & UI** | `context.ime.domain` | `VoiceTouchInputArbitrator`, `EditorBridge` (+ `InputConnectionEditorBridge`) |
 | | `context.ime.presentation` | `FlickKeyboardView`, `FlickPopupWindow`, `FlickPopupContentView`, `FlickPopupGeometry`, `CandidateStripView`, `KeyboardHeightManager` |
-| **BC-8: Clipboard** | `context.clipboard.domain` | `ClipboardSuggestionPolicy`, `ClipboardUtils` |
+| **BC-8: Clipboard** | `context.clipboard.domain` | `ClipboardSuggestionPolicy`, `ClipboardSuggestionJudgement`, `ClipboardUtils` |
 | | `context.clipboard.infrastructure` | `ClipboardHistoryRepository` |
 | | `context.clipboard.presentation` | `ClipboardHistoryView` |
 

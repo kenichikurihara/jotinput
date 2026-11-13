@@ -82,12 +82,13 @@ class DddArchitectureKonsistTest {
     }
 
     @Test
-    fun `pure bounded context domains (reranking, speech, english, vocabulary) must not depend on any infrastructure`() {
+    fun `pure bounded context domains (reranking, speech, english, vocabulary, clipboard) must not depend on any infrastructure`() {
         val pureDomainPackages = listOf(
             "com.example.myasr.context.reranking.domain..",
             "com.example.myasr.context.speech.domain..",
             "com.example.myasr.context.english.domain..",
-            "com.example.myasr.context.vocabulary.domain.."
+            "com.example.myasr.context.vocabulary.domain..",
+            "com.example.myasr.context.clipboard.domain.."
         )
 
         pureDomainPackages.forEach { pkg ->
@@ -101,6 +102,33 @@ class DddArchitectureKonsistTest {
                     }
                 }
         }
+    }
+
+    @Test
+    fun `DMN DecisionTable and DecisionModel definitions must reside in domain packages and remain pure`() {
+        Konsist
+            .scopeFromProduction()
+            .classes()
+            .withNameEndingWith("DecisionTable")
+            .assertTrue { it.resideInPackage("..domain..") }
+
+        Konsist
+            .scopeFromProduction()
+            .classes()
+            .withNameEndingWith("DecisionModel")
+            .assertTrue { it.resideInPackage("..domain..") }
+
+        Konsist
+            .scopeFromProduction()
+            .files
+            .withPackage("com.example.myasr.shared.domain.dmn..")
+            .assertTrue { file ->
+                file.imports.none { imp ->
+                    imp.name.contains(".infrastructure.") ||
+                        imp.name.contains(".presentation.") ||
+                        imp.name.startsWith("android.")
+                }
+            }
     }
 
     @Test

@@ -1,7 +1,5 @@
 package com.example.myasr.context.clipboard.domain
 
-import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryRepository
-
 /**
  * Holistic state machine governing when a fresh (<60s) clipboard suggestion chip
  * (`clipboard_recent`) is allowed to appear on `CandidateStripView`.
@@ -47,7 +45,7 @@ class ClipboardSuggestionPolicy {
     }
 
     /**
-     * Called when a genuinely new or re-copied clip is discovered by [ClipboardHistoryRepository].
+     * Called when a genuinely new or re-copied clip is discovered by ClipboardHistoryRepository.
      * Re-enables suggestion eligibility only if the user has not typed within [TYPING_COOLDOWN_MS].
      */
     fun onNewClipDiscovered(nowUptimeMs: Long) {
@@ -63,12 +61,16 @@ class ClipboardSuggestionPolicy {
         isStreamingComposing: Boolean,
         hasActiveNonClipboardCandidates: Boolean
     ): Boolean {
-        return isInputViewActive &&
-            isVoiceIdle &&
-            !isClipboardHistoryShowing &&
-            !isKeyboardComposing &&
-            !isStreamingComposing &&
-            !isTypingSessionActive &&
-            !hasActiveNonClipboardCandidates
+        return ClipboardSuggestionJudgement.judgeEligibility(
+            ClipboardSuggestionJudgement.SuggestionEligibilityInput(
+                isInputViewActive = isInputViewActive,
+                isVoiceIdle = isVoiceIdle,
+                isClipboardHistoryShowing = isClipboardHistoryShowing,
+                isKeyboardComposing = isKeyboardComposing,
+                isStreamingComposing = isStreamingComposing,
+                isTypingSessionActive = isTypingSessionActive,
+                hasActiveNonClipboardCandidates = hasActiveNonClipboardCandidates
+            )
+        ).decision
     }
 }

@@ -150,4 +150,32 @@ class CandidateRerankJudgementTest {
             ).decision
         )
     }
+
+    @Test
+    fun `DMN decision tables expose auditable rule IDs and hit policies`() {
+        val rapidTrace = CandidateRerankJudgement.judgeExecutionWithTrace(
+            CandidateRerankJudgement.ExecutionInput(
+                isRerankEnabled = true,
+                candidateCount = 3,
+                isSlmReady = true,
+                interKeyIntervalMs = 50L,
+                readingLength = 2
+            )
+        )
+        assertEquals("CandidateRerankExecution", rapidTrace.decisionName)
+        assertEquals("RERANK_EXEC_R4", rapidTrace.selectedRuleId)
+        assertFalse(rapidTrace.usedDefaultFallback)
+
+        val normalTrace = CandidateRerankJudgement.judgeExecutionWithTrace(
+            CandidateRerankJudgement.ExecutionInput(
+                isRerankEnabled = true,
+                candidateCount = 3,
+                isSlmReady = true,
+                interKeyIntervalMs = 300L,
+                readingLength = 5
+            )
+        )
+        assertEquals("RERANK_EXEC_DEFAULT", normalTrace.selectedRuleId)
+        assertTrue(normalTrace.usedDefaultFallback)
+    }
 }
