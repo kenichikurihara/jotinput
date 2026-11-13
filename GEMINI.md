@@ -63,7 +63,10 @@ Whenever changes are made and pushed:
 - **Optimal Defaults Over UI Knobs**: When a parameter is proven optimal via cross-validation or corpus evaluation, apply it as the default constant in code rather than adding new visible controls to the primary UI.
 - **Zero Dead UI Resources**: Immediately delete obsolete layouts or classes when refactoring UI flows. Refer to [`docs/ui_design_and_simplicity_guidelines.md`](docs/ui_design_and_simplicity_guidelines.md) before adding any UI element.
 
-## 🚀 Remote Repository Synchronization Policy (Mandatory)
+## 🚀 Remote Repository Synchronization & CI/CD Verification Policy (Mandatory)
 - **Continuous Remote Git Push**:
   - Whenever any new feature, bug fix, asset addition, or documentation change is completed and verified, **always commit and push changes to the remote GitHub repository (`origin/main`)**.
   - Never leave completed feature increments or tested fixes unpushed on the local branch.
+- **Mandatory CI/CD Completion & Success Verification**:
+  - After pushing commits to remote, **always monitor and verify that GitHub Actions CI/CD (`Android CI`) completes with success (`gh run watch <run_id>` or `gh run list` / `gh run view`)**.
+  - Never finish or conclude a task while CI/CD is failing or unresolved. If CI/CD fails, immediately investigate the failure logs, fix the root cause, and re-push until CI/CD is all green.
