@@ -97,9 +97,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}/.ccache
-          key: ccache-${{ runner.os }}-${{ hashFiles('app/src/main/cpp/**', 'tools/setup_native_deps.sh') }}
+          key: ccache-v2-${{ runner.os }}-${{ hashFiles('app/src/main/cpp/**', 'tools/setup_native_deps.sh') }}
           restore-keys: |
-            ccache-${{ runner.os }}-
+            ccache-v2-${{ runner.os }}-
 
       - name: Cache llama.cpp source
         uses: actions/cache@v4
