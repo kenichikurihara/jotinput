@@ -7,12 +7,38 @@ on:
     paths-ignore:
       - '**.md'
       - 'docs/**'
+      - 'eval/**'
+      - 'LICENSES/**'
+      - 'LICENSE'
+      - '.agents/**'
+      - '.githooks/**'
+      - 'scripts/**'
+      - 'deploy.sh'
+      - 'download_model.sh'
+      - 'tools/*.py'
+      - 'tools/*.cc'
+      - 'tools/*.tsv'
+      - 'tools/*.jsonl'
+      - 'tools/push_model_to_device.sh'
   pull_request:
     branches:
       - main
     paths-ignore:
       - '**.md'
       - 'docs/**'
+      - 'eval/**'
+      - 'LICENSES/**'
+      - 'LICENSE'
+      - '.agents/**'
+      - '.githooks/**'
+      - 'scripts/**'
+      - 'deploy.sh'
+      - 'download_model.sh'
+      - 'tools/*.py'
+      - 'tools/*.cc'
+      - 'tools/*.tsv'
+      - 'tools/*.jsonl'
+      - 'tools/push_model_to_device.sh'
   workflow_dispatch:
 
 concurrency:
@@ -25,9 +51,11 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_NOHASHDIR: 'true'
+      CCACHE_COMPILERCHECK: content
       CCACHE_MAXSIZE: '500M'
 
     steps:
@@ -45,20 +73,22 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ${{ env.ANDROID_HOME }}/ndk/26.3.11579264
-            ${{ env.ANDROID_HOME }}/cmake/3.22.1
+            /usr/local/lib/android/sdk/ndk/26.3.11579264
+            /usr/local/lib/android/sdk/cmake/3.22.1
           key: ndk-26.3.11579264-cmake-3.22.1
 
-      - name: Set up Android NDK
+      - name: Set up Android NDK and CMake
         if: steps.ndk-cache.outputs.cache-hit != 'true'
-        uses: nttld/setup-ndk@v1
-        with:
-          ndk-version: r26c
-          link-to-sdk: true
-          add-to-path: false
+        run: |
+          SDKMANAGER=$(command -v sdkmanager || echo "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager")
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "ndk;26.3.11579264" "cmake;3.22.1"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-cleanup: on-success
 
       - name: Install ccache
         run: which ccache >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ccache)
@@ -90,8 +120,14 @@ jobs:
       - name: Setup Native Dependencies
         run: ./tools/setup_native_deps.sh
 
-      - name: Run Unit Tests & Assemble Debug APK
-        run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest --max-workers=2 --stacktrace
+
+      - name: Assemble Debug APK
+        run: |
+          ccache -z
+          ./gradlew assembleDebug --max-workers=2 --stacktrace
+          ccache -s
 
       - name: Upload Test Reports on Failure
         if: failure()
@@ -108,3 +144,4 @@ jobs:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
+          compression-level: 0
