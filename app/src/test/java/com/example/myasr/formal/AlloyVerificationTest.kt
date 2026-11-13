@@ -4,6 +4,7 @@ import edu.mit.csail.sdg.alloy4.A4Reporter
 import edu.mit.csail.sdg.parser.CompUtil
 import edu.mit.csail.sdg.translator.A4Options
 import edu.mit.csail.sdg.translator.TranslateAlloyToKodkod
+import kodkod.engine.satlab.SATFactory
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -38,7 +39,7 @@ class AlloyVerificationTest {
             assertTrue("Expected at least one Alloy command in $resourcePath", commands.isNotEmpty())
 
             val options = A4Options().apply {
-                solver = A4Options.SatSolver.SAT4J
+                solver = SATFactory.get("sat4j")
             }
 
             for (cmd in commands) {
