@@ -35,13 +35,13 @@ class DddArchitectureKonsistTest {
             .scopeFromProduction()
             .classes()
             .withNameEndingWith("Judgement")
-            .assertTrue { it.residesInPackage("..domain..") }
+            .assertTrue { it.resideInPackage("..domain..") }
 
         Konsist
             .scopeFromProduction()
             .objects()
             .withNameEndingWith("Judgement")
-            .assertTrue { it.residesInPackage("..domain..") }
+            .assertTrue { it.resideInPackage("..domain..") }
     }
 
     @Test
@@ -105,6 +105,6 @@ class DddArchitectureKonsistTest {
             .scopeFromProduction()
             .classes()
             .withNameEndingWith("Repository")
-            .assertTrue { it.residesInPackage("..infrastructure..") }
+            .assertTrue { it.resideInPackage("..infrastructure..") }
     }
 }
