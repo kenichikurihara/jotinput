@@ -4,9 +4,15 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   workflow_dispatch:
 
 concurrency:
@@ -18,6 +24,12 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
 
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_NOHASHDIR: 'true'
+      CCACHE_MAXSIZE: '500M'
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,16 +40,42 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android NDK and CMake
+      - name: Cache Android NDK and CMake
+        id: ndk-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/ndk/26.3.11579264
+            ${{ env.ANDROID_HOME }}/cmake/3.22.1
+          key: ndk-26.3.11579264-cmake-3.22.1
+
+      - name: Set up Android NDK
+        if: steps.ndk-cache.outputs.cache-hit != 'true'
         uses: nttld/setup-ndk@v1
         with:
           ndk-version: r26c
-          add-to-path: true
+          link-to-sdk: true
+          add-to-path: false
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install ccache
+        run: which ccache >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ccache)
+
+      - name: Cache ccache
+        uses: actions/cache@v4
         with:
-          gradle-version: wrapper
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('app/src/main/cpp/**', 'tools/setup_native_deps.sh') }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+
+      - name: Cache llama.cpp source
+        uses: actions/cache@v4
+        with:
+          path: tools/llama_cpp_src
+          key: llama-cpp-${{ hashFiles('tools/setup_native_deps.sh') }}
 
       - name: Prepare Test Lexicon Assets
         run: |
@@ -52,19 +90,16 @@ jobs:
       - name: Setup Native Dependencies
         run: ./tools/setup_native_deps.sh
 
-      - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --stacktrace
+      - name: Run Unit Tests & Assemble Debug APK
+        run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
 
-      - name: Assemble Debug APK
-        run: ./gradlew assembleDebug --stacktrace
-
-      - name: Upload Test Reports
-        if: always()
+      - name: Upload Test Reports on Failure
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
           path: app/build/reports/tests/testDebugUnitTest/
-          retention-days: 7
+          retention-days: 3
 
       - name: Upload Debug APK
         if: success()
@@ -72,5 +107,4 @@ jobs:
         with:
           name: app-debug
           path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
-
+          retention-days: 7
