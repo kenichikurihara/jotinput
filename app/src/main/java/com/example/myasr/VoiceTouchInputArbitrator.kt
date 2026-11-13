@@ -1005,7 +1005,9 @@ class VoiceTouchInputArbitrator {
     ): Boolean {
         val selectionChanged = (oldSelStart != newSelStart || oldSelEnd != newSelEnd)
         if (composingText.isEmpty() && streamingLastComposingText.isEmpty()) {
-            if (selectionChanged && System.currentTimeMillis() - lastImeComposingEditTimeMs > 80L) {
+            val now = System.currentTimeMillis()
+            val recentImeEdit = (now - lastImeComposingEditTimeMs <= 80L) || (now - lastImeDirectEditTimeMs <= 80L)
+            if (selectionChanged && !recentImeEdit) {
                 clearAutoAssistState()
             }
             return false
