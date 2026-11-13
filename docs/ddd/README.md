@@ -23,6 +23,7 @@ JotInput は、完全オンデバイスで動作する日本語音声認識（Re
 | [`bounded_context_canvases.md`](./bounded_context_canvases.md) | **Bounded Context Canvas**：全8コンテキストの Purpose、ユビキタス言語、ビジネスルール、入出力、戦術的モデル |
 | [`tactical_design_and_refactoring_plan.md`](./tactical_design_and_refactoring_plan.md) | **戦術的設計と移行計画**：Shared Kernel、Domain Event Bus、ACL、全クラス/JNI/XML/テストの移行マッピング |
 | [`dmn_decision_models.md`](./dmn_decision_models.md) | **DMN (Decision Model and Notation)**：Hit Policy、決定表 DSL、各コンテキストの DecisionTable 一覧 |
+| [`alloy_formal_verification.md`](./alloy_formal_verification.md) | **Alloy 6 形式検証**：状態遷移不変条件・DMN 決定表安全性の SAT4J 自動モデル検査 |
 
 ---
 

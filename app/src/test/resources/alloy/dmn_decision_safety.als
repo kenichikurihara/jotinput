@@ -1,0 +1,121 @@
+module jotinput/dmn_decision_safety
+
+open util/boolean
+
+/**
+ * Formal Alloy 6 Specification for JotInput DMN Decision Tables:
+ * 1. BC-2 TapSafeCandidateOrdering (Policy ⑤)
+ * 2. BC-8 ClipboardSuggestionEligibility
+ * 3. General FIRST-hit DMN DecisionTable Totality
+ */
+
+// --- Part 1: TapSafeCandidateOrdering (BC-2) ---
+
+abstract sig TapSafeRule {}
+one sig TapSafeR1, TapSafeR2, TapSafeR3, TapSafeDefault extends TapSafeRule {}
+
+sig TapSafeInput {
+    hasInitialTop1: one Bool,
+    top1Unchanged: one Bool,
+    withinSafeWindow: one Bool,
+    userTouching: one Bool,
+    preservedPartial: one Bool,
+    newTopFull: one Bool
+}
+
+pred tapSafeR1Matches[i: TapSafeInput] {
+    i.hasInitialTop1 = False or i.top1Unchanged = True
+}
+
+pred tapSafeR2Matches[i: TapSafeInput] {
+    not tapSafeR1Matches[i] and
+    i.withinSafeWindow = True and i.userTouching = False
+}
+
+pred tapSafeR3Matches[i: TapSafeInput] {
+    not tapSafeR1Matches[i] and
+    not tapSafeR2Matches[i] and
+    i.preservedPartial = True and i.newTopFull = True
+}
+
+fun evalTapSafeRule[i: TapSafeInput]: one TapSafeRule {
+    tapSafeR1Matches[i] => TapSafeR1 else
+    tapSafeR2Matches[i] => TapSafeR2 else
+    tapSafeR3Matches[i] => TapSafeR3 else
+    TapSafeDefault
+}
+
+fun isPinnedTop1[i: TapSafeInput]: one Bool {
+    (evalTapSafeRule[i] = TapSafeDefault) => True else False
+}
+
+// Assertion 1: Every TapSafeInput resolves to a unique rule (totality)
+assert TapSafeTableIsTotal {
+    all i: TapSafeInput | one evalTapSafeRule[i]
+}
+
+// Assertion 2: Never pins when Top-1 is absent or unchanged
+assert NeverPinsWhenTop1UnchangedOrAbsent {
+    all i: TapSafeInput |
+        (i.hasInitialTop1 = False or i.top1Unchanged = True) implies isPinnedTop1[i] = False
+}
+
+// Assertion 3: Never pins within 100ms window unless user is touching the candidate strip
+assert NeverPinsWithinWindowUnlessTouching {
+    all i: TapSafeInput |
+        (i.withinSafeWindow = True and i.userTouching = False) implies isPinnedTop1[i] = False
+}
+
+// Assertion 4: Never pins partial prefix when full-span candidate is promoted
+assert NeverPinsPartialOverFullSpan {
+    all i: TapSafeInput |
+        (i.preservedPartial = True and i.newTopFull = True) implies isPinnedTop1[i] = False
+}
+
+// --- Part 2: ClipboardSuggestionEligibility (BC-8) ---
+
+sig ClipboardInput {
+    inputViewActive: one Bool,
+    voiceIdle: one Bool,
+    historyShowing: one Bool,
+    keyboardComposing: one Bool,
+    streamingComposing: one Bool,
+    typingSessionActive: one Bool,
+    nonClipboardCandidates: one Bool
+}
+
+fun evalClipboardEligible[c: ClipboardInput]: one Bool {
+    (c.inputViewActive = True and
+     c.voiceIdle = True and
+     c.historyShowing = False and
+     c.keyboardComposing = False and
+     c.streamingComposing = False and
+     c.typingSessionActive = False and
+     c.nonClipboardCandidates = False) => True else False
+}
+
+// Assertion 5: Clipboard suggestion never intrudes during composing, typing, or active voice
+assert ClipboardNeverIntrudesDuringActiveInput {
+    all c: ClipboardInput |
+        (c.keyboardComposing = True or
+         c.streamingComposing = True or
+         c.typingSessionActive = True or
+         c.voiceIdle = False) implies evalClipboardEligible[c] = False
+}
+
+// Non-vacuity reachability checks
+pred canPinTop1Safely {
+    some i: TapSafeInput | isPinnedTop1[i] = True
+}
+
+pred canShowClipboardSuggestion {
+    some c: ClipboardInput | evalClipboardEligible[c] = True
+}
+
+check TapSafeTableIsTotal for 4
+check NeverPinsWhenTop1UnchangedOrAbsent for 4
+check NeverPinsWithinWindowUnlessTouching for 4
+check NeverPinsPartialOverFullSpan for 4
+check ClipboardNeverIntrudesDuringActiveInput for 4
+run canPinTop1Safely for 3
+run canShowClipboardSuggestion for 3
