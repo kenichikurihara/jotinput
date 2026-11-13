@@ -1,7 +1,5 @@
 package com.example.myasr.context.clipboard.domain
 
-import com.example.myasr.context.ime.presentation.CandidateStripView
-
 object ClipboardUtils {
 
     /**

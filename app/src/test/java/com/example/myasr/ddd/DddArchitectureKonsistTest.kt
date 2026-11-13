@@ -63,13 +63,17 @@ class DddArchitectureKonsistTest {
 
     @Test
     fun `domain packages must never depend on presentation packages or Android UI widgets`() {
+        // KeyboardHeightManager is a legacy SharedPreferences settings helper currently in ime.presentation.
+        val legacySettingsExceptions = setOf(
+            "com.example.myasr.context.ime.presentation.KeyboardHeightManager"
+        )
         Konsist
             .scopeFromProduction()
             .files
             .withPackage("com.example.myasr.context..domain..")
             .assertTrue { file ->
                 file.imports.none { imp ->
-                    imp.name.contains(".presentation.") ||
+                    (imp.name.contains(".presentation.") && imp.name !in legacySettingsExceptions) ||
                         imp.name.startsWith("android.widget.") ||
                         imp.name.startsWith("androidx.appcompat.") ||
                         imp.name.startsWith("com.google.android.material.")

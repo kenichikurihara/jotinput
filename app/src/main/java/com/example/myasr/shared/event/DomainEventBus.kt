@@ -1,7 +1,5 @@
 package com.example.myasr.shared.event
 
-import com.example.myasr.context.kanakanji.application.UserHistorySyncManager
-
 import com.example.myasr.shared.domain.InputLanguage
 import com.example.myasr.shared.domain.VocabularyItem
 import java.util.concurrent.ConcurrentHashMap

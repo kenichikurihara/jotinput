@@ -1,6 +1,5 @@
 package com.example.myasr.context.ime.domain
 
-import com.example.myasr.context.ime.presentation.CandidateStripView
 import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
 
 import android.view.inputmethod.InputConnection
