@@ -199,7 +199,7 @@ class AsrManager(private val context: Context) {
             Log.i(TAG, "Initializing English Parakeet TDT-CTC 110M from storage: ${dir.absolutePath}")
 
             val modelConfig = OfflineModelConfig(
-                nemoCtc = OfflineNemoEncDecCtcModelConfig(
+                nemo = OfflineNemoEncDecCtcModelConfig(
                     model = modelFile.absolutePath
                 ),
                 tokens = tokensFile.absolutePath,
