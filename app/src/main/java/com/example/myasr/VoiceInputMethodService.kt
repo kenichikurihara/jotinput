@@ -762,7 +762,8 @@ class VoiceInputMethodService : InputMethodService() {
                             val stripCandidates = candidates.map {
                                 ConversionCandidate(surface = it, reading = it, isPrediction = false, source = "futo_swipe")
                             }
-                            candidateStripView?.setCandidates(stripCandidates, debugBadge = "FUTO")
+                            updateDebugSlmBadge("FUTO")
+                            candidateStripView?.setCandidates(stripCandidates)
                         }
                     }
                 }
@@ -1331,11 +1332,13 @@ class VoiceInputMethodService : InputMethodService() {
                 )
                 withContext(Dispatchers.Main) {
                     if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
-                        candidateStripView?.setCandidates(cand, debugBadge = "AI-GEC")
+                        updateDebugSlmBadge("AI-GEC")
+                        candidateStripView?.setCandidates(cand)
                     }
                 }
             } else {
                 withContext(Dispatchers.Main) {
+                    updateDebugSlmBadge(null)
                     candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                 }
             }
