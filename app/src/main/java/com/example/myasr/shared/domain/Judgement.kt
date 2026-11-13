@@ -21,7 +21,7 @@ data class JudgementResult<out T>(
 /**
  * DDD Specification パターン: 合成可能な真偽値判定ルール。
  */
-fun interface Specification<in T> {
+fun interface Specification<T> {
     fun isSatisfiedBy(candidate: T): Boolean
 
     infix fun and(other: Specification<T>): Specification<T> = Specification { candidate ->
