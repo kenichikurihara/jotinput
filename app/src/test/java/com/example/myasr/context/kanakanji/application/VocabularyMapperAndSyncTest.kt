@@ -56,7 +56,7 @@ class VocabularyMapperAndSyncTest {
         )
         bus.publish(UserDictionaryChangedEvent(listOf(VocabularyMapper.toPublishedItem(entry))))
 
-        val candidates = engine.convert("きょうかいづけられたぶんみゃく")
+        val candidates = engine.getCandidates("きょうかいづけられたぶんみゃく")
         assertTrue(
             "Expected synced custom vocabulary candidate in KanaKanjiEngine",
             candidates.any { it.surface == "境界づけられた文脈" }
