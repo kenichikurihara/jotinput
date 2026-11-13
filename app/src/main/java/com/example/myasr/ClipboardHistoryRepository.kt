@@ -72,7 +72,7 @@ class ClipboardHistoryRepository private constructor(private val appContext: Con
     private var lastObservedTextHash: String? = null
     private var lastObservedClipTimestamp: Long = 0L
 
-    var onHistoryChanged: (() -> Unit)? = null
+    var onHistoryChanged: ((hasNewClip: Boolean) -> Unit)? = null
 
     private val clipChangedListener = ClipboardManager.OnPrimaryClipChangedListener {
         scope.launch {
@@ -135,6 +135,7 @@ class ClipboardHistoryRepository private constructor(private val appContext: Con
         }
 
         var changed = false
+        var hasNewClip = false
 
         if (!osText.isNullOrBlank()) {
             val textToStore = if (osText.length > MAX_TEXT_LENGTH) osText.take(MAX_TEXT_LENGTH) else osText
@@ -161,6 +162,7 @@ class ClipboardHistoryRepository private constructor(private val appContext: Con
                     )
                     items.add(0, updated)
                     changed = true
+                    hasNewClip = true
                 } else {
                     // New clip discovered
                     val newItem = ClipboardHistoryItem(
@@ -172,6 +174,7 @@ class ClipboardHistoryRepository private constructor(private val appContext: Con
                     )
                     items.add(0, newItem)
                     changed = true
+                    hasNewClip = true
                 }
             }
         }
@@ -191,7 +194,7 @@ class ClipboardHistoryRepository private constructor(private val appContext: Con
         if (changed) {
             saveToDiskLocked()
             scope.launch(Dispatchers.Main) {
-                onHistoryChanged?.invoke()
+                onHistoryChanged?.invoke(hasNewClip)
             }
         }
         return@withLock changed
@@ -253,7 +256,7 @@ class ClipboardHistoryRepository private constructor(private val appContext: Con
         if (removed) {
             saveToDiskLocked()
             scope.launch(Dispatchers.Main) {
-                onHistoryChanged?.invoke()
+                onHistoryChanged?.invoke(false)
             }
         }
     }
@@ -262,7 +265,7 @@ class ClipboardHistoryRepository private constructor(private val appContext: Con
         items.clear()
         saveToDiskLocked()
         scope.launch(Dispatchers.Main) {
-            onHistoryChanged?.invoke()
+            onHistoryChanged?.invoke(false)
         }
     }
 
@@ -325,6 +328,27 @@ class ClipboardHistoryRepository private constructor(private val appContext: Con
             synchronized(items) {
                 items.clear()
                 items.addAll(loaded)
+            }
+            if (!osText.isNullOrBlank()) {
+                val truncated = if (osText.length > MAX_TEXT_LENGTH) osText.take(MAX_TEXT_LENGTH) else osText
+                val osHash = computeHash(truncated)
+                val matchingLoaded = loaded.firstOrNull { it.id == osHash }
+                if (matchingLoaded != null) {
+                    val currentDesc = try {
+                        clipboardManager?.primaryClipDescription
+                    } catch (e: Exception) {
+                        null
+                    }
+                    val currentOsTimestamp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        currentDesc?.timestamp ?: 0L
+                    } else {
+                        0L
+                    }
+                    if (matchingLoaded.osClipTimestampMs == currentOsTimestamp || currentOsTimestamp == 0L) {
+                        lastObservedTextHash = matchingLoaded.id
+                        lastObservedClipTimestamp = matchingLoaded.osClipTimestampMs
+                    }
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to load clipboard history from disk: ${e.message}")
