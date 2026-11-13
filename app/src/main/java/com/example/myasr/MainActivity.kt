@@ -652,6 +652,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateModelStatusBadge(japaneseReady: Boolean? = null) {
+        val jaReady = japaneseReady ?: asrManager.isModelAvailable(AsrLanguage.JAPANESE)
+        val enReady = asrManager.isEnglishModelAvailable()
+        tvModelStatus.text = when {
+            jaReady && enReady -> "音声認識: 日・英 Ready"
+            jaReady && !enReady -> "音声認識: 日Ready / 英未導入"
+            !jaReady && enReady -> "音声認識: 日未導入 / 英Ready"
+            else -> "音声認識: 未導入"
+        }
+    }
+
     private fun checkAndInitializeModel() {
         if (asrManager.isModelAvailable()) {
             cardDownload.visibility = View.GONE
@@ -662,7 +673,7 @@ class MainActivity : AppCompatActivity() {
                 val success = asrManager.initialize(currentHotwordsFile)
                 withContext(Dispatchers.Main) {
                     if (success) {
-                        tvModelStatus.text = "音声認識: Ready"
+                        updateModelStatusBadge(japaneseReady = true)
                     } else {
                         tvModelStatus.text = "音声認識: エラー"
                     }
@@ -671,7 +682,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             // Model files missing
             cardDownload.visibility = View.VISIBLE
-            tvModelStatus.text = "音声認識: 未導入"
+            updateModelStatusBadge(japaneseReady = false)
         }
     }
 
@@ -1087,14 +1098,15 @@ class MainActivity : AppCompatActivity() {
         if (isInstalled) {
             val totalSize = (dir.listFiles()?.sumOf { it.length() } ?: 0L)
             val sizeMb = String.format(java.util.Locale.US, "%.1f", totalSize / (1024.0 * 1024.0))
-            tvEnglishAsrSummary.text = "Parakeet TDT-CTC 110M (${sizeMb} MB, CC-BY-4.0) が有効です。QWERTYモードの音声入力で使用されます。"
+            tvEnglishAsrSummary.text = "導入済み・有効 (${sizeMb} MB, Parakeet 110M, CC-BY-4.0)。QWERTYモードの音声入力で使用されます。"
             btnDownloadEnglishAsr.text = "英語ASRモデルを再取得"
             btnDeleteEnglishAsr.visibility = View.VISIBLE
         } else {
-            tvEnglishAsrSummary.text = "オフライン英語音声認識 (~126MB, CC-BY-4.0)。QWERTYモードで句読点・大文字付き英語入力が可能です。"
+            tvEnglishAsrSummary.text = "未導入（QWERTY英語音声入力を使うには下のボタンから取得してください / ~126MB, CC-BY-4.0）"
             btnDownloadEnglishAsr.text = "英語ASRモデルを取得 (~126MB)"
             btnDeleteEnglishAsr.visibility = View.GONE
         }
+        updateModelStatusBadge()
     }
 
     private fun startDownloadEnglishAsr() {
