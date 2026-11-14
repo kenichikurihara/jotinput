@@ -47,8 +47,14 @@ class HistorySyncJobService : JobService() {
                 .setPersisted(true)
                 .build()
 
-            val result = scheduler.schedule(jobInfo)
-            Log.i(TAG, "Scheduled periodic Google Drive sync every ${intervalMinutes}m (result=$result)")
+            try {
+                val result = scheduler.schedule(jobInfo)
+                Log.i(TAG, "Scheduled periodic Google Drive sync every ${intervalMinutes}m (result=$result)")
+            } catch (e: SecurityException) {
+                Log.e(TAG, "Failed to schedule periodic sync job due to missing permission", e)
+            } catch (e: IllegalArgumentException) {
+                Log.e(TAG, "Failed to schedule periodic sync job", e)
+            }
         }
 
         fun cancel(context: Context) {
