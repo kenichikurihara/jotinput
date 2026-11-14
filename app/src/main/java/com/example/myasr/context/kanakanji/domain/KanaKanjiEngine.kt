@@ -38,7 +38,9 @@ data class ConversionCandidate(
     val completedSurface: String = "",
     val suffixBranchingFactor: Float = 1.0f,
     val isPredicate: Boolean = false,
-    val predicateTailSurface: String = ""
+    val predicateTailSurface: String = "",
+    val historyCount: Int = 0,
+    val lastUsedAtMs: Long = 0L
 )
 
 class KanaKanjiEngine internal constructor(private val context: Context? = null) {
@@ -69,8 +71,10 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     private val root = TrieNode()
     // In-memory access-ordered LinkedHashMap to guarantee consistent JVM/Android LRU behavior and null-safety
     private val historyMap = LinkedHashMap<String, Int>(256, 0.75f, true)
+    private val historyLastUsedMap = LinkedHashMap<String, Long>(256, 0.75f, true)
     private val queryCache = LinkedHashMap<String, List<ConversionCandidate>>(300, 0.75f, true)
     private val historyFile = context?.let { File(it.filesDir, "ime_history.json") }
+    private val historyTimestampFile = context?.let { File(it.filesDir, "ime_history_timestamps.json") }
     private val dbHelper = context?.let { DictionaryDatabaseHelper.getInstance(it) }
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
@@ -899,14 +903,22 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         candidates: List<ConversionCandidate>,
         targetReading: String = ""
     ): List<ConversionCandidate> {
-        val userCandidates = candidates.filter { it.source == "user" }
-        val nonUserCandidates = candidates.filter { it.source != "user" }
+        val enriched = synchronized(historyLock) {
+            candidates.map { cand ->
+                val key = "${cand.reading}:${cand.surface}"
+                val count = historyMap[key] ?: 0
+                val ts = historyLastUsedMap[key] ?: 0L
+                if (count > 0 || ts > 0L) cand.copy(historyCount = count, lastUsedAtMs = ts) else cand
+            }
+        }
+        val userCandidates = enriched.filter { it.source == "user" }
+        val nonUserCandidates = enriched.filter { it.source != "user" }
 
         val sortedNonUser = nonUserCandidates.sortedWith { a, b ->
             val aIsFull = targetReading.isEmpty() || (a.reading == targetReading && !a.isPrediction && a.source != "viterbi_prefix")
             val bIsFull = targetReading.isEmpty() || (b.reading == targetReading && !b.isPrediction && b.source != "viterbi_prefix")
-            val histA = if (aIsFull) synchronized(historyLock) { historyMap["${a.reading}:${a.surface}"] ?: 0 } else 0
-            val histB = if (bIsFull) synchronized(historyLock) { historyMap["${b.reading}:${b.surface}"] ?: 0 } else 0
+            val histA = if (aIsFull) a.historyCount else 0
+            val histB = if (bIsFull) b.historyCount else 0
             histB.compareTo(histA)
         }
 
@@ -998,12 +1010,17 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
      */
     fun commitCandidate(candidate: ConversionCandidate) {
         val key = "${candidate.reading}:${candidate.surface}"
+        val nowMs = System.currentTimeMillis()
         synchronized(historyLock) {
             val currentCount = historyMap[key] ?: 0
             historyMap[key] = (currentCount + 1).coerceAtMost(100_000)
+            historyLastUsedMap[key] = nowMs
             if (historyMap.size > MAX_HISTORY_WORDS) {
                 val oldestKey = historyMap.keys.firstOrNull()
-                if (oldestKey != null) historyMap.remove(oldestKey)
+                if (oldestKey != null) {
+                    historyMap.remove(oldestKey)
+                    historyLastUsedMap.remove(oldestKey)
+                }
             }
         }
         clearMemoryCache()
@@ -1092,6 +1109,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     fun clearHistory() {
         synchronized(historyLock) {
             historyMap.clear()
+            historyLastUsedMap.clear()
         }
         clearMemoryCache()
         scheduleSaveHistory(immediate = true)
@@ -1122,6 +1140,19 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     }
                 }
             }
+            val tsFile = historyTimestampFile
+            if (tsFile != null && tsFile.exists()) {
+                val tsJson = JSONObject(tsFile.readText(Charsets.UTF_8))
+                val tsKeys = tsJson.keys()
+                synchronized(historyLock) {
+                    historyLastUsedMap.clear()
+                    while (tsKeys.hasNext()) {
+                        val k = tsKeys.next()
+                        val ts = tsJson.optLong(k, 0L)
+                        if (ts > 0L) historyLastUsedMap[k] = ts
+                    }
+                }
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Error loading history: ${e.message}")
         }
@@ -1131,17 +1162,31 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val file = historyFile ?: return
         try {
             val json = JSONObject()
-            val snapshot = synchronized(historyLock) {
-                LinkedHashMap(historyMap)
+            val tsJson = JSONObject()
+            val (snapshot, tsSnapshot) = synchronized(historyLock) {
+                Pair(LinkedHashMap(historyMap), LinkedHashMap(historyLastUsedMap))
             }
             for ((k, v) in snapshot) {
                 json.put(k, v)
+            }
+            for ((k, ts) in tsSnapshot) {
+                if (snapshot.containsKey(k) && ts > 0L) {
+                    tsJson.put(k, ts)
+                }
             }
             val tempFile = File(file.parentFile, "${file.name}.tmp")
             tempFile.writeText(json.toString(), Charsets.UTF_8)
             if (!tempFile.renameTo(file)) {
                 tempFile.copyTo(file, overwrite = true)
                 tempFile.delete()
+            }
+            historyTimestampFile?.let { tsFile ->
+                val tsTemp = File(tsFile.parentFile, "${tsFile.name}.tmp")
+                tsTemp.writeText(tsJson.toString(), Charsets.UTF_8)
+                if (!tsTemp.renameTo(tsFile)) {
+                    tsTemp.copyTo(tsFile, overwrite = true)
+                    tsTemp.delete()
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Error saving history: ${e.message}")

@@ -81,7 +81,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             lambdaObs: Float,
             gammaUser: Float,
             targetInputLength: Int? = null,
-            hysteresisDelta: Float = -1.20f
+            hysteresisDelta: Float = -1.20f,
+            nowMs: Long = System.currentTimeMillis()
         ): List<ConversionCandidate> {
             if (topPool.isEmpty()) return emptyList()
 
@@ -124,6 +125,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 if (cand.source != "user" && cand.source != "user_english") scores[index] else null
             }
             val sysBestNll = sysNlls.minOrNull() ?: 15.0f
+            val bestPoolNll = scores.minOrNull() ?: 15.0f
 
             val thetaCoherent = 4.0f
 
@@ -165,23 +167,23 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 val deltaUnconsumed = unconsumedDeltas[index]
                 val deltaExt = extDeltas[index]
 
-                val effectiveNll: Float
+                val rawBaseNll: Float
                 if (isExactUser) {
                     val priority = if (candidate.priority > 0f) candidate.priority else 3.0f
                     val clampedNll = minOf(sysBestNll, rawNll)
                     val userBoost = gammaUser * priority
                     val tieBreaker = 0.05f * rawNll
-                    effectiveNll = clampedNll - userBoost + tieBreaker
+                    rawBaseNll = clampedNll - userBoost + tieBreaker
                 } else if (deltaUnconsumed == 0 && deltaExt == 0 && !candidate.isPrediction) {
                     // (a) Full-span exact candidate
                     val chimeraPenalty = if (isChimeraFull[index]) 10.0f else 0.0f
-                    effectiveNll = rawNll + chimeraPenalty
+                    rawBaseNll = rawNll + chimeraPenalty
                 } else if (deltaUnconsumed > 0) {
                     // (b) Partial-prefix candidate (Virtual suffix completed or marginalized)
                     if (candidate.completedSurface.isNotEmpty() && candidate.completedSurface != candidate.surface) {
                         // Virtual completed full surface NLL has already been evaluated!
                         val branchBonus = (0.55f * kotlin.math.ln(maxOf(1.0f, candidate.suffixBranchingFactor))).coerceAtMost(1.20f)
-                        effectiveNll = rawNll - branchBonus + kappaCommit
+                        rawBaseNll = rawNll - branchBonus + kappaCommit
                     } else {
                         // Fallback when completedSurface is absent (e.g. English typos, direct unit tests)
                         val subsumingFullNll = fullSpanIndices.filter { !isChimeraFull[it] }.mapNotNull { fIdx ->
@@ -195,11 +197,41 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                         }.minOrNull()
 
                         val baseCompNll = subsumingFullNll ?: (rawNll + muSpan * deltaUnconsumed)
-                        effectiveNll = baseCompNll + kappaCommit
+                        rawBaseNll = baseCompNll + kappaCommit
                     }
                 } else {
-                    // (c) Uninputted prefix extension cost
-                    effectiveNll = rawNll + lambdaExt * maxOf(1, deltaExt)
+                    // (c) Uninputted prefix extension cost (waive extension penalty for user history >= 2 or history_bigram)
+                    val waiveExt = candidate.historyCount >= 2 || candidate.source == "history_bigram"
+                    rawBaseNll = if (waiveExt) rawNll else rawNll + lambdaExt * maxOf(1, deltaExt)
+                }
+
+                // Hybrid-6b History x SLM Fusion (Time-Decay + Coherence Gate + Gated Soft-Clamping + c=1 Damping)
+                val effectiveNll: Float = if (!isExactUser && candidate.historyCount > 0 && !isChimeraFull[index]) {
+                    val deltaNll = rawNll - bestPoolNll
+                    val thetaGate = 4.6f + (if (deltaExt > 0) 0.25f * deltaExt else 0.0f)
+                    val gate = 1.0f / (1.0f + kotlin.math.exp(((deltaNll - thetaGate) / 0.6f).coerceIn(-20.0f, 20.0f)))
+
+                    val hoursElapsed = if (candidate.lastUsedAtMs > 0L && nowMs > candidate.lastUsedAtMs) {
+                        (nowMs - candidate.lastUsedAtMs).toFloat() / 3_600_000.0f
+                    } else {
+                        0.0f
+                    }
+                    val shortDecay = kotlin.math.exp((-hoursElapsed / 1.0f).coerceIn(-50.0f, 0.0f))
+                    val longDecay = kotlin.math.exp((-hoursElapsed / 336.0f).coerceIn(-50.0f, 0.0f))
+
+                    val clampedBase = if (candidate.historyCount >= 2) {
+                        val eta = gate * minOf(0.70f, (candidate.historyCount - 1) / 5.0f) * longDecay
+                        eta * minOf(sysBestNll, rawBaseNll) + (1.0f - eta) * rawBaseNll
+                    } else {
+                        rawBaseNll
+                    }
+
+                    val shortTerm = if (candidate.lastUsedAtMs > 0L) 2.2f * shortDecay else 0.0f
+                    val longTerm = 1.8f * minOf(kotlin.math.ln(1.0f + candidate.historyCount.toFloat()), 3.0f) * longDecay
+                    val c1Damp = if (candidate.historyCount == 1) 0.30f else 1.0f
+                    clampedBase - gate * (shortTerm + longTerm) * c1Damp
+                } else {
+                    rawBaseNll
                 }
 
                 val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f
@@ -318,7 +350,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             }
 
             // 9. Extensions / Predictions ranked by base score
-            val rankedExt = extIndices.sortedBy { baseScores[it] }.map { topPool[it] }
+            val rankedExtIndices = extIndices.sortedBy { baseScores[it] }
+            val rankedExt = rankedExtIndices.map { topPool[it] }
+            val topHistPredIdx = rankedExtIndices.firstOrNull { topPool[it].historyCount >= 2 }
 
             // 10. Adaptive Stratified Interleaving Schedule
             val maxBranch = prefixIndices.map { topPool[it].suffixBranchingFactor }.maxOrNull() ?: 1.0f
@@ -338,9 +372,20 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             for (idx in exactUserIndices) {
                 addCandidate(topPool[idx])
             }
-            // Stratum 1: Top full candidates
+            // Stratum 1: Top full candidates + History Prefix Prediction Promotion (Slot-2 / Conditional Top-1)
             var fullIdx = 0
             var partialIdx = 0
+            if (topHistPredIdx != null && rankedFull.isNotEmpty() && n > 0) {
+                val topFullIdx = topPool.indexOf(rankedFull[0])
+                val canPromoteTop1 = n >= 2 && topFullIdx >= 0 && baseScores[topHistPredIdx] < baseScores[topFullIdx] - 0.50f
+                if (canPromoteTop1) {
+                    addCandidate(topPool[topHistPredIdx])
+                    addCandidate(rankedFull[fullIdx++])
+                } else {
+                    addCandidate(rankedFull[fullIdx++])
+                    addCandidate(topPool[topHistPredIdx])
+                }
+            }
             while (fullIdx < minOf(topFullQuota, rankedFull.size)) {
                 addCandidate(rankedFull[fullIdx++])
             }
@@ -733,10 +778,16 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             }
             val topPool = mutableListOf<ConversionCandidate>()
             val topPoolSurfaces = HashSet<String>()
+            // Ensure high-frequency history candidates (both full-span and predictions) enter topPool
+            for (c in nonHiraganaCandidates.filter { it.historyCount >= 2 }.sortedByDescending { it.historyCount }.take(4)) {
+                if (topPoolSurfaces.add(c.surface)) topPool.add(c)
+            }
             for (c in fullCands.take(6)) {
+                if (topPool.size >= 12) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
             for (c in prefixCands.take(6)) {
+                if (topPool.size >= 12) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
             for (c in nonHiraganaCandidates) {

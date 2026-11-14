@@ -30,6 +30,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
     private val scope = CoroutineScope(Dispatchers.IO)
     private var saveHistoryJob: Job? = null
     private val cacheFile = context?.let { File(it.filesDir, "next_phrase_cache.json") }
+    private val timestampFile = context?.let { File(it.filesDir, "next_phrase_timestamps.json") }
 
     // Constants for 5MB RAM cap:
     // 4,000 prefix keys x 16 continuations = max 32,000 bigram pairs (< 5MB RAM)
@@ -110,6 +111,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
 
     // Access-ordered LinkedHashMap for LRU prefix keys (prevPhrase -> (nextPhrase -> count))
     private val bigramHistory = LinkedHashMap<String, LinkedHashMap<String, Int>>(256, 0.75f, true)
+    private val bigramLastUsed = LinkedHashMap<String, LinkedHashMap<String, Long>>(256, 0.75f, true)
     private var totalBigramPairs = 0
 
     init {
@@ -126,10 +128,13 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         val curr = currentPhrase.trim()
         if (prev.isEmpty() || curr.isEmpty() || prev == curr) return
 
+        val nowMs = System.currentTimeMillis()
         val nextMap = bigramHistory.getOrPut(prev) { LinkedHashMap(8, 0.75f, true) }
+        val nextTsMap = bigramLastUsed.getOrPut(prev) { LinkedHashMap(8, 0.75f, true) }
         val existed = nextMap.containsKey(curr)
         val count = nextMap.getOrDefault(curr, 0)
         nextMap[curr] = (count + 1).coerceAtMost(100_000)
+        nextTsMap[curr] = nowMs
         if (!existed) {
             totalBigramPairs++
         }
@@ -139,6 +144,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             val lowestEntry = nextMap.minByOrNull { it.value }
             if (lowestEntry != null) {
                 nextMap.remove(lowestEntry.key)
+                nextTsMap.remove(lowestEntry.key)
                 totalBigramPairs--
             }
         }
@@ -148,6 +154,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             val oldestKey = bigramHistory.keys.firstOrNull()
             if (oldestKey != null) {
                 val removedMap = bigramHistory.remove(oldestKey)
+                bigramLastUsed.remove(oldestKey)
                 if (removedMap != null) totalBigramPairs -= removedMap.size
             }
         }
@@ -156,6 +163,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         while (totalBigramPairs > MAX_TOTAL_BIGRAM_PAIRS && bigramHistory.isNotEmpty()) {
             val oldestKey = bigramHistory.keys.firstOrNull() ?: break
             val removedMap = bigramHistory.remove(oldestKey)
+            bigramLastUsed.remove(oldestKey)
             if (removedMap != null) totalBigramPairs -= removedMap.size
         }
 
@@ -194,6 +202,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         if (cleanLast.isNotEmpty()) {
             val userNextMap = bigramHistory[cleanLast]
             if (userNextMap != null) {
+                val tsMap = bigramLastUsed[cleanLast]
                 val sortedUserNext = userNextMap.entries.sortedByDescending { it.value }
                 for (entry in sortedUserNext) {
                     addCandidate(
@@ -201,7 +210,9 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                             surface = entry.key,
                             reading = entry.key,
                             isPrediction = true,
-                            source = "history_bigram"
+                            source = "history_bigram",
+                            historyCount = entry.value,
+                            lastUsedAtMs = tsMap?.get(entry.key) ?: 0L
                         )
                     )
                 }
@@ -501,7 +512,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
 
     private fun saveHistory() {
         val file = cacheFile ?: return
-        val snapshotJson = synchronized(this) {
+        val (snapshotJson, tsSnapshotJson) = synchronized(this) {
             val root = JSONObject()
             for ((key, map) in bigramHistory) {
                 val child = JSONObject()
@@ -510,7 +521,16 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 }
                 root.put(key, child)
             }
-            root.toString()
+            val tsRoot = JSONObject()
+            for ((key, map) in bigramLastUsed) {
+                if (!bigramHistory.containsKey(key)) continue
+                val child = JSONObject()
+                for ((next, ts) in map) {
+                    if (ts > 0L) child.put(next, ts)
+                }
+                if (child.length() > 0) tsRoot.put(key, child)
+            }
+            Pair(root.toString(), tsRoot.toString())
         }
 
         try {
@@ -519,6 +539,14 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             if (!tempFile.renameTo(file)) {
                 tempFile.copyTo(file, overwrite = true)
                 tempFile.delete()
+            }
+            timestampFile?.let { tsFile ->
+                val tsTemp = File(tsFile.parentFile, "${tsFile.name}.tmp")
+                tsTemp.writeText(tsSnapshotJson, Charsets.UTF_8)
+                if (!tsTemp.renameTo(tsFile)) {
+                    tsTemp.copyTo(tsFile, overwrite = true)
+                    tsTemp.delete()
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Error saving next phrase history: ${e.message}")
@@ -546,6 +574,26 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                             totalBigramPairs++
                         }
                         bigramHistory[k] = childMap
+                    }
+                }
+            }
+            val tsFile = timestampFile
+            if (tsFile != null && tsFile.exists()) {
+                val tsRoot = JSONObject(tsFile.readText(Charsets.UTF_8))
+                val tsKeys = tsRoot.keys()
+                synchronized(this) {
+                    bigramLastUsed.clear()
+                    while (tsKeys.hasNext()) {
+                        val k = tsKeys.next()
+                        val child = tsRoot.optJSONObject(k) ?: continue
+                        val childMap = LinkedHashMap<String, Long>(8, 0.75f, true)
+                        val childKeys = child.keys()
+                        while (childKeys.hasNext()) {
+                            val ck = childKeys.next()
+                            val ts = child.optLong(ck, 0L)
+                            if (ts > 0L) childMap[ck] = ts
+                        }
+                        if (childMap.isNotEmpty()) bigramLastUsed[k] = childMap
                     }
                 }
             }
