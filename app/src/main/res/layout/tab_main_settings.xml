@@ -137,6 +137,53 @@
                         android:checked="true" />
                 </LinearLayout>
 
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="10dp"
+                    android:background="@color/border" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="英語QWERTY カーソル移動"
+                    android:textColor="@color/text_primary"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="左右矢印キーの表示、またはスペースキーの左右スワイプを選択"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="11sp" />
+
+                <RadioGroup
+                    android:id="@+id/rgQwertyCursorMode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/rbCursorArrowKeys"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:checked="true"
+                        android:text="左右矢印キー (◀ ▶)"
+                        android:textSize="11.5sp" />
+
+                    <RadioButton
+                        android:id="@+id/rbCursorSpaceSwipe"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="スペース左右スワイプ"
+                        android:textSize="11.5sp" />
+                </RadioGroup>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

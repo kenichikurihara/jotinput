@@ -101,6 +101,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbHeightTall: android.widget.RadioButton
     private lateinit var rbHeightExtraTall: android.widget.RadioButton
     private lateinit var switchQwertyNumberRow: com.google.android.material.switchmaterial.SwitchMaterial
+    private lateinit var rgQwertyCursorMode: android.widget.RadioGroup
+    private lateinit var rbCursorArrowKeys: android.widget.RadioButton
+    private lateinit var rbCursorSpaceSwipe: android.widget.RadioButton
     private lateinit var switchQwertySwipeTyping: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var switchStreamingVoiceInput: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var switchDebugDisplay: com.google.android.material.switchmaterial.SwitchMaterial
@@ -613,6 +616,9 @@ class MainActivity : AppCompatActivity() {
         rbHeightTall = findViewById(R.id.rbHeightTall)
         rbHeightExtraTall = findViewById(R.id.rbHeightExtraTall)
         switchQwertyNumberRow = findViewById(R.id.switchQwertyNumberRow)
+        rgQwertyCursorMode = findViewById(R.id.rgQwertyCursorMode)
+        rbCursorArrowKeys = findViewById(R.id.rbCursorArrowKeys)
+        rbCursorSpaceSwipe = findViewById(R.id.rbCursorSpaceSwipe)
         switchQwertySwipeTyping = findViewById(R.id.switchQwertySwipeTyping)
         switchStreamingVoiceInput = findViewById(R.id.switchStreamingVoiceInput)
         switchDebugDisplay = findViewById(R.id.switchDebugDisplay)
@@ -749,6 +755,16 @@ class MainActivity : AppCompatActivity() {
             KeyboardHeightManager.setQwertyNumberRowEnabled(this, isChecked)
             val status = if (isChecked) "表示 (ON)" else "非表示 (OFF)"
             Toast.makeText(this, "英語QWERTYの数字行: $status", Toast.LENGTH_SHORT).show()
+        }
+
+        rgQwertyCursorMode.setOnCheckedChangeListener { _, checkedId ->
+            if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
+            val mode = when (checkedId) {
+                R.id.rbCursorSpaceSwipe -> KeyboardHeightManager.QwertyCursorControlMode.SPACEBAR_SWIPE
+                else -> KeyboardHeightManager.QwertyCursorControlMode.ARROW_KEYS
+            }
+            KeyboardHeightManager.setQwertyCursorControlMode(this, mode)
+            Toast.makeText(this, "英語QWERTYカーソル移動: ${mode.displayName}", Toast.LENGTH_SHORT).show()
         }
 
         switchQwertySwipeTyping.isChecked = KeyboardHeightManager.isQwertySwipeTypingEnabled(this)
@@ -1515,6 +1531,10 @@ class MainActivity : AppCompatActivity() {
                 KeyboardHeightManager.HeightPreset.EXTRA_TALL -> rbHeightExtraTall.isChecked = true
             }
             switchQwertyNumberRow.isChecked = KeyboardHeightManager.isQwertyNumberRowEnabled(this)
+            when (KeyboardHeightManager.getQwertyCursorControlMode(this)) {
+                KeyboardHeightManager.QwertyCursorControlMode.ARROW_KEYS -> rbCursorArrowKeys.isChecked = true
+                KeyboardHeightManager.QwertyCursorControlMode.SPACEBAR_SWIPE -> rbCursorSpaceSwipe.isChecked = true
+            }
             switchQwertySwipeTyping.isChecked = KeyboardHeightManager.isQwertySwipeTypingEnabled(this)
             switchStreamingVoiceInput.isChecked = KeyboardHeightManager.isStreamingVoiceInputEnabled(this)
             switchDebugDisplay.isChecked = KeyboardHeightManager.isDebugDisplayEnabled(this)

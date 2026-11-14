@@ -53,6 +53,16 @@ class FlickKeyboardView @JvmOverloads constructor(
             }
         }
 
+    var qwertyCursorControlMode: KeyboardHeightManager.QwertyCursorControlMode =
+        KeyboardHeightManager.QwertyCursorControlMode.ARROW_KEYS
+        set(value) {
+            if (field != value) {
+                field = value
+                layoutKeys(width.toFloat(), height.toFloat())
+                invalidate()
+            }
+        }
+
     enum class ShiftState {
         OFF,
         SHIFT_ONCE,
@@ -233,10 +243,21 @@ class FlickKeyboardView @JvmOverloads constructor(
     private val swipeThresholdPx = 18f * resources.displayMetrics.density
 
     private val flickThresholdPx = 26f * resources.displayMetrics.density
+    private val spacebarSwipeTracker = SpacebarCursorSwipeTracker(
+        activationThresholdPx = 14f * resources.displayMetrics.density,
+        stepThresholdPx = 12f * resources.displayMetrics.density
+    )
+
+    private fun isSpacebarSwipeEnabledForCurrentMode(): Boolean {
+        return qwertyCursorControlMode == KeyboardHeightManager.QwertyCursorControlMode.SPACEBAR_SWIPE &&
+            (currentMode == JapaneseKanaUtils.KeyboardMode.QWERTY ||
+                currentMode == JapaneseKanaUtils.KeyboardMode.QWERTY_SYMBOLS)
+    }
 
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null)
         showNumberRowInQwerty = KeyboardHeightManager.isQwertyNumberRowEnabled(context)
+        qwertyCursorControlMode = KeyboardHeightManager.getQwertyCursorControlMode(context)
         updateThemeColors()
     }
 
@@ -295,10 +316,15 @@ class FlickKeyboardView @JvmOverloads constructor(
     fun syncPreferences() {
         updateThemeColors()
         val numRow = KeyboardHeightManager.isQwertyNumberRowEnabled(context)
+        val cursorMode = KeyboardHeightManager.getQwertyCursorControlMode(context)
         val savedMode = KeyboardHeightManager.getLastKeyboardMode(context)
         var changed = false
         if (showNumberRowInQwerty != numRow) {
             showNumberRowInQwerty = numRow
+            changed = true
+        }
+        if (qwertyCursorControlMode != cursorMode) {
+            qwertyCursorControlMode = cursorMode
             changed = true
         }
         if (currentMode != savedMode && currentMode != JapaneseKanaUtils.KeyboardMode.QWERTY_SYMBOLS && currentMode != JapaneseKanaUtils.KeyboardMode.NUMBER) {
@@ -619,20 +645,26 @@ class FlickKeyboardView @JvmOverloads constructor(
         val (symL, symR) = nextX(0.11f)
         addKey(KeyType.MODE_SYMBOLS, symL, rowDTop, symR, rowDBottom, marginX, marginY, "?123", isFunctionKey = true)
 
+        val showArrowKeys = qwertyCursorControlMode == KeyboardHeightManager.QwertyCursorControlMode.ARROW_KEYS
+
         val (commaL, commaR) = nextX(0.085f)
         addKey(KeyType.QWERTY_CHAR, commaL, rowDTop, commaR, rowDBottom, marginX, marginY, ",")
 
-        val (spaceL, spaceR) = nextX(0.33f)
-        addKey(KeyType.SPACE, spaceL, rowDTop, spaceR, rowDBottom, marginX * 1.2f, marginY * 1.3f, "English", isPill = true)
+        val spacePct = if (showArrowKeys) 0.33f else 0.46f
+        val spaceLabel = if (showArrowKeys) "English" else "‹ English ›"
+        val (spaceL, spaceR) = nextX(spacePct)
+        addKey(KeyType.SPACE, spaceL, rowDTop, spaceR, rowDBottom, marginX * 1.2f, marginY * 1.3f, spaceLabel, isPill = true)
 
         val (periodL, periodR) = nextX(0.085f)
         addKey(KeyType.QWERTY_CHAR, periodL, rowDTop, periodR, rowDBottom, marginX, marginY, ".")
 
-        val (leftCurL, leftCurR) = nextX(0.065f)
-        addKey(KeyType.CURSOR_LEFT, leftCurL, rowDTop, leftCurR, rowDBottom, marginX * 0.8f, marginY, "◀", isFunctionKey = true)
+        if (showArrowKeys) {
+            val (leftCurL, leftCurR) = nextX(0.065f)
+            addKey(KeyType.CURSOR_LEFT, leftCurL, rowDTop, leftCurR, rowDBottom, marginX * 0.8f, marginY, "◀", isFunctionKey = true)
 
-        val (rightCurL, rightCurR) = nextX(0.065f)
-        addKey(KeyType.CURSOR_RIGHT, rightCurL, rowDTop, rightCurR, rowDBottom, marginX * 0.8f, marginY, "▶", isFunctionKey = true)
+            val (rightCurL, rightCurR) = nextX(0.065f)
+            addKey(KeyType.CURSOR_RIGHT, rightCurL, rowDTop, rightCurR, rowDBottom, marginX * 0.8f, marginY, "▶", isFunctionKey = true)
+        }
 
         val enterLabel = if (isComposingState || hasVoiceComposingState) "確定" else "↵"
         addKey(KeyType.ENTER, x, rowDTop, width, rowDBottom, marginX * 1.2f, marginY * 1.3f, enterLabel, isPill = true, isAccent = true, isFunctionKey = true)
@@ -708,18 +740,23 @@ class FlickKeyboardView @JvmOverloads constructor(
             x = r
             return Pair(l, r)
         }
+        val showArrowKeys = qwertyCursorControlMode == KeyboardHeightManager.QwertyCursorControlMode.ARROW_KEYS
         val (backL, backR) = nextX(0.15f)
         addKey(KeyType.MODE_BACK_KANA, backL, rowDTop, backR, height, marginX * 1.2f, marginY * 1.3f, "ABC", isPill = true, isFunctionKey = true)
         val (commaL, commaR) = nextX(0.10f)
         addKey(KeyType.QWERTY_CHAR, commaL, rowDTop, commaR, height, marginX, marginY, ",")
-        val (spaceL, spaceR) = nextX(0.40f)
-        addKey(KeyType.SPACE, spaceL, rowDTop, spaceR, height, marginX * 1.2f, marginY * 1.3f, "␣", isPill = true)
+        val spacePct = if (showArrowKeys) 0.40f else 0.52f
+        val spaceLabel = if (showArrowKeys) "␣" else "‹ ␣ ›"
+        val (spaceL, spaceR) = nextX(spacePct)
+        addKey(KeyType.SPACE, spaceL, rowDTop, spaceR, height, marginX * 1.2f, marginY * 1.3f, spaceLabel, isPill = true)
         val (periodL, periodR) = nextX(0.10f)
         addKey(KeyType.QWERTY_CHAR, periodL, rowDTop, periodR, height, marginX, marginY, ".")
-        val (leftL, leftR) = nextX(0.06f)
-        addKey(KeyType.CURSOR_LEFT, leftL, rowDTop, leftR, height, marginX * 0.8f, marginY, "◀", isFunctionKey = true)
-        val (rightL, rightR) = nextX(0.06f)
-        addKey(KeyType.CURSOR_RIGHT, rightL, rowDTop, rightR, height, marginX * 0.8f, marginY, "▶", isFunctionKey = true)
+        if (showArrowKeys) {
+            val (leftL, leftR) = nextX(0.06f)
+            addKey(KeyType.CURSOR_LEFT, leftL, rowDTop, leftR, height, marginX * 0.8f, marginY, "◀", isFunctionKey = true)
+            val (rightL, rightR) = nextX(0.06f)
+            addKey(KeyType.CURSOR_RIGHT, rightL, rowDTop, rightR, height, marginX * 0.8f, marginY, "▶", isFunctionKey = true)
+        }
         val enterLabel = if (isComposingState || hasVoiceComposingState) "確定" else "↵"
         addKey(KeyType.ENTER, x, rowDTop, width, height, marginX * 1.2f, marginY * 1.3f, enterLabel, isPill = true, isAccent = true, isFunctionKey = true)
     }
@@ -903,6 +940,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         flickPopupWindow.dismiss()
         usingWindowPopup = false
         longPressTriggered = false
+        spacebarSwipeTracker.reset()
         activeKey?.isPressed = false
         activeKey = null
         activeDirection = JapaneseKanaUtils.FlickDirection.CENTER
@@ -961,12 +999,17 @@ class FlickKeyboardView @JvmOverloads constructor(
                 longPressTriggered = false
                 isSwiping = false
                 swipeTrajectory.clear()
+                spacebarSwipeTracker.reset()
 
                 val hitKey = keys.firstOrNull { it.hitRect.contains(x, y) }
                 if (hitKey != null) {
                     activeKey = hitKey
                     hitKey.isPressed = true
                     performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+
+                    if (isSpacebarSwipeEnabledForCurrentMode() && hitKey.type == KeyType.SPACE) {
+                        spacebarSwipeTracker.start(x, y)
+                    }
 
                     if (currentMode == JapaneseKanaUtils.KeyboardMode.QWERTY &&
                         hitKey.type == KeyType.QWERTY_CHAR &&
@@ -1019,6 +1062,23 @@ class FlickKeyboardView @JvmOverloads constructor(
                 val dx = x - touchStartX
                 val dy = y - touchStartY
                 val dist = sqrt(dx * dx + dy * dy)
+
+                if (isSpacebarSwipeEnabledForCurrentMode() && currentKey.type == KeyType.SPACE) {
+                    val steps = spacebarSwipeTracker.move(x, y)
+                    if (steps != 0) {
+                        currentKey.isPressed = false
+                        performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        if (steps > 0) {
+                            repeat(steps) { listener?.onCursorRight() }
+                        } else {
+                            repeat(-steps) { listener?.onCursorLeft() }
+                        }
+                        invalidate()
+                    }
+                    if (spacebarSwipeTracker.isSwiping) {
+                        return true
+                    }
+                }
 
                 if (currentMode == JapaneseKanaUtils.KeyboardMode.QWERTY &&
                     currentKey.type == KeyType.QWERTY_CHAR &&
@@ -1086,6 +1146,17 @@ class FlickKeyboardView @JvmOverloads constructor(
                 handler.removeCallbacks(qwertyLongPressRunnable)
                 flickPopupWindow.dismiss()
                 usingWindowPopup = false
+                val wasSpaceSwiping = spacebarSwipeTracker.isSwiping
+                spacebarSwipeTracker.reset()
+
+                if (wasSpaceSwiping) {
+                    activeKey?.isPressed = false
+                    activeKey = null
+                    longPressTriggered = false
+                    activeDirection = JapaneseKanaUtils.FlickDirection.CENTER
+                    invalidate()
+                    return true
+                }
 
                 if (isSwiping) {
                     val normX = (x / width.toFloat()).coerceIn(0f, 1f)

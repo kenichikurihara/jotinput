@@ -12,6 +12,7 @@ object KeyboardHeightManager {
     private const val KEY_HEIGHT_SCALE = "keyboard_height_scale"
     private const val KEY_QWERTY_NUMBER_ROW = "qwerty_show_number_row"
     private const val KEY_QWERTY_SWIPE_TYPING = "qwerty_swipe_typing_enabled"
+    private const val KEY_QWERTY_CURSOR_CONTROL_MODE = "qwerty_cursor_control_mode"
     private const val KEY_ENGLISH_AUTO_SPACE = "english_auto_space_enabled"
     private const val KEY_ENGLISH_AUTO_PERIOD = "english_auto_period_enabled"
     private const val KEY_JAPANESE_PERIOD_SUGGESTION = "japanese_period_suggestion_enabled"
@@ -106,6 +107,28 @@ object KeyboardHeightManager {
     fun setQwertySwipeTypingEnabled(context: Context, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_QWERTY_SWIPE_TYPING, enabled).apply()
+    }
+
+    enum class QwertyCursorControlMode(val id: String, val displayName: String) {
+        ARROW_KEYS("arrow_keys", "左右矢印キー (◀ ▶)"),
+        SPACEBAR_SWIPE("spacebar_swipe", "スペースキー左右スワイプ");
+
+        companion object {
+            fun fromId(id: String?): QwertyCursorControlMode {
+                return entries.firstOrNull { it.id == id } ?: ARROW_KEYS
+            }
+        }
+    }
+
+    fun getQwertyCursorControlMode(context: Context): QwertyCursorControlMode {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val saved = prefs.getString(KEY_QWERTY_CURSOR_CONTROL_MODE, QwertyCursorControlMode.ARROW_KEYS.id)
+        return QwertyCursorControlMode.fromId(saved)
+    }
+
+    fun setQwertyCursorControlMode(context: Context, mode: QwertyCursorControlMode) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_QWERTY_CURSOR_CONTROL_MODE, mode.id).apply()
     }
 
     fun isEnglishAutoSpaceEnabled(context: Context): Boolean {
