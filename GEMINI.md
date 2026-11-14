@@ -77,6 +77,9 @@ Whenever changes are made and pushed:
     1. Verify alignment with [`docs/ddd/context_map.md`](docs/ddd/context_map.md) and [`docs/ddd/README.md`](docs/ddd/README.md) dependency rules.
     2. Confirm no `domain` or `shared` package introduces dependencies on `infrastructure`, `presentation`, or Android UI (`android.view.*`, `android.widget.*`).
     3. Update `docs/ddd/` and unit tests in the same change when boundary contracts evolve.
-- **Automated Konsist Enforcement**:
-  - [`DddArchitectureKonsistTest`](app/src/test/java/com/example/myasr/ddd/DddArchitectureKonsistTest.kt) enforces Shared Kernel purity, `Judgement` placement/purity, domain UI-independence, and repository placement on every `./gradlew testDebugUnitTest` run. Never weaken or bypass these rules without explicit review.
+- **Automated Konsist Enforcement & Doc-Code Sync**:
+  - [`DddArchitectureKonsistTest`](app/src/test/java/com/example/myasr/ddd/DddArchitectureKonsistTest.kt) enforces Shared Kernel purity, `Judgement` placement/purity, domain UI-independence, repository placement, Bounded Context allowlist alignment (`docs/ddd/context_map.md`), DMN `DecisionTable` documentation sync (`docs/ddd/dmn_decision_models.md`), `Judgement`/`DecisionModel` test coverage, and Alloy `.als` documentation sync (`docs/ddd/alloy_formal_verification.md`) on every `./gradlew testDebugUnitTest` run. Never weaken or bypass these rules without explicit review.
+- **Spec-First & Alloy Synchronization**:
+  - All formal Alloy models must reside in `app/src/test/resources/alloy/*.als` so [`AlloyVerificationTest`](app/src/test/java/com/example/myasr/formal/AlloyVerificationTest.kt) automatically discovers and verifies them in CI.
+  - When modifying state transitions, UI mode arbitration, or DMN/Judgement decision rules, update the corresponding `.als` spec, DMN `DecisionTable`, and `docs/ddd/` in the same commit.
 

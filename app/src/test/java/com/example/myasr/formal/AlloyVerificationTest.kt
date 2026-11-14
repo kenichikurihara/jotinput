@@ -68,29 +68,41 @@ class AlloyVerificationTest {
         }
     }
 
-    @Test
-    fun `voice_touch_arbitration formal model satisfies all safety invariants and reachability checks`() {
-        verifyAlloyModel("alloy/voice_touch_arbitration.als")
+    private fun discoverAlloySpecs(): List<String> {
+        val resourceDirUrl = javaClass.classLoader?.getResource("alloy")
+            ?: throw IllegalStateException("Alloy specification resource directory 'alloy' not found on classpath")
+
+        if (resourceDirUrl.protocol == "file") {
+            val dir = File(resourceDirUrl.toURI())
+            val alsFiles = dir.listFiles { file -> file.isFile && file.extension == "als" }
+                ?.map { "alloy/${it.name}" }
+                ?.sorted()
+                ?: emptyList()
+            assertTrue("Expected at least 6 Alloy specifications in ${dir.absolutePath}", alsFiles.size >= 6)
+            return alsFiles
+        }
+
+        // Fallback: scan source tree when running from non-file classpath
+        val candidateDirs = listOf(
+            File("app/src/test/resources/alloy"),
+            File("src/test/resources/alloy")
+        )
+        val dir = candidateDirs.firstOrNull { it.isDirectory }
+            ?: throw IllegalStateException("Cannot locate alloy resources directory (url=$resourceDirUrl)")
+        val alsFiles = dir.listFiles { file -> file.isFile && file.extension == "als" }
+            ?.map { "alloy/${it.name}" }
+            ?.sorted()
+            ?: emptyList()
+        assertTrue("Expected at least 6 Alloy specifications in ${dir.absolutePath}", alsFiles.size >= 6)
+        return alsFiles
     }
 
     @Test
-    fun `dmn_decision_safety formal model satisfies all decision table invariants and reachability checks`() {
-        verifyAlloyModel("alloy/dmn_decision_safety.als")
-    }
-
-    @Test
-    fun `custom_dictionary_ui formal model satisfies all undo, tombstone, and filter invariants`() {
-        verifyAlloyModel("alloy/custom_dictionary_ui.als")
-    }
-
-    @Test
-    fun `main_app_ui_state formal model satisfies all 3-tab, DMN hero, and provisioning banner invariants`() {
-        verifyAlloyModel("alloy/main_app_ui_state.als")
-    }
-
-    @Test
-    fun `onboarding_flow formal model satisfies launch, Drive permission-loss, and non-blocking completion invariants`() {
-        verifyAlloyModel("alloy/onboarding_flow.als")
+    fun `all alloy formal specifications satisfy safety invariants and reachability checks`() {
+        val specs = discoverAlloySpecs()
+        for (specPath in specs) {
+            verifyAlloyModel(specPath)
+        }
     }
 
     @Test

@@ -58,4 +58,16 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`PermissionLostCancelsJobAndShowsWarning`**: 権限失効時は定期ジョブを停止し警告表示とすること。
 - **`ChangingSyncUriResetsSnapshot`**: 同期先ファイル変更時は旧 Base Snapshot が必ずリセットされること。
 
+### 3.7 [`english_auto_space_period.als`](app/src/test/resources/alloy/english_auto_space_period.als)
+英語オートスペース・ダブルスペース自動ピリオド・Android `onUpdateSelection` 同期（[`VoiceTouchInputArbitrator`](app/src/main/java/com/example/myasr/context/ime/domain/VoiceTouchInputArbitrator.kt)）の状態遷移をモデル化し、以下を検証する：
+- **`NoIllegalAutoPeriod` / `NoTripleSpaceDoublePeriod`**: バイパス時・文頭・非対象文字後・タイムアウト後の誤発動や連続ピリオド（`".. "`）を禁止すること。
+- **`PunctuationNeverPrependsSpace` / `NoDoubleSpaceOnAutoSpace`**: 句読点直前のオートスペース挿入や二重スペース挿入を禁止すること。
+- **`DoubleSpaceSurvivesImeEcho` / `CandidateAutoSpaceSurvivesImeEcho` / `ExternalMoveClearsAutoAssist`**: IME 自身の編集エコーでは状態を保持し、外部カーソル移動時のみクリアすること。
+
+---
+
+## 4. 自動同期ルール
+- `app/src/test/resources/alloy/` 配下の全 `.als` ファイルは [`AlloyVerificationTest`](app/src/test/java/com/example/myasr/formal/AlloyVerificationTest.kt) により動的にスキャン・自動検証される。
+- 新規 `.als` ファイルを追加した際は、本ドキュメントのセクション 3 にも概要を追記すること（[`DddArchitectureKonsistTest`](app/src/test/java/com/example/myasr/ddd/DddArchitectureKonsistTest.kt) が未記載の `.als` を検知する）。
+
 

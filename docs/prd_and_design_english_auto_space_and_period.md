@@ -57,7 +57,7 @@ JotInput の英語 QWERTY / 記号（`QWERTY` / `QWERTY_SYMBOLS`）入力モー�
 
 ## Part 2: Alloy による形式仕様 (Formal Specification)
 
-複雑な非同期状態遷移（IME 編集と `onUpdateSelection` の競合）の正当性を保証するため、Alloy モデルを [`docs/specs/english_auto_space_period.als`](docs/specs/english_auto_space_period.als) に定義した。
+複雑な非同期状態遷移（IME 編集と `onUpdateSelection` の競合）の正当性を保証するため、Alloy モデルを [`app/src/test/resources/alloy/english_auto_space_period.als`](app/src/test/resources/alloy/english_auto_space_period.als) に定義した。
 
 ### 状態と IME カーソルデルタ追跡
 IME が `commitText(s)` または `deleteSurroundingText(n, 0)` を実行する際、期待されるカーソル移動量 `pendingImeSelectionDelta += (committedLen - deletedLen)` を記録する。
