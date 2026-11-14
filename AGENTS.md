@@ -45,11 +45,16 @@ Whenever any code, resource, or configuration change is pushed or tested:
 - **Reference Spec**: Refer to [`docs/punctuation_and_voice_boundary_evaluation_criteria.md`](docs/punctuation_and_voice_boundary_evaluation_criteria.md) for full evaluation axes and criteria.
 
 ## ✨ UI Simplicity & Progressive Disclosure Contract (Mandatory)
-- **4-Card Top-Level Cap (`MainActivity`)**: Keep [`activity_main.xml`](app/src/main/res/layout/activity_main.xml) strictly structured into at most **4 top-level cards**:
-  1. **Card 1 (Hero: Setup, Status & Quick Test)**: Unified status badges, IME enable/switch buttons, Custom Dictionary button, and immediate test field (`etKeyboardTest`).
-  2. **Card 2 (Core Everyday Settings)**: At most 4–5 everyday user preferences (Keyboard Height, QWERTY Number Row, Streaming Voice Input, AI Rerank Engine selector). Hide child sub-selectors (`View.GONE`) when a parent feature toggle is OFF.
-  3. **Card 3 (Unified Dictionary & Model Data Management)**: One-tap recommended download for dictionaries and connection matrix, with individual dictionary/asset rows placed inside the collapsible `layoutDictDetailsContainer` (collapsed by default).
-  4. **Card 4 (Collapsible Advanced & Developer Tools)**: Place all hyperparameter tuning knobs ($\alpha$ slider, Context-Free toggle, Mandatory toggle, Debug badges) inside `layoutAdvancedContent` (collapsed by default).
+- **Mandatory PRD, JTBD & CUJ for UI Changes**:
+  - Whenever making any UI-related changes (including layouts, views, navigation, dialogs, user settings, or IME surface interactions), **always author/update a PRD (`docs/prd_and_design_*.md`) beforehand**.
+  - Clearly define the **Jobs to be Done (JTBD)** (user context, triggers, motivations, and expected outcomes) and **Critical User Journeys (CUJ)** (step-by-step user interaction flows and edge cases).
+- **Proactive DMN & Alloy Modeling for UI Decisions & State Transitions**:
+  - Whenever the UI involves decision logic, action arbitration (e.g. smart setup guides, dynamic CTA selection, feature enabling/disabling), or multi-state transitions, **proactively leverage DMN (`DecisionTable` / `DecisionModel`) and Alloy formal verification (`.als`)**.
+  - Keep decision rules declarative and testable outside Android UI (`android.view.*`), and formally verify transition safety and reachability invariants in `app/src/test/resources/alloy/*.als`.
+- **v2 3-Tab Information Architecture & Progressive Disclosure**:
+  - Maintain the 3-tab structure for `MainActivity` (Home / Settings / Data) as defined in [`docs/ui_design_and_simplicity_guidelines.md`](docs/ui_design_and_simplicity_guidelines.md).
+  - Use DMN smart guides (presenting only the single highest-priority next action) to minimize cognitive load.
+  - Collapse developer/advanced tuning knobs by default (`View.GONE` / collapsible containers).
 - **Optimal Defaults Over UI Knobs**: When a parameter is proven optimal via cross-validation or corpus evaluation, apply it as the default constant in code rather than adding new visible controls to the primary UI.
 - **Zero Dead UI Resources**: Immediately delete obsolete layouts or classes when refactoring UI flows. Refer to [`docs/ui_design_and_simplicity_guidelines.md`](docs/ui_design_and_simplicity_guidelines.md) before adding any UI element.
 
