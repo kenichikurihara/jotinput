@@ -13,6 +13,10 @@ import com.example.myasr.context.ime.domain.OnboardingDecisionModel.OnboardingLa
 import com.example.myasr.context.ime.infrastructure.OnboardingStateStore
 import com.example.myasr.context.ime.presentation.KeyboardHeightManager
 import com.example.myasr.context.kanakanji.application.UserHistorySyncManager
+import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel
+import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel.SettingsSyncCardInput
+import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel.SyncBadgeTone
+import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel.SyncCardState
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
 import com.example.myasr.context.provisioning.domain.DictUpdateState
 import com.example.myasr.context.provisioning.domain.DictionaryStatusInfo
@@ -163,6 +167,39 @@ class MainActivity : AppCompatActivity() {
     private var isUpdatingUiFromPrefs = false
     private var lastHandledProvisioningEventId: Long =
         ProvisioningForegroundService.state.value.lastEvent?.eventId ?: 0L
+
+    private lateinit var tvSettingsSyncBadge: TextView
+    private lateinit var tvSettingsSyncSummary: TextView
+    private lateinit var tvSettingsSyncStats: TextView
+    private lateinit var btnSettingsSyncPrimary: MaterialButton
+    private lateinit var layoutSettingsSyncSecondaryActions: LinearLayout
+    private lateinit var btnSettingsSyncChange: MaterialButton
+    private lateinit var btnSettingsSyncUnlink: MaterialButton
+    private lateinit var layoutSettingsAutoSyncControls: LinearLayout
+    private lateinit var switchSettingsAutoSync: com.google.android.material.switchmaterial.SwitchMaterial
+    private lateinit var rgSettingsSyncInterval: android.widget.RadioGroup
+    private lateinit var rbSyncInterval15m: android.widget.RadioButton
+    private lateinit var rbSyncInterval60m: android.widget.RadioButton
+    private lateinit var rbSyncInterval360m: android.widget.RadioButton
+
+    private var isSettingsSyncing = false
+    private var lastSettingsSyncError: String? = null
+
+    private val selectSettingsSyncFileLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            handleSettingsSyncFileSelected(uri)
+        }
+    }
+
+    private val createSettingsSyncFileLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            handleSettingsSyncFileSelected(uri)
+        }
+    }
 
     private lateinit var btnLaunchOnboarding: MaterialButton
     private val onboardingLauncher = registerForActivityResult(
@@ -485,6 +522,7 @@ class MainActivity : AppCompatActivity() {
             isUpdatingUiFromPrefs = false
         }
         updateSlmStatusBadge()
+        refreshSettingsSyncCard()
         val currentActiveCount = dictionaryRepository.getActive().size
         if (lastActiveDictionaryCount != -1 && lastActiveDictionaryCount != currentActiveCount) {
             lastActiveDictionaryCount = currentActiveCount
@@ -551,6 +589,20 @@ class MainActivity : AppCompatActivity() {
         cardQuickDictionary = findViewById(R.id.cardQuickDictionary)
         cardQuickSwitchIme = findViewById(R.id.cardQuickSwitchIme)
         btnEnableIme = findViewById(R.id.btnEnableIme)
+        tvSettingsSyncBadge = findViewById(R.id.tvSettingsSyncBadge)
+        tvSettingsSyncSummary = findViewById(R.id.tvSettingsSyncSummary)
+        tvSettingsSyncStats = findViewById(R.id.tvSettingsSyncStats)
+        btnSettingsSyncPrimary = findViewById(R.id.btnSettingsSyncPrimary)
+        layoutSettingsSyncSecondaryActions = findViewById(R.id.layoutSettingsSyncSecondaryActions)
+        btnSettingsSyncChange = findViewById(R.id.btnSettingsSyncChange)
+        btnSettingsSyncUnlink = findViewById(R.id.btnSettingsSyncUnlink)
+        layoutSettingsAutoSyncControls = findViewById(R.id.layoutSettingsAutoSyncControls)
+        switchSettingsAutoSync = findViewById(R.id.switchSettingsAutoSync)
+        rgSettingsSyncInterval = findViewById(R.id.rgSettingsSyncInterval)
+        rbSyncInterval15m = findViewById(R.id.rbSyncInterval15m)
+        rbSyncInterval60m = findViewById(R.id.rbSyncInterval60m)
+        rbSyncInterval360m = findViewById(R.id.rbSyncInterval360m)
+
         btnLaunchOnboarding = findViewById(R.id.btnLaunchOnboarding)
         tvOssLicenses = findViewById(R.id.tvOssLicenses)
 
@@ -741,6 +793,8 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
         }
 
+        setupSettingsSyncUI()
+
         btnLaunchOnboarding.setOnClickListener {
             launchOnboarding(
                 forceLaunch = true,
@@ -752,6 +806,173 @@ class MainActivity : AppCompatActivity() {
         tvOssLicenses.setOnClickListener {
             showOssLicensesDialog()
         }
+    }
+
+    private fun setupSettingsSyncUI() {
+        btnSettingsSyncPrimary.setOnClickListener {
+            val syncManager = UserHistorySyncManager.getInstance(this)
+            val uri = syncManager.getSyncUri()
+            val hasPerm = syncManager.hasValidSyncPermission()
+            if (uri != null && hasPerm) {
+                executeSettingsSync(uri)
+            } else {
+                promptChooseOrCreateSettingsSyncFile()
+            }
+        }
+        btnSettingsSyncChange.setOnClickListener {
+            promptChooseOrCreateSettingsSyncFile()
+        }
+        btnSettingsSyncUnlink.setOnClickListener {
+            promptUnlinkSettingsSync()
+        }
+        switchSettingsAutoSync.setOnCheckedChangeListener { _, isChecked ->
+            if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
+            UserHistorySyncManager.getInstance(this).setAutoSyncEnabled(isChecked)
+            refreshSettingsSyncCard()
+            val msg = if (isChecked) "Google Drive 自動・定期同期をオンにしました" else "自動・定期同期をオフにしました（手動のみ）"
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+        }
+        rgSettingsSyncInterval.setOnCheckedChangeListener { _, checkedId ->
+            if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
+            val minutes = when (checkedId) {
+                R.id.rbSyncInterval15m -> 15L
+                R.id.rbSyncInterval360m -> 360L
+                else -> 60L
+            }
+            UserHistorySyncManager.getInstance(this).setSyncIntervalMinutes(minutes)
+            val label = when (minutes) {
+                15L -> "15分ごと"
+                360L -> "6時間ごと"
+                else -> "1時間ごと"
+            }
+            Toast.makeText(this, "定期同期間隔を $label に設定しました", Toast.LENGTH_SHORT).show()
+        }
+        refreshSettingsSyncCard()
+    }
+
+    private fun refreshSettingsSyncCard() {
+        val syncManager = UserHistorySyncManager.getInstance(this)
+        val stats = syncManager.getSyncStats()
+        val hasUri = stats.syncUriString != null
+        val decision = HistorySyncDecisionModel.evaluateSettingsSyncCard(
+            SettingsSyncCardInput(
+                isSyncing = isSettingsSyncing,
+                hasStoredUri = hasUri,
+                hasValidPermission = stats.hasValidPermission,
+                autoSyncEnabled = stats.isAutoSyncEnabled,
+                lastSyncTimestamp = stats.lastSyncTimestamp,
+                lastSyncError = lastSettingsSyncError
+            )
+        )
+
+        tvSettingsSyncBadge.text = decision.badgeText
+        val tone = when (decision.tone) {
+            SyncBadgeTone.SUCCESS -> StatusTone.SUCCESS
+            SyncBadgeTone.INFO -> StatusTone.INFO
+            SyncBadgeTone.WARNING -> StatusTone.WARNING
+            SyncBadgeTone.NEUTRAL -> StatusTone.NEUTRAL
+        }
+        applyBadgeTone(tvSettingsSyncBadge, tone)
+
+        tvSettingsSyncSummary.text = when (decision.cardState) {
+            SyncCardState.SYNCING -> "Google Drive と安全にマージ同期しています..."
+            SyncCardState.ERROR -> "${lastSettingsSyncError ?: "同期エラー"}（ローカルデータは保護されています）"
+            SyncCardState.PERMISSION_LOST -> "再インストール等により Google Drive ファイルへのアクセス権限が失効しています。ファイルを選択して再連携してください。"
+            SyncCardState.CONNECTED -> {
+                val dateStr = if (stats.lastSyncTimestamp > 0L) {
+                    java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.getDefault())
+                        .format(java.util.Date(stats.lastSyncTimestamp))
+                } else {
+                    "未同期"
+                }
+                val summary = stats.lastSyncSummary ?: "準備完了"
+                "最終同期: $dateStr ($summary)"
+            }
+            SyncCardState.NOT_CONNECTED -> "Google Drive の同期ファイルを選択すると、学習履歴と単語辞書を定期的・安全に同期できます。"
+        }
+
+        tvSettingsSyncStats.text = "登録単語 ${stats.customDictCount}件 / 変換語 ${stats.unigramCount} / 連接 ${stats.bigramPairCount}"
+        btnSettingsSyncPrimary.text = decision.primaryButtonLabel
+        btnSettingsSyncPrimary.isEnabled = decision.primaryButtonEnabled
+        layoutSettingsSyncSecondaryActions.visibility =
+            if (decision.showChangeAndUnlinkButtons) View.VISIBLE else View.GONE
+        layoutSettingsAutoSyncControls.visibility =
+            if (decision.showAutoSyncControls) View.VISIBLE else View.GONE
+
+        isUpdatingUiFromPrefs = true
+        try {
+            switchSettingsAutoSync.isChecked = stats.isAutoSyncEnabled
+            when (stats.syncIntervalMinutes) {
+                15L -> rbSyncInterval15m.isChecked = true
+                360L -> rbSyncInterval360m.isChecked = true
+                else -> rbSyncInterval60m.isChecked = true
+            }
+        } finally {
+            isUpdatingUiFromPrefs = false
+        }
+    }
+
+    private fun promptChooseOrCreateSettingsSyncFile() {
+        val options = arrayOf("Google Drive 上の既存ファイルを選択", "Google Drive 上に新規作成 (推奨)")
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Google Drive 同期ファイルの設定")
+            .setItems(options) { _, which ->
+                if (which == 0) {
+                    selectSettingsSyncFileLauncher.launch(arrayOf("application/json", "*/*"))
+                } else {
+                    createSettingsSyncFileLauncher.launch("jotinput_history_sync.json")
+                }
+            }
+            .setNegativeButton("キャンセル", null)
+            .show()
+    }
+
+    private fun handleSettingsSyncFileSelected(uri: android.net.Uri) {
+        try {
+            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            contentResolver.takePersistableUriPermission(uri, takeFlags)
+        } catch (_: Exception) {
+        }
+        UserHistorySyncManager.getInstance(this).setSyncUri(uri)
+        lastSettingsSyncError = null
+        executeSettingsSync(uri)
+    }
+
+    private fun executeSettingsSync(uri: android.net.Uri) {
+        isSettingsSyncing = true
+        lastSettingsSyncError = null
+        refreshSettingsSyncCard()
+
+        lifecycleScope.launch {
+            val result = UserHistorySyncManager.getInstance(this@MainActivity)
+                .performSync(uri, trigger = "settings_manual")
+            isSettingsSyncing = false
+            if (result.success) {
+                lastSettingsSyncError = null
+                withContext(Dispatchers.Default) {
+                    AsrApp.instance.syncAllUserDictionaries()
+                }
+                updateDictionaryBadge()
+            } else {
+                lastSettingsSyncError = result.message
+            }
+            refreshSettingsSyncCard()
+            Toast.makeText(this@MainActivity, result.message, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun promptUnlinkSettingsSync() {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("Google Drive 連携を解除")
+            .setMessage("Google Drive との自動同期・定期同期を解除しますか？\n（※端末内の単語辞書や学習履歴、Drive 上のファイル自体は削除されません）")
+            .setPositiveButton("解除する") { _, _ ->
+                UserHistorySyncManager.getInstance(this).clearSyncUri()
+                lastSettingsSyncError = null
+                refreshSettingsSyncCard()
+                Toast.makeText(this, "Google Drive との連携を解除しました", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("キャンセル", null)
+            .show()
     }
 
     private fun maybeLaunchOnboarding(savedInstanceState: Bundle?): Boolean {

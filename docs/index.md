@@ -323,6 +323,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 61. [オンボーディングフロー PRD & 形式設計 (Onboarding Flow — 初回・再インストール・Google Drive 履歴復元対応)](docs/prd_and_design_onboarding_flow.md)
     - 初回インストール・再インストール（Android Auto Backup 権限失効検知）・Google Drive 履歴復元に対応する非ブロッキング型オンボーディングの PRD、4つの JTBD、4つの CUJ、12項目のコーナーケース対策、[`OnboardingDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/OnboardingDecisionModel.kt)（DMN 決定表3種）、および [`onboarding_flow.als`](app/src/test/resources/alloy/onboarding_flow.als) による形式検証仕様。
 
+62. [Google Drive 履歴同期の設定画面統合 & 定期バックグラウンド同期 PRD & 形式設計](docs/prd_and_design_google_drive_sync_settings.md)
+    - 設定タブからの常時連携・同期先変更・即時同期・解除と、`JobScheduler` による定期バックグラウンド同期継続のための PRD、4つの JTBD、4つの CUJ、コーナーケース対策、[`HistorySyncDecisionModel`](app/src/main/java/com/example/myasr/context/kanakanji/domain/HistorySyncDecisionModel.kt)（DMN 決定表2種）、および [`history_sync_settings.als`](app/src/test/resources/alloy/history_sync_settings.als) による形式検証仕様。
+
 ---
 
 ## 📂 Source Code Layout

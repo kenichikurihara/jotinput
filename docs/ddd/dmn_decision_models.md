@@ -47,6 +47,8 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingLaunchDecisionTable` | `FIRST` | 起動時オンボーディング要否・再インストール/既存移行判定 |
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `DriveRestoreStatusDecisionTable` | `FIRST` | Google Drive 履歴復元・SAF権限失効検知と表示状態決定 |
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingStepGuidanceDecisionTable` | `FIRST` | 各ステップのCTA・非ブロッキング進行・スキップ制御決定 |
+| **BC-1: Kana-Kanji & Sync** | `HistorySyncDecisionModel` | `SyncScheduleDecisionTable` | `FIRST` | 定期バックグラウンド同期ジョブの登録・停止方針決定 |
+| **BC-1: Kana-Kanji & Sync** | `HistorySyncDecisionModel` | `SettingsSyncCardDecisionTable` | `FIRST` | 設定タブ Google Drive 同期カードのUI状態・操作可否決定 |
 
 ---
 

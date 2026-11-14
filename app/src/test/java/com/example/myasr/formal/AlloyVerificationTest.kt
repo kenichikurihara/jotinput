@@ -92,4 +92,9 @@ class AlloyVerificationTest {
     fun `onboarding_flow formal model satisfies launch, Drive permission-loss, and non-blocking completion invariants`() {
         verifyAlloyModel("alloy/onboarding_flow.als")
     }
+
+    @Test
+    fun `history_sync_settings formal model satisfies periodic job scheduling, permission-loss, and snapshot-reset invariants`() {
+        verifyAlloyModel("alloy/history_sync_settings.als")
+    }
 }

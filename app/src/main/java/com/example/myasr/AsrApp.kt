@@ -95,6 +95,11 @@ class AsrApp : Application() {
         // Asynchronously preload and warm up all core engines (KanaKanji, SLM, ASR) off the UI main thread
         modelWarmUpManager.startWarmUpAsync()
 
+        // Ensure OS periodic background Google Drive sync matches current user & permission state
+        com.example.myasr.context.kanakanji.application.UserHistorySyncManager
+            .getInstance(this)
+            .ensurePeriodicSyncSchedule()
+
         Log.i(TAG, "AsrApp initialized. Shared ASR, IME & SLM components ready.")
     }
 

@@ -1,6 +1,9 @@
 package com.example.myasr.context.kanakanji.application
 
 import com.example.myasr.AsrApp
+import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel
+import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel.SyncScheduleInput
+import com.example.myasr.context.kanakanji.infrastructure.HistorySyncJobService
 import com.example.myasr.context.vocabulary.domain.DictionaryEntry
 import com.example.myasr.context.vocabulary.domain.DictionaryTombstone
 
@@ -35,6 +38,7 @@ class UserHistorySyncManager private constructor(private val context: Context) {
     private val KEY_LAST_SYNC_TIME = "last_sync_timestamp"
     private val KEY_LAST_SYNC_SUMMARY = "last_sync_summary"
     private val KEY_AUTO_SYNC_ENABLED = "auto_sync_enabled"
+    private val KEY_SYNC_INTERVAL_MINUTES = "sync_interval_minutes"
     private val KEY_DEVICE_ID = "sync_device_id"
 
     private val BASE_SNAPSHOT_FILE = "sync_base_snapshot.json"
@@ -76,7 +80,9 @@ class UserHistorySyncManager private constructor(private val context: Context) {
         val lastSyncTimestamp: Long,
         val syncUriString: String?,
         val lastSyncSummary: String?,
-        val isAutoSyncEnabled: Boolean
+        val isAutoSyncEnabled: Boolean,
+        val syncIntervalMinutes: Long = HistorySyncDecisionModel.DEFAULT_PERIODIC_INTERVAL_MINUTES,
+        val hasValidPermission: Boolean = false
     )
 
     data class MergeResult(
@@ -105,9 +111,25 @@ class UserHistorySyncManager private constructor(private val context: Context) {
     fun setAutoSyncEnabled(enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_AUTO_SYNC_ENABLED, enabled).apply()
+        ensurePeriodicSyncSchedule()
         if (enabled && (isHistoryDirty || isDictionaryDirty)) {
             triggerOpportunisticSyncIfNeeded()
         }
+    }
+
+    fun getSyncIntervalMinutes(): Long {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getLong(
+            KEY_SYNC_INTERVAL_MINUTES,
+            HistorySyncDecisionModel.DEFAULT_PERIODIC_INTERVAL_MINUTES
+        ).coerceAtLeast(HistorySyncDecisionModel.MIN_PERIODIC_INTERVAL_MINUTES)
+    }
+
+    fun setSyncIntervalMinutes(minutes: Long) {
+        val clamped = minutes.coerceAtLeast(HistorySyncDecisionModel.MIN_PERIODIC_INTERVAL_MINUTES)
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putLong(KEY_SYNC_INTERVAL_MINUTES, clamped).apply()
+        ensurePeriodicSyncSchedule()
     }
 
     fun notifyHistoryMutated() {
@@ -182,13 +204,23 @@ class UserHistorySyncManager private constructor(private val context: Context) {
             lastSyncTimestamp = lastSync,
             syncUriString = uriStr,
             lastSyncSummary = summary,
-            isAutoSyncEnabled = autoSync
+            isAutoSyncEnabled = autoSync,
+            syncIntervalMinutes = getSyncIntervalMinutes(),
+            hasValidPermission = hasValidSyncPermission()
         )
     }
 
     fun setSyncUri(uri: Uri) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_SYNC_URI, uri.toString()).apply()
+        val oldUri = prefs.getString(KEY_SYNC_URI, null)
+        val newUriStr = uri.toString()
+        if (oldUri != null && oldUri != newUriStr) {
+            // Reset base snapshot when switching to a different Google Drive file
+            // so 3-way delta never applies tombstones/deletes from the previous file.
+            runCatching { File(context.filesDir, BASE_SNAPSHOT_FILE).delete() }
+        }
+        prefs.edit().putString(KEY_SYNC_URI, newUriStr).apply()
+        ensurePeriodicSyncSchedule()
     }
 
     fun getSyncUri(): Uri? {
@@ -204,6 +236,24 @@ class UserHistorySyncManager private constructor(private val context: Context) {
     fun clearSyncUri() {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().remove(KEY_SYNC_URI).apply()
+        runCatching { File(context.filesDir, BASE_SNAPSHOT_FILE).delete() }
+        ensurePeriodicSyncSchedule()
+    }
+
+    fun ensurePeriodicSyncSchedule() {
+        val decision = HistorySyncDecisionModel.evaluateSyncSchedule(
+            SyncScheduleInput(
+                autoSyncEnabled = isAutoSyncEnabled(),
+                hasStoredUri = getSyncUri() != null,
+                hasValidPermission = hasValidSyncPermission(),
+                intervalMinutes = getSyncIntervalMinutes()
+            )
+        )
+        if (decision.shouldBeScheduled) {
+            HistorySyncJobService.schedulePeriodic(context, decision.effectiveIntervalMinutes)
+        } else {
+            HistorySyncJobService.cancel(context)
+        }
     }
 
     /**

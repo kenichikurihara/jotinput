@@ -52,4 +52,10 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`DownloadInProgressNeverBlocksCompletion`**: バックグラウンドダウンロード中・失敗時でも完了ステップへ到達できること（非ブロッキング性）。
 - **`AllModesCanReachCompletion`**: 新規・再インストール・Google Drive 復元の全モードでデッドロックなく完了できること。
 
+### 3.6 [`history_sync_settings.als`](app/src/test/resources/alloy/history_sync_settings.als)
+設定タブの Google Drive 履歴同期と定期バックグラウンド同期（[`HistorySyncDecisionModel`](app/src/main/java/com/example/myasr/context/kanakanji/domain/HistorySyncDecisionModel.kt)）をモデル化し、以下を検証する：
+- **`PeriodicJobOnlyWhenEnabledAndPermitted`**: 自動同期ON・URI設定済・SAF権限有効の3条件が揃ったときのみ定期ジョブがスケジュールされること。
+- **`PermissionLostCancelsJobAndShowsWarning`**: 権限失効時は定期ジョブを停止し警告表示とすること。
+- **`ChangingSyncUriResetsSnapshot`**: 同期先ファイル変更時は旧 Base Snapshot が必ずリセットされること。
+
 
