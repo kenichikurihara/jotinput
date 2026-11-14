@@ -241,6 +241,8 @@ class FlickKeyboardView @JvmOverloads constructor(
     private val swipeTrajectory = mutableListOf<FutoSwipeEngine.SwipePoint>()
     private var isSwiping = false
     private val swipeThresholdPx = 18f * resources.displayMetrics.density
+    private var qwertyAlphaTop: Float = 0f
+    private var qwertyAlphaBottom: Float = 0f
 
     private val flickThresholdPx = 26f * resources.displayMetrics.density
     private val spacebarSwipeTracker = SpacebarCursorSwipeTracker(
@@ -252,6 +254,22 @@ class FlickKeyboardView @JvmOverloads constructor(
         return qwertyCursorControlMode == KeyboardHeightManager.QwertyCursorControlMode.SPACEBAR_SWIPE &&
             (currentMode == JapaneseKanaUtils.KeyboardMode.QWERTY ||
                 currentMode == JapaneseKanaUtils.KeyboardMode.QWERTY_SYMBOLS)
+    }
+
+    private fun isAlphabetSwipeKey(key: Key): Boolean {
+        return key.type == KeyType.QWERTY_CHAR &&
+            key.label.length == 1 &&
+            key.label[0].lowercaseChar() in 'a'..'z'
+    }
+
+    private fun normalizeSwipeY(y: Float): Float {
+        val alphaHeight = (qwertyAlphaBottom - qwertyAlphaTop).takeIf { it > 1f } ?: height.toFloat().coerceAtLeast(1f)
+        return ((y - qwertyAlphaTop) / alphaHeight).coerceIn(0f, 1f)
+    }
+
+    private fun denormalizeSwipeY(normY: Float): Float {
+        val alphaHeight = (qwertyAlphaBottom - qwertyAlphaTop).takeIf { it > 1f } ?: height.toFloat().coerceAtLeast(1f)
+        return qwertyAlphaTop + normY * alphaHeight
     }
 
     init {
@@ -534,6 +552,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         // Row A: q..p
         val rowATop = currentRow * rowHeight
         val rowABottom = rowATop + rowHeight
+        qwertyAlphaTop = rowATop
         val rowASubs = if (showNumberRowInQwerty) {
             JapaneseKanaUtils.QWERTY_ROW_1_SUB_WITH_NUM
         } else {
@@ -581,6 +600,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         // Row C: Shift (15%) + z..m (7 * 10%) + Delete (15%)
         val rowCTop = currentRow * rowHeight
         val rowCBottom = rowCTop + rowHeight
+        qwertyAlphaBottom = rowCBottom
         val sideWidth = width * 0.15f
         val shiftLabel = when (shiftState) {
             ShiftState.OFF -> "⇧"
@@ -668,6 +688,21 @@ class FlickKeyboardView @JvmOverloads constructor(
 
         val enterLabel = if (isComposingState || hasVoiceComposingState) "確定" else "↵"
         addKey(KeyType.ENTER, x, rowDTop, width, rowDBottom, marginX * 1.2f, marginY * 1.3f, enterLabel, isPill = true, isAccent = true, isFunctionKey = true)
+
+        // Sync normalized 26 alphabet key centers with FutoSwipeEngine
+        val alphaHeight = (qwertyAlphaBottom - qwertyAlphaTop).coerceAtLeast(1f)
+        val safeWidth = width.coerceAtLeast(1f)
+        val keyCenters = FloatArray(52)
+        for (k in keys) {
+            if (isAlphabetSwipeKey(k)) {
+                val idx = k.label[0].lowercaseChar() - 'a'
+                if (idx in 0..25) {
+                    keyCenters[idx * 2] = (k.hitRect.centerX() / safeWidth).coerceIn(0f, 1f)
+                    keyCenters[idx * 2 + 1] = ((k.hitRect.centerY() - qwertyAlphaTop) / alphaHeight).coerceIn(0f, 1f)
+                }
+            }
+        }
+        FutoSwipeEngine.getInstance(context).updateLayoutKeys(keyCenters)
     }
 
     /**
@@ -893,9 +928,9 @@ class FlickKeyboardView @JvmOverloads constructor(
         // Draw active swipe path on QWERTY
         if (isSwiping && swipeTrajectory.size >= 2) {
             val path = Path()
-            path.moveTo(swipeTrajectory[0].x * width, swipeTrajectory[0].y * height)
+            path.moveTo(swipeTrajectory[0].x * width, denormalizeSwipeY(swipeTrajectory[0].y))
             for (i in 1 until swipeTrajectory.size) {
-                path.lineTo(swipeTrajectory[i].x * width, swipeTrajectory[i].y * height)
+                path.lineTo(swipeTrajectory[i].x * width, denormalizeSwipeY(swipeTrajectory[i].y))
             }
             canvas.drawPath(path, swipePathPaint)
         }
@@ -1012,11 +1047,11 @@ class FlickKeyboardView @JvmOverloads constructor(
                     }
 
                     if (currentMode == JapaneseKanaUtils.KeyboardMode.QWERTY &&
-                        hitKey.type == KeyType.QWERTY_CHAR &&
+                        isAlphabetSwipeKey(hitKey) &&
                         KeyboardHeightManager.isQwertySwipeTypingEnabled(context)
                     ) {
                         val normX = (x / width.toFloat()).coerceIn(0f, 1f)
-                        val normY = (y / height.toFloat()).coerceIn(0f, 1f)
+                        val normY = normalizeSwipeY(y)
                         swipeTrajectory.add(FutoSwipeEngine.SwipePoint(normX, normY, event.eventTime))
                     }
 
@@ -1081,7 +1116,7 @@ class FlickKeyboardView @JvmOverloads constructor(
                 }
 
                 if (currentMode == JapaneseKanaUtils.KeyboardMode.QWERTY &&
-                    currentKey.type == KeyType.QWERTY_CHAR &&
+                    isAlphabetSwipeKey(currentKey) &&
                     KeyboardHeightManager.isQwertySwipeTypingEnabled(context)
                 ) {
                     if (!isSwiping && dist >= swipeThresholdPx && !longPressTriggered) {
@@ -1095,7 +1130,7 @@ class FlickKeyboardView @JvmOverloads constructor(
 
                     if (isSwiping) {
                         val normX = (x / width.toFloat()).coerceIn(0f, 1f)
-                        val normY = (y / height.toFloat()).coerceIn(0f, 1f)
+                        val normY = normalizeSwipeY(y)
                         swipeTrajectory.add(FutoSwipeEngine.SwipePoint(normX, normY, event.eventTime))
                         invalidate()
                         return true
@@ -1160,7 +1195,7 @@ class FlickKeyboardView @JvmOverloads constructor(
 
                 if (isSwiping) {
                     val normX = (x / width.toFloat()).coerceIn(0f, 1f)
-                    val normY = (y / height.toFloat()).coerceIn(0f, 1f)
+                    val normY = normalizeSwipeY(y)
                     swipeTrajectory.add(FutoSwipeEngine.SwipePoint(normX, normY, event.eventTime))
                     val trajectoryCopy = swipeTrajectory.toList()
                     isSwiping = false

@@ -74,6 +74,23 @@ Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeSync
     g_swipe_engine->SyncUserDictionary(user_words);
 }
 
+JNIEXPORT void JNICALL
+Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeSetLayoutKeys(
+    JNIEnv* env,
+    jobject /* this */,
+    jfloatArray key_centers_jarr
+) {
+    if (g_swipe_engine == nullptr || key_centers_jarr == nullptr) {
+        return;
+    }
+    jsize len = env->GetArrayLength(key_centers_jarr);
+    if (len < 52) return;
+    jfloat* ptr = env->GetFloatArrayElements(key_centers_jarr, nullptr);
+    std::vector<float> key_centers(ptr, ptr + len);
+    env->ReleaseFloatArrayElements(key_centers_jarr, ptr, JNI_ABORT);
+    g_swipe_engine->SetLayoutKeys(key_centers);
+}
+
 JNIEXPORT jobjectArray JNICALL
 Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeDecode(
     JNIEnv* env,

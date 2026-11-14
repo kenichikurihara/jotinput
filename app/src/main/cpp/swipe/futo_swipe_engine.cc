@@ -112,7 +112,11 @@ std::pair<int64_t, int64_t> FutoContextBuckets(const std::string& word) {
     return {b0, b1};
 }
 
-// Trace Resampling: converts arbitrary touch trace to (2, 64) float32
+// Trace Resampling (Tier 1 Idea 5):
+// 1. Stationary mid-stroke dwell clamping (max_dt_ms = 65.0ms when spatial movement < 0.03)
+// 2. 60Hz temporal interpolation
+// 3. Time + cumulative arc-length hybrid parameterization (arc_blend = 0.02)
+// 4. Endpoint-preserving 3-tap low-pass smoothing (smooth_alpha = 0.06)
 std::vector<float> ResampleTrace(const std::vector<SwipePoint>& trace) {
     std::vector<float> result(2 * 64, 0.0f);
     size_t count = trace.size();
@@ -127,6 +131,24 @@ std::vector<float> ResampleTrace(const std::vector<SwipePoint>& trace) {
     }
     if (count > 1 && times.back() > 100000.0) {
         for (size_t i = 0; i < count; ++i) times[i] /= 1000.0;
+    }
+
+    // 1. Clamp stationary mid-stroke pauses
+    if (count > 2) {
+        constexpr double kMaxStationaryDtMs = 65.0;
+        constexpr double kStationaryDistThr = 0.03;
+        std::vector<double> clamped_times(count, 0.0);
+        for (size_t i = 0; i + 1 < count; ++i) {
+            double dt = times[i + 1] - times[i];
+            double dx = xs[i + 1] - xs[i];
+            double dy = ys[i + 1] - ys[i];
+            double dist = std::hypot(dx, dy);
+            if (dt > kMaxStationaryDtMs && dist < kStationaryDistThr) {
+                dt = kMaxStationaryDtMs;
+            }
+            clamped_times[i + 1] = clamped_times[i] + dt;
+        }
+        times = std::move(clamped_times);
     }
 
     double duration = times.back();
@@ -160,18 +182,65 @@ std::vector<float> ResampleTrace(const std::vector<SwipePoint>& trace) {
         stage_y = ys;
     }
 
+    // 2. Hybrid time + cumulative arc-length parameterization to 64 points
     size_t s_len = stage_x.size();
-    for (int i = 0; i < 64; ++i) {
-        double pos = static_cast<double>(s_len - 1) * i / 63.0;
-        size_t p_floor = static_cast<size_t>(pos);
-        size_t p_ceil = std::min(p_floor + 1, s_len - 1);
-        double frac = pos - p_floor;
+    std::vector<float> rx(64, 0.0f), ry(64, 0.0f);
+    constexpr double kArcBlend = 0.02;
 
-        float rx = static_cast<float>(stage_x[p_floor] + frac * (stage_x[p_ceil] - stage_x[p_floor]));
-        float ry = static_cast<float>(stage_y[p_floor] + frac * (stage_y[p_ceil] - stage_y[p_floor]));
+    if (s_len > 2 && kArcBlend > 0.0) {
+        std::vector<double> cum_s(s_len, 0.0);
+        for (size_t i = 0; i + 1 < s_len; ++i) {
+            double ds = std::hypot(stage_x[i + 1] - stage_x[i], stage_y[i + 1] - stage_y[i]);
+            cum_s[i + 1] = cum_s[i] + ds;
+        }
+        if (cum_s.back() > 1e-5) {
+            std::vector<double> hybrid_param(s_len, 0.0);
+            double total_s = cum_s.back();
+            for (size_t i = 0; i < s_len; ++i) {
+                double t_norm = static_cast<double>(i) / static_cast<double>(s_len - 1);
+                double s_norm = cum_s[i] / total_s;
+                hybrid_param[i] = (1.0 - kArcBlend) * t_norm + kArcBlend * s_norm;
+            }
+            size_t curr = 0;
+            for (int i = 0; i < 64; ++i) {
+                double target_p = static_cast<double>(i) / 63.0;
+                while (curr + 1 < s_len && hybrid_param[curr + 1] < target_p) curr++;
+                if (curr + 1 >= s_len) {
+                    rx[i] = static_cast<float>(stage_x.back());
+                    ry[i] = static_cast<float>(stage_y.back());
+                } else {
+                    double dp = hybrid_param[curr + 1] - hybrid_param[curr];
+                    double frac = (dp > 1e-8) ? (target_p - hybrid_param[curr]) / dp : 0.0;
+                    rx[i] = static_cast<float>(stage_x[curr] + frac * (stage_x[curr + 1] - stage_x[curr]));
+                    ry[i] = static_cast<float>(stage_y[curr] + frac * (stage_y[curr + 1] - stage_y[curr]));
+                }
+            }
+        } else {
+            for (int i = 0; i < 64; ++i) {
+                rx[i] = static_cast<float>(stage_x[0]);
+                ry[i] = static_cast<float>(stage_y[0]);
+            }
+        }
+    } else {
+        for (int i = 0; i < 64; ++i) {
+            double pos = static_cast<double>(s_len - 1) * i / 63.0;
+            size_t p_floor = static_cast<size_t>(pos);
+            size_t p_ceil = std::min(p_floor + 1, s_len - 1);
+            double frac = pos - p_floor;
+            rx[i] = static_cast<float>(stage_x[p_floor] + frac * (stage_x[p_ceil] - stage_x[p_floor]));
+            ry[i] = static_cast<float>(stage_y[p_floor] + frac * (stage_y[p_ceil] - stage_y[p_floor]));
+        }
+    }
 
-        result[i] = rx;          // x at [0, i]
-        result[64 + i] = ry;     // y at [1, i]
+    // 3. Endpoint-preserving 3-tap low-pass smoothing on interior points [1..62]
+    constexpr float kSmoothAlpha = 0.06f;
+    result[0] = rx[0];
+    result[64] = ry[0];
+    result[63] = rx[63];
+    result[64 + 63] = ry[63];
+    for (int i = 1; i < 63; ++i) {
+        result[i] = (1.0f - kSmoothAlpha) * rx[i] + 0.5f * kSmoothAlpha * (rx[i - 1] + rx[i + 1]);
+        result[64 + i] = (1.0f - kSmoothAlpha) * ry[i] + 0.5f * kSmoothAlpha * (ry[i - 1] + ry[i + 1]);
     }
     return result;
 }
@@ -185,12 +254,19 @@ inline float LogAdd(float a, float b) {
 }
 
 // Flat-array Trie for ultra-fast CTC beam search
+struct SurfaceEntry {
+    std::string surface;
+    int vocab_rank = 32768;
+    float zipf_freq = 0.0f;
+    bool has_apostrophe = false;
+};
+
 struct TrieNode {
     std::string text;
     int last = -1;
     int children[26];
-    std::vector<std::string> surfaces;
-    int frequency = 0;
+    std::vector<SurfaceEntry> surfaces;
+    bool has_plain_surface = false;
     float max_user_priority = 0.0f;
     bool has_user_subtree = false;
 
@@ -275,8 +351,29 @@ public:
                     std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
                     lowercase_ids_.emplace(lower, token_id);
                 }
-                AddWordToTrie(line);
+                AddWordToTrie(line, vocab_idx);
                 vocab_idx++;
+            }
+
+            // Idea 2: Derive missing base stems from possessive ('s) vocabulary entries
+            // (e.g., York's -> York, Alzheimer's -> Alzheimer, Macy's -> Macy)
+            for (size_t rank = 0; rank < vocabulary_.size(); ++rank) {
+                const std::string& w = vocabulary_[rank];
+                if (w.size() >= 4 && w[w.size() - 2] == '\'' && (w.back() == 's' || w.back() == 'S')) {
+                    std::string stem = w.substr(0, w.size() - 2);
+                    bool all_alpha = true;
+                    std::string lower_stem = stem;
+                    for (char& c : lower_stem) {
+                        if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))) {
+                            all_alpha = false;
+                            break;
+                        }
+                        c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+                    }
+                    if (all_alpha && lowercase_ids_.find(lower_stem) == lowercase_ids_.end()) {
+                        AddWordToTrie(stem, static_cast<int>(rank));
+                    }
+                }
             }
 
             // Init layout keys
@@ -327,14 +424,41 @@ public:
                 trie_nodes_[curr].has_user_subtree = true;
             }
 
-            auto it = std::find(trie_nodes_[curr].surfaces.begin(), trie_nodes_[curr].surfaces.end(), uw.surface);
+            bool has_apos = (uw.surface.find('\'') != std::string::npos);
+            auto it = std::find_if(
+                trie_nodes_[curr].surfaces.begin(),
+                trie_nodes_[curr].surfaces.end(),
+                [&](const SurfaceEntry& se) { return se.surface == uw.surface; }
+            );
             if (it != trie_nodes_[curr].surfaces.end()) {
                 trie_nodes_[curr].surfaces.erase(it);
             }
-            trie_nodes_[curr].surfaces.insert(trie_nodes_[curr].surfaces.begin(), uw.surface);
+            trie_nodes_[curr].surfaces.insert(
+                trie_nodes_[curr].surfaces.begin(),
+                SurfaceEntry{uw.surface, 0, 255.0f, has_apos}
+            );
+            if (!has_apos) {
+                trie_nodes_[curr].has_plain_surface = true;
+            }
             trie_nodes_[curr].max_user_priority = std::max(trie_nodes_[curr].max_user_priority, uw.priority_score);
         }
         LOGI("Synced %zu user swipe words into Trie (nodes=%zu)", user_words.size(), trie_nodes_.size());
+    }
+
+    void SetLayoutKeys(const std::vector<float>& key_centers_xy) {
+        if (key_centers_xy.size() < 52) return;
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (layout_keys_.size() != FUTO_SWIPE_MAX_KEYS * 2) {
+            layout_keys_.assign(FUTO_SWIPE_MAX_KEYS * 2, 0.0f);
+            layout_mask_.assign(FUTO_SWIPE_MAX_KEYS, false);
+        }
+        for (int i = 0; i < 26; ++i) {
+            key_centers_[i][0] = key_centers_xy[i * 2];
+            key_centers_[i][1] = key_centers_xy[i * 2 + 1];
+            layout_keys_[i * 2] = key_centers_[i][0];
+            layout_keys_[i * 2 + 1] = key_centers_[i][1];
+            layout_mask_[i] = true;
+        }
     }
 
     std::vector<SwipeCandidate> Decode(
@@ -346,8 +470,10 @@ public:
         if (!ready_ || trajectory.size() < 2) return {};
         std::lock_guard<std::mutex> lock(mutex_);
 
-        // 1. Trace Resampling
+        // 1. Trace Resampling (Idea 5)
         std::vector<float> resampled = ResampleTrace(trajectory); // [2, 64]
+        float px0 = resampled[0], py0 = resampled[64];
+        float px1 = resampled[63], py1 = resampled[127];
 
         // 2. Run Encoder
         int64_t feat_shape[3] = {1, 2, 64};
@@ -470,20 +596,29 @@ public:
             }
         }
 
-        // 6. Context state & scoring
+        // 6. Context state & scoring (Ideas 2, 3, 4)
         std::vector<float> context_state;
         if (use_context) {
             context_state = ComputeContextState(previous_words);
         }
 
         float max_base = -1e9f;
+        float best_common_tot = -1e9f;
         for (const auto& kv : states) {
             int node_idx = kv.first;
             const TrieNode& node = trie_nodes_[node_idx];
             if (node.surfaces.empty()) continue;
 
+            float tot = kv.second.Total();
+            for (const auto& se : node.surfaces) {
+                if (se.vocab_rank < 6000) {
+                    if (tot > best_common_tot) best_common_tot = tot;
+                    break;
+                }
+            }
+
             float l = static_cast<float>(node.text.size());
-            float base = kv.second.Total() / std::pow(l, gamma) + beta * l;
+            float base = tot / std::pow(l, gamma) + beta * l;
             if (base > max_base) max_base = base;
         }
 
@@ -491,24 +626,57 @@ public:
         for (const auto& kv : states) {
             int node_idx = kv.first;
             const TrieNode& node = trie_nodes_[node_idx];
-            if (node.surfaces.empty()) continue;
+            if (node.surfaces.empty() || node.text.empty()) continue;
 
             float l = static_cast<float>(node.text.size());
-            float base = kv.second.Total() / std::pow(l, gamma) + beta * l;
+            float tot = kv.second.Total();
 
-            for (const auto& surf : node.surfaces) {
+            // Idea 3: Start & End Key Radial Anchor Distance Penalty
+            int c0 = node.text.front() - 'a';
+            int c1 = node.text.back() - 'a';
+            float dx0 = px0 - key_centers_[c0][0];
+            float dy0 = py0 - key_centers_[c0][1];
+            float d0_sq = dx0 * dx0 + dy0 * dy0;
+            float dx1 = px1 - key_centers_[c1][0];
+            float dy1 = py1 - key_centers_[c1][1];
+            float d1_sq = dx1 * dx1 + dy1 * dy1;
+
+            float base = tot / std::pow(l, gamma) + beta * l - 2.0f * d0_sq - 3.5f * d1_sq;
+
+            for (const auto& se : node.surfaces) {
                 float total_score = base;
-                if (use_context && !context_state.empty()) {
-                    total_score += alpha * ScoreWordInContext(context_state, surf);
+
+                // Idea 4: Shared-node apostrophe disambiguation (e.g., its vs it's, were vs we're)
+                if (se.has_apostrophe && node.has_plain_surface) {
+                    total_score -= 2.5f;
                 }
-                auto u_it = user_word_priorities_.find(surf);
+
+                if (!use_context) {
+                    // Idea 2: Unigram frequency prior + embedding unigram bias in spatial mode
+                    float uni_bias = LookupUnigramBias(se.surface);
+                    total_score += 0.004f * se.zipf_freq + 0.25f * uni_bias;
+                } else {
+                    // Idea 2: Mild Zipf rank prior in context mode (exact_biases_ already in ScoreWordInContext)
+                    total_score += 0.0015f * se.zipf_freq;
+                    if (!context_state.empty()) {
+                        float cs = ScoreWordInContext(context_state, se.surface);
+                        // Idea 4: Confidence-gated ContextLM length bonus protection
+                        float tot_gap = best_common_tot - tot;
+                        if (best_common_tot > -0.55f && tot_gap > 1.7f && cs < 1.0f) {
+                            total_score -= 0.80f * (tot_gap - 1.7f);
+                        }
+                        total_score += alpha * cs;
+                    }
+                }
+
+                auto u_it = user_word_priorities_.find(se.surface);
                 if (u_it != user_word_priorities_.end()) {
                     if (base >= max_base - 6.5f) {
                         float boost = (u_it->second >= 4.0f) ? 5.5f : ((u_it->second >= 2.5f) ? 3.8f : 2.0f);
                         total_score += boost;
                     }
                 }
-                candidates.push_back({surf, total_score});
+                candidates.push_back({se.surface, total_score});
             }
         }
 
@@ -532,10 +700,11 @@ public:
     }
 
 private:
-    void AddWordToTrie(const std::string& surface) {
+    void AddWordToTrie(const std::string& surface, int vocab_rank) {
         std::string key = surface;
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
         key.erase(std::remove(key.begin(), key.end(), '\''), key.end());
+        if (key.empty()) return;
 
         int curr = 0;
         for (char ch : key) {
@@ -548,20 +717,28 @@ private:
             }
             curr = trie_nodes_[curr].children[idx];
         }
-        trie_nodes_[curr].surfaces.push_back(surface);
+
+        float zipf_freq = std::max(
+            0.0f,
+            static_cast<float>(255.0 * (1.0 - std::log(static_cast<double>(vocab_rank) + 1.0) / std::log(32768.0)))
+        );
+        bool has_apos = (surface.find('\'') != std::string::npos);
+        trie_nodes_[curr].surfaces.push_back(SurfaceEntry{surface, vocab_rank, zipf_freq, has_apos});
+        if (!has_apos) {
+            trie_nodes_[curr].has_plain_surface = true;
+        }
     }
 
     void InitQwertyLayout() {
         const char* rows[] = {"qwertyuiop", "asdfghjkl", "zxcvbnm"};
         const float starts[] = {0.05f, 0.10f, 0.20f};
-        float key_centers[26][2];
 
         for (int r = 0; r < 3; ++r) {
             int len = std::strlen(rows[r]);
             for (int c = 0; c < len; ++c) {
                 int ch_idx = rows[r][c] - 'a';
-                key_centers[ch_idx][0] = starts[r] + c * 0.1f;
-                key_centers[ch_idx][1] = (r + 0.5f) / 3.0f;
+                key_centers_[ch_idx][0] = starts[r] + c * 0.1f;
+                key_centers_[ch_idx][1] = (r + 0.5f) / 3.0f;
             }
         }
 
@@ -569,10 +746,29 @@ private:
         layout_mask_.assign(FUTO_SWIPE_MAX_KEYS, false);
 
         for (int i = 0; i < 26; ++i) {
-            layout_keys_[i * 2] = key_centers[i][0];
-            layout_keys_[i * 2 + 1] = key_centers[i][1];
+            layout_keys_[i * 2] = key_centers_[i][0];
+            layout_keys_[i * 2 + 1] = key_centers_[i][1];
             layout_mask_[i] = true;
         }
+    }
+
+    int LookupTokenId(const std::string& word) const {
+        auto it = exact_ids_.find(word);
+        if (it != exact_ids_.end()) return it->second;
+        std::string lower = word;
+        std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+        auto lit = lowercase_ids_.find(lower);
+        if (lit != lowercase_ids_.end()) return lit->second;
+        return -1;
+    }
+
+    float LookupUnigramBias(const std::string& word) const {
+        int row = LookupTokenId(word);
+        if (row >= 0 && static_cast<size_t>(row) < exact_biases_.size()) {
+            return exact_biases_[row];
+        }
+        auto [b0, b1] = FutoContextBuckets(word);
+        return hashed_biases_[b0] + hashed_biases_[b1];
     }
 
     std::vector<float> ComputeContextState(const std::vector<std::string>& words) {
@@ -584,15 +780,9 @@ private:
 
         for (size_t i = 0; i < n_tokens; ++i) {
             const std::string& w = words[start + i];
-            auto it = exact_ids_.find(w);
-            if (it == exact_ids_.end()) {
-                std::string lower = w;
-                std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-                it = lowercase_ids_.find(lower);
-            }
-
-            if (it != exact_ids_.end()) {
-                token_ids[i] = it->second;
+            int tok_id = LookupTokenId(w);
+            if (tok_id >= 0) {
+                token_ids[i] = tok_id;
             } else {
                 token_ids[i] = FUTO_CONTEXT_HASHED_TOKEN_ID;
                 auto [b0, b1] = FutoContextBuckets(w);
@@ -627,15 +817,8 @@ private:
     }
 
     float ScoreWordInContext(const std::vector<float>& state, const std::string& word) {
-        auto it = exact_ids_.find(word);
-        if (it == exact_ids_.end()) {
-            std::string lower = word;
-            std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-            it = lowercase_ids_.find(lower);
-        }
-
-        if (it != exact_ids_.end()) {
-            int row = it->second;
+        int row = LookupTokenId(word);
+        if (row >= 0) {
             float score = exact_biases_[row];
             const float* emb = &exact_embeddings_[row * FUTO_CONTEXT_DIM];
             for (int d = 0; d < FUTO_CONTEXT_DIM; ++d) {
@@ -686,6 +869,7 @@ private:
     std::vector<TrieNode> base_trie_nodes_;
     std::unordered_map<std::string, float> user_word_priorities_;
     std::mutex mutex_;
+    float key_centers_[26][2] = {};
     std::vector<float> layout_keys_;
     std::vector<uint8_t> layout_mask_;
 
@@ -705,6 +889,10 @@ bool FutoSwipeEngine::IsReady() const {
 
 void FutoSwipeEngine::SyncUserDictionary(const std::vector<UserSwipeWord>& user_words) {
     impl_->SyncUserDictionary(user_words);
+}
+
+void FutoSwipeEngine::SetLayoutKeys(const std::vector<float>& key_centers_xy) {
+    impl_->SetLayoutKeys(key_centers_xy);
 }
 
 std::vector<SwipeCandidate> FutoSwipeEngine::Decode(

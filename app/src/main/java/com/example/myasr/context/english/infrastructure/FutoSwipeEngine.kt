@@ -66,6 +66,11 @@ class FutoSwipeEngine private constructor(private val context: Context) {
             isInitialized = success
             if (success) {
                 Log.i(TAG, "FUTO Swipe engine initialized successfully from ${modelDir.absolutePath}")
+                pendingLayoutKeys?.let { keys ->
+                    if (keys.size >= 52) {
+                        nativeSetLayoutKeys(keys)
+                    }
+                }
                 try {
                     val active = AsrApp.instanceOrNull?.dictionaryRepository?.getActive() ?: emptyList()
                     syncUserDictionary(active)
@@ -82,7 +87,23 @@ class FutoSwipeEngine private constructor(private val context: Context) {
         }
     }
 
+    private var pendingLayoutKeys: FloatArray? = null
+
     fun isReady(): Boolean = isInitialized && nativeIsReady()
+
+    /**
+     * Updates the normalized (x, y) centers for the 26 QWERTY alphabet keys ('a'..'z', size = 52).
+     */
+    fun updateLayoutKeys(keyCentersXy: FloatArray) {
+        if (keyCentersXy.size < 52) return
+        pendingLayoutKeys = keyCentersXy.copyOf()
+        if (!isReady()) return
+        try {
+            nativeSetLayoutKeys(keyCentersXy)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to update layout keys in FUTO Swipe: ${e.message}", e)
+        }
+    }
 
     /**
      * Decodes a swipe trajectory into candidate words.
@@ -138,6 +159,7 @@ class FutoSwipeEngine private constructor(private val context: Context) {
     private external fun nativeInitialize(modelDir: String): Boolean
     private external fun nativeIsReady(): Boolean
     private external fun nativeSyncUserDictionary(words: Array<String>, priorities: FloatArray)
+    private external fun nativeSetLayoutKeys(keyCentersXy: FloatArray)
     private external fun nativeDecode(
         xs: FloatArray,
         ys: FloatArray,

@@ -459,4 +459,47 @@ class FutoSwipeIntegrationTest {
         assertTrue(EnglishCapitalizationAnalyzer.shouldBypassAutoAssist(uriInfo, "https://example"))
         assertTrue(EnglishCapitalizationAnalyzer.shouldBypassAutoAssist(uriInfo, "google.com"))
     }
+
+    @Test
+    fun testTier1AccuracyImprovementsAndCoordinateNormalizationContract() {
+        val repoRoot = java.io.File("..").canonicalFile.let { parent ->
+            if (java.io.File(parent, "settings.gradle.kts").exists()) parent else java.io.File(".").canonicalFile
+        }
+
+        // 1. Verify Idea 1: FlickKeyboardView normalizes swipe Y to alphabet rows [qwertyAlphaTop, qwertyAlphaBottom]
+        val flickViewFile = java.io.File(repoRoot, "app/src/main/java/com/example/myasr/context/ime/presentation/FlickKeyboardView.kt")
+        assertTrue("FlickKeyboardView.kt must exist", flickViewFile.exists())
+        val flickSrc = flickViewFile.readText()
+        assertTrue("FlickKeyboardView must normalize swipe Y relative to qwertyAlphaTop/Bottom", flickSrc.contains("normalizeSwipeY(y)"))
+        assertTrue("FlickKeyboardView must denormalize swipe Y when drawing path", flickSrc.contains("denormalizeSwipeY("))
+        assertTrue("FlickKeyboardView must restrict swipe start to alphabet keys a..z", flickSrc.contains("isAlphabetSwipeKey("))
+        assertTrue("FlickKeyboardView must sync 26 key centers with FutoSwipeEngine", flickSrc.contains("updateLayoutKeys(keyCenters)"))
+        assertFalse("FlickKeyboardView must NOT normalize swipe Y by full view height", flickSrc.contains("val normY = (y / height.toFloat())"))
+
+        // 2. Verify Ideas 2-5 in C++ native engine (futo_swipe_engine.cc)
+        val cppEngineFile = java.io.File(repoRoot, "app/src/main/cpp/swipe/futo_swipe_engine.cc")
+        assertTrue("futo_swipe_engine.cc must exist", cppEngineFile.exists())
+        val cppSrc = cppEngineFile.readText()
+        assertTrue("Idea 1: SetLayoutKeys must be implemented", cppSrc.contains("void SetLayoutKeys("))
+        assertTrue("Idea 2: Zipf unigram frequency prior must be implemented", cppSrc.contains("zipf_freq"))
+        assertTrue("Idea 2: LookupUnigramBias must be implemented", cppSrc.contains("LookupUnigramBias("))
+        assertTrue("Idea 3: Start/end radial anchor distance d0_sq / d1_sq must be implemented", cppSrc.contains("d0_sq") && cppSrc.contains("d1_sq"))
+        assertTrue("Idea 4: Confidence-gated ContextLM best_common_tot must be implemented", cppSrc.contains("best_common_tot"))
+        assertTrue("Idea 4: Shared-node apostrophe disambiguation must be implemented", cppSrc.contains("has_plain_surface"))
+        assertTrue("Idea 5: Stationary pause clamping and smoothing must be implemented", cppSrc.contains("kMaxPauseMs") && cppSrc.contains("kSmoothAlpha"))
+
+        // 3. Verify 1,000-sample benchmark results JSON meets Tier 1 quality bar
+        val evalJsonFile = java.io.File(repoRoot, "eval/futo_swipe/swipe_eval_results_1000.json")
+        assertTrue("swipe_eval_results_1000.json must exist", evalJsonFile.exists())
+        val evalJson = org.json.JSONObject(evalJsonFile.readText())
+        val spatialTop1 = evalJson.getJSONObject("spatial_baseline").getDouble("top1_accuracy")
+        val contextTop1 = evalJson.getJSONObject("context_aware").getDouble("top1_accuracy")
+        val contextTop3 = evalJson.getJSONObject("context_aware").getDouble("top3_accuracy")
+        val degradedCount = evalJson.getJSONObject("comparison").getInt("degraded_count")
+
+        assertTrue("Tier 1 Spatial Top-1 accuracy ($spatialTop1%) must be >= 90.0%", spatialTop1 >= 90.0)
+        assertTrue("Tier 1 Context Top-1 accuracy ($contextTop1%) must be >= 90.8%", contextTop1 >= 90.8)
+        assertTrue("Tier 1 Context Top-3 accuracy ($contextTop3%) must be >= 92.8%", contextTop3 >= 92.8)
+        assertTrue("Tier 1 Context degraded count ($degradedCount) must be <= 5", degradedCount <= 5)
+    }
 }

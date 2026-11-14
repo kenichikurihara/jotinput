@@ -70,3 +70,17 @@
 3. **Phase 2 への決定方針**:
    - **推論コアを C++ (`app/src/main/cpp/swipe/`) へ移植**し、ARM NEON / AVX2 を有効化して $5\text{ms}$ 級の超低遅延エンジンを構築する。
    - モデル構成は **Encoder + Decoder + ContextLM (計 12MB)** のフル構成を採用し、端末ストレージにダウンロード分離する。
+
+---
+
+## 6. Tier 1 精度改善（Idea 1〜Idea 5）適用後のベンチマーク更新
+
+[`docs/futo_swipe_accuracy_improvement_ideas.md`](docs/futo_swipe_accuracy_improvement_ideas.md) の Tier 1（実機 `FlickKeyboardView` アルファベット領域 Y 正規化 + Unigram Zipf/Bias Prior & 所有格語幹補完 + 始点/終点 Radial Anchor 距離項 + 空間信頼度マージンゲート & 共有ノード Apostrophe ペナルティ + 軌跡前処理高度化）をすべて実装した後の 1,000 件ベンチマーク結果（[`eval/futo_swipe/swipe_eval_results_1000.json`](eval/futo_swipe/swipe_eval_results_1000.json)）は以下の通りである：
+
+| 評価指標 | Phase 1 初期実装 | Tier 1 適用後 | 改善幅 ($\Delta$) | 実機 4 段/5 段バグ修正込み改善幅 |
+| :--- | :---: | :---: | :---: | :---: |
+| **Spatial Top-1 正解率** | 89.0% (890/1000) | **90.1%** (901/1000) | **+1.1%** (+11件) | **+9.7%** (4段比) / **+4.6%** (5段比) |
+| **Context Top-1 正解率** | 90.3% (903/1000) | **90.9%** (909/1000) | **+0.6%** (+6件) | **+5.6%** (4段比) / **+2.1%** (5段比) |
+| **Context Top-3 正解率** | 92.7% (927/1000) | **92.8%** (928/1000) | **+0.1%** (+1件) | **+2.8%** (4段比) / **+1.2%** (5段比) |
+| **Context 悪化ケース数** | 9 件 | **5 件** | **-4 件 (44% 削減)** | `county`, `camps`, `son`, `were` 等の逆転解消 |
+

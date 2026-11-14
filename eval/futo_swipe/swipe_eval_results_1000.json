@@ -2,38 +2,38 @@
   "metadata": {
     "dataset": "eval/futo_swipe/swipe_eval_1000.jsonl",
     "total_samples": 1000,
-    "total_wall_clock_sec": 116.44,
+    "total_wall_clock_sec": 437.84,
     "beam_width": 100
   },
   "spatial_baseline": {
-    "top1_accuracy": 89.0,
+    "top1_accuracy": 90.1,
     "top3_accuracy": 92.4,
-    "top5_accuracy": 92.8,
-    "latency_mean_ms": 57.59,
-    "latency_p50_ms": 54.82,
-    "latency_p95_ms": 99.41
+    "top5_accuracy": 92.6,
+    "latency_mean_ms": 217.88,
+    "latency_p50_ms": 194.11,
+    "latency_p95_ms": 360.55
   },
   "context_aware": {
-    "top1_accuracy": 90.3,
-    "top3_accuracy": 92.7,
+    "top1_accuracy": 90.9,
+    "top3_accuracy": 92.8,
     "top5_accuracy": 92.8,
-    "latency_mean_ms": 58.82,
-    "latency_p50_ms": 56.11,
-    "latency_p95_ms": 101.12
+    "latency_mean_ms": 219.85,
+    "latency_p50_ms": 200.72,
+    "latency_p95_ms": 359.79
   },
   "comparison": {
-    "top1_delta_pct": 1.3,
-    "top3_delta_pct": 0.3,
-    "improved_count": 22,
-    "degraded_count": 9,
-    "net_gain": 13
+    "top1_delta_pct": 0.8,
+    "top3_delta_pct": 0.4,
+    "improved_count": 13,
+    "degraded_count": 5,
+    "net_gain": 8
   },
   "sample_improvements": [
     {
       "id": 21,
       "target": "chicago",
       "context": "ebert of the",
-      "spatial_top1": "chick",
+      "spatial_top1": "clinical",
       "context_top1": "chicago"
     },
     {
@@ -44,32 +44,11 @@
       "context_top1": "met"
     },
     {
-      "id": 54,
-      "target": "its",
-      "context": "the time of",
-      "spatial_top1": "it's",
-      "context_top1": "its"
-    },
-    {
-      "id": 89,
-      "target": "team",
-      "context": "the belgium national",
-      "spatial_top1": "teak",
-      "context_top1": "team"
-    },
-    {
-      "id": 174,
-      "target": "england",
-      "context": "wilkinson remained in",
-      "spatial_top1": "england's",
-      "context_top1": "england"
-    },
-    {
-      "id": 265,
-      "target": "glass",
-      "context": "mechanization of the",
-      "spatial_top1": "glad",
-      "context_top1": "glass"
+      "id": 293,
+      "target": "party",
+      "context": "the oldest political",
+      "spatial_top1": "part",
+      "context_top1": "party"
     },
     {
       "id": 316,
@@ -93,11 +72,32 @@
       "context_top1": "our"
     },
     {
-      "id": 578,
-      "target": "its",
-      "context": "a revival in",
-      "spatial_top1": "it's",
-      "context_top1": "its"
+      "id": 581,
+      "target": "soon",
+      "context": "its fortunes vesterinen",
+      "spatial_top1": "son",
+      "context_top1": "soon"
+    },
+    {
+      "id": 624,
+      "target": "sold",
+      "context": "in france was",
+      "spatial_top1": "sod",
+      "context_top1": "sold"
+    },
+    {
+      "id": 661,
+      "target": "bar",
+      "context": "gate near boston",
+      "spatial_top1": "bat",
+      "context_top1": "bar"
+    },
+    {
+      "id": 728,
+      "target": "shame",
+      "context": "look away in",
+      "spatial_top1": "shane",
+      "context_top1": "shame"
     }
   ],
   "sample_degradations": [
@@ -107,27 +107,6 @@
       "context": "also managed royal",
       "spatial_top1": "daring",
       "context_top1": "dating"
-    },
-    {
-      "id": 149,
-      "target": "camps",
-      "context": "gives seminars and",
-      "spatial_top1": "camps",
-      "context_top1": "campus"
-    },
-    {
-      "id": 395,
-      "target": "county",
-      "context": "mud archons its",
-      "spatial_top1": "county",
-      "context_top1": "country"
-    },
-    {
-      "id": 472,
-      "target": "son",
-      "context": "a united",
-      "spatial_top1": "son",
-      "context_top1": "soon"
     },
     {
       "id": 584,
@@ -151,18 +130,11 @@
       "context_top1": "rose"
     },
     {
-      "id": 736,
-      "target": "were",
-      "context": "there were a",
-      "spatial_top1": "were",
-      "context_top1": "we're"
-    },
-    {
-      "id": 864,
-      "target": "torah",
-      "context": "dealing with the",
-      "spatial_top1": "torah",
-      "context_top1": "total"
+      "id": 986,
+      "target": "commenced",
+      "context": "connect them he",
+      "spatial_top1": "commenced",
+      "context_top1": "commended"
     }
   ]
 }

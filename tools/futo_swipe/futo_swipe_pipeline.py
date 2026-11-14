@@ -99,21 +99,40 @@ def futo_context_buckets(word: str):
         for mult in BUCKET_MULTIPLIERS
     ]
 
-def resample_trace(points):
+def resample_trace(points, max_pause_ms: float = 65.0, arc_blend: float = 0.02, smooth_alpha: float = 0.06):
     """
     points: list of dict {'x': float, 'y': float, 't': int (ms or us)}
     Returns: np.ndarray shape (2, 64), float32
+    Implements Idea 5:
+      1. Stationary pause time clamping (dt > max_pause_ms when dist < 0.03)
+      2. 60Hz time interpolation + hybrid cumulative arc-length parameterization
+      3. Endpoint-preserving 3-tap low-pass smoothing on interior points [1..62]
     """
     count = len(points)
+    if count == 0:
+        return np.zeros((2, 64), dtype=np.float32)
+    if count == 1:
+        res = np.zeros((2, 64), dtype=np.float32)
+        res[0, :] = points[0]['x']
+        res[1, :] = points[0]['y']
+        return res
+
     t0 = points[0]['t']
-    times = np.array([(p['t'] - t0) for p in points], dtype=np.float64)
-    # If timestamps are in milliseconds, duration is in ms.
-    # Check if timestamps are microseconds:
-    if len(times) > 1 and times[-1] > 100000:
-        times /= 1000.0  # convert to ms
+    raw_times = np.array([(p['t'] - t0) for p in points], dtype=np.float64)
+    if len(raw_times) > 1 and raw_times[-1] > 100000:
+        raw_times /= 1000.0  # convert microseconds to ms
 
     xs = np.array([p['x'] for p in points], dtype=np.float64)
     ys = np.array([p['y'] for p in points], dtype=np.float64)
+
+    # 1. Stationary pause clamping
+    times = np.zeros_like(raw_times)
+    for i in range(1, count):
+        dt = max(0.0, raw_times[i] - raw_times[i - 1])
+        dist = math.hypot(xs[i] - xs[i - 1], ys[i] - ys[i - 1])
+        if dist < 0.03 and dt > max_pause_ms:
+            dt = max_pause_ms
+        times[i] = times[i - 1] + dt
 
     duration = times[-1]
     if duration > 1e-3:
@@ -125,12 +144,38 @@ def resample_trace(points):
         stage_x = xs
         stage_y = ys
 
-    positions = np.arange(len(stage_x), dtype=np.float64)
-    idx_grid = np.linspace(0.0, len(stage_x) - 1, 64)
-    resampled_x = np.interp(idx_grid, positions, stage_x).astype(np.float32)
-    resampled_y = np.interp(idx_grid, positions, stage_y).astype(np.float32)
+    # 2. Hybrid time + cumulative arc-length parameterization to 64 points
+    s_len = len(stage_x)
+    if s_len > 2 and arc_blend > 0.0:
+        dx = np.diff(stage_x)
+        dy = np.diff(stage_y)
+        ds = np.hypot(dx, dy)
+        cum_s = np.concatenate([[0.0], np.cumsum(ds)])
+        if cum_s[-1] > 1e-5:
+            t_norm = np.linspace(0.0, 1.0, s_len)
+            s_norm = cum_s / cum_s[-1]
+            hybrid_param = (1.0 - arc_blend) * t_norm + arc_blend * s_norm
+            target_grid = np.linspace(0.0, 1.0, 64)
+            rx = np.interp(target_grid, hybrid_param, stage_x).astype(np.float32)
+            ry = np.interp(target_grid, hybrid_param, stage_y).astype(np.float32)
+        else:
+            rx = np.full(64, stage_x[0], dtype=np.float32)
+            ry = np.full(64, stage_y[0], dtype=np.float32)
+    else:
+        positions = np.arange(s_len, dtype=np.float64)
+        idx_grid = np.linspace(0.0, s_len - 1, 64)
+        rx = np.interp(idx_grid, positions, stage_x).astype(np.float32)
+        ry = np.interp(idx_grid, positions, stage_y).astype(np.float32)
 
-    return np.stack([resampled_x, resampled_y], axis=0) # shape (2, 64)
+    # 3. Endpoint-preserving 3-tap low-pass smoothing on interior points [1..62]
+    if smooth_alpha > 0.0:
+        sx = rx.copy()
+        sy = ry.copy()
+        sx[1:-1] = (1.0 - smooth_alpha) * rx[1:-1] + 0.5 * smooth_alpha * (rx[:-2] + rx[2:])
+        sy[1:-1] = (1.0 - smooth_alpha) * ry[1:-1] + 0.5 * smooth_alpha * (ry[:-2] + ry[2:])
+        rx, ry = sx, sy
+
+    return np.stack([rx, ry], axis=0)  # shape (2, 64)
 
 def default_qwerty_layout():
     """
@@ -158,13 +203,14 @@ def default_qwerty_layout():
     return layout_keys, layout_mask
 
 class LexiconNode:
-    __slots__ = ('text', 'last', 'children', 'surfaces', 'frequency')
+    __slots__ = ('text', 'last', 'children', 'surfaces', 'has_plain_surface', 'frequency')
     def __init__(self, text: str, last: int):
         self.text = text
         self.last = last
-        self.children = {} # key: letter index 0..25 -> LexiconNode
-        self.surfaces = [] # list of (surface_str, freq_int)
-        self.frequency = 0
+        self.children = {}  # key: letter index 0..25 -> LexiconNode
+        self.surfaces = []  # list of (surface_str, vocab_rank, zipf_freq, has_apostrophe)
+        self.has_plain_surface = False
+        self.frequency = 0.0
 
 class PrefixMass:
     __slots__ = ('blank', 'letter', 'priority')
@@ -184,9 +230,9 @@ def log_add(a: float, b: float) -> float:
     lo = min(a, b)
     return hi + math.log(1.0 + math.exp(lo - hi))
 
-def add_lexicon_word(root: LexiconNode, surface: str, freq: int = 0):
+def add_lexicon_word(root: LexiconNode, surface: str, vocab_rank: int = 32768):
     key = re.sub(r"['\u2019]", "", surface.lower())
-    if not key.isalpha() or not key.isascii():
+    if not key or not key.isalpha() or not key.isascii():
         return False
     node = root
     for ch in key:
@@ -195,16 +241,20 @@ def add_lexicon_word(root: LexiconNode, surface: str, freq: int = 0):
             node.children[idx] = LexiconNode(node.text + ch, idx)
         node = node.children[idx]
 
-    # Check existing
+    zipf_freq = max(0.0, float(255.0 * (1.0 - math.log(vocab_rank + 1.0) / math.log(32768.0))))
+    has_apos = ("'" in surface) or ("\u2019" in surface)
+
     found = False
-    for i, (s, f) in enumerate(node.surfaces):
+    for i, (s, r, f, ha) in enumerate(node.surfaces):
         if s == surface:
-            node.surfaces[i] = (s, max(f, freq))
+            node.surfaces[i] = (s, min(r, vocab_rank), max(f, zipf_freq), ha)
             found = True
             break
     if not found:
-        node.surfaces.append((surface, freq))
-    node.frequency = max(node.frequency, freq)
+        node.surfaces.append((surface, vocab_rank, zipf_freq, has_apos))
+    if not has_apos:
+        node.has_plain_surface = True
+    node.frequency = max(node.frequency, zipf_freq)
     return True
 
 def ctc_prefix_search(logits: np.ndarray, root: LexiconNode, beam: int = 100, gamma: float = 0.1902, beta: float = 1.2727):
@@ -292,13 +342,34 @@ class FutoSwipeEngine:
 
         # Default layout
         self.layout_keys, self.layout_mask = default_qwerty_layout()
+        self.key_centers = self.layout_keys[:26].copy()
 
-        # Build Lexicon Trie
+        # Build Lexicon Trie (Idea 2: Zipf rank prior + possessive base stem derivation)
         self.root = LexiconNode('', -1)
-        for w in self.vocabulary:
-            add_lexicon_word(self.root, w, 0)
+        for rank, w in enumerate(self.vocabulary):
+            add_lexicon_word(self.root, w, rank)
+
+        for rank, w in enumerate(self.vocabulary):
+            if len(w) >= 4 and (w.endswith("'s") or w.endswith("'S") or w.endswith("\u2019s")):
+                stem = w[:-2]
+                if stem.isalpha() and stem.isascii() and stem.lower() not in self.lowercase_ids:
+                    add_lexicon_word(self.root, stem, rank)
 
         self.context_cache = {}
+
+    def set_layout_keys(self, key_centers_xy):
+        arr = np.asarray(key_centers_xy, dtype=np.float32).reshape(-1, 2)
+        if len(arr) >= 26:
+            self.key_centers = arr[:26].copy()
+            self.layout_keys[:26] = self.key_centers
+            self.layout_mask[:26] = True
+
+    def lookup_unigram_bias(self, word: str) -> float:
+        w_id = self.exact_ids.get(word) or self.lowercase_ids.get(word.lower())
+        if w_id is not None:
+            return float(self.exact_biases[w_id])
+        b0, b1 = futo_context_buckets(word)
+        return float(self.hashed_biases[b0] + self.hashed_biases[b1])
 
     def get_context_state(self, previous_words):
         if not previous_words:
@@ -352,9 +423,11 @@ class FutoSwipeEngine:
         trajectory: list of dict {'x': float, 'y': float, 't': int}
         previous_words: list of str or None. If None, decode without ContextLM.
         """
-        # 1. Resample trajectory
-        features = resample_trace(trajectory) # (2, 64)
-        features = np.expand_dims(features, 0) # (1, 2, 64)
+        # 1. Resample trajectory (Idea 5)
+        resampled = resample_trace(trajectory)  # (2, 64)
+        px0, py0 = float(resampled[0, 0]), float(resampled[1, 0])
+        px1, py1 = float(resampled[0, 63]), float(resampled[1, 63])
+        features = np.expand_dims(resampled, 0)  # (1, 2, 64)
 
         layout_k = np.expand_dims(self.layout_keys, 0) # (1, 64, 2)
         layout_m = np.expand_dims(self.layout_mask, 0) # (1, 64)
@@ -394,28 +467,60 @@ class FutoSwipeEngine:
             beta=weights['beta_prune']
         )
 
-        # 6. Candidate scoring & Rescoring
+        # 6. Candidate scoring & Rescoring (Ideas 2, 3, 4)
         state_vec = None
         if previous_words is not None:
             state_vec = self.get_context_state(previous_words)
 
         gamma = weights['gamma']
         beta = weights['beta']
-        lam = weights['lambda']
         alpha = weights['alpha'] if state_vec is not None else 0.0
 
-        candidates = []
+        best_common_tot = -1e9
         for node, mass in states.items():
             if not node.surfaces:
                 continue
-            l = len(node.text)
-            base_score = mass.total / (l ** gamma) + beta * l
+            tot = mass.total
+            if any(r < 6000 for (_, r, _, _) in node.surfaces):
+                if tot > best_common_tot:
+                    best_common_tot = tot
 
-            for surface, freq in node.surfaces:
-                total_s = base_score + lam * freq
-                if state_vec is not None:
+        candidates = []
+        for node, mass in states.items():
+            if not node.surfaces or not node.text:
+                continue
+            l = len(node.text)
+            tot = mass.total
+
+            # Idea 3: Start & End Key Radial Anchor Distance Penalty
+            c0 = ord(node.text[0]) - ord('a')
+            c1 = ord(node.text[-1]) - ord('a')
+            d0_sq = (px0 - float(self.key_centers[c0, 0])) ** 2 + (py0 - float(self.key_centers[c0, 1])) ** 2
+            d1_sq = (px1 - float(self.key_centers[c1, 0])) ** 2 + (py1 - float(self.key_centers[c1, 1])) ** 2
+
+            base_score = tot / (l ** gamma) + beta * l - 2.0 * d0_sq - 3.5 * d1_sq
+
+            for surface, vocab_rank, zipf_freq, has_apos in node.surfaces:
+                total_s = base_score
+
+                # Idea 4: Shared-node apostrophe disambiguation
+                if has_apos and node.has_plain_surface:
+                    total_s -= 2.5
+
+                if state_vec is None:
+                    # Idea 2: Unigram frequency prior + embedding unigram bias in spatial mode
+                    uni_bias = self.lookup_unigram_bias(surface)
+                    total_s += 0.004 * zipf_freq + 0.25 * uni_bias
+                else:
+                    # Idea 2: Mild Zipf rank prior in context mode
+                    total_s += 0.0015 * zipf_freq
                     ctx_score = self.score_word_in_context(state_vec, surface)
+                    # Idea 4: Confidence-gated ContextLM length bonus protection
+                    tot_gap = best_common_tot - tot
+                    if best_common_tot > -0.55 and tot_gap > 1.7 and ctx_score < 1.0:
+                        total_s -= 0.80 * (tot_gap - 1.7)
                     total_s += alpha * ctx_score
+
                 candidates.append((surface, total_s))
 
         candidates.sort(key=lambda x: x[1], reverse=True)

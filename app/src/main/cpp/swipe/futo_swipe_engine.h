@@ -36,6 +36,9 @@ public:
     // Sync active user dictionary entries into Trie
     void SyncUserDictionary(const std::vector<UserSwipeWord>& user_words);
 
+    // Update normalized (x, y) centers for the 26 QWERTY alphabet keys ('a'..'z', size = 52)
+    void SetLayoutKeys(const std::vector<float>& key_centers_xy);
+
     // Decode swipe trajectory with optional context words
     std::vector<SwipeCandidate> Decode(
         const std::vector<SwipePoint>& trajectory,
