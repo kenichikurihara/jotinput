@@ -78,109 +78,111 @@ fact InitialState {
         s0.outConvertedToPeriod = False
 }
 
-pred step[s, s': State] {
-    s'.bypass = s.bypass and
+pred shouldAutoSpaceOnDirectAlnum[s: State] {
+    s.bypass = False and
+    (s.pendingAutoSpace = True or s.lastWasSwipe = True) and
+    s.cursorChar != Space and
+    s.cursorChar != Empty
+}
+
+pred shouldAutoSpaceOnSwipe[s: State] {
+    s.bypass = False and
+    (
+        (s.cursorChar != Empty and s.cursorChar != Space and isAutoSpacePreceding[s.cursorChar])
+        or
+        (s.cursorChar = Empty and s.lastWasSwipe = True)
+    )
+}
+
+pred canConvertDoubleSpaceToPeriod[s: State] {
+    s.bypass = False and
+    s.composing = False and
+    s.autoPeriodWindow = True and
+    s.cursorChar = Space and
+    isAutoPeriodEligible[s.charBeforeTrailingSpace]
+}
+
+pred step[s, sNext: State] {
+    sNext.bypass = s.bypass and
     (
         // 1. Direct Alphanumeric Tap
         (
-            s'.action = TypeDirectAlnum and
-            s'.composing = False and
-            let doSpace = (
-                s.bypass = False and
-                (s.pendingAutoSpace = True or s.lastWasSwipe = True) and
-                s.cursorChar != Space and
-                s.cursorChar != Empty
-            ) | (
-                (doSpace => s'.outPrependedSpace = True else s'.outPrependedSpace = False) and
-                s'.outConvertedToPeriod = False and
-                s'.cursorChar = Alnum and
-                s'.charBeforeTrailingSpace = Empty and
-                s'.pendingAutoSpace = False and
-                s'.lastWasSwipe = False and
-                s'.autoPeriodWindow = False and
-                s'.pendingImeDelta = DeltaMatchesIme
-            )
+            sNext.action = TypeDirectAlnum and
+            sNext.composing = False and
+            (shouldAutoSpaceOnDirectAlnum[s] => sNext.outPrependedSpace = True else sNext.outPrependedSpace = False) and
+            sNext.outConvertedToPeriod = False and
+            sNext.cursorChar = Alnum and
+            sNext.charBeforeTrailingSpace = Empty and
+            sNext.pendingAutoSpace = False and
+            sNext.lastWasSwipe = False and
+            sNext.autoPeriodWindow = False and
+            sNext.pendingImeDelta = DeltaMatchesIme
         )
         or
         // 2. Direct Punctuation Tap (must NEVER prepend space)
         (
-            s'.action = TypeDirectPunct and
-            s'.composing = False and
-            s'.outPrependedSpace = False and
-            s'.outConvertedToPeriod = False and
-            (s'.cursorChar in (SentenceEndPunct + OtherSepPunct + OpenOrIdentSym + ClosingQuoteOrPct)) and
-            s'.charBeforeTrailingSpace = Empty and
-            s'.pendingAutoSpace = False and
-            s'.lastWasSwipe = False and
-            s'.autoPeriodWindow = False and
-            s'.pendingImeDelta = DeltaMatchesIme
+            sNext.action = TypeDirectPunct and
+            sNext.composing = False and
+            sNext.outPrependedSpace = False and
+            sNext.outConvertedToPeriod = False and
+            (sNext.cursorChar in (SentenceEndPunct + OtherSepPunct + OpenOrIdentSym + ClosingQuoteOrPct)) and
+            sNext.charBeforeTrailingSpace = Empty and
+            sNext.pendingAutoSpace = False and
+            sNext.lastWasSwipe = False and
+            sNext.autoPeriodWindow = False and
+            sNext.pendingImeDelta = DeltaMatchesIme
         )
         or
         // 3. Swipe Word Commit
         (
-            s'.action = CommitSwipeWord and
-            s'.composing = False and
-            let doSpace = (
-                s.bypass = False and
-                (
-                    (s.cursorChar != Empty and s.cursorChar != Space and isAutoSpacePreceding[s.cursorChar])
-                    or
-                    (s.cursorChar = Empty and s.lastWasSwipe = True)
-                )
-            ) | (
-                (doSpace => s'.outPrependedSpace = True else s'.outPrependedSpace = False) and
-                s'.outConvertedToPeriod = False and
-                s'.cursorChar = Alnum and
-                s'.charBeforeTrailingSpace = Empty and
-                s'.lastWasSwipe = True and
-                (s.bypass = False => s'.pendingAutoSpace = True else s'.pendingAutoSpace = False) and
-                s'.autoPeriodWindow = False and
-                s'.pendingImeDelta = DeltaMatchesIme
-            )
+            sNext.action = CommitSwipeWord and
+            sNext.composing = False and
+            (shouldAutoSpaceOnSwipe[s] => sNext.outPrependedSpace = True else sNext.outPrependedSpace = False) and
+            sNext.outConvertedToPeriod = False and
+            sNext.cursorChar = Alnum and
+            sNext.charBeforeTrailingSpace = Empty and
+            sNext.lastWasSwipe = True and
+            (s.bypass = False => sNext.pendingAutoSpace = True else sNext.pendingAutoSpace = False) and
+            sNext.autoPeriodWindow = False and
+            sNext.pendingImeDelta = DeltaMatchesIme
         )
         or
         // 4. English Candidate Selection (typo / cap / gec / user_english / swipe alt)
         (
-            s'.action = SelectEnglishCandidate and
-            s'.composing = False and
-            s'.outPrependedSpace = False and
-            s'.outConvertedToPeriod = False and
-            s'.cursorChar = Alnum and
-            s'.charBeforeTrailingSpace = Empty and
-            (s.bypass = False => s'.pendingAutoSpace = True else s'.pendingAutoSpace = False) and
-            s'.lastWasSwipe = s.lastWasSwipe and
-            s'.autoPeriodWindow = False and
-            s'.pendingImeDelta = DeltaMatchesIme
+            sNext.action = SelectEnglishCandidate and
+            sNext.composing = False and
+            sNext.outPrependedSpace = False and
+            sNext.outConvertedToPeriod = False and
+            sNext.cursorChar = Alnum and
+            sNext.charBeforeTrailingSpace = Empty and
+            (s.bypass = False => sNext.pendingAutoSpace = True else sNext.pendingAutoSpace = False) and
+            sNext.lastWasSwipe = s.lastWasSwipe and
+            sNext.autoPeriodWindow = False and
+            sNext.pendingImeDelta = DeltaMatchesIme
         )
         or
         // 5. Space Press (within DOUBLE_SPACE_TIMEOUT_MS)
         (
-            s'.action = SpacePressFast and
-            s'.composing = False and
-            s'.outPrependedSpace = False and
-            s'.pendingAutoSpace = False and
-            s'.lastWasSwipe = False and
-            s'.pendingImeDelta = DeltaMatchesIme and
-            let canConvert = (
-                s.bypass = False and
-                s.composing = False and
-                s.autoPeriodWindow = True and
-                s.cursorChar = Space and
-                isAutoPeriodEligible[s.charBeforeTrailingSpace]
-            ) | (
-                canConvert implies (
-                    s'.outConvertedToPeriod = True and
-                    s'.cursorChar = Space and
-                    s'.charBeforeTrailingSpace = SentenceEndPunct and
-                    s'.autoPeriodWindow = False
+            sNext.action = SpacePressFast and
+            sNext.composing = False and
+            sNext.outPrependedSpace = False and
+            sNext.pendingAutoSpace = False and
+            sNext.lastWasSwipe = False and
+            sNext.pendingImeDelta = DeltaMatchesIme and
+            (
+                canConvertDoubleSpaceToPeriod[s] implies (
+                    sNext.outConvertedToPeriod = True and
+                    sNext.cursorChar = Space and
+                    sNext.charBeforeTrailingSpace = SentenceEndPunct and
+                    sNext.autoPeriodWindow = False
                 ) else (
-                    s'.outConvertedToPeriod = False and
-                    s'.cursorChar = Space and
-                    s'.charBeforeTrailingSpace = s.cursorChar and
+                    sNext.outConvertedToPeriod = False and
+                    sNext.cursorChar = Space and
+                    sNext.charBeforeTrailingSpace = s.cursorChar and
                     (
                         (s.bypass = False and isAutoPeriodEligible[s.cursorChar])
-                        => s'.autoPeriodWindow = True
-                        else s'.autoPeriodWindow = False
+                        => sNext.autoPeriodWindow = True
+                        else sNext.autoPeriodWindow = False
                     )
                 )
             )
@@ -188,61 +190,61 @@ pred step[s, s': State] {
         or
         // 6. Space Press (after DOUBLE_SPACE_TIMEOUT_MS expired)
         (
-            s'.action = SpacePressSlow and
-            s'.composing = False and
-            s'.outPrependedSpace = False and
-            s'.outConvertedToPeriod = False and
-            s'.pendingAutoSpace = False and
-            s'.lastWasSwipe = False and
-            s'.pendingImeDelta = DeltaMatchesIme and
-            s'.cursorChar = Space and
-            s'.charBeforeTrailingSpace = s.cursorChar and
+            sNext.action = SpacePressSlow and
+            sNext.composing = False and
+            sNext.outPrependedSpace = False and
+            sNext.outConvertedToPeriod = False and
+            sNext.pendingAutoSpace = False and
+            sNext.lastWasSwipe = False and
+            sNext.pendingImeDelta = DeltaMatchesIme and
+            sNext.cursorChar = Space and
+            sNext.charBeforeTrailingSpace = s.cursorChar and
             (
                 (s.bypass = False and isAutoPeriodEligible[s.cursorChar])
-                => s'.autoPeriodWindow = True
-                else s'.autoPeriodWindow = False
+                => sNext.autoPeriodWindow = True
+                else sNext.autoPeriodWindow = False
             )
         )
         or
         // 7. Delete Press
         (
-            s'.action = DeletePress and
-            s'.composing = False and
-            s'.outPrependedSpace = False and
-            s'.outConvertedToPeriod = False and
-            s'.pendingAutoSpace = False and
-            s'.lastWasSwipe = False and
-            s'.autoPeriodWindow = False and
-            s'.pendingImeDelta = DeltaMatchesIme and
-            s'.charBeforeTrailingSpace = Empty
+            sNext.action = DeletePress and
+            sNext.composing = False and
+            sNext.outPrependedSpace = False and
+            sNext.outConvertedToPeriod = False and
+            sNext.pendingAutoSpace = False and
+            sNext.lastWasSwipe = False and
+            sNext.autoPeriodWindow = False and
+            sNext.pendingImeDelta = DeltaMatchesIme and
+            sNext.charBeforeTrailingSpace = Empty
         )
         or
         // 8. Asynchronous Android onUpdateSelection echo of IME's own commit/delete
         (
-            s'.action = ImeSelectionEcho and
+            sNext.action = ImeSelectionEcho and
             s.pendingImeDelta = DeltaMatchesIme and
-            s'.composing = s.composing and
-            s'.cursorChar = s.cursorChar and
-            s'.charBeforeTrailingSpace = s.charBeforeTrailingSpace and
+            sNext.composing = s.composing and
+            sNext.cursorChar = s.cursorChar and
+            sNext.charBeforeTrailingSpace = s.charBeforeTrailingSpace and
             // CRITICAL: IME echo MUST preserve pendingAutoSpace and autoPeriodWindow!
-            s'.pendingAutoSpace = s.pendingAutoSpace and
-            s'.lastWasSwipe = s.lastWasSwipe and
-            s'.autoPeriodWindow = s.autoPeriodWindow and
-            s'.pendingImeDelta = DeltaZero and
-            s'.outPrependedSpace = False and
-            s'.outConvertedToPeriod = False
+            sNext.pendingAutoSpace = s.pendingAutoSpace and
+            sNext.lastWasSwipe = s.lastWasSwipe and
+            sNext.autoPeriodWindow = s.autoPeriodWindow and
+            sNext.pendingImeDelta = DeltaZero and
+            sNext.outPrependedSpace = False and
+            sNext.outConvertedToPeriod = False
         )
         or
         // 9. External cursor tap / selection change by user in EditText
         (
-            s'.action = ExternalCursorMove and
-            s'.composing = False and
-            s'.pendingAutoSpace = False and
-            s'.lastWasSwipe = s.lastWasSwipe and
-            s'.autoPeriodWindow = False and
-            s'.pendingImeDelta = DeltaZero and
-            s'.outPrependedSpace = False and
-            s'.outConvertedToPeriod = False
+            sNext.action = ExternalCursorMove and
+            sNext.composing = False and
+            sNext.pendingAutoSpace = False and
+            sNext.lastWasSwipe = s.lastWasSwipe and
+            sNext.autoPeriodWindow = False and
+            sNext.pendingImeDelta = DeltaZero and
+            sNext.outPrependedSpace = False and
+            sNext.outConvertedToPeriod = False
         )
     )
 }
