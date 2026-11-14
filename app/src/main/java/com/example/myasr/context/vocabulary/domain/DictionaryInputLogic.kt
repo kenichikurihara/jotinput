@@ -48,11 +48,10 @@ object DictionaryInputLogic {
             )
         }
 
-        // 2. Backward-compatible English mode: valid English word in Reading field
-        if (reading.isNotEmpty() && EnglishDictionaryUtils.isValidEnglishWord(reading)) {
-            val finalWord = if (word.isNotEmpty()) word else reading
+        // 2. Backward-compatible English mode: valid English word in Reading field when Word is empty
+        if (word.isEmpty() && reading.isNotEmpty() && EnglishDictionaryUtils.isValidEnglishWord(reading)) {
             return ResolutionResult.Success(
-                word = finalWord,
+                word = reading,
                 reading = EnglishDictionaryUtils.normalizeEnglishReading(reading),
                 isEnglishOnly = true
             )
