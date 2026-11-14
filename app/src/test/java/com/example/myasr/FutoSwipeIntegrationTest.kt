@@ -432,4 +432,31 @@ class FutoSwipeIntegrationTest {
         ed2.simulateUserCursorTap(1)
         assertFalse(arb2.pendingAutoSpaceAfterWord)
     }
+
+    @Test
+    fun testConsecutiveSwipeWordsIHaveToTryAndNoSuggestionsField() {
+        val arbitrator = VoiceTouchInputArbitrator()
+        val editor = SelectionEchoingEditorBridge(arbitrator)
+
+        // Swiping "i", "have", "to", "try" consecutively must produce "i have to try"
+        arbitrator.onCommitSwipeWord(editor, "i")
+        arbitrator.onCommitSwipeWord(editor, "have")
+        arbitrator.onCommitSwipeWord(editor, "to")
+        arbitrator.onCommitSwipeWord(editor, "try")
+        assertEquals("i have to try", editor.text.toString())
+
+        // TYPE_TEXT_FLAG_NO_SUGGESTIONS (used by search bars, chat apps, WebViews) must NOT bypass auto-space
+        val noSuggInfo = android.view.inputmethod.EditorInfo().apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        }
+        assertFalse(EnglishCapitalizationAnalyzer.shouldBypassAutoAssist(noSuggInfo, "i have"))
+
+        // URI field with natural search words must NOT bypass, while active URL token MUST bypass
+        val uriInfo = android.view.inputmethod.EditorInfo().apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+        }
+        assertFalse(EnglishCapitalizationAnalyzer.shouldBypassAutoAssist(uriInfo, "i have"))
+        assertTrue(EnglishCapitalizationAnalyzer.shouldBypassAutoAssist(uriInfo, "https://example"))
+        assertTrue(EnglishCapitalizationAnalyzer.shouldBypassAutoAssist(uriInfo, "google.com"))
+    }
 }

@@ -1128,7 +1128,7 @@ class VoiceInputMethodService : InputMethodService() {
     private fun shouldBypassEnglishAutoAssist(): Boolean {
         val mode = flickKeyboardView?.currentMode
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(64, 0)?.toString() ?: ""
-        val isFieldBypassed = EnglishCapitalizationAnalyzer.shouldBypassCapitalization(currentInputEditorInfo, textBeforeCursor)
+        val isFieldBypassed = EnglishCapitalizationAnalyzer.shouldBypassAutoAssist(currentInputEditorInfo, textBeforeCursor)
         return EnglishAssistJudgement.judgeAutoAssistBypass(mode, isFieldBypassed).decision
     }
 

@@ -86,6 +86,47 @@ object EnglishCapitalizationAnalyzer {
     }
 
     /**
+     * Determines whether English Auto-Space and Double-Space Auto-Period should be bypassed.
+     * Unlike capitalization, TYPE_TEXT_FLAG_NO_SUGGESTIONS (common in search bars, chat apps,
+     * and WebViews) and natural search queries in URI bars should NOT disable swipe word spacing.
+     */
+    fun shouldBypassAutoAssist(editorInfo: EditorInfo?, textBeforeCursor: String): Boolean {
+        if (editorInfo != null) {
+            val variation = editorInfo.inputType and EditorInfo.TYPE_MASK_VARIATION
+            if (variation == EditorInfo.TYPE_TEXT_VARIATION_PASSWORD ||
+                variation == EditorInfo.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
+                variation == EditorInfo.TYPE_TEXT_VARIATION_WEB_PASSWORD ||
+                variation == EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            ) {
+                return true
+            }
+            if ((editorInfo.inputType and EditorInfo.TYPE_CLASS_NUMBER) != 0 &&
+                variation == EditorInfo.TYPE_NUMBER_VARIATION_PASSWORD
+            ) {
+                return true
+            }
+            if (variation == EditorInfo.TYPE_TEXT_VARIATION_URI) {
+                val trailingToken = textBeforeCursor.takeLastWhile { !it.isWhitespace() }
+                if (trailingToken.contains("://") || trailingToken.contains('.') || trailingToken.contains('/')) {
+                    return true
+                }
+            }
+        }
+
+        val rawPrefix = textBeforeCursor.dropLastWhile { it.isLetter() || it == '\'' }
+        if (rawPrefix.isNotEmpty()) {
+            val lastChar = rawPrefix.last()
+            if (lastChar == '@' || lastChar == '/' || lastChar == '#' || lastChar == '$' ||
+                lastChar == '_' || lastChar == '\\'
+            ) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    /**
      * Analyzes context and current word to produce algorithmic truecasing candidates.
      */
     fun analyze(
