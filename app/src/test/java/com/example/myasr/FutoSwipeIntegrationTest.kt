@@ -238,4 +238,198 @@ class FutoSwipeIntegrationTest {
         arbitrator.onTypeDirectChar(editor, "a")
         assertEquals("hello. world a", editor.text.toString())
     }
+
+    /**
+     * Simulates an Android EditText that dispatches InputMethodService.onUpdateSelection(...)
+     * asynchronously after every IME edit (including batch edits).
+     */
+    private class SelectionEchoingEditorBridge(
+        private val arbitrator: VoiceTouchInputArbitrator
+    ) : EditorBridge {
+        val text = StringBuilder()
+        var composingText: String = ""
+        var cursorPos: Int = 0
+        private var inBatch = false
+        private var batchOldSel = 0
+
+        private fun dispatchSelectionEcho(oldSel: Int, newSel: Int) {
+            arbitrator.onExternalSelectionUpdated(
+                editor = this,
+                oldSelStart = oldSel,
+                oldSelEnd = oldSel,
+                newSelStart = newSel,
+                newSelEnd = newSel,
+                candidatesStart = -1,
+                candidatesEnd = -1
+            )
+        }
+
+        override fun beginBatchEdit(): Boolean {
+            if (!inBatch) {
+                inBatch = true
+                batchOldSel = cursorPos
+            }
+            return true
+        }
+
+        override fun endBatchEdit(): Boolean {
+            if (inBatch) {
+                inBatch = false
+                if (cursorPos != batchOldSel) {
+                    dispatchSelectionEcho(batchOldSel, cursorPos)
+                }
+            }
+            return true
+        }
+
+        override fun commitText(text: String, newCursorPosition: Int): Boolean {
+            val oldSel = cursorPos
+            this.text.insert(cursorPos, text)
+            cursorPos += text.length
+            composingText = ""
+            if (!inBatch && cursorPos != oldSel) {
+                dispatchSelectionEcho(oldSel, cursorPos)
+            }
+            return true
+        }
+
+        override fun setComposingText(text: String, newCursorPosition: Int): Boolean {
+            composingText = text
+            return true
+        }
+
+        override fun finishComposingText(): Boolean {
+            if (composingText.isNotEmpty()) {
+                val oldSel = cursorPos
+                text.insert(cursorPos, composingText)
+                cursorPos += composingText.length
+                composingText = ""
+                if (!inBatch && cursorPos != oldSel) {
+                    dispatchSelectionEcho(oldSel, cursorPos)
+                }
+            }
+            return true
+        }
+
+        override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
+            val oldSel = cursorPos
+            val delCount = minOf(beforeLength, cursorPos)
+            if (delCount > 0) {
+                text.delete(cursorPos - delCount, cursorPos)
+                cursorPos -= delCount
+            }
+            if (!inBatch && cursorPos != oldSel) {
+                dispatchSelectionEcho(oldSel, cursorPos)
+            }
+            return true
+        }
+
+        override fun getTextBeforeCursor(length: Int, flags: Int): String {
+            val s = text.substring(0, cursorPos)
+            return if (s.length > length) s.substring(s.length - length) else s
+        }
+
+        override fun getSelectedText(flags: Int): String? = null
+
+        fun simulateUserCursorTap(newPos: Int) {
+            val oldSel = cursorPos
+            cursorPos = newPos.coerceIn(0, text.length)
+            dispatchSelectionEcho(oldSel, cursorPos)
+        }
+    }
+
+    @Test
+    fun testE2E_DoubleSpaceAutoPeriodSurvivesOnUpdateSelectionEcho() {
+        val arbitrator = VoiceTouchInputArbitrator()
+        val editor = SelectionEchoingEditorBridge(arbitrator)
+
+        for (ch in "hello") {
+            arbitrator.onTypeDirectChar(editor, ch.toString())
+        }
+        assertEquals("hello", editor.text.toString())
+
+        // 1st Space -> EditText fires onUpdateSelection(5 -> 6). Must NOT clear auto-period window.
+        val o1 = arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = 1000L)
+        assertEquals(VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_IDLE_SPACE, o1)
+        assertEquals("hello ", editor.text.toString())
+
+        // Simulate >80ms Binder IPC delay before 2nd space (still within 1000ms double-space timeout)
+        val o2 = arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = 1350L)
+        assertEquals(VoiceTouchInputArbitrator.SpaceOutcome.CONVERTED_DOUBLE_SPACE_TO_PERIOD, o2)
+        assertEquals("hello. ", editor.text.toString())
+
+        // 3rd Space must NOT create ".. "
+        val o3 = arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = 1500L)
+        assertEquals(VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_IDLE_SPACE, o3)
+        assertEquals("hello.  ", editor.text.toString())
+    }
+
+    @Test
+    fun testE2E_SwipeAndEnglishCandidateAutoSpaceSurviveOnUpdateSelectionEcho() {
+        val arbitrator = VoiceTouchInputArbitrator()
+        val editor = SelectionEchoingEditorBridge(arbitrator)
+
+        // 1. Tap "hel" then select English candidate "hello" -> EditText fires batch onUpdateSelection(3 -> 5)
+        for (ch in "hel") {
+            arbitrator.onTypeDirectChar(editor, ch.toString())
+        }
+        arbitrator.onEnglishCandidateSelected(editor, replaceLength = 3, candidateSurface = "hello")
+        assertEquals("hello", editor.text.toString())
+
+        // 2. Tap 'w' after candidate selection -> must prepend space
+        arbitrator.onTypeDirectChar(editor, "w")
+        assertEquals("hello w", editor.text.toString())
+
+        // 3. Swipe "world" -> must prepend space
+        arbitrator.onCommitSwipeWord(editor, "world")
+        assertEquals("hello w world", editor.text.toString())
+
+        // 4. Select alternative swipe candidate "earth" -> replaces "world" and preserves auto-space
+        arbitrator.onCandidateSelected(editor, candidateSurface = "earth", isPrediction = false)
+        assertEquals("hello w earth", editor.text.toString())
+
+        // 5. Tap 'f' after swipe candidate -> must prepend space
+        arbitrator.onTypeDirectChar(editor, "f")
+        assertEquals("hello w earth f", editor.text.toString())
+
+        // 6. Swipe "test", then tap '.' -> punctuation attaches without space
+        arbitrator.onCommitSwipeWord(editor, "test")
+        arbitrator.onTypeDirectChar(editor, ".")
+        assertEquals("hello w earth f test.", editor.text.toString())
+
+        // 7. Swipe "next" after '.' -> must prepend space
+        arbitrator.onCommitSwipeWord(editor, "next")
+        assertEquals("hello w earth f test. next", editor.text.toString())
+    }
+
+    @Test
+    fun testE2E_ExternalCursorTapClearsAutoPeriodAndAutoSpace() {
+        val arbitrator = VoiceTouchInputArbitrator()
+        val editor = SelectionEchoingEditorBridge(arbitrator)
+
+        for (ch in "hello") {
+            arbitrator.onTypeDirectChar(editor, ch.toString())
+        }
+        arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = 1000L)
+        assertEquals("hello ", editor.text.toString())
+
+        // User taps elsewhere in the EditText (cursor moves from 6 to 2)
+        editor.simulateUserCursorTap(2)
+        assertEquals(0L, arbitrator.lastAutoPeriodEligibleSpaceTimeMs)
+
+        val o2 = arbitrator.onSpacePressed(editor, " ", autoPeriodEnabled = true, nowMs = 1200L)
+        assertEquals(VoiceTouchInputArbitrator.SpaceOutcome.COMMITTED_IDLE_SPACE, o2)
+        assertEquals("he llo ", editor.text.toString())
+
+        // Also test external tap after English candidate selection clears pendingAutoSpaceAfterWord
+        val arb2 = VoiceTouchInputArbitrator()
+        val ed2 = SelectionEchoingEditorBridge(arb2)
+        arb2.onTypeDirectChar(ed2, "h")
+        arb2.onTypeDirectChar(ed2, "i")
+        arb2.onEnglishCandidateSelected(ed2, replaceLength = 2, candidateSurface = "hi")
+        assertTrue(arb2.pendingAutoSpaceAfterWord)
+
+        ed2.simulateUserCursorTap(1)
+        assertFalse(arb2.pendingAutoSpaceAfterWord)
+    }
 }

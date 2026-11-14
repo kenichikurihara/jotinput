@@ -554,6 +554,8 @@ class VoiceInputMethodService : InputMethodService() {
 
                 if (isPartialCommit) {
                     updateCandidates()
+                } else if (candidate.source == "futo_swipe") {
+                    candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                 } else {
                     showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
                 }

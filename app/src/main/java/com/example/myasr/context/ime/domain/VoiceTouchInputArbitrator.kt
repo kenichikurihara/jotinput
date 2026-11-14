@@ -132,6 +132,9 @@ class VoiceTouchInputArbitrator {
     var lastImeDirectEditTimeMs: Long = 0L
         private set
 
+    // Expected net cursor delta from IME's own direct commit/delete edits not yet echoed by onUpdateSelection
+    private var pendingImeSelectionDelta: Int = 0
+
     fun isKeyboardComposing(): Boolean = composingText.isNotEmpty()
 
     fun isStreamingComposing(): Boolean = streamingLastComposingText.isNotEmpty()
@@ -164,6 +167,11 @@ class VoiceTouchInputArbitrator {
         lastAutoPeriodEligibleSpaceTimeMs = 0L
     }
 
+    private fun recordImeDirectEditDelta(delta: Int) {
+        pendingImeSelectionDelta = delta
+        lastImeComposingEditTimeMs = System.currentTimeMillis()
+    }
+
     fun resetAll() {
         composingText.clear()
         activeComposingSessionId = 0L
@@ -171,6 +179,7 @@ class VoiceTouchInputArbitrator {
         streamingCommittedPrefix = ""
         streamingLastComposingText = ""
         streamingInferenceHistory.clear()
+        pendingImeSelectionDelta = 0
         clearUndoState()
         clearAutoAssistState()
         previousCommittedPhrase = ""
@@ -324,7 +333,7 @@ class VoiceTouchInputArbitrator {
         val textToCommit = if (shouldPrependSpace) " $text" else text
         clearUndoState()
         clearAutoAssistState()
-        lastImeDirectEditTimeMs = System.currentTimeMillis()
+        recordImeDirectEditDelta(textToCommit.length)
         editor?.commitText(textToCommit, 1)
         recordDirectCommitForInFlightDecodes(textToCommit)
         flushPendingVoice(editor)
@@ -372,6 +381,7 @@ class VoiceTouchInputArbitrator {
         lastAutoPeriodEligibleSpaceTimeMs = 0L
         lastImeDirectEditTimeMs = System.currentTimeMillis()
 
+        recordImeDirectEditDelta(textToCommit.length)
         editor?.commitText(textToCommit, 1)
         recordDirectCommitForInFlightDecodes(textToCommit)
         previousCommittedPhrase = word
@@ -406,6 +416,7 @@ class VoiceTouchInputArbitrator {
         lastAutoPeriodEligibleSpaceTimeMs = 0L
         lastImeDirectEditTimeMs = System.currentTimeMillis()
 
+        recordImeDirectEditDelta(candidateSurface.length - replaceLength)
         editor?.beginBatchEdit()
         try {
             if (replaceLength > 0) {
@@ -511,6 +522,7 @@ class VoiceTouchInputArbitrator {
             val wordLen = lastCommittedSurface.length
             clearUndoState()
             previousCommittedPhrase = ""
+            recordImeDirectEditDelta(-wordLen)
             editor?.deleteSurroundingText(wordLen, 0)
             recordDeleteCharsForInFlightDecodes(wordLen)
             return DeleteOutcome.DELETED_ENTIRE_SWIPE_WORD
@@ -521,9 +533,11 @@ class VoiceTouchInputArbitrator {
 
         val selected = editor?.getSelectedText(0)
         if (!selected.isNullOrEmpty()) {
+            pendingImeSelectionDelta = 0
             editor.commitText("", 1)
             clearInFlightCommittedTracking()
         } else {
+            recordImeDirectEditDelta(-1)
             editor?.deleteSurroundingText(1, 0)
             recordDeleteCharsForInFlightDecodes(1)
         }
@@ -593,7 +607,7 @@ class VoiceTouchInputArbitrator {
             commitKeyboardSurface(editor, reading, reading)
             clearUndoState()
             previousCommittedPhrase = ""
-            lastImeDirectEditTimeMs = System.currentTimeMillis()
+            recordImeDirectEditDelta(spaceCharWhenIdle.length)
             editor?.commitText(spaceCharWhenIdle, 1)
             recordDirectCommitForInFlightDecodes(spaceCharWhenIdle)
             flushPendingVoice(editor)
@@ -609,7 +623,7 @@ class VoiceTouchInputArbitrator {
             val finalized = commitActiveStreamingComposing(editor, onResetStreamingUtterance, formatStreamingFn)
             clearUndoState()
             previousCommittedPhrase = ""
-            lastImeDirectEditTimeMs = System.currentTimeMillis()
+            recordImeDirectEditDelta(spaceCharWhenIdle.length)
             editor?.commitText(spaceCharWhenIdle, 1)
             recordDirectCommitForInFlightDecodes(spaceCharWhenIdle)
             flushPendingVoice(editor)
@@ -636,7 +650,7 @@ class VoiceTouchInputArbitrator {
                 clearUndoState()
                 lastAutoPeriodEligibleSpaceTimeMs = 0L
                 previousCommittedPhrase = "."
-                lastImeDirectEditTimeMs = System.currentTimeMillis()
+                recordImeDirectEditDelta(1)
                 editor?.beginBatchEdit()
                 try {
                     editor?.deleteSurroundingText(1, 0)
@@ -657,7 +671,7 @@ class VoiceTouchInputArbitrator {
         val prevCharBeforeSpace = editor?.getTextBeforeCursor(1, 0)?.lastOrNull()
         clearUndoState()
         previousCommittedPhrase = ""
-        lastImeDirectEditTimeMs = System.currentTimeMillis()
+        recordImeDirectEditDelta(spaceCharWhenIdle.length)
         editor?.commitText(spaceCharWhenIdle, 1)
         recordDirectCommitForInFlightDecodes(spaceCharWhenIdle)
         flushPendingVoice(editor)
@@ -703,6 +717,7 @@ class VoiceTouchInputArbitrator {
             // User selected an alternative candidate for the immediately preceding swipe word!
             // Replace the previous swipe word with the new candidate word
             val prevLen = lastCommittedSurface.length
+            recordImeDirectEditDelta(candidateSurface.length - prevLen)
             editor?.deleteSurroundingText(prevLen, 0)
             recordDeleteCharsForInFlightDecodes(prevLen)
 
@@ -710,6 +725,8 @@ class VoiceTouchInputArbitrator {
             recordDirectCommitForInFlightDecodes(candidateSurface)
             previousCommittedPhrase = candidateSurface
             lastCommittedSurface = candidateSurface
+            lastAutoPeriodEligibleSpaceTimeMs = 0L
+            pendingAutoSpaceAfterWord = candidateSurface.isNotEmpty() && !isSentenceEndPunctuation(candidateSurface)
             flushPendingVoice(editor)
             return false
         } else {
@@ -1007,10 +1024,17 @@ class VoiceTouchInputArbitrator {
     ): Boolean {
         val selectionChanged = (oldSelStart != newSelStart || oldSelEnd != newSelEnd)
         if (composingText.isEmpty() && streamingLastComposingText.isEmpty()) {
-            val now = System.currentTimeMillis()
-            val recentImeEdit = (now - lastImeComposingEditTimeMs <= 80L) || (now - lastImeDirectEditTimeMs <= 80L)
-            if (selectionChanged && !recentImeEdit) {
-                clearAutoAssistState()
+            if (selectionChanged) {
+                val actualDelta = newSelStart - oldSelStart
+                val isImeSelectionEcho = newSelStart == newSelEnd &&
+                    pendingImeSelectionDelta != 0 &&
+                    actualDelta == pendingImeSelectionDelta
+                if (isImeSelectionEcho) {
+                    pendingImeSelectionDelta = 0
+                } else {
+                    pendingImeSelectionDelta = 0
+                    clearAutoAssistState()
+                }
             }
             return false
         }
