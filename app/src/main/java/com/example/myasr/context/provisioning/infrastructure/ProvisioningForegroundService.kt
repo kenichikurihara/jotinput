@@ -259,13 +259,13 @@ class ProvisioningForegroundService : Service() {
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
-            Log.e(TAG, "Task failed: $task", e)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Task failed: $task", t)
             ProvisioningEvent(
                 eventId = eventCounter.incrementAndGet(),
                 task = task,
                 success = false,
-                message = "処理に失敗しました: ${e.message ?: "Unknown error"}"
+                message = "処理に失敗しました: ${t.message ?: t.javaClass.simpleName}"
             )
         }
     }

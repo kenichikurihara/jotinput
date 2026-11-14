@@ -7,6 +7,7 @@ import com.example.myasr.context.provisioning.infrastructure.ProvisioningTaskReq
 import com.example.myasr.context.provisioning.infrastructure.ProvisioningUiState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -69,5 +70,51 @@ class ProvisioningBackgroundServiceTest {
         assertTrue(result.isFailure)
         assertFalse(targetFile.exists())
         assertFalse(File(dir, "${targetFile.name}.tmp").exists())
+        assertFalse(File(dir, "${targetFile.name}.rt.tmp").exists())
+        assertFalse(File(dir, "${targetFile.name}.tt.tmp").exists())
+        assertFalse(File(dir, "${targetFile.name}.str.tmp").exists())
+    }
+
+    @Test
+    fun `MmapDictionaryCompiler StreamingBuilder compiles and loads identically to MmapDictionary`() {
+        val dir = tempFolder.newFolder("dict_streaming_test")
+        val targetFile = File(dir, "dict_sudachidict.bin")
+
+        val builder = MmapDictionaryCompiler.StreamingBuilder(initialCapacity = 4)
+        builder.addToken("すだち", "酢橘", 6000, 1851, 1851)
+        builder.addToken("すだち", "Sudachi", 5000, 1851, 1851)
+        builder.addToken("あい", "愛", 4000, 1851, 1851)
+        builder.addToken("あい", "相", 4500, 1851, 1851)
+        builder.addToken("ん", "ん", 3000, 1851, 1851)
+
+        val result = builder.compileToFile(targetFile)
+        assertTrue("Compile should succeed", result.isSuccess)
+        assertEquals(5, result.getOrNull())
+        assertTrue(targetFile.exists())
+        assertFalse(File(dir, "${targetFile.name}.tmp").exists())
+        assertFalse(File(dir, "${targetFile.name}.rt.tmp").exists())
+        assertFalse(File(dir, "${targetFile.name}.tt.tmp").exists())
+        assertFalse(File(dir, "${targetFile.name}.str.tmp").exists())
+
+        val mmap = com.example.myasr.context.kanakanji.domain.MmapDictionary.loadFromFile(targetFile)
+        assertNotNull("MmapDictionary should load", mmap)
+        mmap!!.use { dict ->
+            assertEquals(3, dict.numReadings)
+            assertEquals(5, dict.numTokens)
+
+            val sudachiTokens = dict.getExactTokens("すだち")
+            assertNotNull(sudachiTokens)
+            assertEquals(2, sudachiTokens!!.size)
+            // Sorted by cost ascending
+            assertEquals("Sudachi", sudachiTokens[0].surface)
+            assertEquals(5000, sudachiTokens[0].cost)
+            assertEquals("酢橘", sudachiTokens[1].surface)
+            assertEquals(6000, sudachiTokens[1].cost)
+
+            val aiTokens = dict.getExactTokens("あい")
+            assertNotNull(aiTokens)
+            assertEquals("愛", aiTokens!![0].surface)
+            assertEquals("相", aiTokens[1].surface)
+        }
     }
 }
