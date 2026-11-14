@@ -9,7 +9,9 @@ import com.example.myasr.context.provisioning.domain.DictionaryUpdateTracker
 import com.example.myasr.context.provisioning.infrastructure.DictionaryType
 import com.example.myasr.context.provisioning.infrastructure.EnglishAsrModelDownloader
 import com.example.myasr.context.provisioning.infrastructure.EnglishSpellDownloader
-import com.example.myasr.context.provisioning.infrastructure.ModelDownloader
+import com.example.myasr.context.provisioning.infrastructure.ProvisioningForegroundService
+import com.example.myasr.context.provisioning.infrastructure.ProvisioningTaskKind
+import com.example.myasr.context.provisioning.infrastructure.ProvisioningUiState
 import com.example.myasr.context.reranking.domain.RerankEngineType
 import com.example.myasr.context.reranking.infrastructure.LlmReranker
 import com.example.myasr.context.reranking.infrastructure.PowerBenchmarkRunner
@@ -23,6 +25,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -35,8 +38,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.progressindicator.LinearProgressIndicator
@@ -141,6 +147,8 @@ class MainActivity : AppCompatActivity() {
     private var currentHotwordsFile: File? = null
     private var lastActiveDictionaryCount = -1
     private var isUpdatingUiFromPrefs = false
+    private var lastHandledProvisioningEventId: Long =
+        ProvisioningForegroundService.state.value.lastEvent?.eventId ?: 0L
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -165,6 +173,7 @@ class MainActivity : AppCompatActivity() {
 
         initViews()
         setupListeners()
+        observeProvisioningState()
         updateDictionaryBadge()
         updateImeStatusBadge()
         refreshMultiDictionaryUI()
@@ -414,6 +423,10 @@ class MainActivity : AppCompatActivity() {
         updateImeStatusBadge()
         refreshMultiDictionaryUI()
         refreshConnectionMatrixBadge()
+        refreshJapaneseAsrUI()
+        refreshEnglishSpellingUI()
+        refreshEnglishAsrUI()
+        updateModelStatusBadge()
         updateKeyboardHeightUI()
         isUpdatingUiFromPrefs = true
         try {
@@ -736,73 +749,149 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun startModelDownload() {
-        btnDownloadModel.isEnabled = false
-        btnDownloadJapaneseAsr.isEnabled = false
-        downloadProgress.visibility = View.VISIBLE
-        downloadProgress.progress = 0
-        tvDownloadInfo.text = "Connecting to repository…"
+    private fun startBackgroundProvisioning(kind: ProvisioningTaskKind, dictId: String? = null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1002)
+        }
+        ProvisioningForegroundService.enqueue(this, kind, dictId)
+    }
 
-        japaneseAsrProgress.visibility = View.VISIBLE
-        japaneseAsrProgress.progress = 0
-        tvJapaneseAsrDownloadStatus.visibility = View.VISIBLE
-        tvJapaneseAsrDownloadStatus.text = "準備中..."
-
-        val downloader = ModelDownloader(asrManager.getStorageModelDir())
-
+    private fun observeProvisioningState() {
         lifecycleScope.launch {
-            val result = downloader.download { fileName, fileIdx, totalFiles, percent ->
-                lifecycleScope.launch(Dispatchers.Main) {
-                    downloadProgress.progress = percent
-                    tvDownloadInfo.text = "Downloading [$fileIdx/$totalFiles] $fileName ($percent%)"
-                    japaneseAsrProgress.progress = percent
-                    tvJapaneseAsrDownloadStatus.text = "[$fileIdx/$totalFiles] $fileName ($percent%)"
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                ProvisioningForegroundService.state.collect { state ->
+                    renderProvisioningState(state)
                 }
-            }
-
-            if (result.isSuccess) {
-                hotwordsGenerator.reloadTokensSet()
-                if (!kanaKanjiEngine.isBaseDictionaryDownloaded()) {
-                    withContext(Dispatchers.Main) {
-                        tvDownloadInfo.text = "Mozc 基本辞書をダウンロード中..."
-                        tvJapaneseAsrDownloadStatus.text = "Mozc 基本辞書をダウンロード中..."
-                    }
-                    val baseDictResult = AsrApp.instance.multiDictionaryManager.downloadDictionary(DictionaryType.MOZC_GENERAL) { pct, statusText ->
-                        lifecycleScope.launch(Dispatchers.Main) {
-                            downloadProgress.progress = pct
-                            tvDownloadInfo.text = "基本辞書: $statusText"
-                            japaneseAsrProgress.progress = pct
-                            tvJapaneseAsrDownloadStatus.text = "基本辞書: $statusText"
-                        }
-                    }
-                    if (baseDictResult.isSuccess) {
-                        withContext(Dispatchers.Main) {
-                            refreshMultiDictionaryUI()
-                        }
-                    }
-                }
-                withContext(Dispatchers.Default) {
-                    currentHotwordsFile = hotwordsGenerator.generate(dictionaryRepository.getActive())
-                    asrManager.reload(currentHotwordsFile, AsrLanguage.JAPANESE)
-                }
-                downloadProgress.visibility = View.GONE
-                japaneseAsrProgress.visibility = View.GONE
-                tvJapaneseAsrDownloadStatus.visibility = View.GONE
-                btnDownloadModel.isEnabled = true
-                btnDownloadJapaneseAsr.isEnabled = true
-                Toast.makeText(this@MainActivity, "モデルと辞書のダウンロードが完了しました！", Toast.LENGTH_LONG).show()
-                checkAndInitializeModel()
-            } else {
-                val error = result.exceptionOrNull()?.message ?: "Unknown error"
-                tvDownloadInfo.text = "Download failed: $error"
-                btnDownloadModel.isEnabled = true
-                btnDownloadJapaneseAsr.isEnabled = true
-                downloadProgress.visibility = View.GONE
-                japaneseAsrProgress.visibility = View.GONE
-                tvJapaneseAsrDownloadStatus.visibility = View.GONE
-                Toast.makeText(this@MainActivity, "Download failed: $error", Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun renderProvisioningState(state: ProvisioningUiState) {
+        val active = state.activeTask
+
+        // 1. Japanese ASR model
+        val jaActive = active?.kind == ProvisioningTaskKind.JAPANESE_ASR_MODEL
+        val jaQueued = state.isTaskActiveOrQueued(ProvisioningTaskKind.JAPANESE_ASR_MODEL)
+        btnDownloadModel.isEnabled = !jaQueued
+        btnDownloadJapaneseAsr.isEnabled = !jaQueued
+        if (jaActive) {
+            downloadProgress.visibility = View.VISIBLE
+            downloadProgress.progress = state.progress
+            tvDownloadInfo.text = state.statusText.ifEmpty { "バックグラウンドで準備中..." }
+            japaneseAsrProgress.visibility = View.VISIBLE
+            japaneseAsrProgress.progress = state.progress
+            tvJapaneseAsrDownloadStatus.visibility = View.VISIBLE
+            tvJapaneseAsrDownloadStatus.text = state.statusText.ifEmpty { "バックグラウンドで準備中..." }
+        } else if (jaQueued) {
+            downloadProgress.visibility = View.VISIBLE
+            downloadProgress.progress = 0
+            tvDownloadInfo.text = "待機中 (他の処理の完了後に開始)..."
+            japaneseAsrProgress.visibility = View.VISIBLE
+            japaneseAsrProgress.progress = 0
+            tvJapaneseAsrDownloadStatus.visibility = View.VISIBLE
+            tvJapaneseAsrDownloadStatus.text = "待機中..."
+        } else {
+            downloadProgress.visibility = View.GONE
+            japaneseAsrProgress.visibility = View.GONE
+            tvJapaneseAsrDownloadStatus.visibility = View.GONE
+        }
+
+        // 2. Multi-dictionary download & compile
+        val dictActive = active?.kind == ProvisioningTaskKind.SINGLE_DICTIONARY ||
+            active?.kind == ProvisioningTaskKind.ALL_OR_OUTDATED_DICTIONARIES
+        val dictQueued = state.isTaskActiveOrQueued(ProvisioningTaskKind.SINGLE_DICTIONARY) ||
+            state.isTaskActiveOrQueued(ProvisioningTaskKind.ALL_OR_OUTDATED_DICTIONARIES)
+        btnDownloadAllDicts.isEnabled = !dictQueued
+        if (dictActive) {
+            multiDictProgress.visibility = View.VISIBLE
+            multiDictProgress.isIndeterminate = false
+            multiDictProgress.progress = state.progress
+            tvMultiDictStatus.visibility = View.VISIBLE
+            tvMultiDictStatus.text = state.statusText.ifEmpty { "バックグラウンドで処理中..." }
+        } else if (dictQueued) {
+            multiDictProgress.visibility = View.VISIBLE
+            multiDictProgress.isIndeterminate = true
+            tvMultiDictStatus.visibility = View.VISIBLE
+            tvMultiDictStatus.text = "待機中 (他の処理の完了後に開始)..."
+        } else {
+            multiDictProgress.visibility = View.GONE
+            tvMultiDictStatus.visibility = View.GONE
+        }
+
+        // 3. English Spelling model
+        val enSpellActive = active?.kind == ProvisioningTaskKind.ENGLISH_SPELLING_MODEL
+        val enSpellQueued = state.isTaskActiveOrQueued(ProvisioningTaskKind.ENGLISH_SPELLING_MODEL)
+        btnDownloadEnglishSpelling.isEnabled = !enSpellQueued
+        btnDeleteEnglishSpelling.isEnabled = !enSpellQueued
+        if (enSpellActive) {
+            englishSpellingProgress.visibility = View.VISIBLE
+            englishSpellingProgress.progress = state.progress
+            tvEnglishSpellingStatus.visibility = View.VISIBLE
+            tvEnglishSpellingStatus.text = state.statusText.ifEmpty { "バックグラウンドで準備中..." }
+        } else if (enSpellQueued) {
+            englishSpellingProgress.visibility = View.VISIBLE
+            englishSpellingProgress.progress = 0
+            tvEnglishSpellingStatus.visibility = View.VISIBLE
+            tvEnglishSpellingStatus.text = "待機中..."
+        } else {
+            englishSpellingProgress.visibility = View.GONE
+            tvEnglishSpellingStatus.visibility = View.GONE
+        }
+
+        // 4. English ASR model
+        val enAsrActive = active?.kind == ProvisioningTaskKind.ENGLISH_ASR_MODEL
+        val enAsrQueued = state.isTaskActiveOrQueued(ProvisioningTaskKind.ENGLISH_ASR_MODEL)
+        btnDownloadEnglishAsr.isEnabled = !enAsrQueued
+        btnDeleteEnglishAsr.isEnabled = !enAsrQueued
+        if (enAsrActive) {
+            englishAsrProgress.visibility = View.VISIBLE
+            englishAsrProgress.progress = state.progress
+            tvEnglishAsrStatus.visibility = View.VISIBLE
+            tvEnglishAsrStatus.text = state.statusText.ifEmpty { "バックグラウンドで準備中..." }
+        } else if (enAsrQueued) {
+            englishAsrProgress.visibility = View.VISIBLE
+            englishAsrProgress.progress = 0
+            tvEnglishAsrStatus.visibility = View.VISIBLE
+            tvEnglishAsrStatus.text = "待機中..."
+        } else {
+            englishAsrProgress.visibility = View.GONE
+            tvEnglishAsrStatus.visibility = View.GONE
+        }
+
+        // 5. Handle completion / error event once
+        val event = state.lastEvent
+        if (event != null && event.eventId > lastHandledProvisioningEventId) {
+            lastHandledProvisioningEventId = event.eventId
+            Toast.makeText(this, event.message, Toast.LENGTH_LONG).show()
+            when (event.task.kind) {
+                ProvisioningTaskKind.JAPANESE_ASR_MODEL -> {
+                    if (event.success) {
+                        checkAndInitializeModel()
+                        refreshMultiDictionaryUI()
+                    } else {
+                        tvDownloadInfo.text = event.message
+                    }
+                }
+                ProvisioningTaskKind.SINGLE_DICTIONARY,
+                ProvisioningTaskKind.ALL_OR_OUTDATED_DICTIONARIES -> {
+                    refreshMultiDictionaryUI()
+                    refreshConnectionMatrixBadge()
+                    refreshEnglishSpellingUI()
+                }
+                ProvisioningTaskKind.ENGLISH_SPELLING_MODEL -> {
+                    refreshEnglishSpellingUI()
+                }
+                ProvisioningTaskKind.ENGLISH_ASR_MODEL -> {
+                    refreshEnglishAsrUI()
+                }
+            }
+        }
+    }
+
+    private fun startModelDownload() {
+        startBackgroundProvisioning(ProvisioningTaskKind.JAPANESE_ASR_MODEL)
     }
 
     private fun setupMultiDictionaryUI() {
@@ -972,33 +1061,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startDownloadSingleDict(type: DictionaryType) {
-        val manager = AsrApp.instance.multiDictionaryManager
-        btnDownloadAllDicts.isEnabled = false
-        multiDictProgress.visibility = View.VISIBLE
-        multiDictProgress.isIndeterminate = false
-        multiDictProgress.progress = 0
-        tvMultiDictStatus.visibility = View.VISIBLE
-        tvMultiDictStatus.text = "${type.displayName} をダウンロード中..."
-
-        lifecycleScope.launch {
-            val result = manager.downloadDictionary(type) { pct, msg ->
-                lifecycleScope.launch(Dispatchers.Main) {
-                    multiDictProgress.progress = pct
-                    tvMultiDictStatus.text = msg
-                }
-            }
-            multiDictProgress.visibility = View.GONE
-            tvMultiDictStatus.visibility = View.GONE
-            btnDownloadAllDicts.isEnabled = true
-
-            if (result.isSuccess) {
-                val words = result.getOrDefault(0)
-                Toast.makeText(this@MainActivity, "${type.displayName} をインストールしました (${words}語)", Toast.LENGTH_SHORT).show()
-            } else {
-                Toast.makeText(this@MainActivity, "ダウンロード失敗: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-            }
-            refreshMultiDictionaryUI()
-        }
+        startBackgroundProvisioning(ProvisioningTaskKind.SINGLE_DICTIONARY, type.id)
     }
 
     private fun startDownloadBaseDict() {
@@ -1006,73 +1069,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startDownloadAllDicts() {
-        val manager = AsrApp.instance.multiDictionaryManager
-        val tracker = AsrApp.instance.dictionaryUpdateTracker
-        val outdatedStatuses = tracker.getAllStatusInfo().filter { it.state == DictUpdateState.UPDATE_AVAILABLE }
-
-        btnDownloadAllDicts.isEnabled = false
-        multiDictProgress.visibility = View.VISIBLE
-        multiDictProgress.isIndeterminate = false
-        multiDictProgress.progress = 0
-        tvMultiDictStatus.visibility = View.VISIBLE
-        tvMultiDictStatus.text = if (outdatedStatuses.isNotEmpty()) {
-            "更新がある辞書 (${outdatedStatuses.size}件) をアップデート中..."
-        } else {
-            "推奨データを一括ダウンロード中..."
-        }
-
-        lifecycleScope.launch {
-            if (outdatedStatuses.isNotEmpty()) {
-                var updatedTotalWords = 0
-                val totalSteps = outdatedStatuses.size
-                outdatedStatuses.forEachIndexed { idx, status ->
-                    val stepBase = (idx.toDouble() / totalSteps * 100).toInt()
-                    val stepRange = (1.0 / totalSteps * 100).toInt()
-                    val dictType = if (status.sourceId == DictionaryUpdateTracker.BASE_DICT_ID) {
-                        DictionaryType.MOZC_GENERAL
-                    } else {
-                        DictionaryType.fromId(status.sourceId)
-                    }
-                    if (dictType != null) {
-                        val res = manager.downloadDictionary(dictType) { pct, msg ->
-                            lifecycleScope.launch(Dispatchers.Main) {
-                                multiDictProgress.progress = (stepBase + pct * stepRange / 100).coerceIn(0, 99)
-                                tvMultiDictStatus.text = msg
-                            }
-                        }
-                        updatedTotalWords += res.getOrDefault(0)
-                    }
-                }
-                multiDictProgress.visibility = View.GONE
-                tvMultiDictStatus.visibility = View.GONE
-                btnDownloadAllDicts.isEnabled = true
-                Toast.makeText(
-                    this@MainActivity,
-                    "${outdatedStatuses.size}件の辞書を最新版に更新しました (計${updatedTotalWords}語)",
-                    Toast.LENGTH_LONG
-                ).show()
-            } else {
-                val result = manager.downloadAllDictionaries { pct, msg ->
-                    lifecycleScope.launch(Dispatchers.Main) {
-                        multiDictProgress.progress = pct.coerceIn(0, 100)
-                        tvMultiDictStatus.text = msg
-                    }
-                }
-                multiDictProgress.visibility = View.GONE
-                tvMultiDictStatus.visibility = View.GONE
-                btnDownloadAllDicts.isEnabled = true
-
-                if (result.isSuccess) {
-                    val totalWords = result.getOrDefault(0)
-                    Toast.makeText(this@MainActivity, "全辞書・言語データの導入が完了しました (計${totalWords}語)", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(this@MainActivity, "一部の辞書ダウンロードに失敗しました: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-                }
-            }
-            refreshMultiDictionaryUI()
-            refreshConnectionMatrixBadge()
-            refreshEnglishSpellingUI()
-        }
+        startBackgroundProvisioning(ProvisioningTaskKind.ALL_OR_OUTDATED_DICTIONARIES)
     }
 
     private fun refreshConnectionMatrixBadge() {
@@ -1128,34 +1125,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startDownloadEnglishSpelling() {
-        val downloader = EnglishSpellDownloader(this)
-        btnDownloadEnglishSpelling.isEnabled = false
-        btnDeleteEnglishSpelling.isEnabled = false
-        englishSpellingProgress.visibility = View.VISIBLE
-        tvEnglishSpellingStatus.visibility = View.VISIBLE
-        englishSpellingProgress.progress = 0
-        tvEnglishSpellingStatus.text = "準備中..."
-
-        lifecycleScope.launch {
-            val result = downloader.download { currentFile, fileIdx, totalFiles, pct ->
-                runOnUiThread {
-                    englishSpellingProgress.progress = pct
-                    tvEnglishSpellingStatus.text = "[$fileIdx/$totalFiles] $currentFile ($pct%)"
-                }
-            }
-            englishSpellingProgress.visibility = View.GONE
-            tvEnglishSpellingStatus.visibility = View.GONE
-            btnDownloadEnglishSpelling.isEnabled = true
-            btnDeleteEnglishSpelling.isEnabled = true
-
-            if (result.isSuccess) {
-                EnglishSpellEngine.getInstance(this@MainActivity).ensureInitialized()
-                Toast.makeText(this@MainActivity, "英語スペル補正モデルのインストールが完了しました", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(this@MainActivity, "ダウンロードに失敗しました: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-            }
-            refreshEnglishSpellingUI()
-        }
+        startBackgroundProvisioning(ProvisioningTaskKind.ENGLISH_SPELLING_MODEL)
     }
 
     private fun setupEnglishAsrUI() {
@@ -1195,37 +1165,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startDownloadEnglishAsr() {
-        val downloader = EnglishAsrModelDownloader(asrManager.getEnglishStorageModelDir())
-        btnDownloadEnglishAsr.isEnabled = false
-        btnDeleteEnglishAsr.isEnabled = false
-        englishAsrProgress.visibility = View.VISIBLE
-        tvEnglishAsrStatus.visibility = View.VISIBLE
-        englishAsrProgress.progress = 0
-        tvEnglishAsrStatus.text = "準備中..."
-
-        lifecycleScope.launch {
-            val result = downloader.download { statusText, pct ->
-                runOnUiThread {
-                    englishAsrProgress.progress = pct
-                    tvEnglishAsrStatus.text = "$statusText ($pct%)"
-                }
-            }
-
-            if (result.isSuccess) {
-                withContext(Dispatchers.Default) {
-                    asrManager.reload(null, AsrLanguage.ENGLISH)
-                }
-                Toast.makeText(this@MainActivity, "英語音声認識モデルのインストールが完了しました", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(this@MainActivity, "ダウンロードに失敗しました: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-            }
-
-            englishAsrProgress.visibility = View.GONE
-            tvEnglishAsrStatus.visibility = View.GONE
-            btnDownloadEnglishAsr.isEnabled = true
-            btnDeleteEnglishAsr.isEnabled = true
-            refreshEnglishAsrUI()
-        }
+        startBackgroundProvisioning(ProvisioningTaskKind.ENGLISH_ASR_MODEL)
     }
 
     private fun updateKeyboardHeightUI() {

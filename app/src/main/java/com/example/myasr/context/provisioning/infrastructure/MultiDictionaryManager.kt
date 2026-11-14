@@ -7,7 +7,10 @@ import com.example.myasr.context.kanakanji.infrastructure.MmapDictionaryCompiler
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import java.io.BufferedReader
@@ -201,6 +204,7 @@ class MultiDictionaryManager(private val context: Context) {
                     var line: String?
 
                     while (reader.readLine().also { line = it } != null) {
+                        ensureActive()
                         val trimmed = line!!.trim()
                         if (trimmed.isEmpty() || trimmed.startsWith("#")) continue
 
@@ -218,9 +222,14 @@ class MultiDictionaryManager(private val context: Context) {
                 }
             }
 
+            ensureActive()
             onProgress(88, "バイナリ辞書をコンパイル中 (MYASRDIC v1)...")
             val targetFile = getDictFile(type)
-            val compileResult = MmapDictionaryCompiler.compileToFile(readingMap, targetFile)
+            val compileResult = MmapDictionaryCompiler.compileToFile(
+                readingMap,
+                targetFile,
+                isCancelled = { !isActive }
+            )
 
             if (compileResult.isFailure) {
                 return@withContext compileResult
@@ -234,6 +243,8 @@ class MultiDictionaryManager(private val context: Context) {
             onProgress(100, "完了 (${totalTokens}語)")
             Log.i(TAG, "Completed ${type.displayName}: $totalTokens tokens compiled to ${targetFile.name}")
             Result.success(totalTokens)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Failed downloading ${type.displayName}: ${e.message}", e)
             Result.failure(e)
@@ -268,6 +279,8 @@ class MultiDictionaryManager(private val context: Context) {
             KanaKanjiEngine.getInstance(context).reloadDictionaries()
             onProgress(100, "全辞書のインストールが完了しました (計 ${grandTotal}語)")
             Result.success(grandTotal)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Download all failed: ${e.message}", e)
             Result.failure(e)

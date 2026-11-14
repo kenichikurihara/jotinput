@@ -30,10 +30,14 @@ object MmapDictionaryCompiler {
      */
     fun compileToFile(
         readingMap: Map<String, List<RawToken>>,
-        targetFile: File
+        targetFile: File,
+        isCancelled: () -> Boolean = { false }
     ): Result<Int> {
         val tempFile = File(targetFile.parentFile ?: return Result.failure(IllegalStateException("No parent dir")), "${targetFile.name}.tmp")
         return try {
+            if (isCancelled() || Thread.currentThread().isInterrupted) {
+                throw java.util.concurrent.CancellationException("Compilation cancelled")
+            }
             val sortedReadings = readingMap.keys.sortedWith { a, b ->
                 compareUtf8Bytes(a.toByteArray(Charsets.UTF_8), b.toByteArray(Charsets.UTF_8))
             }
@@ -70,7 +74,10 @@ object MmapDictionaryCompiler {
 
             var tokenCounter = 0
 
-            for (reading in sortedReadings) {
+            for ((idx, reading) in sortedReadings.withIndex()) {
+                if ((idx and 0xFFF) == 0 && (isCancelled() || Thread.currentThread().isInterrupted)) {
+                    throw java.util.concurrent.CancellationException("Compilation cancelled")
+                }
                 val (rOffset, rLen) = getStringOffset(reading)
                 val tokens = readingMap[reading]?.sortedBy { it.cost } ?: emptyList()
                 val tokenCount = tokens.size
