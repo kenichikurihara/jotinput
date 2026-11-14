@@ -38,3 +38,11 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`UndoSlotConsistent` / `UndoRestoresDeletedAndClearsTombstone`**: 削除直後の Undo が確実に単語を復元し Tombstone を除去すること。
 - **`VisibleSubsetOfActive` / `UnfilteredShowsAllActive` / `SearchFilterPreservesRepository`**: 検索フィルタがリポジトリ状態を変更せず、常に整合した部分集合のみを表示すること。
 
+### 3.4 [`main_app_ui_state.als`](app/src/test/resources/alloy/main_app_ui_state.als)
+メインアプリ画面（[`MainActivity`](app/src/main/java/com/example/myasr/MainActivity.kt) v2）の 3 タブ構成・DMN スマートガイド・プロビジョニング進捗状態をモデル化し、以下を検証する：
+- **`ReadyImpliesAllPrerequisitesMet`**: ホームの Hero Action が `HeroReady` のとき、IME有効化・選択・日ASR・辞書導入・最新性がすべて揃っていること。
+- **`TabSwitchPreservesState`**: タブ切替がプロビジョニングやセットアップ状態・AI設定を破壊しないこと。
+- **`SlmSelectorHiddenWhenDisabled`**: AI エンジン OFF 時はエンジン選択 UI が必ず非表示であること。
+- **`GlobalBannerVisibleDuringProvisioning`**: バックグラウンド処理中はタブを問わず進捗バナーが表示されること。
+
+

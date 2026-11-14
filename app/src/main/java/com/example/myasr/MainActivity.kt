@@ -1,6 +1,12 @@
 package com.example.myasr
 
-import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
+import com.example.myasr.context.ime.domain.MainAppUiDecisionModel
+import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.AiEngineStatusInput
+import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.AiRuntimeState
+import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.HeroActionKind
+import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.HomeHeroInput
+import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.ProvisioningBannerInput
+import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.StatusTone
 import com.example.myasr.context.ime.presentation.KeyboardHeightManager
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
 import com.example.myasr.context.provisioning.domain.DictUpdateState
@@ -43,8 +49,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.progressindicator.LinearProgressIndicator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -53,19 +59,32 @@ import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
+    // Shell Navigation & Global Provisioning Banner
+    private lateinit var bottomNav: BottomNavigationView
+    private lateinit var tabHome: View
+    private lateinit var tabSettings: View
+    private lateinit var tabData: View
+    private lateinit var layoutGlobalProvisioningBanner: LinearLayout
+    private lateinit var tvGlobalProvisioningStatus: TextView
+    private lateinit var globalProvisioningProgress: LinearProgressIndicator
+
+    // Home Tab: DMN Smart Guide & Playground
+    private lateinit var tvHeroBadge: TextView
+    private lateinit var tvHeroTitle: TextView
+    private lateinit var tvHeroDescription: TextView
+    private lateinit var btnHeroCta: MaterialButton
     private lateinit var tvModelStatus: TextView
     private lateinit var tvDictionaryStatus: TextView
-    private lateinit var btnOpenDictionary: MaterialButton
-    private lateinit var tvOssLicenses: TextView
-
-    // Keyboard controls
     private lateinit var tvImeStatusBadge: TextView
     private lateinit var tvCard1AiStatusBadge: TextView
-    private lateinit var btnEnableIme: MaterialButton
-    private lateinit var btnSelectIme: MaterialButton
+    private lateinit var btnClearTestInput: TextView
     private lateinit var etKeyboardTest: EditText
+    private lateinit var cardQuickDictionary: View
+    private lateinit var cardQuickSwitchIme: View
+    private lateinit var btnEnableIme: MaterialButton
+    private lateinit var tvOssLicenses: TextView
 
-    // Keyboard Height & QWERTY Number Row widgets
+    // Settings Tab: Keyboard, Input Assist, AI Engine, Advanced
     private lateinit var rgKeyboardHeight: android.widget.RadioGroup
     private lateinit var rbHeightCompact: android.widget.RadioButton
     private lateinit var rbHeightShort: android.widget.RadioButton
@@ -77,15 +96,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchStreamingVoiceInput: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var switchDebugDisplay: com.google.android.material.switchmaterial.SwitchMaterial
 
-    // Downloader card widgets
-    private lateinit var cardDownload: MaterialCardView
-    private lateinit var tvDownloadInfo: TextView
-    private lateinit var downloadProgress: LinearProgressIndicator
-    private lateinit var btnDownloadModel: MaterialButton
-
-    // Multi-Source Japanese Dictionary widgets
-    private lateinit var tvTotalDictWordsBadge: TextView
-    private lateinit var tvMultiDictSummary: TextView
     private lateinit var tvSlmStatusBadge: TextView
     private lateinit var tvSlmStatusDesc: TextView
     private lateinit var switchSlmRerankEnabled: com.google.android.material.switchmaterial.SwitchMaterial
@@ -94,12 +104,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rbEngineLocalSlm: android.widget.RadioButton
     private lateinit var rbEngineLocalSlm15B: android.widget.RadioButton
     private lateinit var rbEngineNone: android.widget.RadioButton
+
+    private lateinit var layoutAdvancedHeader: LinearLayout
+    private lateinit var tvAdvancedToggleIcon: TextView
+    private lateinit var layoutAdvancedContent: LinearLayout
     private lateinit var sliderSlmAlpha: com.google.android.material.slider.Slider
     private lateinit var tvSlmAlphaValue: TextView
     private lateinit var tvSlmAlphaDesc: TextView
     private lateinit var sliderSlmLambda: com.google.android.material.slider.Slider
     private lateinit var tvSlmLambdaValue: TextView
     private lateinit var tvSlmLambdaDesc: TextView
+
+    // Data Tab: Dictionaries & On-Device Models
+    private lateinit var tvTotalDictWordsBadge: TextView
+    private lateinit var tvConnectionMatrixBadge: TextView
     private lateinit var multiDictProgress: LinearProgressIndicator
     private lateinit var tvMultiDictStatus: TextView
     private lateinit var layoutDictUpdateBanner: LinearLayout
@@ -110,13 +128,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutDictDetailsContainer: LinearLayout
     private lateinit var layoutDictItemsContainer: LinearLayout
 
-    // Progressive disclosure for Advanced / Developer tools
-    private lateinit var layoutAdvancedHeader: LinearLayout
-    private lateinit var tvAdvancedToggleIcon: TextView
-    private lateinit var layoutAdvancedContent: LinearLayout
-
-    private lateinit var tvConnectionMatrixBadge: TextView
-
     private lateinit var tvJapaneseAsrStatusBadge: TextView
     private lateinit var tvJapaneseAsrStats: TextView
     private lateinit var japaneseAsrProgress: LinearProgressIndicator
@@ -124,7 +135,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnDownloadJapaneseAsr: MaterialButton
 
     private lateinit var tvEnglishSpellingStatusBadge: TextView
-    private lateinit var tvEnglishSpellingSummary: TextView
     private lateinit var tvEnglishSpellingStats: TextView
     private lateinit var englishSpellingProgress: LinearProgressIndicator
     private lateinit var tvEnglishSpellingStatus: TextView
@@ -132,7 +142,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnDeleteEnglishSpelling: MaterialButton
 
     private lateinit var tvEnglishAsrStatusBadge: TextView
-    private lateinit var tvEnglishAsrSummary: TextView
     private lateinit var tvEnglishAsrStats: TextView
     private lateinit var englishAsrProgress: LinearProgressIndicator
     private lateinit var tvEnglishAsrStatus: TextView
@@ -180,6 +189,7 @@ class MainActivity : AppCompatActivity() {
         refreshConnectionMatrixBadge()
         updateKeyboardHeightUI()
         checkAndInitializeModel()
+        refreshHomeHeroCard()
         checkBenchmarkIntent(intent)
 
         // Verify On-Device SLM Re-ranking with the user's motivating case
@@ -206,7 +216,6 @@ class MainActivity : AppCompatActivity() {
                     Log.i("MainActivity", "  Top-${idx + 1}: '${c.surface}' (source: ${c.source})")
                 }
 
-                // Test 3: Empty Context with Context-Free SLM enabled
                 val reading3 = "きょう"
                 val cands3 = AsrApp.instance.kanaKanjiEngine.getCandidates(reading3, "")
                 Log.i("MainActivity", "=== ON-DEVICE CONTEXT-FREE SLM TEST ===")
@@ -218,6 +227,75 @@ class MainActivity : AppCompatActivity() {
             withContext(Dispatchers.Main) {
                 updateSlmStatusBadge()
             }
+        }
+    }
+
+    private fun applyBadgeTone(badge: TextView, tone: StatusTone) {
+        val (bgRes, textRes) = when (tone) {
+            StatusTone.SUCCESS -> R.color.badge_success_bg to R.color.badge_success_text
+            StatusTone.INFO -> R.color.badge_info_bg to R.color.badge_info_text
+            StatusTone.WARNING -> R.color.badge_warning_bg to R.color.badge_warning_text
+            StatusTone.NEUTRAL -> R.color.badge_neutral_bg to R.color.badge_neutral_text
+        }
+        badge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, bgRes))
+        badge.setTextColor(ContextCompat.getColor(this, textRes))
+    }
+
+    private fun isImeEnabled(): Boolean {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager ?: return false
+        return imm.enabledInputMethodList.any { it.packageName == packageName }
+    }
+
+    private fun isImeSelectedAsCurrent(): Boolean {
+        val defaultIme = Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD) ?: ""
+        return defaultIme.startsWith("$packageName/") || defaultIme.contains(packageName)
+    }
+
+    private fun refreshHomeHeroCard() {
+        val manager = AsrApp.instance.multiDictionaryManager
+        val tracker = AsrApp.instance.dictionaryUpdateTracker
+        val outdatedCount = tracker.getAllStatusInfo().count { it.state == DictUpdateState.UPDATE_AVAILABLE }
+
+        val decision = MainAppUiDecisionModel.evaluateHomeHero(
+            HomeHeroInput(
+                imeEnabled = isImeEnabled(),
+                imeSelected = isImeSelectedAsCurrent(),
+                japaneseAsrReady = asrManager.isModelAvailable(AsrLanguage.JAPANESE),
+                totalDictWords = manager.getTotalWordCount(),
+                outdatedDictCount = outdatedCount
+            )
+        )
+
+        tvHeroBadge.text = decision.badgeText
+        applyBadgeTone(tvHeroBadge, decision.tone)
+        tvHeroTitle.text = decision.title
+        tvHeroDescription.text = decision.description
+
+        if (decision.ctaLabel != null) {
+            btnHeroCta.visibility = View.VISIBLE
+            btnHeroCta.text = decision.ctaLabel
+            btnHeroCta.setOnClickListener {
+                when (decision.actionKind) {
+                    HeroActionKind.ENABLE_IME -> startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
+                    HeroActionKind.SELECT_IME -> {
+                        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                        imm?.showInputMethodPicker()
+                    }
+                    HeroActionKind.DOWNLOAD_JA_ASR -> {
+                        startModelDownload()
+                        bottomNav.selectedItemId = R.id.nav_data
+                    }
+                    HeroActionKind.DOWNLOAD_DICTS,
+                    HeroActionKind.UPDATE_DICTS -> {
+                        startDownloadAllDicts()
+                        bottomNav.selectedItemId = R.id.nav_data
+                    }
+                    HeroActionKind.READY -> {}
+                }
+            }
+        } else {
+            btnHeroCta.visibility = View.GONE
+            btnHeroCta.setOnClickListener(null)
         }
     }
 
@@ -300,86 +378,30 @@ class MainActivity : AppCompatActivity() {
         val selectedEngine = KeyboardHeightManager.getRerankEngineType(this)
         val reranker = AsrApp.instance.llmReranker
 
-        if (!isRerankEnabled || selectedEngine == RerankEngineType.NONE) {
-            layoutRerankEngineSelector.visibility = View.GONE
-            tvSlmStatusBadge.text = "オフ (OFF)"
-            tvSlmStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                ContextCompat.getColor(this, R.color.badge_neutral_bg)
+        val runtimeState = when (reranker.state) {
+            LlmReranker.State.READY -> AiRuntimeState.READY
+            LlmReranker.State.INITIALIZING -> AiRuntimeState.INITIALIZING
+            else -> AiRuntimeState.IDLE_OR_ERROR
+        }
+        val modelInstalled = selectedEngine != RerankEngineType.NONE &&
+            reranker.isModelInstalled(selectedEngine.modelFileName)
+
+        val decision = MainAppUiDecisionModel.evaluateAiEngineStatus(
+            AiEngineStatusInput(
+                slmEnabled = isRerankEnabled,
+                engineType = selectedEngine,
+                runtimeState = runtimeState,
+                modelInstalled = modelInstalled
             )
-            tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
-            tvSlmStatusDesc.text = "AI 変換エンジンは無効です (Mozc辞書・Viterbiのみ使用)"
-            if (::tvCard1AiStatusBadge.isInitialized) {
-                tvCard1AiStatusBadge.text = "AI: オフ (Viterbi)"
-                tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                    ContextCompat.getColor(this, R.color.badge_neutral_bg)
-                )
-                tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
-            }
-            return
-        }
+        )
 
-        layoutRerankEngineSelector.visibility = View.VISIBLE
+        layoutRerankEngineSelector.visibility = if (decision.showEngineSelector) View.VISIBLE else View.GONE
+        tvSlmStatusBadge.text = decision.badgeText
+        applyBadgeTone(tvSlmStatusBadge, decision.tone)
+        tvSlmStatusDesc.text = decision.descriptionText
 
-        when (selectedEngine) {
-            RerankEngineType.NONE -> {}
-            RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B -> {
-                val modelName = if (selectedEngine == RerankEngineType.LOCAL_SLM_1_5B) "Qwen2.5-1.5B" else "Qwen2.5-0.5B"
-                val badgeText = if (selectedEngine == RerankEngineType.LOCAL_SLM_1_5B) "Qwen 1.5B" else "Qwen 0.5B"
-                val modelFileName = selectedEngine.modelFileName
-                when (reranker.state) {
-                    LlmReranker.State.READY -> {
-                        tvSlmStatusBadge.text = "$badgeText (Ready)"
-                        tvSlmStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                            ContextCompat.getColor(this, R.color.badge_success_bg)
-                        )
-                        tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-                        tvSlmStatusDesc.text = "$modelName 稼働中 (文脈補正・かな漢字変換)"
-                        if (::tvCard1AiStatusBadge.isInitialized) {
-                            tvCard1AiStatusBadge.text = "AI: $badgeText"
-                            tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                                ContextCompat.getColor(this, R.color.badge_success_bg)
-                            )
-                            tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
-                        }
-                    }
-                    LlmReranker.State.INITIALIZING -> {
-                        tvSlmStatusBadge.text = "読込中..."
-                        tvSlmStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                            ContextCompat.getColor(this, R.color.badge_neutral_bg)
-                        )
-                        tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
-                        tvSlmStatusDesc.text = "$modelName モデルをメモリにロードしています..."
-                        if (::tvCard1AiStatusBadge.isInitialized) {
-                            tvCard1AiStatusBadge.text = "AI: 読込中…"
-                            tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                                ContextCompat.getColor(this, R.color.badge_neutral_bg)
-                            )
-                            tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
-                        }
-                    }
-                    else -> {
-                        if (reranker.isModelInstalled(modelFileName)) {
-                            tvSlmStatusBadge.text = "待機中"
-                            tvSlmStatusDesc.text = "$modelName 検出済み。タップで初期化"
-                        } else {
-                            tvSlmStatusBadge.text = "未導入"
-                            tvSlmStatusDesc.text = "モデル未配置 (models/$modelFileName)"
-                        }
-                        tvSlmStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                            ContextCompat.getColor(this, R.color.badge_neutral_bg)
-                        )
-                        tvSlmStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
-                        if (::tvCard1AiStatusBadge.isInitialized) {
-                            tvCard1AiStatusBadge.text = "AI: $badgeText (待機中)"
-                            tvCard1AiStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                                ContextCompat.getColor(this, R.color.badge_neutral_bg)
-                            )
-                            tvCard1AiStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
-                        }
-                    }
-                }
-            }
-        }
+        tvCard1AiStatusBadge.text = "AI: ${decision.badgeText}"
+        applyBadgeTone(tvCard1AiStatusBadge, decision.tone)
     }
 
     private fun updateAlphaDisplay(alpha: Float) {
@@ -428,6 +450,7 @@ class MainActivity : AppCompatActivity() {
         refreshEnglishAsrUI()
         updateModelStatusBadge()
         updateKeyboardHeightUI()
+        refreshHomeHeroCard()
         isUpdatingUiFromPrefs = true
         try {
             switchStreamingVoiceInput.isChecked = KeyboardHeightManager.isStreamingVoiceInputEnabled(this)
@@ -445,7 +468,6 @@ class MainActivity : AppCompatActivity() {
         updateSlmStatusBadge()
         val currentActiveCount = dictionaryRepository.getActive().size
         if (lastActiveDictionaryCount != -1 && lastActiveDictionaryCount != currentActiveCount) {
-            // Dictionary updated, reload hotwords into ASR engine
             lastActiveDictionaryCount = currentActiveCount
             currentHotwordsFile = hotwordsGenerator.generate(dictionaryRepository.getActive())
             lifecycleScope.launch(Dispatchers.Default) {
@@ -469,40 +491,48 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateImeStatusBadge() {
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager ?: return
-        val enabledMethods = imm.enabledInputMethodList
-        val isEnabled = enabledMethods.any { it.packageName == packageName }
+        val isEnabled = isImeEnabled()
+        val isSelected = isImeSelectedAsCurrent()
 
-        if (isEnabled) {
-            tvImeStatusBadge.text = "IME: 有効"
-            tvImeStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                ContextCompat.getColor(this, R.color.badge_success_bg)
-            )
-            tvImeStatusBadge.setTextColor(
-                ContextCompat.getColor(this, R.color.badge_success_text)
-            )
-        } else {
-            tvImeStatusBadge.text = "IME: 未有効"
-            tvImeStatusBadge.backgroundTintList = ColorStateList.valueOf(
-                ContextCompat.getColor(this, R.color.badge_neutral_bg)
-            )
-            tvImeStatusBadge.setTextColor(
-                ContextCompat.getColor(this, R.color.badge_neutral_text)
-            )
+        when {
+            isEnabled && isSelected -> {
+                tvImeStatusBadge.text = "IME: 使用中"
+                applyBadgeTone(tvImeStatusBadge, StatusTone.SUCCESS)
+            }
+            isEnabled -> {
+                tvImeStatusBadge.text = "IME: 有効 (未選択)"
+                applyBadgeTone(tvImeStatusBadge, StatusTone.INFO)
+            }
+            else -> {
+                tvImeStatusBadge.text = "IME: 未有効"
+                applyBadgeTone(tvImeStatusBadge, StatusTone.NEUTRAL)
+            }
         }
     }
 
     private fun initViews() {
+        bottomNav = findViewById(R.id.bottomNav)
+        tabHome = findViewById(R.id.tabHome)
+        tabSettings = findViewById(R.id.tabSettings)
+        tabData = findViewById(R.id.tabData)
+        layoutGlobalProvisioningBanner = findViewById(R.id.layoutGlobalProvisioningBanner)
+        tvGlobalProvisioningStatus = findViewById(R.id.tvGlobalProvisioningStatus)
+        globalProvisioningProgress = findViewById(R.id.globalProvisioningProgress)
+
+        tvHeroBadge = findViewById(R.id.tvHeroBadge)
+        tvHeroTitle = findViewById(R.id.tvHeroTitle)
+        tvHeroDescription = findViewById(R.id.tvHeroDescription)
+        btnHeroCta = findViewById(R.id.btnHeroCta)
         tvModelStatus = findViewById(R.id.tvModelStatus)
         tvDictionaryStatus = findViewById(R.id.tvDictionaryStatus)
         tvCard1AiStatusBadge = findViewById(R.id.tvCard1AiStatusBadge)
-        btnOpenDictionary = findViewById(R.id.btnOpenDictionary)
-        tvOssLicenses = findViewById(R.id.tvOssLicenses)
-
         tvImeStatusBadge = findViewById(R.id.tvImeStatusBadge)
-        btnEnableIme = findViewById(R.id.btnEnableIme)
-        btnSelectIme = findViewById(R.id.btnSelectIme)
+        btnClearTestInput = findViewById(R.id.btnClearTestInput)
         etKeyboardTest = findViewById(R.id.etKeyboardTest)
+        cardQuickDictionary = findViewById(R.id.cardQuickDictionary)
+        cardQuickSwitchIme = findViewById(R.id.cardQuickSwitchIme)
+        btnEnableIme = findViewById(R.id.btnEnableIme)
+        tvOssLicenses = findViewById(R.id.tvOssLicenses)
 
         rgKeyboardHeight = findViewById(R.id.rgKeyboardHeight)
         rbHeightCompact = findViewById(R.id.rbHeightCompact)
@@ -515,13 +545,7 @@ class MainActivity : AppCompatActivity() {
         switchStreamingVoiceInput = findViewById(R.id.switchStreamingVoiceInput)
         switchDebugDisplay = findViewById(R.id.switchDebugDisplay)
 
-        cardDownload = findViewById(R.id.cardDownload)
-        tvDownloadInfo = findViewById(R.id.tvDownloadInfo)
-        downloadProgress = findViewById(R.id.downloadProgress)
-        btnDownloadModel = findViewById(R.id.btnDownloadModel)
-
         tvTotalDictWordsBadge = findViewById(R.id.tvTotalDictWordsBadge)
-        tvMultiDictSummary = findViewById(R.id.tvMultiDictSummary)
         tvSlmStatusBadge = findViewById(R.id.tvSlmStatusBadge)
         tvSlmStatusDesc = findViewById(R.id.tvSlmStatusDesc)
         switchSlmRerankEnabled = findViewById(R.id.switchSlmRerankEnabled)
@@ -531,6 +555,7 @@ class MainActivity : AppCompatActivity() {
         rbEngineLocalSlm15B = findViewById(R.id.rbEngineLocalSlm15B)
         rbEngineNone = findViewById(R.id.rbEngineNone)
         setupRerankEngineUI()
+
         sliderSlmAlpha = findViewById(R.id.sliderSlmAlpha)
         tvSlmAlphaValue = findViewById(R.id.tvSlmAlphaValue)
         tvSlmAlphaDesc = findViewById(R.id.tvSlmAlphaDesc)
@@ -544,6 +569,7 @@ class MainActivity : AppCompatActivity() {
         val currentLambda = KeyboardHeightManager.getSlmLambdaObs(this)
         sliderSlmLambda.value = currentLambda.coerceIn(0.10f, 2.00f)
         updateLambdaDisplay(currentLambda)
+
         multiDictProgress = findViewById(R.id.multiDictProgress)
         tvMultiDictStatus = findViewById(R.id.tvMultiDictStatus)
         layoutDictUpdateBanner = findViewById(R.id.layoutDictUpdateBanner)
@@ -567,7 +593,6 @@ class MainActivity : AppCompatActivity() {
         btnDownloadJapaneseAsr = findViewById(R.id.btnDownloadJapaneseAsr)
 
         tvEnglishSpellingStatusBadge = findViewById(R.id.tvEnglishSpellingStatusBadge)
-        tvEnglishSpellingSummary = findViewById(R.id.tvEnglishSpellingSummary)
         tvEnglishSpellingStats = findViewById(R.id.tvEnglishSpellingStats)
         englishSpellingProgress = findViewById(R.id.englishSpellingProgress)
         tvEnglishSpellingStatus = findViewById(R.id.tvEnglishSpellingStatus)
@@ -575,7 +600,6 @@ class MainActivity : AppCompatActivity() {
         btnDeleteEnglishSpelling = findViewById(R.id.btnDeleteEnglishSpelling)
 
         tvEnglishAsrStatusBadge = findViewById(R.id.tvEnglishAsrStatusBadge)
-        tvEnglishAsrSummary = findViewById(R.id.tvEnglishAsrSummary)
         tvEnglishAsrStats = findViewById(R.id.tvEnglishAsrStats)
         englishAsrProgress = findViewById(R.id.englishAsrProgress)
         tvEnglishAsrStatus = findViewById(R.id.tvEnglishAsrStatus)
@@ -583,9 +607,34 @@ class MainActivity : AppCompatActivity() {
         btnDeleteEnglishAsr = findViewById(R.id.btnDeleteEnglishAsr)
     }
 
+    private fun switchToTab(itemId: Int) {
+        tabHome.visibility = if (itemId == R.id.nav_home) View.VISIBLE else View.GONE
+        tabSettings.visibility = if (itemId == R.id.nav_settings) View.VISIBLE else View.GONE
+        tabData.visibility = if (itemId == R.id.nav_data) View.VISIBLE else View.GONE
+    }
+
     private fun setupListeners() {
-        btnOpenDictionary.setOnClickListener {
+        bottomNav.setOnItemSelectedListener { item ->
+            switchToTab(item.itemId)
+            true
+        }
+
+        layoutGlobalProvisioningBanner.setOnClickListener {
+            bottomNav.selectedItemId = R.id.nav_data
+        }
+
+        btnClearTestInput.setOnClickListener {
+            etKeyboardTest.text?.clear()
+            etKeyboardTest.requestFocus()
+        }
+
+        cardQuickDictionary.setOnClickListener {
             startActivity(Intent(this, DictionaryActivity::class.java))
+        }
+
+        cardQuickSwitchIme.setOnClickListener {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.showInputMethodPicker()
         }
 
         setupMultiDictionaryUI()
@@ -597,9 +646,9 @@ class MainActivity : AppCompatActivity() {
             val isVisible = layoutDictDetailsContainer.visibility == View.VISIBLE
             layoutDictDetailsContainer.visibility = if (isVisible) View.GONE else View.VISIBLE
             btnToggleDictDetails.text = if (isVisible) {
-                "個別の拡張辞書・音声モデルを管理 ▼"
+                "個別の拡張辞書を管理 ▼"
             } else {
-                "個別の拡張辞書・音声モデルを閉じる ▲"
+                "個別の拡張辞書を閉じる ▲"
             }
         }
 
@@ -672,15 +721,6 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
         }
 
-        btnSelectIme.setOnClickListener {
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-            imm?.showInputMethodPicker()
-        }
-
-        btnDownloadModel.setOnClickListener {
-            startModelDownload()
-        }
-
         tvOssLicenses.setOnClickListener {
             showOssLicensesDialog()
         }
@@ -695,6 +735,12 @@ class MainActivity : AppCompatActivity() {
             !jaReady && enReady -> "音声認識: 日未導入 / 英Ready"
             else -> "音声認識: 未導入"
         }
+        val tone = when {
+            jaReady -> StatusTone.SUCCESS
+            enReady -> StatusTone.INFO
+            else -> StatusTone.NEUTRAL
+        }
+        applyBadgeTone(tvModelStatus, tone)
     }
 
     private fun setupJapaneseAsrUI() {
@@ -711,14 +757,12 @@ class MainActivity : AppCompatActivity() {
             val totalSize = (dir.listFiles()?.sumOf { it.length() } ?: 0L)
             val sizeMb = String.format(java.util.Locale.US, "%.1f", totalSize / (1024.0 * 1024.0))
             tvJapaneseAsrStatusBadge.text = "導入済"
-            tvJapaneseAsrStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
-            tvJapaneseAsrStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+            applyBadgeTone(tvJapaneseAsrStatusBadge, StatusTone.SUCCESS)
             tvJapaneseAsrStats.text = "約160MB (導入済: ${sizeMb} MB, Apache-2.0)"
             btnDownloadJapaneseAsr.text = "再取得"
         } else {
             tvJapaneseAsrStatusBadge.text = "未取得"
-            tvJapaneseAsrStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
-            tvJapaneseAsrStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+            applyBadgeTone(tvJapaneseAsrStatusBadge, StatusTone.NEUTRAL)
             tvJapaneseAsrStats.text = "約160MB (Apache-2.0)"
             btnDownloadJapaneseAsr.text = "取得"
         }
@@ -727,7 +771,6 @@ class MainActivity : AppCompatActivity() {
     private fun checkAndInitializeModel() {
         refreshJapaneseAsrUI()
         if (asrManager.isModelAvailable()) {
-            cardDownload.visibility = View.GONE
             tvModelStatus.text = "音声認識: 読込中…"
 
             lifecycleScope.launch(Dispatchers.Default) {
@@ -738,14 +781,15 @@ class MainActivity : AppCompatActivity() {
                         updateModelStatusBadge(japaneseReady = true)
                     } else {
                         tvModelStatus.text = "音声認識: エラー"
+                        applyBadgeTone(tvModelStatus, StatusTone.WARNING)
                     }
                     refreshJapaneseAsrUI()
+                    refreshHomeHeroCard()
                 }
             }
         } else {
-            // Model files missing
-            cardDownload.visibility = View.VISIBLE
             updateModelStatusBadge(japaneseReady = false)
+            refreshHomeHeroCard()
         }
     }
 
@@ -771,29 +815,41 @@ class MainActivity : AppCompatActivity() {
     private fun renderProvisioningState(state: ProvisioningUiState) {
         val active = state.activeTask
 
+        // 0. Global Cross-Tab Provisioning Banner (DMN-driven)
+        val bannerDecision = MainAppUiDecisionModel.evaluateProvisioningBanner(
+            ProvisioningBannerInput(
+                hasActiveTask = active != null,
+                queuedCount = state.queuedTasks.size,
+                progress = state.progress,
+                statusText = state.statusText
+            )
+        )
+        if (bannerDecision.isVisible) {
+            layoutGlobalProvisioningBanner.visibility = View.VISIBLE
+            tvGlobalProvisioningStatus.text = bannerDecision.title
+            globalProvisioningProgress.isIndeterminate = bannerDecision.isIndeterminate
+            if (!bannerDecision.isIndeterminate) {
+                globalProvisioningProgress.progress = bannerDecision.progress
+            }
+        } else {
+            layoutGlobalProvisioningBanner.visibility = View.GONE
+        }
+
         // 1. Japanese ASR model
         val jaActive = active?.kind == ProvisioningTaskKind.JAPANESE_ASR_MODEL
         val jaQueued = state.isTaskActiveOrQueued(ProvisioningTaskKind.JAPANESE_ASR_MODEL)
-        btnDownloadModel.isEnabled = !jaQueued
         btnDownloadJapaneseAsr.isEnabled = !jaQueued
         if (jaActive) {
-            downloadProgress.visibility = View.VISIBLE
-            downloadProgress.progress = state.progress
-            tvDownloadInfo.text = state.statusText.ifEmpty { "バックグラウンドで準備中..." }
             japaneseAsrProgress.visibility = View.VISIBLE
             japaneseAsrProgress.progress = state.progress
             tvJapaneseAsrDownloadStatus.visibility = View.VISIBLE
             tvJapaneseAsrDownloadStatus.text = state.statusText.ifEmpty { "バックグラウンドで準備中..." }
         } else if (jaQueued) {
-            downloadProgress.visibility = View.VISIBLE
-            downloadProgress.progress = 0
-            tvDownloadInfo.text = "待機中 (他の処理の完了後に開始)..."
             japaneseAsrProgress.visibility = View.VISIBLE
             japaneseAsrProgress.progress = 0
             tvJapaneseAsrDownloadStatus.visibility = View.VISIBLE
             tvJapaneseAsrDownloadStatus.text = "待機中..."
         } else {
-            downloadProgress.visibility = View.GONE
             japaneseAsrProgress.visibility = View.GONE
             tvJapaneseAsrDownloadStatus.visibility = View.GONE
         }
@@ -870,8 +926,6 @@ class MainActivity : AppCompatActivity() {
                     if (event.success) {
                         checkAndInitializeModel()
                         refreshMultiDictionaryUI()
-                    } else {
-                        tvDownloadInfo.text = event.message
                     }
                 }
                 ProvisioningTaskKind.SINGLE_DICTIONARY,
@@ -887,6 +941,7 @@ class MainActivity : AppCompatActivity() {
                     refreshEnglishAsrUI()
                 }
             }
+            refreshHomeHeroCard()
         }
     }
 
@@ -918,6 +973,7 @@ class MainActivity : AppCompatActivity() {
             withContext(Dispatchers.Main) {
                 btnCheckDictUpdates.isEnabled = true
                 refreshMultiDictionaryUI()
+                refreshHomeHeroCard()
                 if (force) {
                     val outdatedCount = statuses.count { it.state == DictUpdateState.UPDATE_AVAILABLE }
                     val msg = if (outdatedCount > 0) {
@@ -942,32 +998,28 @@ class MainActivity : AppCompatActivity() {
         when (statusInfo.state) {
             DictUpdateState.UPDATE_AVAILABLE -> {
                 tvStatusBadge.text = "更新あり ($wordCountLabel)"
-                tvStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_warning_bg))
-                tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_warning_text))
+                applyBadgeTone(tvStatusBadge, StatusTone.WARNING)
                 tvDates.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_warning_bg))
                 tvDates.setTextColor(ContextCompat.getColor(this, R.color.badge_warning_text))
                 btnAction.text = "更新"
             }
             DictUpdateState.UP_TO_DATE -> {
                 tvStatusBadge.text = "最新 ($wordCountLabel)"
-                tvStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
-                tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+                applyBadgeTone(tvStatusBadge, StatusTone.SUCCESS)
                 tvDates.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_info_bg))
                 tvDates.setTextColor(ContextCompat.getColor(this, R.color.badge_info_text))
                 btnAction.text = "再取得"
             }
             DictUpdateState.INSTALLED_REMOTE_UNKNOWN -> {
                 tvStatusBadge.text = "導入済 ($wordCountLabel)"
-                tvStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
-                tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+                applyBadgeTone(tvStatusBadge, StatusTone.SUCCESS)
                 tvDates.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
                 tvDates.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
                 btnAction.text = "再取得"
             }
             DictUpdateState.NOT_INSTALLED -> {
                 tvStatusBadge.text = "未取得"
-                tvStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
-                tvStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+                applyBadgeTone(tvStatusBadge, StatusTone.NEUTRAL)
                 tvDates.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
                 tvDates.setTextColor(ContextCompat.getColor(this, R.color.text_secondary))
                 btnAction.text = "取得"
@@ -1010,19 +1062,16 @@ class MainActivity : AppCompatActivity() {
         if (totalCombined > 0) {
             if (outdatedList.isNotEmpty()) {
                 tvTotalDictWordsBadge.text = "更新あり: ${outdatedList.size}件"
-                tvTotalDictWordsBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_warning_bg))
-                tvTotalDictWordsBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_warning_text))
+                applyBadgeTone(tvTotalDictWordsBadge, StatusTone.WARNING)
                 btnDownloadAllDicts.text = "更新がある辞書を一括アップデート (${outdatedList.size}件)"
             } else {
                 tvTotalDictWordsBadge.text = "辞書: $totalFormatted 語"
-                tvTotalDictWordsBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
-                tvTotalDictWordsBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+                applyBadgeTone(tvTotalDictWordsBadge, StatusTone.SUCCESS)
                 btnDownloadAllDicts.text = "全拡張辞書を最新版に更新 ($totalFormatted 語)"
             }
         } else {
             tvTotalDictWordsBadge.text = "辞書: 未取得"
-            tvTotalDictWordsBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
-            tvTotalDictWordsBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+            applyBadgeTone(tvTotalDictWordsBadge, StatusTone.NEUTRAL)
             btnDownloadAllDicts.text = "推奨拡張辞書を一括ダウンロード (約400万語)"
         }
 
@@ -1064,10 +1113,6 @@ class MainActivity : AppCompatActivity() {
         startBackgroundProvisioning(ProvisioningTaskKind.SINGLE_DICTIONARY, type.id)
     }
 
-    private fun startDownloadBaseDict() {
-        startDownloadSingleDict(DictionaryType.MOZC_GENERAL)
-    }
-
     private fun startDownloadAllDicts() {
         startBackgroundProvisioning(ProvisioningTaskKind.ALL_OR_OUTDATED_DICTIONARIES)
     }
@@ -1077,12 +1122,10 @@ class MainActivity : AppCompatActivity() {
         val isInstalled = manager.isInstalled()
         if (isInstalled) {
             tvConnectionMatrixBadge.text = "連接: 導入済"
-            tvConnectionMatrixBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
-            tvConnectionMatrixBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+            applyBadgeTone(tvConnectionMatrixBadge, StatusTone.SUCCESS)
         } else {
             tvConnectionMatrixBadge.text = "連接: 未導入"
-            tvConnectionMatrixBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
-            tvConnectionMatrixBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+            applyBadgeTone(tvConnectionMatrixBadge, StatusTone.NEUTRAL)
         }
     }
 
@@ -1109,15 +1152,13 @@ class MainActivity : AppCompatActivity() {
             val totalSize = (dir.listFiles()?.sumOf { it.length() } ?: 0L)
             val sizeMb = String.format(java.util.Locale.US, "%.1f", totalSize / (1024.0 * 1024.0))
             tvEnglishSpellingStatusBadge.text = "導入済"
-            tvEnglishSpellingStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
-            tvEnglishSpellingStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+            applyBadgeTone(tvEnglishSpellingStatusBadge, StatusTone.SUCCESS)
             tvEnglishSpellingStats.text = "約27MB (導入済: ${sizeMb} MB)"
             btnDownloadEnglishSpelling.text = "再取得"
             btnDeleteEnglishSpelling.visibility = View.VISIBLE
         } else {
             tvEnglishSpellingStatusBadge.text = "未取得"
-            tvEnglishSpellingStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
-            tvEnglishSpellingStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+            applyBadgeTone(tvEnglishSpellingStatusBadge, StatusTone.NEUTRAL)
             tvEnglishSpellingStats.text = "約27MB"
             btnDownloadEnglishSpelling.text = "取得"
             btnDeleteEnglishSpelling.visibility = View.GONE
@@ -1148,15 +1189,13 @@ class MainActivity : AppCompatActivity() {
             val totalSize = (dir.listFiles()?.sumOf { it.length() } ?: 0L)
             val sizeMb = String.format(java.util.Locale.US, "%.1f", totalSize / (1024.0 * 1024.0))
             tvEnglishAsrStatusBadge.text = "導入済"
-            tvEnglishAsrStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_success_bg))
-            tvEnglishAsrStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_success_text))
+            applyBadgeTone(tvEnglishAsrStatusBadge, StatusTone.SUCCESS)
             tvEnglishAsrStats.text = "約126MB (導入済: ${sizeMb} MB, CC-BY-4.0)"
             btnDownloadEnglishAsr.text = "再取得"
             btnDeleteEnglishAsr.visibility = View.VISIBLE
         } else {
             tvEnglishAsrStatusBadge.text = "未取得"
-            tvEnglishAsrStatusBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, R.color.badge_neutral_bg))
-            tvEnglishAsrStatusBadge.setTextColor(ContextCompat.getColor(this, R.color.badge_neutral_text))
+            applyBadgeTone(tvEnglishAsrStatusBadge, StatusTone.NEUTRAL)
             tvEnglishAsrStats.text = "約126MB (CC-BY-4.0)"
             btnDownloadEnglishAsr.text = "取得"
             btnDeleteEnglishAsr.visibility = View.GONE

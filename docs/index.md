@@ -317,6 +317,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 59. [ユーザー辞書（単語登録）UI刷新 PRD & 形式設計 (Custom Dictionary UI PRD & Alloy Spec)](docs/prd_and_design_custom_dictionary_ui.md)
     - JTBD と 5つの CUJ に基づく Zero-Friction 登録フォーム（表記先行・英語1ステップ自動判定・カタカナ読み自動提案）、リアルタイム検索フィルタ、ボトムシート編集・クラウド同期分離、即時削除＋Snackbar Undo、および [`custom_dictionary_ui.als`](app/src/test/resources/alloy/custom_dictionary_ui.als) による状態整合性検証。
 
+60. [メインアプリ UI 刷新 PRD & 形式設計 (MainActivity v2 — 3-Tab + DMN Smart Guide)](docs/prd_and_design_main_app_ui.md)
+    - 従来の4カード縦長制約を解消し、JTBD・CUJ から再設計した3タブ構成（ホーム / 設定 / データ）、[`MainAppUiDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/MainAppUiDecisionModel.kt)（DMN 決定表3種）、および [`main_app_ui_state.als`](app/src/test/resources/alloy/main_app_ui_state.als) による状態遷移形式検証。
+
 ---
 
 ## 📂 Source Code Layout

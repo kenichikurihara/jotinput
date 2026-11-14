@@ -1,0 +1,96 @@
+# PRD & System Design: メインアプリ UI 刷新 (MainActivity v2 — 3-Tab + DMN Smart Guide Architecture)
+
+## Part 1: Product Requirements Document (PRD)
+
+### 1. 概要 (Executive Summary)
+従来の [`MainActivity`](app/src/main/java/com/example/myasr/MainActivity.kt) は「4カード構成・単一縦スクロール（1,358行 XML）」という過去の制約の中で機能追加を重ねてきた結果、以下の構造的な課題を抱えていた：
+
+1. **初回セットアップと日常利用の混在**: すでに IME を有効化しモデルを導入済みのユーザーに対しても、最上部に「1. キーボード設定」「2. 入力方法を切替」のセットアップボタンと4つの技術バッジが常時表示され、画面を占有していた。
+2. **異なる仕事（JTBD）の縦積みによる視認性低下**: 「試し打ち＆単語登録」「日常の入力設定」「大容量辞書・モデル管理」「開発者向け $\alpha/\lambda$ チューニング」が1本の縦長スクロールに同居し、目的の機能へ到達するスクロールコストが高い。
+3. **非宣言的な UI 状態判定**: IME状態・音声モデル状態・辞書更新状態・バックグラウンドダウンロード状態の判定が Activity 内の手続き的 `if-else` に分散し、状態間の整合性が保証しにくかった。
+
+本 PRD では、**従来の「4カード制約」を白紙撤回**し、**Jobs to be Done (JTBD)** と **Critical User Journeys (CUJ)** から逆算した **「3タブ情報設計（ホーム / 設定 / データ）＋ DMN スマートガイド ＋ Alloy 形式検証」** アーキテクチャを再定義する。
+
+---
+
+### 2. Jobs to be Done (JTBD)
+
+| JTBD ID | Job Statement (状況・動機・期待する成果) | 主担当タブ |
+| :--- | :--- | :--- |
+| **JTBD-M1** | **迷わない導入と即座の動作確認**: アプリを初めて開いたとき、あるいは環境が変わったとき、**「いま次に何をすべきか」を1つだけ迷わず案内され、設定完了後はすぐに試し打ちと音声入力をテストしたい**。 | **ホーム** |
+| **JTBD-M2** | **日常のショートカットアクセス**: 普段アプリを開くときは、**単語登録画面へ1タップで移動したり、入力の試し打ちをしたりしたい**（毎回セットアップ手順を見せられたくない）。 | **ホーム** |
+| **JTBD-M3** | **入力体験のカスタマイズ**: 自分の好みに合わせて**キーボード高さ、QWERTY数字行、スワイプ入力、音声ストリーミング、AI変換エンジン（0.5B/1.5B/OFF）を迷わず切り替えたい**。 | **設定** |
+| **JTBD-M4** | **オフライン資産の一元管理**: Wi-Fi 環境などで**音声認識モデル（日/英）・スペル補正・拡張辞書（SudachiDict等）の導入・更新・削除・進捗確認を整理された一覧から安心して行いたい**。 | **データ** |
+| **JTBD-M5** | **高度な実験とチューニング**: 開発・検証時には、**$\alpha$ / $\lambda$ パラメータやデバッグ表示を通常の操作を邪魔しない場所から調整したい**。 | **設定 (折りたたみ)** |
+
+---
+
+### 3. Critical User Journeys (CUJ)
+
+#### CUJ-M1: 初回セットアップ（IME有効化 → 切替 → モデル/辞書準備 → テスト）
+1. ユーザーがアプリを起動すると、**ホーム**タブ最上部の **スマートガイドカード** が現在の不足ステップを DMN 決定表で自動判定し、**次にやるべき唯一の CTA** を提示する：
+   - IME未有効 → `Step 1: キーボードを有効にする`（システム設定へ）
+   - IME有効だが未選択 → `Step 2: JotInput に切り替える`（IMEピッカー表示）
+   - 日本語音声モデル未取得 → `音声認識モデルを取得 (~160MB)`（ワンタップ開始）
+   - 日本語拡張辞書未取得 → `推奨変換辞書を取得`（データタブまたは即時一括ダウンロード）
+2. 各ステップが完了するごとにカードが次のステップへ自動遷移し、すべて揃うと **「準備完了 — すぐに入力できます」** 状態（緑）へ変化する。
+3. ユーザーはそのすぐ下にある **「入力テスト」** 欄をタップし、音声入力とフリック/QWERTY入力を即座に試せる。
+
+#### CUJ-M2: 日常利用（単語登録・入力テスト・IME再選択）
+1. すでにセットアップ完了済みのユーザーは、ホーム画面を開いた瞬間に「準備完了 ✓」のコンパクトなステータスと、広い「入力テスト」エリア、および **「単語登録を開く」**・**「入力方法を切替」** のクイックアクションに即座にアクセスできる。
+2. 辞書にリモート更新がある場合は、スマートガイドカードが「新しい辞書アップデートがあります」と通知し、ワンタップで更新を実行できる。
+
+#### CUJ-M3: 入力設定のカスタマイズ（設定タブ）
+1. ボトムナビゲーションの **「設定」** タブをタップする。
+2. 「キーボード表示（高さ5段階・QWERTY数字行）」「入力アシスト（英語スワイプ・リアルタイム音声ストリーミング）」「AI 変換エンジン（ON/OFF ＆ 0.5B / 1.5B 選択）」が論理グループごとに整理されており、スクロール迷子にならず設定できる。
+3. AI 変換エンジンが OFF のときはモデル選択ラジオボタンを自動的に `View.GONE` とする。
+4. 最下部の折りたたみセクション「詳細設定・開発者ツール」を開くと、$\alpha$ / $\lambda$ スライダーおよび `[SLM]` デバッグ表示スイッチへアクセスできる。
+
+#### CUJ-M4: モデル・拡張辞書のダウンロードと更新管理（データタブ）
+1. ボトムナビゲーションの **「データ」** タブをタップする。
+2. ダウンロードやコンパイルがバックグラウンド（[`ProvisioningForegroundService`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/ProvisioningForegroundService.kt)）で実行中の場合、**グローバル進捗バナー**がタブを跨いで上部に表示され、ホームや設定にいても進捗を把握できる。
+3. データタブ内では、① **推奨データ一括セットアップ / 更新カード**、② **音声・AIモデル（日本語ASR / 英語ASR / 英語スペル補正）**、③ **日本語拡張辞書（7種 ＋ 連接コスト行列ステータス）** が明確に分かれて表示される。
+
+---
+
+### 4. 情報設計 (Information Architecture)
+
+```mermaid
+flowchart TD
+    Main["MainActivity (Toolbar + Global Progress Banner + BottomNavigationView)"]
+    TabHome["Tab 1: ホーム (Home)\n- DMN駆動スマートガイドカード (次の1アクション)\n- すぐ試せる入力テスト欄 (クリアボタン付)\n- クイックアクション (単語登録 / 入力方法切替)"]
+    TabSettings["Tab 2: 設定 (Settings)\n- キーボード (高さ5段階 / QWERTY数字行)\n- 入力アシスト (英語スワイプ / リアルタイム音声)\n- AI変換エンジン (ON/OFF & 0.5B/1.5B)\n- [折りたたみ] 詳細設定・開発者ツール + OSSライセンス"]
+    TabData["Tab 3: データ (Data)\n- 推奨拡張辞書 一括取得/更新 + 更新日バナー\n- 音声・スペルAIモデル (日ASR / 英ASR / 英スペル)\n- 個別拡張辞書リスト (7種) + 連接行列ステータス"]
+
+    Main --> TabHome
+    Main --> TabSettings
+    Main --> TabData
+```
+
+---
+
+## Part 2: DMN 決定表設計 (Decision Model and Notation)
+
+[`MainAppUiDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/MainAppUiDecisionModel.kt) に以下の 3 つの純粋な DMN `DecisionTable` を定義し、`MainActivity` の表示状態・CTA・バッジを宣言的に決定する。
+
+1. **`HomeHeroActionDecisionTable` (`HitPolicy.FIRST`)**:
+   - 入力: `imeEnabled`, `imeSelected`, `japaneseAsrReady`, `totalDictWords`, `outdatedDictCount`
+   - 出力 (`HomeHeroDecision`): `HeroActionKind` (`ENABLE_IME`, `SELECT_IME`, `DOWNLOAD_JA_ASR`, `DOWNLOAD_DICTS`, `UPDATE_DICTS`, `READY`)、タイトル、説明文、CTAラベル、重要度トーン（`WARNING` / `INFO` / `SUCCESS`）。
+2. **`ProvisioningBannerDecisionTable` (`HitPolicy.FIRST`)**:
+   - 入力: `hasActiveTask`, `queuedCount`, `progress`, `statusText`
+   - 出力 (`ProvisioningBannerDecision`): バナー表示可否、見出し、進捗率、インデターミネート判定。
+3. **`AiEngineStatusDecisionTable` (`HitPolicy.FIRST`)**:
+   - 入力: `slmEnabled`, `engineType`, `rerankerState`, `modelInstalled`
+   - 出力 (`AiEngineStatusDecision`): セレクタ表示可否、ステータスバッジ文言、バッジトーン、説明文。
+
+---
+
+## Part 3: Alloy による形式仕様 (Formal Verification)
+
+[`app/src/test/resources/alloy/main_app_ui_state.als`](app/src/test/resources/alloy/main_app_ui_state.als) により、UI 状態遷移の安全性を SAT4J で網羅検証する：
+
+- **`ReadyImpliesAllPrerequisitesMet`**: ホームの Hero Action が `HeroReady`（準備完了）のとき、必ず `imeEnabled = True`, `imeSelected = True`, `jaAsrReady = True`, `baseDictReady = True`, `outdatedDicts = False` がすべて成立していること。
+- **`HeroActionTotalAndDeterministic`**: 任意のシステム状態に対して必ず 1 つの Hero Action が決定され、`imeEnabled = False` のときは常に最優先で `HeroEnableIme` が選ばれること。
+- **`TabSwitchPreservesState`**: `Home` ↔ `Settings` ↔ `Data` のタブ切替は、プロビジョニング状態・AI設定・セットアップ状態を一切破壊しないこと。
+- **`SlmSelectorHiddenWhenDisabled`**: AI 変換エンジンが OFF のときは、サブモデル選択パネルが必ず非表示であること。
+- **`GlobalBannerVisibleDuringProvisioning`**: バックグラウンドでダウンロード/コンパイルが進行中または待機中のときは、どのタブを表示していてもグローバル進捗バナーが表示されること。

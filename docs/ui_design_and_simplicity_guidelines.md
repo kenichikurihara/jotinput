@@ -1,75 +1,44 @@
-# UI Design & Simplicity Guidelines (UI設計原則とシンプルさ維持ガイドライン)
+# UI Design & Simplicity Guidelines (UI設計原則とシンプルさ維持ガイドライン v2)
 
-本ドキュメントは、**JotInput** のUI整理（機能・UIの精査と統合）の設計記録、および**今後新しい機能を追加する際にUIの肥大化・煩雑化を防ぐための厳格な設計原則（UIガバナンス）**を定義します。
-
----
-
-## 1. 課題背景（なぜUIが煩雑化したのか）
-
-開発初期のプロトタイプ（単体音声認識テスト画面）の上に、システムIME機能、Mozc複数辞書、連接コスト行列、オンデバイスSLMリランキング、複数のSLM推論バックエンド、実験用ハイパーパラメータ（$\alpha$ スライダー、Context-Freeトグル、Mandatoryトグル、デバッグ表示バッジ）が段階的に追加された結果、[`MainActivity`](app/src/main/java/com/example/myasr/MainActivity.kt) が以下の問題を抱えるに至りました：
-
-1. **カードと責務の混在**: 6枚の巨大カードに35個以上のUIコントロールが常時展開され、「日本語変換辞書」カードの中にSLM推論設定やハイパーパラメータが混在していた。
-2. **データ管理の分断**: 「基本辞書・拡張辞書」と「連接コスト行列 (`connection_single_column.txt`)」が別々のカードに分断され、一括ダウンロードボタンで連接コスト行列が入らない構造になっていた。
-3. **実験・開発者向けパラメータの常時露出**: 交差検証（5-Fold CV）で最適値（$\alpha = 0.00$, Mandatory = ON, Context-Free = ON）が確定した後のチューニング用ノブや単体マイクトレーニング用ハーネスがメイン画面を圧迫していた。
-4. **レガシー・未使用リソースの残存**: インプレース編集移行後に不要となった `dialog_edit_dictionary_entry.xml` や旧 `MozcDictionaryDownloader.kt` が残存していた。
+本ドキュメントは、**JotInput** の UI 設計原則（UIガバナンス）を定義します。
+v1 では単一縦スクロール画面（`MainActivity`）の肥大化を防ぐために「4カード・ルール」を採用していましたが、JTBD・CUJ に基づく再設計（[`prd_and_design_main_app_ui.md`](docs/prd_and_design_main_app_ui.md)）により、**v2「3タブ情報設計（ホーム / 設定 / データ）＋ DMN スマートガイド」アーキテクチャ** へ発展的に進化させました。
 
 ---
 
-## 2. 機能とUIの精査・統合アーキテクチャ（4階層構造）
-
-アプリケーションの全機能を精査し、ユーザーの認知負荷を最小化する **4階層・段階的開示（Progressive Disclosure）アーキテクチャ** に再編しました。
+## 1. v2 情報設計（3-Tab + DMN Smart Guide Architecture）
 
 ```mermaid
 flowchart TD
-    Main["MainActivity (メイン設定・管理画面)"]
-    Card1["Card 1: セットアップ＆テスト (Hero Card)\n・ステータスバッジ行 (IME / 音声認識 / 登録単語)\n・1. キーボード設定 / 2. 入力方法切替 / 単語登録\n・キーボード＆音声入力テスト欄 (etKeyboardTest)"]
-    Card2["Card 2: 基本設定 (日常利用の4項目のみ)\n1. キーボードの高さ (80%〜120%)\n2. 英語QWERTY数字行 (1〜0) 表示\n3. リアルタイム音声ストリーミング入力\n4. AI文脈変換エンジン選択 (ON時のみリスト展開)"]
-    Card3["Card 3: 変換辞書・言語データ管理 (統合データ管理)\n・推奨データ一括ダウンロード (基本辞書＋連接行列＋拡張辞書)\n・[折りたたみ] 個別の辞書・連接コスト行列を管理 ▼"]
-    Card4["Card 4: 詳細設定・開発者ツール (デフォルト折りたたみ ▼)\n・SLM詳細チューニング (αスライダー / Context-Free / Mandatory)\n・デバッグ表示 ([SLM]バッジ)"]
+    Main["MainActivity (Toolbar + Global Progress Banner + BottomNavigationView)"]
+    Tab1["Tab 1: ホーム (Home)\n・DMN駆動スマートガイド (次の1アクションのみ提示)\n・すぐ試せる入力テスト欄\n・クイックアクション (単語登録 / 入力方法切替)"]
+    Tab2["Tab 2: 設定 (Settings)\n・キーボード (高さ5段階 / QWERTY数字行)\n・入力アシスト (英語スワイプ / リアルタイム音声)\n・AI変換エンジン (ON/OFF ＆ 0.5B/1.5B)\n・[折りたたみ] 詳細設定・開発者ツール + OSSライセンス"]
+    Tab3["Tab 3: データ (Data)\n・推奨拡張辞書 一括取得/更新 + 更新日バナー\n・音声・スペルAIモデル (日ASR / 英ASR / 英スペル)\n・個別拡張辞書 (7種) + 連接行列ステータス"]
 
-    Main --> Card1
-    Main --> Card2
-    Main --> Card3
-    Main --> Card4
+    Main --> Tab1
+    Main --> Tab2
+    Main --> Tab3
 ```
-
-### 各セクションの責務と整理結果
-
-| セクション | 常時表示されるUI要素 | 折りたたみ / 自動非表示化された要素 / 削除された要素 |
-| :--- | :--- | :--- |
-| **Card 1: セットアップ＆テスト** | タイトル、3つのステータスバッジ（IME・音声モデル・単語登録）、IME有効化/切替ボタン、単語登録ボタン、テスト入力欄 (`etKeyboardTest`) | 音声認識モデル未導入時のみ警告バナー (`cardDownload`) を表示（導入済みの場合は非表示） |
-| **Card 2: 基本設定** | キーボード高さ（5段階）、QWERTY数字行スイッチ、音声ストリーミングスイッチ、AI文脈変換スイッチ | AI文脈変換がOFFの時はエンジン選択ラジオボタン群 (`layoutRerankEngineSelector`) を自動的に折りたたむ |
-| **Card 3: 変換辞書・言語データ管理** | 合計語数バッジ、連接行列バッジ、**「推奨データを一括ダウンロード (辞書＋連接行列)」** ボタン | 個別の拡張辞書（7種）および連接コスト行列の個別再取得・削除UIは `「個別の辞書・連接コスト行列を管理 ▼」` 内にデフォルト格納 |
-| **Card 4: 詳細設定・開発者ツール** | カードヘッダー（`「詳細設定・開発者ツール ▼」`）のみ1行表示 | デバッグ表示スイッチ、文頭SLMスイッチ、SLM確定リランクスイッチ、SLM重み係数 $\alpha$ スライダーを内部に格納。旧「単体音声認識テスト」UIは `etKeyboardTest`（IMEキーボードテスト欄）で代替可能なため完全撤去 |
 
 ---
 
-## 3. 今後機能を追加する際のUI設計原則（UI Simplicity Contract）
+## 2. UI 設計原則（UI Simplicity Contract v2）
 
-今後新しい機能・モデル・辞書・アルゴリズムを追加する際は、以下の **5大原則** を厳守してください。
+### 原則1: 役割に基づく 3 タブ分離と 1 画面あたりの認知負荷最小化
+- `MainActivity` は **「ホーム（準備状態・テスト・単語登録）」「設定（日常設定・詳細ツール）」「データ（モデル・辞書管理）」** の 3 タブを維持し、新しいタブを安易に増やさないこと。
+- 新しい設定項目やデータ管理機能を追加する場合は、必ず責務に対応するタブへ配置すること。
 
-### 原則1: トップレベル・カード数の上限（4カード・ルール）
-- [`MainActivity`](app/src/main/java/com/example/myasr/MainActivity.kt) のトップレベルカードは原則として以下の **4枚以内** に収めること：
-  1. **セットアップ＆テスト (`Hero Card`)**
-  2. **基本設定 (`Core Settings`)**
-  3. **辞書・モデルデータ管理 (`Unified Data Management`)**
-  4. **詳細設定・開発者ツール (`Collapsible Advanced Tools`)**
-- 新機能のために新しいトップレベル `MaterialCardView` を追加してはならない。必ず既存の4カードのいずれかに統合すること。
+### 原則2: DMN による宣言的ガイド（「次の1アクション」原則）
+- ホーム画面では複数のセットアップ警告や複雑な技術バッジを並立させず、[`MainAppUiDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/MainAppUiDecisionModel.kt) の DMN 決定表により、**現時点で最も優先度の高い唯一のアクション（または「準備完了」）** のみを提示すること。
 
-### 原則2: 基本設定（Card 2）への追加基準と「最適デフォルト優先」原則
-- **コーパス統計や交差検証（CV）で最適値が証明できるパラメータ（重み係数 $\alpha$、タイムアウト値、閾値など）は、コード内のデフォルト定数として適用し、基本設定UIに露出させないこと。**
-- どうしてもベンチマーク比較や検証のためにUIから切り替えたい場合は、必ず **Card 4（`layoutAdvancedContent`：詳細設定・開発者ツール、デフォルト折りたたみ）** の中に配置すること。
-- **Card 2（基本設定）** には、一般ユーザーが日常の好みに応じて切り替える項目（最大4〜5項目まで）のみを配置すること。
+### 原則3: 最適デフォルト優先と詳細設定の段階的開示（Progressive Disclosure）
+- コーパス統計や交差検証で最適値が証明できるパラメータ（$\alpha$, $\lambda$ など）はコード内のデフォルト定数として適用し、通常の「設定」領域に露出させないこと。
+- ベンチマーク・検証用のノブは「設定」タブ内の **「詳細設定・開発者ツール（デフォルト折りたたみ）」** に格納すること。
+- AI 変換エンジンが OFF のときは、エンジン選択ラジオボタン群を `View.GONE` とすること。
 
-### 原則3: モデル・辞書・言語アセットの一元管理（One-Tap + Progressive Disclosure）
-- 新しい辞書データやモデルファイル（ONNX / GGUF / バイナリ辞書等）を追加する場合、個別のカードを新設してはならない。
-- 必ず **Card 3（変換辞書・言語データ管理）** の「一括ダウンロード (`startDownloadAllDicts`)」パイプラインに統合するか、折りたたみセクション（`layoutDictDetailsContainer`）内の個別リストに追加すること。
+### 原則4: モデル・辞書・言語アセットの「データ」タブ一元管理
+- 新しいモデル（ONNX / GGUF 等）や辞書を追加する場合、ホームや設定にダウンロードUIを散在させず、必ず **「データ」タブ** に統合し、バックグラウンド進捗は [`ProvisioningForegroundService`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/ProvisioningForegroundService.kt) 経由のグローバル進捗バナーで可視化すること。
 
-### 原則4: キーボード（IME）画面のミニマリズム維持
-- [`keyboard_view.xml`](app/src/main/res/layout/keyboard_view.xml) のヘッダーバー（高さ `36dp`）には、**音声トグルボタン (`🎙 話す`)**、**候補ストリップ (`CandidateStripView`)**、**単語登録 (`📖`)**、**クリップボード (`📋`：テキスト存在時のみ表示)** 以外の常駐ボタンを追加しないこと。
-- キーボード面の高さ・インセット計算（[`KeyboardHeightManager`](app/src/main/java/com/example/myasr/KeyboardHeightManager.kt)）を汚染する装飾ビューやマージンを追加しないこと。
-
-### 原則5: 不要・重複UIの即時撤去（Zero Dead UI Policy）
-- トグルスイッチとラジオボタンの重複（例：ON/OFFスイッチの直下に「オフ」選択肢を持つラジオグループを常時表示するなど）を作らないこと。親スイッチがOFFのときは子セレクタを `View.GONE` にすること。
-- 仕様変更で不要になったレイアウトXMLやダウンローダークラスは、放置せず同コミット内で削除すること。
-- ラベル表記はモバイル画面幅で折り返しが発生しないよう、簡潔な日本語表記（「単語の追加」「辞書に追加」「IME: 有効」等）に統一し、冗長な日英併記や内部実装用語（`mmap`, `connection_single_column.txt` 等）をメインUIに出さないこと。
+### 原則5: キーボード（IME）画面のミニマリズム維持とユーザー辞書 UI 原則
+- [`keyboard_view.xml`](app/src/main/res/layout/keyboard_view.xml) のヘッダーバー（高さ `36dp`）には、**音声トグルボタン**、**候補ストリップ**、**単語登録 (`📖`)**、**クリップボード (`📋`)** 以外の常駐ボタンを追加しないこと。
+- ユーザー辞書画面（[`DictionaryActivity`](app/src/main/java/com/example/myasr/DictionaryActivity.kt)）は [`prd_and_design_custom_dictionary_ui.md`](docs/prd_and_design_custom_dictionary_ui.md) に従い、クイック登録＋検索＋ボトムシート分離を維持すること。
+- 不要になったレイアウトやリソースは放置せず同コミット内で削除すること（Zero Dead UI Policy）。

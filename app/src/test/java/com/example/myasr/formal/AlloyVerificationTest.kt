@@ -82,4 +82,9 @@ class AlloyVerificationTest {
     fun `custom_dictionary_ui formal model satisfies all undo, tombstone, and filter invariants`() {
         verifyAlloyModel("alloy/custom_dictionary_ui.als")
     }
+
+    @Test
+    fun `main_app_ui_state formal model satisfies all 3-tab, DMN hero, and provisioning banner invariants`() {
+        verifyAlloyModel("alloy/main_app_ui_state.als")
+    }
 }
