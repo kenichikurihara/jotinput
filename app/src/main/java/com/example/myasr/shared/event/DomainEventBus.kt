@@ -40,6 +40,18 @@ data class AssetProvisionedEvent(
 ) : DomainEvent
 
 /**
+ * BC-3 (Speech Recognition) から発行され、BC-1 / BC-4 等が購読する音声修正学習イベント。
+ */
+data class VoiceCorrectionLearnedEvent(
+    val language: InputLanguage,
+    val originalSurface: String,
+    val correctedSurface: String,
+    val normalizedReading: String,
+    val netCount: Int,
+    override val occurredAtMillis: Long = System.currentTimeMillis()
+) : DomainEvent
+
+/**
  * コンテキスト間の疎結合連携を担うスレッドセーフなインメモリ DomainEventBus。
  */
 class DomainEventBus {

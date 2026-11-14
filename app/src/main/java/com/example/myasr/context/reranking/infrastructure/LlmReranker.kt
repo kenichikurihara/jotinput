@@ -872,6 +872,28 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
         return rerankWithStatus(contextPrefix, candidates, weightAlpha).first
     }
 
+    /**
+     * S3: Computes NLL(corrText | contextPrefix) - NLL(origText | contextPrefix) in nats.
+     * Returns null if SLM is not ready or scoring fails/is aborted.
+     */
+    fun scorePairDeltaNll(contextPrefix: String, origText: String, corrText: String): Float? {
+        if (!isReady() || origText.isBlank() || corrText.isBlank() || origText == corrText) {
+            return null
+        }
+        return try {
+            val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
+            val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
+            val scores = nativeScoreCandidates(effectiveContext, arrayOf(origText, corrText))
+            if (scores != null && scores.size == 2) {
+                scores[1] - scores[0]
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     fun release() {
         if (state == State.READY) {
             try {

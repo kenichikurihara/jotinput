@@ -49,6 +49,8 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingStepGuidanceDecisionTable` | `FIRST` | 各ステップのCTA・非ブロッキング進行・スキップ制御決定 |
 | **BC-1: Kana-Kanji & Sync** | `HistorySyncDecisionModel` | `SyncScheduleDecisionTable` | `FIRST` | 定期バックグラウンド同期ジョブの登録・停止方針決定 |
 | **BC-1: Kana-Kanji & Sync** | `HistorySyncDecisionModel` | `SettingsSyncCardDecisionTable` | `FIRST` | 設定タブ Google Drive 同期カードのUI状態・操作可否決定 |
+| **BC-3: Speech Recognition** | `VoiceCorrectionDecisionModel` | `VoiceCorrectionEligibilityDecisionTable` | `FIRST` | 音声確定後編集の修正検知妥当性・意味的書き換え除外判定 |
+| **BC-3: Speech Recognition** | `VoiceCorrectionDecisionModel` | `VoiceCorrectionBoostPolicyDecisionTable` | `FIRST` | 学習済み音声修正の3段階昇格・SLM文脈整合性ゲート・自己修復抑制決定 |
 
 ---
 

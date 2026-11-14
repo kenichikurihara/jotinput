@@ -64,6 +64,13 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`PunctuationNeverPrependsSpace` / `NoDoubleSpaceOnAutoSpace`**: 句読点直前のオートスペース挿入や二重スペース挿入を禁止すること。
 - **`DoubleSpaceSurvivesImeEcho` / `CandidateAutoSpaceSurvivesImeEcho` / `ExternalMoveClearsAutoAssist`**: IME 自身の編集エコーでは状態を保持し、外部カーソル移動時のみクリアすること。
 
+### 3.8 [`voice_correction_learning.als`](app/src/test/resources/alloy/voice_correction_learning.als)
+日英音声修正学習（[`VoiceCorrectionDecisionModel`](app/src/main/java/com/example/myasr/context/speech/domain/VoiceCorrectionDecisionModel.kt) / [`VoiceCorrectionRepository`](app/src/main/java/com/example/myasr/context/speech/infrastructure/VoiceCorrectionRepository.kt)）の安全性・整合性をモデル化し、以下を検証する：
+- **`NoSemanticRewritePollution`**: 編集ウィンドウ外・不正スパン・音韻距離外の単なる言い換え（意味的書き換え）が学習履歴を汚染しないこと。
+- **`ReverseEditSafetyInvariant`**: ユーザーのリバート（`netCount <= 0`）後に即座に `BoostSuppressed` へ戻り、誤置換を繰り返さないこと。
+- **`AmbiguousHomophoneGateSafety`**: 同音異義語・近音語において SLM 文脈整合性ゲートが棄却した場合は決して自動置換せず提案チップに留めること。
+- **`CustomDictionaryIsolationInvariant`**: 学習履歴の追加・削除・クリアがいかなる場合も `custom_dictionary.json`（ユーザー辞書）を変更・消去しないこと。
+
 ---
 
 ## 4. 自動同期ルール

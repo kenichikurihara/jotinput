@@ -94,18 +94,20 @@ class HotwordsGenerator(private val context: Context) {
     }
 
     /**
-     * Builds space-separated hotword rules from active entries.
+     * Builds space-separated hotword rules from active dictionary entries and learned voice corrections.
      * Each rule is formatted as: "<char> <char> ... :<score>"
      */
-    fun buildHotwordRules(entries: List<DictionaryEntry>): List<String> {
+    fun buildHotwordRules(
+        entries: List<DictionaryEntry>,
+        learnedCorrections: List<com.example.myasr.context.speech.domain.VoiceCorrectionEntry> = emptyList(),
+        nowMs: Long = System.currentTimeMillis()
+    ): List<String> {
         val activeEntries = entries.filter { it.isEnabled && it.word.isNotBlank() }
-        if (activeEntries.isEmpty()) return emptyList()
-
         val lines = mutableListOf<String>()
         val seenPhrases = mutableSetOf<String>()
 
         for (entry in activeEntries) {
-            val scoreStr = String.format("%.1f", entry.priority.score)
+            val scoreStr = String.format(java.util.Locale.US, "%.1f", entry.priority.score)
             val trimmedWord = entry.word.trim()
             val trimmedReading = JapaneseKanaUtils.normalizeReading(entry.reading)
 
@@ -128,6 +130,38 @@ class HotwordsGenerator(private val context: Context) {
                 lines.add("$katakanaTokens :$scoreStr")
             }
         }
+
+        // S1: Dynamic in-beam escalation from learned voice corrections (Japanese, non-suppressed)
+        val sortedCorrections = learnedCorrections
+            .filter {
+                it.language == com.example.myasr.context.speech.domain.AsrLanguage.JAPANESE &&
+                    it.netCount() > 0 &&
+                    it.correctedSurface.isNotBlank() &&
+                    (!com.example.myasr.context.speech.domain.VoiceCorrectionScoring.isAmbiguousCommonHomophone(it) || it.netCount() >= 2)
+            }
+            .sortedByDescending { it.computeHotwordScore(nowMs) }
+
+        for (corr in sortedCorrections) {
+            val score = corr.computeHotwordScore(nowMs)
+            if (score <= 0f) continue
+            val scoreStr = String.format(java.util.Locale.US, "%.1f", score)
+            val wordTokens = toSpaceSeparatedTokens(corr.correctedSurface.trim())
+            if (wordTokens != null && seenPhrases.add(wordTokens)) {
+                lines.add("$wordTokens :$scoreStr")
+            }
+            val reading = JapaneseKanaUtils.normalizeReading(corr.normalizedReading)
+            if (reading.isNotEmpty()) {
+                val hiraganaTokens = toSpaceSeparatedTokens(reading)
+                if (hiraganaTokens != null && seenPhrases.add(hiraganaTokens)) {
+                    lines.add("$hiraganaTokens :$scoreStr")
+                }
+                val katakanaTokens = toSpaceSeparatedTokens(JapaneseKanaUtils.hiraganaToKatakana(reading))
+                if (katakanaTokens != null && seenPhrases.add(katakanaTokens)) {
+                    lines.add("$katakanaTokens :$scoreStr")
+                }
+            }
+        }
+
         return lines
     }
 
@@ -136,18 +170,24 @@ class HotwordsGenerator(private val context: Context) {
      * In sherpa-onnx, hotword rules are separated by '/'.
      * Inside each rule, characters must be space-separated for cjkchar models.
      */
-    fun getHotwordsString(entries: List<DictionaryEntry>): String {
-        val rules = buildHotwordRules(entries)
+    fun getHotwordsString(
+        entries: List<DictionaryEntry>,
+        learnedCorrections: List<com.example.myasr.context.speech.domain.VoiceCorrectionEntry> = emptyList()
+    ): String {
+        val rules = buildHotwordRules(entries, learnedCorrections)
         val result = rules.joinToString("/")
         Log.d(TAG, "Formatted hotwords string (${rules.size} rules): $result")
         return result
     }
 
     /**
-     * Generates a hotwords file on disk from active entries.
+     * Generates a hotwords file on disk from active entries and learned voice corrections.
      */
-    fun generate(entries: List<DictionaryEntry>): File? {
-        val rules = buildHotwordRules(entries)
+    fun generate(
+        entries: List<DictionaryEntry>,
+        learnedCorrections: List<com.example.myasr.context.speech.domain.VoiceCorrectionEntry> = emptyList()
+    ): File? {
+        val rules = buildHotwordRules(entries, learnedCorrections)
         val file = getHotwordsFile()
 
         if (rules.isEmpty()) {

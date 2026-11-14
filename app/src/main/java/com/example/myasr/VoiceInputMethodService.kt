@@ -28,10 +28,13 @@ import com.example.myasr.context.reranking.domain.ContextWindowTrimmer
 import com.example.myasr.context.reranking.infrastructure.LlmReranker
 import com.example.myasr.context.speech.domain.AsrLanguage
 import com.example.myasr.context.speech.domain.AsrLanguagePolicy
+import com.example.myasr.context.speech.domain.BoostAction
 import com.example.myasr.context.speech.domain.EnglishVoicePostProcessor
 import com.example.myasr.context.speech.domain.JapanesePunctuationEngine
 import com.example.myasr.context.speech.domain.ProsodyBoundaryMetadata
 import com.example.myasr.context.speech.domain.ProsodyPitchEstimator
+import com.example.myasr.context.speech.domain.VoiceCorrectionDetector
+import com.example.myasr.context.speech.domain.VoiceCorrectionSuggestion
 import com.example.myasr.context.speech.infrastructure.AudioRecorder
 import com.example.myasr.context.vocabulary.domain.Priority
 
@@ -93,6 +96,14 @@ class VoiceInputMethodService : InputMethodService() {
     private val arbitrator = VoiceTouchInputArbitrator()
     private val editorBridge = InputConnectionEditorBridge { currentInputConnection }
 
+    // Recent auto-applied voice corrections (correctedSurface -> (originalSurface, language)) for revert detection
+    private val recentAutoAppliedCorrections = object : LinkedHashMap<String, Pair<String, AsrLanguage>>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Pair<String, AsrLanguage>>?): Boolean {
+            return size > 12
+        }
+    }
+    private var activeVoiceCorrectionChipsLanguage: AsrLanguage = AsrLanguage.JAPANESE
+
     // Streaming voice input state
     private var isStreamingActive = false
     private var streamingJob: Job? = null
@@ -141,6 +152,10 @@ class VoiceInputMethodService : InputMethodService() {
 
         kanaKanjiEngine = KanaKanjiEngine.getInstance(this)
         nextPhrasePredictor = NextPhrasePredictor.getInstance(this)
+
+        arbitrator.onVoiceAnchorSettled = { anchor, editedText ->
+            handleVoiceAnchorSettled(anchor, editedText)
+        }
 
         audioRecorder.onSpeechChunkCaptured = { chunk ->
             if (!isStreamingActive) {
@@ -259,6 +274,7 @@ class VoiceInputMethodService : InputMethodService() {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
+        arbitrator.settleActiveVoiceAnchorIfNeeded(editorBridge)
         hideClipboardHistoryView()
         clipboardSuggestionPolicy.onFinishInputView()
         ClipboardHistoryRepository.getInstance(this).setInputViewActive(false)
@@ -267,6 +283,82 @@ class VoiceInputMethodService : InputMethodService() {
             cancelRecording()
         }
         commitComposingText()
+    }
+
+    private fun handleVoiceAnchorSettled(
+        anchor: VoiceTouchInputArbitrator.VoiceCommitAnchor,
+        editedText: String
+    ) {
+        val elapsedMs = (System.currentTimeMillis() - anchor.committedAtMs).coerceAtLeast(0L)
+        val hasJapanese = anchor.committedText.any {
+            val code = it.code
+            code in 0x3040..0x30FF || code in 0x4E00..0x9FFF || code in 0xF900..0xFAFF
+        } || editedText.any {
+            val code = it.code
+            code in 0x3040..0x30FF || code in 0x4E00..0x9FFF || code in 0xF900..0xFAFF
+        }
+        val lang = if (hasJapanese) AsrLanguage.JAPANESE else AsrLanguage.ENGLISH
+        serviceScope.launch(Dispatchers.Default) {
+            try {
+                val detected = VoiceCorrectionDetector.detect(
+                    beforeText = anchor.committedText,
+                    afterText = editedText,
+                    language = lang,
+                    contextBefore = anchor.contextBefore,
+                    elapsedSinceVoiceCommitMs = elapsedMs,
+                    typedReadingHint = anchor.typedReadingHint
+                ) ?: return@launch
+
+                val repo = AsrApp.instance.voiceCorrectionRepository
+                val revertedPair = synchronized(recentAutoAppliedCorrections) {
+                    recentAutoAppliedCorrections[detected.originalSurface]
+                }
+                if (revertedPair != null &&
+                    revertedPair.second == lang &&
+                    revertedPair.first.equals(detected.correctedSurface, ignoreCase = lang == AsrLanguage.ENGLISH)
+                ) {
+                    repo.recordRevert(
+                        language = lang,
+                        originalSurface = detected.correctedSurface,
+                        correctedSurface = detected.originalSurface
+                    )
+                    synchronized(recentAutoAppliedCorrections) {
+                        recentAutoAppliedCorrections.remove(detected.originalSurface)
+                    }
+                    Log.d(TAG, "VoiceCorrection revert recorded: ${detected.originalSurface} -> ${detected.correctedSurface}")
+                } else {
+                    repo.recordCorrection(
+                        language = lang,
+                        originalSurface = detected.originalSurface,
+                        correctedSurface = detected.correctedSurface,
+                        normalizedReading = detected.normalizedReading,
+                        contextTokens = detected.contextTokens
+                    )
+                    Log.d(TAG, "VoiceCorrection learned: ${detected.originalSurface} -> ${detected.correctedSurface} (${detected.category})")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to process voice correction anchor: ${e.message}")
+            }
+        }
+    }
+
+    private fun renderVoiceCorrectionSuggestions(
+        suggestions: List<VoiceCorrectionSuggestion>,
+        language: AsrLanguage
+    ) {
+        if (suggestions.isEmpty() || arbitrator.isKeyboardComposing() || arbitrator.isStreamingComposing()) {
+            return
+        }
+        activeVoiceCorrectionChipsLanguage = language
+        val candidates = suggestions.map { s ->
+            ConversionCandidate(
+                surface = s.correctedSurface,
+                reading = s.originalSurface,
+                cost = 0,
+                source = "voice_correction_suggest"
+            )
+        }
+        candidateStripView?.setCandidates(candidates)
     }
 
     override fun onWindowHidden() {
@@ -490,6 +582,34 @@ class VoiceInputMethodService : InputMethodService() {
                 val prevPhrase = arbitrator.previousCommittedPhrase
                 val committedSurface = candidate.surface
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
+
+                if (candidate.source == "voice_correction_suggest") {
+                    val orig = candidate.reading
+                    val corr = candidate.surface
+                    val ic = currentInputConnection
+                    if (ic != null && orig.isNotEmpty()) {
+                        val textBefore = ic.getTextBeforeCursor(160, 0)?.toString() ?: ""
+                        val idx = textBefore.lastIndexOf(
+                            orig,
+                            ignoreCase = activeVoiceCorrectionChipsLanguage == AsrLanguage.ENGLISH
+                        )
+                        if (idx >= 0) {
+                            val tail = textBefore.substring(idx + orig.length)
+                            if (tail.length <= 32) {
+                                ic.beginBatchEdit()
+                                ic.deleteSurroundingText(orig.length + tail.length, 0)
+                                ic.commitText(corr + tail, 1)
+                                ic.endBatchEdit()
+                            }
+                        }
+                    }
+                    val lang = activeVoiceCorrectionChipsLanguage
+                    serviceScope.launch(Dispatchers.Default) {
+                        AsrApp.instance.voiceCorrectionRepository.recordAccept(lang, orig, corr)
+                    }
+                    candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                    return
+                }
 
                 if (candidate.source == "clipboard_recent") {
                     pasteTextFromHistory(committedSurface)
@@ -1055,6 +1175,8 @@ class VoiceInputMethodService : InputMethodService() {
                 }
                 var recognizedText = ""
                 var deletePreceding = 0
+                var suggestedChips: List<VoiceCorrectionSuggestion> = emptyList()
+                var appliedCorrections: List<VoiceCorrectionSuggestion> = emptyList()
                 var error: String? = null
                 try {
                     val app = AsrApp.instance
@@ -1066,16 +1188,30 @@ class VoiceInputMethodService : InputMethodService() {
                         } else {
                             emptyList()
                         }
+                        val learnedCorrections = app.voiceCorrectionRepository.getActiveBoostEntries(asrLanguage)
                         val hotwordsStr = if (asrLanguage == AsrLanguage.JAPANESE) {
-                            app.hotwordsGenerator.getHotwordsString(activeEntries)
+                            app.hotwordsGenerator.getHotwordsString(activeEntries, learnedCorrections)
                         } else {
                             ""
                         }
                         val rawText = withTimeout(3000L) {
                             app.asrManager.transcribe(samples, 16000, hotwordsStr, asrLanguage)
                         }
+                        val slmDeltaProvider: ((String, String) -> Float?)? = if (app.llmReranker.isReady()) {
+                            { orig, corr -> app.llmReranker.scorePairDeltaNll(textBeforeCursor, orig, corr) }
+                        } else {
+                            null
+                        }
                         if (asrLanguage == AsrLanguage.ENGLISH) {
-                            recognizedText = EnglishVoicePostProcessor.format(rawText, textBeforeCursor)
+                            val cResult = EnglishVoicePostProcessor.formatWithCorrections(
+                                rawText = rawText,
+                                contextBefore = textBeforeCursor,
+                                learnedCorrections = learnedCorrections,
+                                slmCoherenceDeltaProvider = slmDeltaProvider
+                            )
+                            recognizedText = cResult.formattedText
+                            suggestedChips = cResult.suggestedChips
+                            appliedCorrections = cResult.appliedCorrections
                             deletePreceding = 0
                         } else {
                             val pitchSlope = ProsodyPitchEstimator.estimateTerminalPitchSlope(samples, 16000)
@@ -1083,14 +1219,25 @@ class VoiceInputMethodService : InputMethodService() {
                                 terminalPitchSlopeSemitones = pitchSlope,
                                 precedingCommittedTail = textBeforeCursor
                             )
-                            val pResult = app.contextAwareProcessor.processWithPunctuationResult(
+                            val pResult = app.contextAwareProcessor.processWithCorrectionsAndPunctuation(
                                 rawText = rawText,
                                 contextBefore = textBeforeCursor,
                                 entries = activeEntries,
-                                metadata = prosodyMetadata
+                                learnedCorrections = learnedCorrections,
+                                metadata = prosodyMetadata,
+                                slmCoherenceDeltaProvider = slmDeltaProvider
                             )
                             recognizedText = pResult.formattedText
                             deletePreceding = pResult.deletePrecedingChars
+                            suggestedChips = pResult.suggestedChips
+                            appliedCorrections = pResult.appliedCorrections
+                        }
+                        if (appliedCorrections.isNotEmpty()) {
+                            synchronized(recentAutoAppliedCorrections) {
+                                for (a in appliedCorrections) {
+                                    recentAutoAppliedCorrections[a.correctedSurface] = Pair(a.originalSurface, asrLanguage)
+                                }
+                            }
                         }
                     }
                 } catch (e: TimeoutCancellationException) {
@@ -1125,7 +1272,11 @@ class VoiceInputMethodService : InputMethodService() {
                                 updateCandidates()
                             }
                         } else if (committedImmediately) {
-                            showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+                            if (suggestedChips.isNotEmpty()) {
+                                renderVoiceCorrectionSuggestions(suggestedChips, asrLanguage)
+                            } else {
+                                showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+                            }
                         }
                     } else {
                         arbitrator.onVoiceDecodeCancelledOrFailed(decodeId)
@@ -1515,6 +1666,7 @@ class VoiceInputMethodService : InputMethodService() {
             return
         }
 
+        arbitrator.settleActiveVoiceAnchorIfNeeded(editorBridge)
         commitComposingText()
 
         val isStreaming = KeyboardHeightManager.isStreamingVoiceInputEnabled(this)
@@ -1577,7 +1729,8 @@ class VoiceInputMethodService : InputMethodService() {
                                 ""
                             } else {
                                 val hotwordsStr = if (asrLanguage == AsrLanguage.JAPANESE) {
-                                    app.hotwordsGenerator.getHotwordsString(app.dictionaryRepository.getActive())
+                                    val learned = app.voiceCorrectionRepository.getActiveBoostEntries(asrLanguage)
+                                    app.hotwordsGenerator.getHotwordsString(app.dictionaryRepository.getActive(), learned)
                                 } else {
                                     ""
                                 }
@@ -1688,6 +1841,8 @@ class VoiceInputMethodService : InputMethodService() {
                     if (shouldDecodeFinalSamples) {
                         var recognizedText = ""
                         var deletePreceding = 0
+                        var suggestedChips: List<VoiceCorrectionSuggestion> = emptyList()
+                        var appliedCorrections: List<VoiceCorrectionSuggestion> = emptyList()
                         var error: String? = null
 
                         try {
@@ -1700,16 +1855,30 @@ class VoiceInputMethodService : InputMethodService() {
                                 } else {
                                     emptyList()
                                 }
+                                val learnedCorrections = app.voiceCorrectionRepository.getActiveBoostEntries(asrLanguage)
                                 val hotwordsStr = if (asrLanguage == AsrLanguage.JAPANESE) {
-                                    app.hotwordsGenerator.getHotwordsString(activeEntries)
+                                    app.hotwordsGenerator.getHotwordsString(activeEntries, learnedCorrections)
                                 } else {
                                     ""
                                 }
                                 val rawText = withTimeout(3000L) {
                                     app.asrManager.transcribe(samples, 16000, hotwordsStr, asrLanguage)
                                 }
+                                val slmDeltaProvider: ((String, String) -> Float?)? = if (app.llmReranker.isReady()) {
+                                    { orig, corr -> app.llmReranker.scorePairDeltaNll(textBeforeCursor, orig, corr) }
+                                } else {
+                                    null
+                                }
                                 if (asrLanguage == AsrLanguage.ENGLISH) {
-                                    recognizedText = EnglishVoicePostProcessor.format(rawText, textBeforeCursor)
+                                    val cResult = EnglishVoicePostProcessor.formatWithCorrections(
+                                        rawText = rawText,
+                                        contextBefore = textBeforeCursor,
+                                        learnedCorrections = learnedCorrections,
+                                        slmCoherenceDeltaProvider = slmDeltaProvider
+                                    )
+                                    recognizedText = cResult.formattedText
+                                    suggestedChips = cResult.suggestedChips
+                                    appliedCorrections = cResult.appliedCorrections
                                     deletePreceding = 0
                                 } else {
                                     val pitchSlope = ProsodyPitchEstimator.estimateTerminalPitchSlope(samples, 16000)
@@ -1717,14 +1886,25 @@ class VoiceInputMethodService : InputMethodService() {
                                         terminalPitchSlopeSemitones = pitchSlope,
                                         precedingCommittedTail = textBeforeCursor
                                     )
-                                    val pResult = app.contextAwareProcessor.processWithPunctuationResult(
+                                    val pResult = app.contextAwareProcessor.processWithCorrectionsAndPunctuation(
                                         rawText = rawText,
                                         contextBefore = textBeforeCursor,
                                         entries = activeEntries,
-                                        metadata = prosodyMetadata
+                                        learnedCorrections = learnedCorrections,
+                                        metadata = prosodyMetadata,
+                                        slmCoherenceDeltaProvider = slmDeltaProvider
                                     )
                                     recognizedText = pResult.formattedText
                                     deletePreceding = pResult.deletePrecedingChars
+                                    suggestedChips = pResult.suggestedChips
+                                    appliedCorrections = pResult.appliedCorrections
+                                }
+                                if (appliedCorrections.isNotEmpty()) {
+                                    synchronized(recentAutoAppliedCorrections) {
+                                        for (a in appliedCorrections) {
+                                            recentAutoAppliedCorrections[a.correctedSurface] = Pair(a.originalSurface, asrLanguage)
+                                        }
+                                    }
                                 }
                             }
                         } catch (e: TimeoutCancellationException) {
@@ -1754,7 +1934,11 @@ class VoiceInputMethodService : InputMethodService() {
                                         updateCandidates()
                                     }
                                 } else if (committedImmediately) {
-                                    showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+                                    if (suggestedChips.isNotEmpty()) {
+                                        renderVoiceCorrectionSuggestions(suggestedChips, asrLanguage)
+                                    } else {
+                                        showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+                                    }
                                 }
                             } else {
                                 arbitrator.onVoiceDecodeCancelledOrFailed(decodeId)

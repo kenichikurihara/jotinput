@@ -27,6 +27,30 @@ object EnglishVoicePostProcessor {
     }
 
     /**
+     * Formats English ASR output and applies learned voice corrections (S2/S3/S4/S5).
+     */
+    fun formatWithCorrections(
+        rawText: String,
+        contextBefore: String = "",
+        learnedCorrections: List<VoiceCorrectionEntry> = emptyList(),
+        nowMs: Long = System.currentTimeMillis(),
+        slmCoherenceDeltaProvider: ((origSentence: String, corrSentence: String) -> Float?)? = null
+    ): VoiceCorrectionApplyResult {
+        val baseFormatted = format(rawText, contextBefore)
+        if (baseFormatted.isEmpty() || learnedCorrections.isEmpty()) {
+            return VoiceCorrectionApplyResult(baseFormatted, emptyList(), emptyList())
+        }
+        return VoiceCorrectionScoring.applyCorrections(
+            text = baseFormatted,
+            contextBefore = contextBefore,
+            entries = learnedCorrections,
+            language = AsrLanguage.ENGLISH,
+            nowMs = nowMs,
+            slmCoherenceDeltaProvider = slmCoherenceDeltaProvider
+        )
+    }
+
+    /**
      * Splits [currentFormatted] into `(frozenPrefix, activeSuffix)` for streaming English voice input.
      * Computes longest common prefix (LCP) over the last [minConsecutiveSteps] steps,
      * protects [protectTrailingChars] at the tail, and snaps the freeze point back to a

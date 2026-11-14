@@ -133,10 +133,11 @@ class CandidateStripView @JvmOverloads constructor(
         for (candidate in displayCandidates) {
             val tv = TextView(context).apply {
                 val isClipboardRecent = candidate.source == "clipboard_recent"
-                val displayText = if (isClipboardRecent) {
-                    ClipboardUtils.formatCandidateChipPreview(candidate.surface, maxChars = 14)
-                } else {
-                    candidate.surface
+                val isVoiceCorrectionSuggest = candidate.source == "voice_correction_suggest"
+                val displayText = when {
+                    isClipboardRecent -> ClipboardUtils.formatCandidateChipPreview(candidate.surface, maxChars = 14)
+                    isVoiceCorrectionSuggest -> "🔄 ${candidate.surface}"
+                    else -> candidate.surface
                 }
                 text = displayText
                 textSize = textSizeSp
@@ -146,7 +147,7 @@ class CandidateStripView @JvmOverloads constructor(
                 // Quantized minimum width by character count: eliminates cumulative layout shifts (CLS)
                 // when homophones of the same character count exchange positions.
                 val charCount = candidate.surface.length
-                val minW = if (isClipboardRecent) {
+                val minW = if (isClipboardRecent || isVoiceCorrectionSuggest) {
                     0
                 } else {
                     when (charCount) {

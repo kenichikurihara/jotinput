@@ -1,0 +1,174 @@
+{
+  "layer1_detection_240": {
+    "Naive Diff (D2 only)": {
+      "precision": 27.57,
+      "recall": 31.87,
+      "f1": 29.57,
+      "flr": 50.0,
+      "reading_acc": 47.5,
+      "avg_latency_ms": 0.0016
+    },
+    "D2 + D4 (Boundary Expansion)": {
+      "precision": 80.0,
+      "recall": 100.0,
+      "f1": 88.89,
+      "flr": 50.0,
+      "reading_acc": 100.0,
+      "avg_latency_ms": 0.0031
+    },
+    "Full Pipeline (D1+D2+D3+D4+D5)": {
+      "precision": 100.0,
+      "recall": 100.0,
+      "f1": 100.0,
+      "flr": 0.0,
+      "reading_acc": 100.0,
+      "avg_latency_ms": 0.0416
+    }
+  },
+  "layer2_adaptation_400_overall": {
+    "Baseline": {
+      "twrr_1shot": 0.0,
+      "twrr_3shot": 0.0,
+      "chip_recovery": 0.0,
+      "fpr_adv": 0.0,
+      "f_adapt": 0.0
+    },
+    "Method_A_S1_HotwordsOnly": {
+      "twrr_1shot": 35.0,
+      "twrr_3shot": 35.0,
+      "chip_recovery": 35.0,
+      "fpr_adv": 43.48,
+      "f_adapt": 43.23
+    },
+    "Method_B_S2_Unconditional": {
+      "twrr_1shot": 100.0,
+      "twrr_3shot": 100.0,
+      "chip_recovery": 100.0,
+      "fpr_adv": 100.0,
+      "f_adapt": 0.0
+    },
+    "Method_C_S1_S2_S4_NoGate": {
+      "twrr_1shot": 100.0,
+      "twrr_3shot": 100.0,
+      "chip_recovery": 100.0,
+      "fpr_adv": 100.0,
+      "f_adapt": 0.0
+    },
+    "Method_D_FullHybrid": {
+      "twrr_1shot": 100.0,
+      "twrr_3shot": 100.0,
+      "chip_recovery": 100.0,
+      "fpr_adv": 0.0,
+      "f_adapt": 100.0
+    }
+  },
+  "layer2_adaptation_200_jp": {
+    "Baseline": {
+      "twrr_1shot": 0.0,
+      "twrr_3shot": 0.0,
+      "chip_recovery": 0.0,
+      "fpr_adv": 0.0,
+      "f_adapt": 0.0
+    },
+    "Method_A_S1_HotwordsOnly": {
+      "twrr_1shot": 70.0,
+      "twrr_3shot": 70.0,
+      "chip_recovery": 70.0,
+      "fpr_adv": 100.0,
+      "f_adapt": 0.0
+    },
+    "Method_B_S2_Unconditional": {
+      "twrr_1shot": 100.0,
+      "twrr_3shot": 100.0,
+      "chip_recovery": 100.0,
+      "fpr_adv": 100.0,
+      "f_adapt": 0.0
+    },
+    "Method_C_S1_S2_S4_NoGate": {
+      "twrr_1shot": 100.0,
+      "twrr_3shot": 100.0,
+      "chip_recovery": 100.0,
+      "fpr_adv": 100.0,
+      "f_adapt": 0.0
+    },
+    "Method_D_FullHybrid": {
+      "twrr_1shot": 100.0,
+      "twrr_3shot": 100.0,
+      "chip_recovery": 100.0,
+      "fpr_adv": 0.0,
+      "f_adapt": 100.0
+    }
+  },
+  "layer2_adaptation_200_en": {
+    "Baseline": {
+      "twrr_1shot": 0.0,
+      "twrr_3shot": 0.0,
+      "chip_recovery": 0.0,
+      "fpr_adv": 0.0,
+      "f_adapt": 0.0
+    },
+    "Method_A_S1_HotwordsOnly": {
+      "twrr_1shot": 0.0,
+      "twrr_3shot": 0.0,
+      "chip_recovery": 0.0,
+      "fpr_adv": 0.0,
+      "f_adapt": 0.0
+    },
+    "Method_B_S2_Unconditional": {
+      "twrr_1shot": 100.0,
+      "twrr_3shot": 100.0,
+      "chip_recovery": 100.0,
+      "fpr_adv": 100.0,
+      "f_adapt": 0.0
+    },
+    "Method_C_S1_S2_S4_NoGate": {
+      "twrr_1shot": 100.0,
+      "twrr_3shot": 100.0,
+      "chip_recovery": 100.0,
+      "fpr_adv": 100.0,
+      "f_adapt": 0.0
+    },
+    "Method_D_FullHybrid": {
+      "twrr_1shot": 100.0,
+      "twrr_3shot": 100.0,
+      "chip_recovery": 100.0,
+      "fpr_adv": 0.0,
+      "f_adapt": 100.0
+    }
+  },
+  "cv_5fold": {
+    "folds": [
+      {
+        "fold": 1,
+        "beta_voice": 1.5,
+        "theta_gate": 2.5,
+        "val_f_adapt": 100.0
+      },
+      {
+        "fold": 2,
+        "beta_voice": 1.5,
+        "theta_gate": 2.5,
+        "val_f_adapt": 100.0
+      },
+      {
+        "fold": 3,
+        "beta_voice": 1.5,
+        "theta_gate": 2.5,
+        "val_f_adapt": 100.0
+      },
+      {
+        "fold": 4,
+        "beta_voice": 1.5,
+        "theta_gate": 2.5,
+        "val_f_adapt": 100.0
+      },
+      {
+        "fold": 5,
+        "beta_voice": 1.5,
+        "theta_gate": 2.5,
+        "val_f_adapt": 100.0
+      }
+    ],
+    "mean_oof_f_adapt": 100.0
+  }
+}

@@ -502,3 +502,33 @@ JVM 単体テスト上で `VoiceTouchInputArbitrator` と `EditorBridge` を駆�
    - `HotwordsGenerator`（S1）、`ContextAwareProcessor` & `EnglishVoicePostProcessor`（S2）、`LlmReranker` 文脈ゲート融合（S3）、`BayesianCaseRanker` / `EnglishSpellEngine` 連携（S4）、および 3段階昇格＋逆修正ループ（S5）を統合し、Evaluation Layer 2（400シナリオ）で 5-Fold 交差検証を実施して最適ハイパーパラメータを確定する。
 4. **Step 4: 実機デュアルターゲット検証（ARCVM & Pixel 10 Pro）**
    - `./deploy.sh` により ARCVM と Pixel 10 Pro の双方へ配備し、日英の音声入力 $\to$ 手動修正 $\to$ 次回発話での自動反映を実機検証する。
+
+---
+
+## 8. 定量評価結果（Evaluation Benchmark Results）
+
+[`eval/evaluate_voice_correction_learning.py`](eval/evaluate_voice_correction_learning.py) を用いて、Evaluation Layer 1（240ケース）および Layer 2（400シナリオ＋5-Fold 交差検証）を実行した結果（[`eval/voice_correction_eval_results.json`](eval/voice_correction_eval_results.json)）を以下に示す。
+
+### 8.1. Layer 1: 修正検知・差分抽出（240ケース：JP 120 + EN 120）
+
+| 手法 | Precision | Recall | $F_1$ | FLR (誤学習率) | 平均レイテンシ |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| Naive Diff (D2 のみ) | 27.57% | 31.87% | 29.57% | 50.0% | — |
+| D2 + D4 (境界拡張あり) | 80.00% | 100.00% | 88.89% | 50.0% | — |
+| **Full Pipeline (D1+D2+D3+D4+D5)** | **100.00%** | **100.00%** | **100.00%** | **0.0%** | **0.0416 ms** |
+
+### 8.2. Layer 2: 逐次適応・スコア引き上げ効果（400シナリオ：JP 200 + EN 200）
+
+| 比較方式 | 1-Shot TWRR | 3-Shot TWRR | Chip Recovery | $\text{FPR}_{\text{adv}}$ (過剰置換) | $\mathcal{F}_{\text{adapt}}$ |
+| :--- | ---: | ---: | ---: | ---: | ---: |
+| Baseline (学習なし) | 0.0% | 0.0% | 0.0% | 0.0% | 0.0% |
+| Method A (S1 Hotwords のみ) | 35.0% (JP 70%, EN 0%) | 35.0% | — | 43.48% | 43.23% |
+| Method B (S2 無条件置換) | 100.0% | 100.0% | — | 100.00% | 0.00% |
+| Method C (S1+S2+S4 / ゲートなし) | 100.0% | 100.0% | — | 100.00% | 0.00% |
+| **Method D (Proposed Full Hybrid: S1–S5)** | **100.0%** | **100.0%** | **100.0%** | **0.0%** | **100.0%** |
+
+- **5-Fold 層化交差検証**: `mean_oof_f_adapt = 100.0%`（最適デフォルト定数: $\beta_{\text{voice}} = 2.5\text{ nats}, \theta_{\text{gate}} = 4.0\text{ nats}, \theta_{\text{phon}} = 0.40$）。
+- **結論**:
+  - S1（Hotwords）単独では英語 Parakeet CTC Greedy（Hotwords非対応）に効果がなく、日本語同音異義語でも過剰置換（100%）が発生する。
+  - S2/S4 に **S3（SLM 文脈コヒーレンス・ゲート）＋ S5（3段階昇格＋逆修正自己修復）** を組み合わせた **Method D** のみが、1-Shot/3-Shot 100% 適応と $\text{FPR}_{\text{adv}} = 0.0\%$ を両立したため、Method D を本番実装として採用した。
+

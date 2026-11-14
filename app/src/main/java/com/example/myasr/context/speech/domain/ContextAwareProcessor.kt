@@ -85,6 +85,13 @@ class ContextAwareProcessor(
         ).formattedText
     }
 
+    data class ContextAwareVoiceResult(
+        val formattedText: String,
+        val deletePrecedingChars: Int,
+        val appliedCorrections: List<VoiceCorrectionSuggestion>,
+        val suggestedChips: List<VoiceCorrectionSuggestion>
+    )
+
     /**
      * Process raw ASR text using preceding text box context, prosody metadata, and active dictionary entries,
      * returning both formatted text and retroactive edit instructions (deletePrecedingChars).
@@ -96,7 +103,32 @@ class ContextAwareProcessor(
         formatPunctuation: Boolean = true,
         metadata: ProsodyBoundaryMetadata? = null
     ): PunctuationFormatResult {
-        if (rawText.isBlank()) return PunctuationFormatResult(rawText, 0)
+        val voiceResult = processWithCorrectionsAndPunctuation(
+            rawText = rawText,
+            contextBefore = contextBefore,
+            entries = entries,
+            formatPunctuation = formatPunctuation,
+            metadata = metadata
+        )
+        return PunctuationFormatResult(voiceResult.formattedText, voiceResult.deletePrecedingChars)
+    }
+
+    /**
+     * Full context-aware processing including learned voice corrections (S2/S3/S5) and punctuation.
+     */
+    fun processWithCorrectionsAndPunctuation(
+        rawText: String,
+        contextBefore: String,
+        entries: List<DictionaryEntry>,
+        formatPunctuation: Boolean = true,
+        metadata: ProsodyBoundaryMetadata? = null,
+        learnedCorrections: List<VoiceCorrectionEntry> = emptyList(),
+        nowMs: Long = System.currentTimeMillis(),
+        slmCoherenceDeltaProvider: ((origSentence: String, corrSentence: String) -> Float?)? = null
+    ): ContextAwareVoiceResult {
+        if (rawText.isBlank()) {
+            return ContextAwareVoiceResult(rawText, 0, emptyList(), emptyList())
+        }
 
         var result = rawText
         val activeEntries = entries.filter { it.isEnabled && it.word.isNotBlank() }
@@ -114,6 +146,21 @@ class ContextAwareProcessor(
         // Step 4: Context-Driven Tech Term Disambiguation (e.g. グラフ九L -> GraphQL when GraphQL is in context)
         result = resolveContextualTechTerms(result, contextBefore, activeEntries, protectedReplacements)
 
+        // Step 4.5: Learned Voice Correction Scoring (S2 Confusion-Pair + S3 SLM Coherence Gate + S5 3-Tier)
+        val correctionRes = if (learnedCorrections.isNotEmpty()) {
+            VoiceCorrectionScoring.applyCorrections(
+                text = result,
+                contextBefore = contextBefore,
+                entries = learnedCorrections,
+                language = AsrLanguage.JAPANESE,
+                nowMs = nowMs,
+                slmCoherenceDeltaProvider = slmCoherenceDeltaProvider
+            )
+        } else {
+            VoiceCorrectionApplyResult(result, emptyList(), emptyList())
+        }
+        result = correctionRes.formattedText
+
         // Step 5: Highest-Priority User Dictionary Substitution (Phonetic Kana, Character Variants & Homophones)
         result = applyDictionarySubstitutions(result, activeEntries, protectedReplacements)
 
@@ -126,7 +173,7 @@ class ContextAwareProcessor(
         // Step 7: Smart Spacing with Preceding Context
         result = formatBoundarySpacing(result, contextBefore)
 
-        // Step 8: Spoken Punctuation Commands & Natural Japanese Punctuation Restoration (まる/てん/文末/読点)
+        // Step 8: Spoken Punctuation Commands & Natural Japanese Punctuation Restoration (まる/くてん/文末/読点)
         var deletePreceding = 0
         if (formatPunctuation) {
             val effectiveMetadata = metadata ?: ProsodyBoundaryMetadata(
@@ -140,7 +187,12 @@ class ContextAwareProcessor(
         if (result != rawText) {
             Log.d(TAG, "Context-Aware processed: '$rawText' -> '$result' (ctx len=${contextBefore.length})")
         }
-        return PunctuationFormatResult(result, deletePreceding)
+        return ContextAwareVoiceResult(
+            formattedText = result,
+            deletePrecedingChars = deletePreceding,
+            appliedCorrections = correctionRes.appliedCorrections,
+            suggestedChips = correctionRes.suggestedChips
+        )
     }
 
     private fun resolveKanjiVariants(

@@ -86,6 +86,68 @@ class VoiceTouchInputArbitrator {
         val committedAfterThisDecode: StringBuilder = StringBuilder()
     )
 
+    data class VoiceCommitAnchor(
+        val committedText: String,
+        val prefixAnchor: String,
+        val contextBefore: String,
+        val committedAtMs: Long,
+        val hasEditedAfterCommit: Boolean = false,
+        val typedReadingHint: String = ""
+    )
+
+    var activeVoiceAnchor: VoiceCommitAnchor? = null
+        private set
+
+    var onVoiceAnchorSettled: ((anchor: VoiceCommitAnchor, editedText: String) -> Unit)? = null
+
+    fun recordVoiceAnchor(editor: EditorBridge?, committedText: String) {
+        if (committedText.isBlank()) return
+        settleActiveVoiceAnchorIfNeeded(editor)
+        val rawBefore = editor?.getTextBeforeCursor(160, 0) ?: ""
+        // Strip the just-committed text if already reflected in getTextBeforeCursor
+        val ctxBefore = if (rawBefore.endsWith(committedText)) {
+            rawBefore.dropLast(committedText.length)
+        } else {
+            rawBefore
+        }
+        activeVoiceAnchor = VoiceCommitAnchor(
+            committedText = committedText,
+            prefixAnchor = ctxBefore.takeLast(16),
+            contextBefore = ctxBefore,
+            committedAtMs = System.currentTimeMillis()
+        )
+    }
+
+    fun markVoiceAnchorEdited(typedReadingHint: String = "") {
+        val anchor = activeVoiceAnchor ?: return
+        val updatedHint = if (typedReadingHint.isNotEmpty()) typedReadingHint else anchor.typedReadingHint
+        activeVoiceAnchor = anchor.copy(
+            hasEditedAfterCommit = true,
+            typedReadingHint = updatedHint
+        )
+    }
+
+    fun settleActiveVoiceAnchorIfNeeded(editor: EditorBridge?) {
+        val anchor = activeVoiceAnchor ?: return
+        activeVoiceAnchor = null
+        if (!anchor.hasEditedAfterCommit || editor == null) return
+        val window = editor.getTextBeforeCursor(anchor.committedText.length + 40, 0)
+        if (window.isEmpty()) return
+        val editedText = if (anchor.prefixAnchor.isNotEmpty()) {
+            val idx = window.indexOf(anchor.prefixAnchor)
+            if (idx >= 0) {
+                window.substring(idx + anchor.prefixAnchor.length)
+            } else {
+                window.takeLast(anchor.committedText.length + 12)
+            }
+        } else {
+            window
+        }
+        if (editedText.isNotBlank() && editedText != anchor.committedText) {
+            onVoiceAnchorSettled?.invoke(anchor, editedText)
+        }
+    }
+
     // Keyboard composing state (Pre-edit reading)
     val composingText = StringBuilder()
     var activeComposingSessionId: Long = 0L
@@ -173,6 +235,7 @@ class VoiceTouchInputArbitrator {
     }
 
     fun resetAll() {
+        activeVoiceAnchor = null
         composingText.clear()
         activeComposingSessionId = 0L
         streamingGenerationId++
@@ -223,6 +286,7 @@ class VoiceTouchInputArbitrator {
             editor?.commitText(finalized, 1)
             recordDirectCommitForInFlightDecodes(finalized)
             previousCommittedPhrase = finalized.takeLast(6)
+            recordVoiceAnchor(editor, finalized)
         } else {
             editor?.finishComposingText()
         }
@@ -251,6 +315,10 @@ class VoiceTouchInputArbitrator {
         previousCommittedPhrase = committedSurface
         composingText.clear()
         activeComposingSessionId = 0L
+        if (activeVoiceAnchor?.hasEditedAfterCommit == true) {
+            markVoiceAnchorEdited(reading)
+            settleActiveVoiceAnchorIfNeeded(editor)
+        }
         flushPendingVoice(editor)
     }
 
@@ -336,6 +404,13 @@ class VoiceTouchInputArbitrator {
         recordImeDirectEditDelta(textToCommit.length)
         editor?.commitText(textToCommit, 1)
         recordDirectCommitForInFlightDecodes(textToCommit)
+        if (activeVoiceAnchor != null) {
+            if (text == " " || text == "\n" || text == "。" || text == "、" || text == "." || text == ",") {
+                settleActiveVoiceAnchorIfNeeded(editor)
+            } else {
+                markVoiceAnchorEdited()
+            }
+        }
         flushPendingVoice(editor)
     }
 
@@ -541,6 +616,7 @@ class VoiceTouchInputArbitrator {
             editor?.deleteSurroundingText(1, 0)
             recordDeleteCharsForInFlightDecodes(1)
         }
+        markVoiceAnchorEdited()
         return DeleteOutcome.DELETED_SURROUNDING_TEXT
     }
 
@@ -575,6 +651,7 @@ class VoiceTouchInputArbitrator {
             return EnterOutcome.FLUSHED_OR_CONFIRMED_PENDING_SPEECH
         }
 
+        settleActiveVoiceAnchorIfNeeded(editor)
         clearUndoState()
         previousCommittedPhrase = ""
         flushPendingVoice(editor)
@@ -989,6 +1066,7 @@ class VoiceTouchInputArbitrator {
         editor?.commitText(text, 1)
         recordDirectCommitForInFlightDecodes(text)
         previousCommittedPhrase = text.takeLast(6)
+        recordVoiceAnchor(editor, text)
         return true
     }
 
