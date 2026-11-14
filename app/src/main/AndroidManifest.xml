@@ -26,6 +26,10 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".OnboardingActivity"
+            android:exported="false"
+            android:label="JotInput セットアップ" />
+        <activity
             android:name=".DictionaryActivity"
             android:exported="true"
             android:label="Custom Dictionary" />

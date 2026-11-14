@@ -87,4 +87,9 @@ class AlloyVerificationTest {
     fun `main_app_ui_state formal model satisfies all 3-tab, DMN hero, and provisioning banner invariants`() {
         verifyAlloyModel("alloy/main_app_ui_state.als")
     }
+
+    @Test
+    fun `onboarding_flow formal model satisfies launch, Drive permission-loss, and non-blocking completion invariants`() {
+        verifyAlloyModel("alloy/onboarding_flow.als")
+    }
 }

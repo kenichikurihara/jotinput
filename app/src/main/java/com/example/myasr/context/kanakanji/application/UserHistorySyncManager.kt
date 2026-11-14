@@ -207,6 +207,22 @@ class UserHistorySyncManager private constructor(private val context: Context) {
     }
 
     /**
+     * Verifies whether the stored SAF sync URI still holds valid persisted read/write permissions.
+     * Essential for detecting Android Auto Backup reinstalls where SharedPreferences restores the
+     * URI string, but OS-level persistable URI permissions are revoked.
+     */
+    fun hasValidSyncPermission(): Boolean {
+        val uri = getSyncUri() ?: return false
+        return try {
+            val persisted = context.contentResolver.persistedUriPermissions
+            persisted.any { it.uri == uri && it.isReadPermission && it.isWritePermission }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to verify persisted URI permission: ${e.message}")
+            false
+        }
+    }
+
+    /**
      * Executes safe, idempotent 3-Way Delta and LWW Tombstone sync:
      * 1. Reads remote JSON from Google Drive URI.
      * 2. Reads local sync base snapshot (previous sync point).

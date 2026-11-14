@@ -44,6 +44,9 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `HomeHeroActionDecisionTable` | `FIRST` | ホーム画面のスマートガイド（次の唯一アクション / 準備完了）決定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `ProvisioningBannerDecisionTable` | `FIRST` | タブ横断グローバル進捗バナーの表示・進捗状態決定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `AiEngineStatusDecisionTable` | `FIRST` | AI 変換エンジンのセレクタ表示・ステータスバッジ決定 |
+| **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingLaunchDecisionTable` | `FIRST` | 起動時オンボーディング要否・再インストール/既存移行判定 |
+| **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `DriveRestoreStatusDecisionTable` | `FIRST` | Google Drive 履歴復元・SAF権限失効検知と表示状態決定 |
+| **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingStepGuidanceDecisionTable` | `FIRST` | 各ステップのCTA・非ブロッキング進行・スキップ制御決定 |
 
 ---
 

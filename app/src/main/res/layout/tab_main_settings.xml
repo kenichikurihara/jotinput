@@ -586,6 +586,16 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLaunchOnboarding"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp"
+            android:text="セットアップガイド / Google Drive 履歴復元"
+            app:cornerRadius="10dp" />
+
         <TextView
             android:id="@+id/tvOssLicenses"
             android:layout_width="wrap_content"

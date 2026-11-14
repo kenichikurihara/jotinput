@@ -7,7 +7,12 @@ import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.HeroActionKin
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.HomeHeroInput
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.ProvisioningBannerInput
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.StatusTone
+import com.example.myasr.context.ime.domain.OnboardingDecisionModel
+import com.example.myasr.context.ime.domain.OnboardingDecisionModel.LaunchAction
+import com.example.myasr.context.ime.domain.OnboardingDecisionModel.OnboardingLaunchInput
+import com.example.myasr.context.ime.infrastructure.OnboardingStateStore
 import com.example.myasr.context.ime.presentation.KeyboardHeightManager
+import com.example.myasr.context.kanakanji.application.UserHistorySyncManager
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
 import com.example.myasr.context.provisioning.domain.DictUpdateState
 import com.example.myasr.context.provisioning.domain.DictionaryStatusInfo
@@ -159,6 +164,17 @@ class MainActivity : AppCompatActivity() {
     private var lastHandledProvisioningEventId: Long =
         ProvisioningForegroundService.state.value.lastEvent?.eventId ?: 0L
 
+    private lateinit var btnLaunchOnboarding: MaterialButton
+    private val onboardingLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        updateImeStatusBadge()
+        updateDictionaryBadge()
+        refreshMultiDictionaryUI()
+        checkAndInitializeModel()
+        refreshHomeHeroCard()
+    }
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -176,10 +192,6 @@ class MainActivity : AppCompatActivity() {
         dictionaryRepository = app.dictionaryRepository
         hotwordsGenerator = app.hotwordsGenerator
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-        }
-
         initViews()
         setupListeners()
         observeProvisioningState()
@@ -191,6 +203,13 @@ class MainActivity : AppCompatActivity() {
         checkAndInitializeModel()
         refreshHomeHeroCard()
         checkBenchmarkIntent(intent)
+
+        val launchedOnboarding = maybeLaunchOnboarding(savedInstanceState)
+        if (!launchedOnboarding &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
 
         // Verify On-Device SLM Re-ranking with the user's motivating case
         lifecycleScope.launch(Dispatchers.Default) {
@@ -532,6 +551,7 @@ class MainActivity : AppCompatActivity() {
         cardQuickDictionary = findViewById(R.id.cardQuickDictionary)
         cardQuickSwitchIme = findViewById(R.id.cardQuickSwitchIme)
         btnEnableIme = findViewById(R.id.btnEnableIme)
+        btnLaunchOnboarding = findViewById(R.id.btnLaunchOnboarding)
         tvOssLicenses = findViewById(R.id.tvOssLicenses)
 
         rgKeyboardHeight = findViewById(R.id.rgKeyboardHeight)
@@ -721,9 +741,64 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
         }
 
+        btnLaunchOnboarding.setOnClickListener {
+            launchOnboarding(
+                forceLaunch = true,
+                suggestedMode = null,
+                reinstallHint = false
+            )
+        }
+
         tvOssLicenses.setOnClickListener {
             showOssLicensesDialog()
         }
+    }
+
+    private fun maybeLaunchOnboarding(savedInstanceState: Bundle?): Boolean {
+        if (savedInstanceState != null) return false
+        if (intent?.getStringExtra("bench_action") != null) return false
+
+        val stateStore = OnboardingStateStore(this)
+        val syncManager = UserHistorySyncManager.getInstance(this)
+        val input = OnboardingLaunchInput(
+            forceLaunch = false,
+            onboardingCompleted = stateStore.isCompleted(),
+            imeEnabled = isImeEnabled(),
+            japaneseAsrReady = asrManager.isModelAvailable(AsrLanguage.JAPANESE),
+            totalDictWords = AsrApp.instance.multiDictionaryManager.getTotalWordCount(),
+            hasLocalCustomDict = dictionaryRepository.getAll().isNotEmpty(),
+            hasStoredDriveUri = syncManager.getSyncUri() != null
+        )
+        val decision = OnboardingDecisionModel.evaluateLaunch(input)
+        if (decision.shouldMarkCompletedSilently) {
+            stateStore.markCompleted()
+        }
+        if (decision.shouldShowOnboarding) {
+            val reinstallHint = decision.action == LaunchAction.LAUNCH_REINSTALL ||
+                decision.action == LaunchAction.LAUNCH_REINSTALL_DRIVE_HINT
+            launchOnboarding(
+                forceLaunch = false,
+                suggestedMode = decision.suggestedMode.name,
+                reinstallHint = reinstallHint
+            )
+            return true
+        }
+        return false
+    }
+
+    private fun launchOnboarding(
+        forceLaunch: Boolean,
+        suggestedMode: String?,
+        reinstallHint: Boolean
+    ) {
+        val intent = Intent(this, OnboardingActivity::class.java).apply {
+            putExtra(OnboardingActivity.EXTRA_FORCE_LAUNCH, forceLaunch)
+            if (suggestedMode != null) {
+                putExtra(OnboardingActivity.EXTRA_SUGGESTED_MODE, suggestedMode)
+            }
+            putExtra(OnboardingActivity.EXTRA_REINSTALL_HINT, reinstallHint)
+        }
+        onboardingLauncher.launch(intent)
     }
 
     private fun updateModelStatusBadge(japaneseReady: Boolean? = null) {

@@ -320,6 +320,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 60. [メインアプリ UI 刷新 PRD & 形式設計 (MainActivity v2 — 3-Tab + DMN Smart Guide)](docs/prd_and_design_main_app_ui.md)
     - 従来の4カード縦長制約を解消し、JTBD・CUJ から再設計した3タブ構成（ホーム / 設定 / データ）、[`MainAppUiDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/MainAppUiDecisionModel.kt)（DMN 決定表3種）、および [`main_app_ui_state.als`](app/src/test/resources/alloy/main_app_ui_state.als) による状態遷移形式検証。
 
+61. [オンボーディングフロー PRD & 形式設計 (Onboarding Flow — 初回・再インストール・Google Drive 履歴復元対応)](docs/prd_and_design_onboarding_flow.md)
+    - 初回インストール・再インストール（Android Auto Backup 権限失効検知）・Google Drive 履歴復元に対応する非ブロッキング型オンボーディングの PRD、4つの JTBD、4つの CUJ、12項目のコーナーケース対策、[`OnboardingDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/OnboardingDecisionModel.kt)（DMN 決定表3種）、および [`onboarding_flow.als`](app/src/test/resources/alloy/onboarding_flow.als) による形式検証仕様。
+
 ---
 
 ## 📂 Source Code Layout

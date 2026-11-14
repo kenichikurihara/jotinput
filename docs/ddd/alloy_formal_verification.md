@@ -45,4 +45,11 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`SlmSelectorHiddenWhenDisabled`**: AI エンジン OFF 時はエンジン選択 UI が必ず非表示であること。
 - **`GlobalBannerVisibleDuringProvisioning`**: バックグラウンド処理中はタブを問わず進捗バナーが表示されること。
 
+### 3.5 [`onboarding_flow.als`](app/src/test/resources/alloy/onboarding_flow.als)
+オンボーディングフロー（[`OnboardingActivity`](app/src/main/java/com/example/myasr/OnboardingActivity.kt) / [`OnboardingDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/OnboardingDecisionModel.kt)）の状態遷移とコーナーケースをモデル化し、以下を検証する：
+- **`ExistingUserNeverForcedIntoOnboarding`**: 既存ユーザー（IME有効かつモデル/辞書あり）はアップデート時に強制オンボーディングされないこと。
+- **`RevokedDrivePermissionNeverReportedConnected`**: Auto Backup 等で URI 文字列のみ残り SAF 権限が失効している場合、決して「連携済み」と誤判定されないこと。
+- **`DownloadInProgressNeverBlocksCompletion`**: バックグラウンドダウンロード中・失敗時でも完了ステップへ到達できること（非ブロッキング性）。
+- **`AllModesCanReachCompletion`**: 新規・再インストール・Google Drive 復元の全モードでデッドロックなく完了できること。
+
 
