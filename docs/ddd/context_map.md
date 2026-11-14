@@ -83,7 +83,7 @@ flowchart TB
 - **パターン**: **Customer-Supplier (Upstream / Downstream)**
 - **契約**:
   - 上流である `Provisioning` コンテキストは、Android 外部ストレージ（`externalFilesDir` / `filesDir`）への HTTPS ダウンロード、展開、整合性検証、更新追跡を担当する。
-  - 準備完了時に `AssetProvisionedEvent(assetType, directoryOrFile)` を通知し、`ModelWarmUpManager` が各エンジンのウォームアップ順序（KanaKanji $\to$ SLM $\to$ ASR）を調停する。
+  - 準備完了時に `AssetProvisionedEvent(assetType, directoryOrFile)` を通知し、`ModelWarmUpManager` が日英各エンジン（`KanaKanjiEngine`・`NextPhrasePredictor`・`EnglishSpellEngine`・`FutoSwipeEngine`・`LlmReranker`・`AsrManager` JA/EN）の並列バックグラウンド・ウォームアップを調停する。
   - 下流エンジンは「ファイルがストレージ上に存在するかどうか」のみに依存し、HTTP 通信や ZIP/BZ2 解凍ロジックを一切持たない。
 
 ---

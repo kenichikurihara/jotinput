@@ -80,6 +80,10 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     private val ioScope = CoroutineScope(Dispatchers.IO)
     private var saveHistoryJob: Job? = null
     private val historyLock = Any()
+    private val historyLoadLock = Any()
+
+    @Volatile
+    private var isHistoryLoaded = false
 
     @Volatile
     private var connectionMatrix: ConnectionMatrix? = null
@@ -94,7 +98,22 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     private var isInitialized = false
 
     init {
-        loadHistory()
+        if (historyFile != null) {
+            ioScope.launch {
+                ensureHistoryLoaded()
+            }
+        } else {
+            isHistoryLoaded = true
+        }
+    }
+
+    fun ensureHistoryLoaded() {
+        if (isHistoryLoaded) return
+        synchronized(historyLoadLock) {
+            if (isHistoryLoaded) return
+            loadHistory()
+            isHistoryLoaded = true
+        }
     }
 
     fun setConnectionMatrix(matrix: ConnectionMatrix?) {
@@ -238,14 +257,16 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     /**
-     * Non-blocking or background warm-up: ensures base dictionaries and user dictionaries are loaded
-     * and performs a sample query to prime Trie node traversal paths and query caches.
+     * Non-blocking or background warm-up: ensures base dictionaries, history, and user dictionaries
+     * are loaded and performs sample queries (exact + multi-bunsetsu Viterbi) to prime Trie paths,
+     * ConnectionMatrix pages, and query caches.
      */
-    @Synchronized
     fun warmUp() {
+        ensureHistoryLoaded()
         initializeIfNeeded()
         try {
             getBaseCandidates("きょう")
+            getBaseCandidates("きょうはいいてんき")
             Log.i(TAG, "KanaKanjiEngine warm-up completed successfully.")
         } catch (e: Exception) {
             Log.w(TAG, "KanaKanjiEngine warm-up query failed: ${e.message}")
@@ -540,6 +561,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
      */
     fun getBaseCandidates(rawReading: String): List<ConversionCandidate> {
         if (rawReading.isBlank()) return emptyList()
+        ensureHistoryLoaded()
         initializeIfNeeded()
 
         val normalized = JapaneseKanaUtils.normalizeReading(rawReading)
@@ -1009,6 +1031,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
      * Records candidate selection in LRU history to prioritize frequent words.
      */
     fun commitCandidate(candidate: ConversionCandidate) {
+        ensureHistoryLoaded()
         val key = "${candidate.reading}:${candidate.surface}"
         val nowMs = System.currentTimeMillis()
         synchronized(historyLock) {
@@ -1038,6 +1061,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
      * Returns an immutable snapshot copy of current Unigram history.
      */
     fun getHistorySnapshot(): Map<String, Int> {
+        ensureHistoryLoaded()
         return synchronized(historyLock) {
             LinkedHashMap(historyMap)
         }
@@ -1050,6 +1074,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
      */
     fun mergeHistoryDelta(remoteHistory: Map<String, Int>, baseHistory: Map<String, Int>) {
         if (remoteHistory.isEmpty() && baseHistory.isEmpty()) return
+        ensureHistoryLoaded()
         synchronized(historyLock) {
             val allKeys = LinkedHashSet<String>()
             allKeys.addAll(historyMap.keys)
@@ -1087,6 +1112,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
      */
     fun mergeHistory(remoteHistory: Map<String, Int>) {
         if (remoteHistory.isEmpty()) return
+        ensureHistoryLoaded()
         synchronized(historyLock) {
             for ((key, remoteCount) in remoteHistory) {
                 if (key.isBlank() || remoteCount <= 0) continue
@@ -1107,6 +1133,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
      * Clears all unigram user selection history.
      */
     fun clearHistory() {
+        ensureHistoryLoaded()
         synchronized(historyLock) {
             historyMap.clear()
             historyLastUsedMap.clear()

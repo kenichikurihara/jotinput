@@ -81,7 +81,11 @@ class ClipboardHistoryRepository private constructor(private val appContext: Con
     }
 
     init {
-        loadFromDisk()
+        scope.launch {
+            mutex.withLock {
+                loadFromDisk()
+            }
+        }
         try {
             clipboardManager?.addPrimaryClipChangedListener(clipChangedListener)
         } catch (e: Exception) {

@@ -275,9 +275,23 @@ public:
 
     void SyncUserDictionary(const std::vector<UserSpellWord>& user_words) {
         std::lock_guard<std::mutex> lock(mutex_);
-        word_to_count_ = base_word_to_count_;
-        deletes_dict_ = base_deletes_dict_;
-        prefix_dict_ = base_prefix_dict_;
+        if (user_words.size() == user_words_.size()) {
+            bool identical = true;
+            for (size_t i = 0; i < user_words.size(); ++i) {
+                if (user_words[i].surface != user_words_[i].surface ||
+                    user_words[i].priority_score != user_words_[i].priority_score) {
+                    identical = false;
+                    break;
+                }
+            }
+            if (identical) {
+                return;
+            }
+        }
+
+        word_to_count_.clear();
+        deletes_dict_.clear();
+        prefix_dict_.clear();
         user_words_ = user_words;
 
         for (const auto& uw : user_words) {
@@ -293,20 +307,20 @@ public:
                 deletes_dict_[d].push_back(w_lower);
             }
 
-            // Also register in prefix_dict_ at the front
+            // Also register in user prefix_dict_
             int L = static_cast<int>(w_lower.length());
             for (int p_len = 2; p_len <= std::min(L, 10); ++p_len) {
                 std::string p = w_lower.substr(0, p_len);
                 auto& p_list = prefix_dict_[p];
                 if (std::find(p_list.begin(), p_list.end(), w_lower) == p_list.end()) {
-                    p_list.insert(p_list.begin(), w_lower);
+                    p_list.push_back(w_lower);
                     if (p_list.size() > 14) {
                         p_list.pop_back();
                     }
                 }
             }
         }
-        LOGI("Synced %zu user spell words.", user_words.size());
+        LOGI("Synced %zu user spell words (layered).", user_words.size());
     }
 
     std::vector<std::string> SuggestTypo(const std::string& word, int max_candidates) {
@@ -320,15 +334,22 @@ public:
         std::unordered_set<std::string> cands;
 
         // 1. Direct Prefix Completion candidates (e.g. examp -> example)
-        auto p_it = prefix_dict_.find(typed_lower);
-        if (p_it != prefix_dict_.end()) {
-            for (const auto& w : p_it->second) {
+        auto up_it = prefix_dict_.find(typed_lower);
+        if (up_it != prefix_dict_.end()) {
+            for (const auto& w : up_it->second) {
+                cands.insert(w);
+            }
+        }
+        auto bp_it = base_prefix_dict_.find(typed_lower);
+        if (bp_it != base_prefix_dict_.end()) {
+            for (const auto& w : bp_it->second) {
                 cands.insert(w);
             }
         }
 
         // 2. Exact match
-        if (word_to_count_.find(typed_lower) != word_to_count_.end()) {
+        if (word_to_count_.find(typed_lower) != word_to_count_.end() ||
+            base_word_to_count_.find(typed_lower) != base_word_to_count_.end()) {
             cands.insert(typed_lower);
         }
 
@@ -342,12 +363,19 @@ public:
         // 4. SymSpell 2-deletes for typos
         auto deletes = GetDeletes(typed_lower, 2);
         for (const auto& d : deletes) {
-            if (word_to_count_.find(d) != word_to_count_.end()) {
+            if (word_to_count_.find(d) != word_to_count_.end() ||
+                base_word_to_count_.find(d) != base_word_to_count_.end()) {
                 cands.insert(d);
             }
-            auto it = deletes_dict_.find(d);
-            if (it != deletes_dict_.end()) {
-                for (const auto& w : it->second) {
+            auto uit = deletes_dict_.find(d);
+            if (uit != deletes_dict_.end()) {
+                for (const auto& w : uit->second) {
+                    cands.insert(w);
+                }
+            }
+            auto bit = base_deletes_dict_.find(d);
+            if (bit != base_deletes_dict_.end()) {
+                for (const auto& w : bit->second) {
                     cands.insert(w);
                 }
             }
@@ -357,10 +385,18 @@ public:
         if (m >= 4) {
             auto deletes1 = GetDeletes(typed_lower, 1);
             for (const auto& d : deletes1) {
-                auto fp_it = prefix_dict_.find(d);
-                if (fp_it != prefix_dict_.end()) {
+                auto ufp_it = prefix_dict_.find(d);
+                if (ufp_it != prefix_dict_.end()) {
                     int taken = 0;
-                    for (const auto& w : fp_it->second) {
+                    for (const auto& w : ufp_it->second) {
+                        cands.insert(w);
+                        if (++taken >= 4) break;
+                    }
+                }
+                auto bfp_it = base_prefix_dict_.find(d);
+                if (bfp_it != base_prefix_dict_.end()) {
+                    int taken = 0;
+                    for (const auto& w : bfp_it->second) {
                         cands.insert(w);
                         if (++taken >= 4) break;
                     }
@@ -375,22 +411,31 @@ public:
         std::vector<ScoredCandidate> scored;
 
         for (const auto& w : cands) {
-            auto it = word_to_count_.find(w);
-            if (it == word_to_count_.end()) continue;
+            const WordInfo* info = nullptr;
+            auto uit = word_to_count_.find(w);
+            if (uit != word_to_count_.end()) {
+                info = &uit->second;
+            } else {
+                auto bit = base_word_to_count_.find(w);
+                if (bit != base_word_to_count_.end()) {
+                    info = &bit->second;
+                }
+            }
+            if (!info) continue;
 
             int n = static_cast<int>(w.length());
-            float log_freq = std::log(static_cast<float>(it->second.count + 1));
+            float log_freq = std::log(static_cast<float>(info->count + 1));
 
             if (w.rfind(typed_lower, 0) == 0 && n > m) {
                 // Pure prefix completion
                 float len_diff = static_cast<float>(n - m);
                 float cov_ratio = static_cast<float>(m) / n;
                 float score = log_freq - 0.45f * len_diff + 2.0f * cov_ratio;
-                scored.push_back({it->second.surface, score});
+                scored.push_back({info->surface, score});
             } else if (w == typed_lower) {
                 // Exact word match
                 float score = log_freq + 1.0f;
-                scored.push_back({it->second.surface, score});
+                scored.push_back({info->surface, score});
             } else {
                 // Spatial edit distance for typos
                 float cost = EditAndSpatialCost(typed_lower, w);
@@ -399,7 +444,7 @@ public:
                 float max_cost = (n >= 7) ? 3.6f : 3.0f;
                 if (norm_cost <= 0.38f && cost <= max_cost) {
                     float score = log_freq - 2.8f * cost;
-                    scored.push_back({it->second.surface, score});
+                    scored.push_back({info->surface, score});
                 }
             }
         }
@@ -534,9 +579,12 @@ private:
             return;
         }
 
-        word_to_count_.clear();
-        deletes_dict_.clear();
-        prefix_dict_.clear();
+        base_word_to_count_.clear();
+        base_deletes_dict_.clear();
+        base_prefix_dict_.clear();
+        base_word_to_count_.reserve(35000);
+        base_deletes_dict_.reserve(450000);
+        base_prefix_dict_.reserve(120000);
 
         std::string line;
         int rank = 0;
@@ -551,18 +599,17 @@ private:
             std::transform(w_lower.begin(), w_lower.end(), w_lower.begin(), ::tolower);
 
             int count = static_cast<int>(10000000.0 / (rank + 1));
-            if (word_to_count_.find(w_lower) == word_to_count_.end()) {
-                word_to_count_[w_lower] = WordInfo{word, count};
+            if (base_word_to_count_.find(w_lower) == base_word_to_count_.end()) {
+                base_word_to_count_.emplace(w_lower, WordInfo{std::move(word), count});
                 auto dels = GetDeletes(w_lower, 2);
-                for (const auto& d : dels) {
-                    deletes_dict_[d].push_back(w_lower);
+                for (auto& d : dels) {
+                    base_deletes_dict_[std::move(d)].push_back(w_lower);
                 }
 
-                // Register in prefix_dict_ (length 2 to min(L, 10))
+                // Register in base_prefix_dict_ (length 2 to min(L, 10))
                 int L = static_cast<int>(w_lower.length());
                 for (int p_len = 2; p_len <= std::min(L, 10); ++p_len) {
-                    std::string p = w_lower.substr(0, p_len);
-                    auto& p_list = prefix_dict_[p];
+                    auto& p_list = base_prefix_dict_[w_lower.substr(0, p_len)];
                     if (p_list.size() < 12) {
                         p_list.push_back(w_lower);
                     }
@@ -570,11 +617,8 @@ private:
             }
             rank++;
         }
-        base_word_to_count_ = word_to_count_;
-        base_deletes_dict_ = deletes_dict_;
-        base_prefix_dict_ = prefix_dict_;
-        LOGI("Loaded %zu words, %zu delete index entries, %zu prefix entries.",
-             word_to_count_.size(), deletes_dict_.size(), prefix_dict_.size());
+        LOGI("Loaded %zu base words, %zu delete index entries, %zu prefix entries (zero-copy).",
+             base_word_to_count_.size(), base_deletes_dict_.size(), base_prefix_dict_.size());
     }
 
     std::vector<std::string> GetDeletes(const std::string& word, int max_edit_distance) {

@@ -41,6 +41,7 @@ class EnglishSpellEngine private constructor(private val context: Context) {
     /**
      * Initializes the native English spell engine if models exist in external files dir.
      */
+    @Synchronized
     fun ensureInitialized(): Boolean {
         if (isInitialized && nativeIsReady()) return true
 

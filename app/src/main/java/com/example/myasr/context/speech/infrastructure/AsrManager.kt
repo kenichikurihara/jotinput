@@ -220,8 +220,30 @@ class AsrManager(private val context: Context) {
         }
     }
 
+    @Volatile
+    private var lastJapaneseHotwordsHash: Int? = null
+
+    fun isInitialized(language: AsrLanguage = AsrLanguage.JAPANESE): Boolean {
+        return when (language) {
+            AsrLanguage.JAPANESE -> japaneseRecognizer != null
+            AsrLanguage.ENGLISH -> englishRecognizer != null
+        }
+    }
+
     @Synchronized
     fun reload(hotwordsFile: File? = null, language: AsrLanguage = AsrLanguage.JAPANESE): Boolean {
+        if (language == AsrLanguage.JAPANESE && japaneseRecognizer != null) {
+            val newHash = try {
+                if (hotwordsFile != null && hotwordsFile.exists()) hotwordsFile.readText(Charsets.UTF_8).hashCode() else 0
+            } catch (_: Exception) {
+                null
+            }
+            if (newHash != null && newHash == lastJapaneseHotwordsHash) {
+                Log.d(TAG, "Skipping redundant Japanese ASR reload (hotwords unchanged).")
+                return true
+            }
+            lastJapaneseHotwordsHash = newHash
+        }
         release(language)
         return initialize(hotwordsFile, language)
     }

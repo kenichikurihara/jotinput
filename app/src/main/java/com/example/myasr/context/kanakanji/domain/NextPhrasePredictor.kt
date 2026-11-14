@@ -113,9 +113,28 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
     private val bigramHistory = LinkedHashMap<String, LinkedHashMap<String, Int>>(256, 0.75f, true)
     private val bigramLastUsed = LinkedHashMap<String, LinkedHashMap<String, Long>>(256, 0.75f, true)
     private var totalBigramPairs = 0
+    private val historyLoadLock = Any()
+
+    @Volatile
+    private var isHistoryLoaded = false
 
     init {
-        loadHistory()
+        if (cacheFile != null) {
+            scope.launch {
+                ensureHistoryLoaded()
+            }
+        } else {
+            isHistoryLoaded = true
+        }
+    }
+
+    fun ensureHistoryLoaded() {
+        if (isHistoryLoaded) return
+        synchronized(historyLoadLock) {
+            if (isHistoryLoaded) return
+            loadHistory()
+            isHistoryLoaded = true
+        }
     }
 
     /**
@@ -124,6 +143,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
      */
     @Synchronized
     fun recordTransition(prevPhrase: String, currentPhrase: String) {
+        ensureHistoryLoaded()
         val prev = prevPhrase.trim()
         val curr = currentPhrase.trim()
         if (prev.isEmpty() || curr.isEmpty() || prev == curr) return
@@ -206,6 +226,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
 
         // 1. User Bigram History Cache (Highest Priority)
         if (cleanLast.isNotEmpty()) {
+            ensureHistoryLoaded()
             val userNextMap = bigramHistory[cleanLast]
             if (userNextMap != null) {
                 val tsMap = bigramLastUsed[cleanLast]
@@ -348,6 +369,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
 
     @Synchronized
     fun clearHistory() {
+        ensureHistoryLoaded()
         bigramHistory.clear()
         totalBigramPairs = 0
         scheduleSaveHistory(immediate = true)
@@ -358,6 +380,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
      */
     @Synchronized
     fun getHistorySnapshot(): Map<String, Map<String, Int>> {
+        ensureHistoryLoaded()
         val copy = LinkedHashMap<String, Map<String, Int>>(bigramHistory.size)
         for ((k, v) in bigramHistory) {
             copy[k] = LinkedHashMap(v)
@@ -369,13 +392,19 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
      * Total number of unique bigram pairs currently held in memory.
      */
     @Synchronized
-    fun getTotalBigramPairs(): Int = totalBigramPairs
+    fun getTotalBigramPairs(): Int {
+        ensureHistoryLoaded()
+        return totalBigramPairs
+    }
 
     /**
      * Number of unique previous phrase keys in memory.
      */
     @Synchronized
-    fun getPrefixKeyCount(): Int = bigramHistory.size
+    fun getPrefixKeyCount(): Int {
+        ensureHistoryLoaded()
+        return bigramHistory.size
+    }
 
     /**
      * Safely merges remote bigram history entries using idempotent 3-Way Delta Merge:
@@ -388,6 +417,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         baseBigram: Map<String, Map<String, Int>>
     ) {
         if (remoteBigram.isEmpty() && baseBigram.isEmpty()) return
+        ensureHistoryLoaded()
 
         val allPrevKeys = LinkedHashSet<String>()
         allPrevKeys.addAll(bigramHistory.keys)

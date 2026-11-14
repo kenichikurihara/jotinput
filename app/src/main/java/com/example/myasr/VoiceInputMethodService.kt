@@ -818,12 +818,12 @@ class VoiceInputMethodService : InputMethodService() {
                 clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 audioRecorder.notifyUserTyping(500L)
                 val engine = FutoSwipeEngine.getInstance(this@VoiceInputMethodService)
-                if (!engine.isReady()) {
-                    engine.ensureInitialized()
-                }
-                if (!engine.isReady()) return
 
                 serviceScope.launch(Dispatchers.Default) {
+                    if (!engine.isReady()) {
+                        engine.ensureInitialized()
+                    }
+                    if (!engine.isReady()) return@launch
                     val textBeforeCursor = withContext(Dispatchers.Main) {
                         currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
                     }
@@ -1284,11 +1284,11 @@ class VoiceInputMethodService : InputMethodService() {
         }
 
         val spellEngine = EnglishSpellEngine.getInstance(this)
-        if (!spellEngine.isReady()) {
-            spellEngine.ensureInitialized()
-        }
 
         englishCandidateJob = serviceScope.launch(Dispatchers.Default) {
+            if (!spellEngine.isReady()) {
+                spellEngine.ensureInitialized()
+            }
             val app = AsrApp.instanceOrNull
             val activeEntries = app?.dictionaryRepository?.getActive() ?: emptyList()
             val userCandidates = EnglishDictionaryUtils.suggestFromUserDictionary(rawWord, activeEntries, maxCandidates = 4)
@@ -1451,14 +1451,6 @@ class VoiceInputMethodService : InputMethodService() {
 
     private fun triggerEnglishSentenceContextCorrection() {
         val spellEngine = EnglishSpellEngine.getInstance(this)
-        if (!spellEngine.isReady()) {
-            spellEngine.ensureInitialized()
-        }
-        if (!spellEngine.isReady()) {
-            candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
-            return
-        }
-
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
         val gecDecision = EnglishAssistJudgement.judgeGecClause(textBeforeCursor)
         if (!gecDecision.shouldCorrect) {
@@ -1468,6 +1460,15 @@ class VoiceInputMethodService : InputMethodService() {
         val clause = gecDecision.clause
 
         serviceScope.launch(Dispatchers.Default) {
+            if (!spellEngine.isReady()) {
+                spellEngine.ensureInitialized()
+            }
+            if (!spellEngine.isReady()) {
+                withContext(Dispatchers.Main) {
+                    candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                }
+                return@launch
+            }
             val corrected = spellEngine.correctSentence(clause, "en")
             if (corrected.isNotBlank() && corrected != clause) {
                 val cand = listOf(

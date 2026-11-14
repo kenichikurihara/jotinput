@@ -117,26 +117,43 @@ class AsrApp : Application() {
         return asrManager.initialize(hotwordsFile, language)
     }
 
-    fun syncAllUserDictionaries() {
+    @Volatile
+    private var lastSyncedDictionarySignature: Int? = null
+
+    fun syncAllUserDictionaries(force: Boolean = false) {
         val activeEntries = dictionaryRepository.getActive()
+        val signature = activeEntries.map { Triple(it.word, it.reading, it.priority.score) }.hashCode()
+        if (!force && signature == lastSyncedDictionarySignature) {
+            return
+        }
+        lastSyncedDictionarySignature = signature
+
         val hotwordsFile = hotwordsGenerator.generate(activeEntries)
         val publishedItems = activeEntries.map { VocabularyMapper.toPublishedItem(it) }
         eventBus.publish(UserDictionaryChangedEvent(publishedItems))
         try {
-            FutoSwipeEngine.getInstance(this).syncUserDictionary(activeEntries)
+            val swipeEngine = FutoSwipeEngine.getInstance(this)
+            if (swipeEngine.isReady()) {
+                swipeEngine.syncUserDictionary(activeEntries)
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Sync to FutoSwipeEngine skipped: ${e.message}")
         }
         try {
-            EnglishSpellEngine.getInstance(this).syncUserDictionary(activeEntries)
+            val spellEngine = EnglishSpellEngine.getInstance(this)
+            if (spellEngine.isReady()) {
+                spellEngine.syncUserDictionary(activeEntries)
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Sync to EnglishSpellEngine skipped: ${e.message}")
         }
-        CoroutineScope(Dispatchers.Default).launch {
-            try {
-                asrManager.reload(hotwordsFile)
-            } catch (e: Exception) {
-                Log.w(TAG, "Reload ASR hotwords skipped: ${e.message}")
+        if (asrManager.isInitialized(com.example.myasr.context.speech.domain.AsrLanguage.JAPANESE)) {
+            CoroutineScope(Dispatchers.Default).launch {
+                try {
+                    asrManager.reload(hotwordsFile)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Reload ASR hotwords skipped: ${e.message}")
+                }
             }
         }
     }

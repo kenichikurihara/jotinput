@@ -327,6 +327,7 @@ public:
 
             // Load vocabulary & build Trie
             trie_nodes_.clear();
+            trie_nodes_.reserve(120000);
             trie_nodes_.emplace_back("", -1); // Root at index 0
 
             std::ifstream vf(vocab_path);
@@ -336,8 +337,11 @@ public:
             }
 
             vocabulary_.clear();
+            vocabulary_.reserve(35000);
             exact_ids_.clear();
+            exact_ids_.reserve(35000);
             lowercase_ids_.clear();
+            lowercase_ids_.reserve(35000);
 
             std::string line;
             int vocab_idx = 0;
@@ -397,6 +401,9 @@ public:
     void SyncUserDictionary(const std::vector<UserSwipeWord>& user_words) {
         std::lock_guard<std::mutex> lock(mutex_);
         if (base_trie_nodes_.empty()) return;
+        if (user_words.empty() && user_word_priorities_.empty()) {
+            return;
+        }
         trie_nodes_ = base_trie_nodes_;
         user_word_priorities_.clear();
 

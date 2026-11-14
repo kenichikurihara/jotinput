@@ -46,6 +46,7 @@ class FutoSwipeEngine private constructor(private val context: Context) {
     /**
      * Initializes the native FUTO Swipe engine if models exist in external files dir.
      */
+    @Synchronized
     fun ensureInitialized(): Boolean {
         if (isInitialized && nativeIsReady()) return true
 
