@@ -486,7 +486,7 @@ class FutoSwipeIntegrationTest {
         assertTrue("Idea 3: Start/end radial anchor distance d0_sq / d1_sq must be implemented", cppSrc.contains("d0_sq") && cppSrc.contains("d1_sq"))
         assertTrue("Idea 4: Confidence-gated ContextLM best_common_tot must be implemented", cppSrc.contains("best_common_tot"))
         assertTrue("Idea 4: Shared-node apostrophe disambiguation must be implemented", cppSrc.contains("has_plain_surface"))
-        assertTrue("Idea 5: Stationary pause clamping and smoothing must be implemented", cppSrc.contains("kMaxPauseMs") && cppSrc.contains("kSmoothAlpha"))
+        assertTrue("Idea 5: Stationary pause clamping and smoothing must be implemented", cppSrc.contains("kMaxStationaryDtMs") && cppSrc.contains("kSmoothAlpha"))
 
         // 3. Verify 1,000-sample benchmark results JSON meets Tier 1 quality bar
         val evalJsonFile = java.io.File(repoRoot, "eval/futo_swipe/swipe_eval_results_1000.json")
