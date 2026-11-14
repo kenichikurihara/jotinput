@@ -332,6 +332,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 64. [音声入力結果の修正検知・学習およびスコアブースト設計・評価仕様書 (Voice Correction Detection, Personalization & Score Boosting Design and Evaluation)](docs/voice_correction_learning_design_and_evaluation.md)
     - 日本語（ReazonSpeech Transducer）および英語（Parakeet TDT-CTC 110M）の音声入力結果に対するユーザーの修正検知5案（操作トレース、Myers Diff スナップショット差分、音韻・G2P妥当性ゲート、形態素・単語境界拡張、ストリーミング介入フック）、スコア引き上げ5案（動的Hotwords昇格、誤認識ペア×文脈BM25リスコア、SLM文脈コヒーレンス・ゲート融合、英語Truecase/Spell横断適応、3段階昇格＋逆修正自己修復）、DDD/DMN/Alloy形式設計、および3層評価ベンチマーク仕様。
 
+65. [デバッグ報告書：「デザインドキュメントを描いて」→「書いて」の修正が次回音声入力に反映されない原因分析](docs/debug_voice_correction_kaite_root_cause.md)
+    - 音声修正学習が「描いて」→「書いて」で機能しない5つの根本原因（RC-1: ストリーミング経路で `VoiceCorrectionScoring` 未呼出、RC-2: `readingResolver == null` による `fallbackJapaneseSurfaceDistance("描","書") == 1.0f` 棄却、RC-3: ストリーミング凍結による `VoiceCommitAnchor` 分断、RC-4: 送り仮名を含まない1文字スパン抽出、RC-5: 同音動詞の SLM ゲート未保護）のトレースと修正方針。
+
 ---
 
 ## 📂 Source Code Layout
