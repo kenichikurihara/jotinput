@@ -329,6 +329,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 63. [英語 QWERTY Truecasing & 大文字化候補 PRD・CUJ・アルゴリズミック設計・定量評価レポート](docs/prd_and_system_design_qwerty_capitalization_and_spell_candidates.md)
     - 静的ヒューリスティックを排したコーパス由来 $P_{\text{lex}}(s \mid w)$、OOV アクロニム検出用 2-state 文字バイグラム言語モデル、Punkt 型確率的文境界検出器（`SentenceBoundaryDetector`）、およびベイズ混合ケースランキング（`BayesianCaseRanker`）によるタップ・タイポ・FUTO Swipe 統合設計、CUJ-1〜7、および 60 ケース定量評価結果（Top-1 93.3%, Top-3 98.3%, 平均 0.108 ms）。
 
+64. [音声入力結果の修正検知・学習およびスコアブースト設計・評価仕様書 (Voice Correction Detection, Personalization & Score Boosting Design and Evaluation)](docs/voice_correction_learning_design_and_evaluation.md)
+    - 日本語（ReazonSpeech Transducer）および英語（Parakeet TDT-CTC 110M）の音声入力結果に対するユーザーの修正検知5案（操作トレース、Myers Diff スナップショット差分、音韻・G2P妥当性ゲート、形態素・単語境界拡張、ストリーミング介入フック）、スコア引き上げ5案（動的Hotwords昇格、誤認識ペア×文脈BM25リスコア、SLM文脈コヒーレンス・ゲート融合、英語Truecase/Spell横断適応、3段階昇格＋逆修正自己修復）、DDD/DMN/Alloy形式設計、および3層評価ベンチマーク仕様。
+
 ---
 
 ## 📂 Source Code Layout
