@@ -108,14 +108,12 @@ def main():
                 if 2 <= len(tok) <= 6:
                     acro_types[low] += 1
 
-            # Apostrophe-omitted contraction mapping (e.g. I'm -> im, I've -> ive)
+            # Apostrophe-omitted contraction mapping (e.g. I'm -> im, let's -> lets, don't -> dont)
             if "'" in tok:
                 stripped = tok.replace("'", "")
                 stripped_low = stripped.lower()
                 if stripped_low and tok != stripped_low and ALPHA_ONLY_RE.match(stripped_low):
-                    # Only map if the token has uppercase (e.g. I'm, I've, I'll, I'd, O'Brien)
-                    if any(c.isupper() for c in tok):
-                        case_counts[stripped_low][tok] += 1
+                    case_counts[stripped_low][tok] += 1
 
     # Merge FUTO Swipe vocab.txt (32,768 words ranked by Zipf frequency)
     # Note: Do NOT add vocab.txt entries to lower_vocab_counts, because vocab.txt
@@ -130,10 +128,10 @@ def main():
                 low = w.lower()
                 if w[0].isupper() or "'" in w:
                     case_counts[low][w] += pseudo_count
-                if "'" in w and any(c.isupper() for c in w):
+                if "'" in w:
                     stripped_low = w.replace("'", "").lower()
                     if stripped_low and ALPHA_ONLY_RE.match(stripped_low):
-                        case_counts[stripped_low][w] += pseudo_count
+                        case_counts[stripped_low][w] += min(pseudo_count, 5)
 
     # 1. Write english_case_lexicon.tsv
     lexicon_path = os.path.join(OUT_DIR, "english_case_lexicon.tsv")

@@ -285,4 +285,54 @@ class EnglishTruecasingEvaluationTest {
         assertTrue("Expected Top-3 recall >= 98%, got ${top3Recall * 100}%", top3Recall >= 0.98)
         assertTrue("Expected avg latency < 1.0ms, got ${avgMs}ms", avgMs < 1.0)
     }
+
+    @Test
+    fun `sentence-start pronoun i and apostrophe contractions like lets rank I and Let's at top`() {
+        // 1. Sentence-start 'i' (including after Japanese punctuation '。')
+        for (ctx in listOf("i", "Hello. i", "\ni", "こんにちは。i")) {
+            val res = EnglishCapitalizationAnalyzer.analyze("i", ctx, isShiftActive = false)
+            assertEquals("Expected 'I' as primaryCandidate for ctx='$ctx'", "I", res.primaryCandidate)
+        }
+
+        // 2. Sentence-start 'lets' -> "Let's" Rank 1, "Lets" and "lets" also present
+        val letsBos = BayesianCaseRanker.generateCaseVariants(
+            baseWord = "lets",
+            bosProb = SentenceBoundaryDetector.computeBosProbability("lets", "lets"),
+            policy = InputFieldCapPolicy.STANDARD,
+            source = "raw",
+            isRawWord = true
+        ).map { it.surface }
+        assertEquals("Expected \"Let's\" at Rank 1 for sentence-start 'lets', got $letsBos", "Let's", letsBos.first())
+        assertTrue("Expected \"Lets\" in $letsBos", "Lets" in letsBos)
+        assertTrue("Expected \"lets\" in $letsBos", "lets" in letsBos)
+
+        // 3. Mid-sentence contractions: "lets" -> "let's", "dont" -> "don't", "cant" -> "can't"
+        val letsMid = BayesianCaseRanker.generateCaseVariants(
+            baseWord = "lets",
+            bosProb = SentenceBoundaryDetector.computeBosProbability("lets", "he lets"),
+            policy = InputFieldCapPolicy.STANDARD,
+            source = "raw",
+            isRawWord = true
+        ).map { it.surface }
+        assertEquals("let's", letsMid.first())
+        assertTrue("lets" in letsMid)
+
+        val dontBos = BayesianCaseRanker.generateCaseVariants(
+            baseWord = "dont",
+            bosProb = 1.0f,
+            policy = InputFieldCapPolicy.STANDARD,
+            source = "raw",
+            isRawWord = true
+        ).map { it.surface }
+        assertEquals("Don't", dontBos.first())
+
+        val cantBos = BayesianCaseRanker.generateCaseVariants(
+            baseWord = "cant",
+            bosProb = 1.0f,
+            policy = InputFieldCapPolicy.STANDARD,
+            source = "raw",
+            isRawWord = true
+        ).map { it.surface }
+        assertEquals("Can't", cantBos.first())
+    }
 }

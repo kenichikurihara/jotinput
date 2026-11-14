@@ -201,6 +201,7 @@ object EnglishCapitalizationAnalyzer {
             BayesianCaseRanker.CaseShape.SPECIAL -> {
                 if (bosProb >= 0.5f) CapitalizationType.SENTENCE_START else CapitalizationType.PROPER_NOUN
             }
+            BayesianCaseRanker.CaseShape.SPECIAL_LOWER,
             BayesianCaseRanker.CaseShape.LOWER -> CapitalizationType.NONE
         }
     }

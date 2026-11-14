@@ -77,6 +77,7 @@ class VoiceInputMethodService : InputMethodService() {
     private var currentState = State.IDLE
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var rerankJob: Job? = null
+    private var englishCandidateJob: Job? = null
     private var isCurrentCandidatesReranked: Boolean = false
     private val audioRecorder = AudioRecorder()
     private val asrDecodingMutex = Mutex()
@@ -602,7 +603,7 @@ class VoiceInputMethodService : InputMethodService() {
 
                     // In QWERTY (ALPHABET) mode, trigger English Spelling Correction & Typo Suggestions
                     if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
-                        updateEnglishTypoAndSpellingCandidates()
+                        updateEnglishTypoAndSpellingCandidates(justTypedChar = text)
                     } else {
                         candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                     }
@@ -650,10 +651,20 @@ class VoiceInputMethodService : InputMethodService() {
                             candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                         }
                     }
-                    VoiceTouchInputArbitrator.DeleteOutcome.DELETED_FROM_KEYBOARD_COMPOSING_NOW_EMPTY,
-                    VoiceTouchInputArbitrator.DeleteOutcome.DELETED_ENTIRE_SWIPE_WORD,
                     VoiceTouchInputArbitrator.DeleteOutcome.DELETED_SURROUNDING_TEXT -> {
                         rerankJob?.cancel()
+                        englishCandidateJob?.cancel()
+                        isCurrentCandidatesReranked = false
+                        if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
+                            updateEnglishTypoAndSpellingCandidates()
+                        } else {
+                            candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                        }
+                    }
+                    VoiceTouchInputArbitrator.DeleteOutcome.DELETED_FROM_KEYBOARD_COMPOSING_NOW_EMPTY,
+                    VoiceTouchInputArbitrator.DeleteOutcome.DELETED_ENTIRE_SWIPE_WORD -> {
+                        rerankJob?.cancel()
+                        englishCandidateJob?.cancel()
                         isCurrentCandidatesReranked = false
                         candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                     }
@@ -1225,8 +1236,20 @@ class VoiceInputMethodService : InputMethodService() {
         }
     }
 
-    private fun updateEnglishTypoAndSpellingCandidates() {
-        val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+    private fun updateEnglishTypoAndSpellingCandidates(justTypedChar: String? = null) {
+        englishCandidateJob?.cancel()
+        val rawTextBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+        // Guard against async InputConnection commitText lag on the first letter of a word (e.g. sentence-start "i")
+        val textBeforeCursor = if (
+            justTypedChar != null &&
+            justTypedChar.length == 1 &&
+            justTypedChar[0].isLetter() &&
+            (rawTextBeforeCursor.isEmpty() || !rawTextBeforeCursor.last().isLetter())
+        ) {
+            rawTextBeforeCursor + justTypedChar
+        } else {
+            rawTextBeforeCursor
+        }
         val extracted = EnglishAssistJudgement.extractTrailingWord(textBeforeCursor)
         val rawWord = extracted.rawWord
 
@@ -1247,7 +1270,7 @@ class VoiceInputMethodService : InputMethodService() {
         // For very short words (length < 2), only show candidates if capitalization or acronym applies (e.g. "i" -> "I")
         val wordEligibility = EnglishAssistJudgement.judgeWordCandidateEligibility(
             rawWord = rawWord,
-            hasPrimaryCapitalizationCandidate = capResult.primaryCandidate != null
+            hasPrimaryCapitalizationCandidate = capResult.primaryCandidate != null || capResult.additionalCandidates.isNotEmpty()
         )
         if (!wordEligibility.decision) {
             updateDebugSlmBadge(null)
@@ -1260,7 +1283,7 @@ class VoiceInputMethodService : InputMethodService() {
             spellEngine.ensureInitialized()
         }
 
-        serviceScope.launch(Dispatchers.Default) {
+        englishCandidateJob = serviceScope.launch(Dispatchers.Default) {
             val app = AsrApp.instanceOrNull
             val activeEntries = app?.dictionaryRepository?.getActive() ?: emptyList()
             val userCandidates = EnglishDictionaryUtils.suggestFromUserDictionary(rawWord, activeEntries, maxCandidates = 4)

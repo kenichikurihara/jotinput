@@ -87,7 +87,9 @@ $$\text{LLR}(w) = \frac{1}{|B(w)|} \sum_{(a,b) \in B(w)} \left(\log P_{\text{acr
 $$P_{\text{case}}(s \mid w, \text{ctx}) = P_{\text{BOS}}(\text{ctx}) \cdot P_{\text{BOS\text{-}shape}}(s \mid w) + (1 - P_{\text{BOS}}(\text{ctx})) \cdot P_{\text{lex}}(s \mid w)$$
 さらに観測/空間編集ペナルティ $d_{\text{obs}}(x, w)$ とコーパス対数頻度 $\log f(w)$ をエネルギー関数として統合する:
 $$E(s, w \mid x, \text{ctx}) = -\ln P_{\text{case}}(s \mid w, \text{ctx}) + \lambda_{\text{obs}} d_{\text{obs}}(x, w) - \lambda_{\text{freq}} \log f(w)$$
-生成された候補は [`toConversionCandidates`](file:///home/<user>/kenichikurihara/jotinput/app/src/main/java/com/example/myasr/context/english/domain/BayesianCaseRanker.kt#L194-L217) および [`VoiceInputMethodService.kt`](file:///home/<user>/kenichikurihara/jotinput/app/src/main/java/com/example/myasr/VoiceInputMethodService.kt) において **正確表層（Exact Surface）** で重複排除される。これにより `"US"` と `"us"`、`"May"` と `"may"` が互いに潰し合うバグを解消した。
+- **一般短縮形の文頭大文字化**: コーパス上の全アポストロフィ短縮形（`let's`, `don't`, `can't`, `it's`, `that's` 等）をアライメントし、文頭（$P_{\text{BOS}} \ge 0.5$）では小文字始まり短縮形（`SPECIAL_LOWER`）の確率質量を先頭大文字形（`Let's`, `Don't`, `Can't`）へ自然に集約する。
+- **正確表層重複排除**: 生成された候補は [`toConversionCandidates`](file:///home/<user>/kenichikurihara/jotinput/app/src/main/java/com/example/myasr/context/english/domain/BayesianCaseRanker.kt#L194-L217) および [`VoiceInputMethodService.kt`](file:///home/<user>/kenichikurihara/jotinput/app/src/main/java/com/example/myasr/VoiceInputMethodService.kt) において **正確表層（Exact Surface）** で重複排除され、`"US"`/`"us"` や `"Let's"`/`"Lets"` が共存する。
+- **非同期 `InputConnection` 遅延ガード & バックスペース更新**: 初回文字入力直後（例: 文頭 `"i"`）の `getTextBeforeCursor` 遅延対策およびバックスペース削除後の候補再評価・ジョブキャンセル（`englishCandidateJob`）を実装している。
 
 ---
 

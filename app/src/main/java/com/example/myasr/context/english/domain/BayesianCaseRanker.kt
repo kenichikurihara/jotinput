@@ -23,7 +23,8 @@ object BayesianCaseRanker {
         LOWER,
         TITLE,
         UPPER,
-        SPECIAL // e.g., I'm, iOS, iPhone, YouTube
+        SPECIAL,       // e.g., I'm, Let's, iOS, iPhone, YouTube
+        SPECIAL_LOWER  // e.g., let's, don't, can't, it's (lowercase-initial contraction)
     }
 
     data class RankedCaseCandidate(
@@ -44,7 +45,13 @@ object BayesianCaseRanker {
     fun classifyShape(surface: String): CaseShape {
         val letters = surface.filter { it.isLetter() }
         if (letters.isEmpty()) return CaseShape.LOWER
-        if (surface.contains('\'')) return CaseShape.SPECIAL
+        if (surface.contains('\'')) {
+            return if (letters[0].isLowerCase() && letters.all { it.isLowerCase() }) {
+                CaseShape.SPECIAL_LOWER
+            } else {
+                CaseShape.SPECIAL
+            }
+        }
         if (letters.all { it.isLowerCase() }) return CaseShape.LOWER
         if (letters.length >= 2 && letters.all { it.isUpperCase() }) return CaseShape.UPPER
         if (letters[0].isUpperCase() && letters.drop(1).all { it.isLowerCase() }) return CaseShape.TITLE
@@ -100,15 +107,29 @@ object BayesianCaseRanker {
             }
         }
 
-        // Ensure TitleCase and UPPERCASE candidates are available when policy or BOS requires them
+        // Ensure TitleCase, capitalized contractions, and UPPERCASE candidates are available when policy or BOS requires them
         val titleSurface = lower.replaceFirstChar { it.uppercase() }
         val upperSurface = lower.uppercase()
 
         if (bosProb >= 0.5f || policy == InputFieldCapPolicy.CAP_WORDS) {
+            // Collapse lowercase-initial contraction mass (e.g., "let's" + "Let's") onto its BOS-capitalized form
+            val lowerContractions = variantPriors.entries
+                .filter { classifyShape(it.key) == CaseShape.SPECIAL_LOWER }
+                .map { it.key to it.value }
+            for ((lowContr, lowProb) in lowerContractions) {
+                val capContr = lowContr.replaceFirstChar { it.uppercase() }
+                variantPriors[capContr] = maxOf(variantPriors[capContr] ?: 0.0f, (variantPriors[capContr] ?: 0.0f) + lowProb)
+            }
             if (!variantPriors.containsKey(titleSurface)) {
-                // If an acronym already dominates UPPER, keep TitleCase low; otherwise give strong BOS prior
                 val upperPrior = variantPriors[upperSurface] ?: 0.0f
-                variantPriors[titleSurface] = if (upperPrior >= 0.70f) 0.08f else 0.85f
+                val contractionPrior = variantPriors.entries
+                    .filter { classifyShape(it.key) == CaseShape.SPECIAL }
+                    .maxOfOrNull { it.value } ?: 0.0f
+                variantPriors[titleSurface] = when {
+                    upperPrior >= 0.70f -> 0.08f
+                    contractionPrior >= 0.40f -> 0.15f
+                    else -> 0.85f
+                }
             }
         }
         if (policy == InputFieldCapPolicy.CAP_CHARACTERS && lower.length >= 2) {
@@ -128,13 +149,16 @@ object BayesianCaseRanker {
         val strongUpperPrior = variantPriors.entries
             .filter { classifyShape(it.key) == CaseShape.UPPER }
             .maxOfOrNull { it.value } ?: 0.0f
+        val strongSpecialPrior = variantPriors.entries
+            .filter { classifyShape(it.key) == CaseShape.SPECIAL }
+            .maxOfOrNull { it.value } ?: 0.0f
 
         val rawScores = ArrayList<Pair<String, Float>>(variantPriors.size)
         var sumProb = 0.0f
 
         for ((surf, pLex) in variantPriors) {
             val shape = classifyShape(surf)
-            val pAtBos = bosShapeProb(shape, pLex, strongUpperPrior, policy)
+            val pAtBos = bosShapeProb(shape, pLex, strongUpperPrior, strongSpecialPrior, policy)
             val pNotBos = notBosPrior(shape, pLex, policy)
             val pCase = effectiveBos * pAtBos + (1.0f - effectiveBos) * pNotBos
             if (pCase > 0.0f) {
@@ -220,6 +244,7 @@ object BayesianCaseRanker {
         shape: CaseShape,
         pLex: Float,
         strongUpperPrior: Float,
+        strongSpecialPrior: Float,
         policy: InputFieldCapPolicy
     ): Float {
         if (policy == InputFieldCapPolicy.CAP_CHARACTERS) {
@@ -227,8 +252,13 @@ object BayesianCaseRanker {
         }
         return when (shape) {
             CaseShape.UPPER -> if (strongUpperPrior >= 0.40f) pLex else 0.02f
-            CaseShape.SPECIAL -> pLex.coerceAtLeast(0.50f)
-            CaseShape.TITLE -> if (strongUpperPrior >= 0.40f) 0.08f else 0.92f
+            CaseShape.SPECIAL -> if (strongSpecialPrior >= 0.40f) pLex else pLex.coerceAtLeast(0.50f)
+            CaseShape.TITLE -> when {
+                strongUpperPrior >= 0.40f -> 0.08f
+                strongSpecialPrior >= 0.40f -> pLex.coerceAtMost(0.45f)
+                else -> 0.92f
+            }
+            CaseShape.SPECIAL_LOWER,
             CaseShape.LOWER -> 0.02f
         }
     }
