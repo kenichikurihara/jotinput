@@ -4,9 +4,12 @@ import com.example.myasr.context.clipboard.domain.ClipboardSuggestionPolicy
 import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryItem
 import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryRepository
 import com.example.myasr.context.clipboard.presentation.ClipboardHistoryView
+import com.example.myasr.context.english.domain.BayesianCaseRanker
 import com.example.myasr.context.english.domain.EnglishAssistJudgement
 import com.example.myasr.context.english.domain.EnglishCapitalizationAnalyzer
 import com.example.myasr.context.english.domain.EnglishDictionaryUtils
+import com.example.myasr.context.english.domain.InputFieldCapPolicy
+import com.example.myasr.context.english.domain.SentenceBoundaryDetector
 import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
 import com.example.myasr.context.english.infrastructure.FutoSwipeEngine
 import com.example.myasr.context.ime.domain.InputConnectionEditorBridge
@@ -816,7 +819,35 @@ class VoiceInputMethodService : InputMethodService() {
                     val prevTokens = textBeforeCursor.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
                     val candidates = engine.decode(trajectory, prevTokens, beamWidth = 100, maxCandidates = 5)
                     if (candidates.isNotEmpty()) {
-                        val top1 = candidates[0]
+                        val isShiftActive = withContext(Dispatchers.Main) {
+                            flickKeyboardView?.shiftState != FlickKeyboardView.ShiftState.OFF
+                        }
+                        val fieldPolicy = EnglishCapitalizationAnalyzer.resolveFieldPolicy(currentInputEditorInfo, textBeforeCursor)
+                        val bosProb = if (isShiftActive || fieldPolicy == InputFieldCapPolicy.BYPASS) {
+                            0.0f
+                        } else {
+                            SentenceBoundaryDetector.computeBosProbability("", textBeforeCursor, fieldPolicy)
+                        }
+                        val rankedSwipe = ArrayList<BayesianCaseRanker.RankedCaseCandidate>()
+                        for ((idx, cand) in candidates.withIndex()) {
+                            val swipeObsPenalty = idx * 0.08f
+                            rankedSwipe.addAll(
+                                BayesianCaseRanker.generateCaseVariants(
+                                    baseWord = cand,
+                                    bosProb = bosProb,
+                                    policy = fieldPolicy,
+                                    source = "futo_swipe",
+                                    obsPenalty = swipeObsPenalty,
+                                    isRawWord = (idx == 0)
+                                )
+                            )
+                        }
+                        val stripCandidates = BayesianCaseRanker.toConversionCandidates(
+                            ranked = rankedSwipe,
+                            reading = candidates[0],
+                            maxCandidates = 5
+                        )
+                        val top1 = stripCandidates.firstOrNull()?.surface ?: candidates[0]
                         withContext(Dispatchers.Main) {
                             arbitrator.onCommitSwipeWord(
                                 editor = editorBridge,
@@ -828,9 +859,6 @@ class VoiceInputMethodService : InputMethodService() {
                             )
                             syncKeyboardState()
 
-                            val stripCandidates = candidates.map {
-                                ConversionCandidate(surface = it, reading = it, isPrediction = false, source = "futo_swipe")
-                            }
                             updateDebugSlmBadge("FUTO")
                             candidateStripView?.setCandidates(stripCandidates)
                         }
@@ -1209,10 +1237,9 @@ class VoiceInputMethodService : InputMethodService() {
         }
 
         val isShiftActive = (flickKeyboardView?.shiftState != FlickKeyboardView.ShiftState.OFF)
-        val isBypassed = EnglishCapitalizationAnalyzer.shouldBypassCapitalization(currentInputEditorInfo, textBeforeCursor)
-
-        val capResult = if (!isBypassed) {
-            EnglishCapitalizationAnalyzer.analyze(rawWord, textBeforeCursor, isShiftActive)
+        val fieldPolicy = EnglishCapitalizationAnalyzer.resolveFieldPolicy(currentInputEditorInfo, textBeforeCursor)
+        val capResult = if (fieldPolicy != InputFieldCapPolicy.BYPASS) {
+            EnglishCapitalizationAnalyzer.analyze(rawWord, textBeforeCursor, isShiftActive, fieldPolicy)
         } else {
             EnglishCapitalizationAnalyzer.CapitalizationResult(EnglishCapitalizationAnalyzer.CapitalizationType.NONE, null)
         }
@@ -1244,8 +1271,14 @@ class VoiceInputMethodService : InputMethodService() {
                 emptyList()
             }
 
-            val isSentenceStart = (capResult.type == EnglishCapitalizationAnalyzer.CapitalizationType.SENTENCE_START)
+            val bosProb = if (isShiftActive || rawWord.first().isUpperCase() || fieldPolicy == InputFieldCapPolicy.BYPASS) {
+                0.0f
+            } else {
+                capResult.bosProbability
+            }
+            val isSentenceStart = bosProb >= 0.5f
             val candidateList = mutableListOf<ConversionCandidate>()
+            // Exact-surface deduplication preserves distinct case variants (e.g. "US" vs "us", "May" vs "may")
             val seenSurfaces = mutableSetOf<String>()
 
             // 1. User dictionary entries (exact case / normalized typo / prefix)
@@ -1256,7 +1289,7 @@ class VoiceInputMethodService : InputMethodService() {
                 } else {
                     surface
                 }
-                if (seenSurfaces.add(adapted.lowercase())) {
+                if (seenSurfaces.add(adapted)) {
                     candidateList.add(
                         ConversionCandidate(
                             surface = adapted,
@@ -1270,50 +1303,73 @@ class VoiceInputMethodService : InputMethodService() {
                 }
             }
 
-            // 2. Primary capitalization candidate (if any)
-            if (capResult.primaryCandidate != null && seenSurfaces.add(capResult.primaryCandidate.lowercase())) {
-                candidateList.add(
-                    ConversionCandidate(
-                        surface = capResult.primaryCandidate,
-                        reading = rawWord,
-                        isPrediction = false,
-                        source = "english_cap",
-                        obsPenalty = 0.0f
+            // 2. Bayesian truecasing variants for rawWord + typo/completion suggestions
+            val rankedPool = mutableListOf<BayesianCaseRanker.RankedCaseCandidate>()
+            if (!isShiftActive && !rawWord.first().isUpperCase() && fieldPolicy != InputFieldCapPolicy.BYPASS) {
+                rankedPool.addAll(
+                    BayesianCaseRanker.generateCaseVariants(
+                        baseWord = rawWord,
+                        bosProb = bosProb,
+                        policy = fieldPolicy,
+                        source = "raw",
+                        obsPenalty = 0.0f,
+                        isRawWord = true
                     )
                 )
             }
 
-            // 3. Typo & completion suggestions from EnglishSpellEngine
             for (sug in suggestions) {
-                val adapted = if (isSentenceStart || capResult.type == EnglishCapitalizationAnalyzer.CapitalizationType.PROPER_NOUN) {
-                    sug.replaceFirstChar { it.uppercase() }
+                val isPrefix = sug.lowercase().startsWith(rawWord.lowercase())
+                val isPrediction = isPrefix && sug.length > rawWord.length
+                val obsPenalty = if (isPrefix) {
+                    0.0f
                 } else {
-                    sug
+                    val cost = EnglishDictionaryUtils.editAndSpatialCost(rawWord.lowercase(), sug.lowercase())
+                    val maxLen = maxOf(rawWord.length, sug.length)
+                    if (maxLen > 0) cost / maxLen.toFloat() else 0.0f
                 }
-                if (seenSurfaces.add(adapted.lowercase())) {
-                    val isPrefix = sug.lowercase().startsWith(rawWord.lowercase())
-                    val isPrediction = isPrefix && sug.length > rawWord.length
-                    val obsPenalty = if (isPrefix) {
-                        0.0f
-                    } else {
-                        val cost = EnglishDictionaryUtils.editAndSpatialCost(rawWord.lowercase(), sug.lowercase())
-                        val maxLen = maxOf(rawWord.length, sug.length)
-                        if (maxLen > 0) cost / maxLen.toFloat() else 0.0f
-                    }
-                    candidateList.add(
-                        ConversionCandidate(
-                            surface = adapted,
-                            reading = rawWord,
-                            isPrediction = isPrediction,
+                if (!isShiftActive && !rawWord.first().isUpperCase() && fieldPolicy != InputFieldCapPolicy.BYPASS) {
+                    rankedPool.addAll(
+                        BayesianCaseRanker.generateCaseVariants(
+                            baseWord = sug,
+                            bosProb = bosProb,
+                            policy = fieldPolicy,
                             source = "english_typo",
-                            obsPenalty = obsPenalty
+                            obsPenalty = obsPenalty,
+                            isPrediction = isPrediction
+                        )
+                    )
+                } else {
+                    rankedPool.add(
+                        BayesianCaseRanker.RankedCaseCandidate(
+                            surface = sug,
+                            baseWord = sug,
+                            source = "english_typo",
+                            posteriorProb = 1.0f,
+                            energy = 5.0f * obsPenalty,
+                            obsPenalty = obsPenalty,
+                            isPrediction = isPrediction
                         )
                     )
                 }
             }
 
-            // 4. Raw typed word so user can always keep exact typing
-            if (seenSurfaces.add(rawWord.lowercase())) {
+            for (item in rankedPool.sortedBy { it.energy }) {
+                if (seenSurfaces.add(item.surface)) {
+                    candidateList.add(
+                        ConversionCandidate(
+                            surface = item.surface,
+                            reading = rawWord,
+                            isPrediction = item.isPrediction,
+                            source = item.source,
+                            obsPenalty = item.obsPenalty
+                        )
+                    )
+                }
+            }
+
+            // 3. Always ensure exact raw typed word is present as an escape hatch
+            if (seenSurfaces.add(rawWord)) {
                 candidateList.add(
                     ConversionCandidate(
                         surface = rawWord,
@@ -1323,21 +1379,6 @@ class VoiceInputMethodService : InputMethodService() {
                         obsPenalty = 0.0f
                     )
                 )
-            }
-
-            // 5. Additional capitalization candidates
-            for (extra in capResult.additionalCandidates) {
-                if (seenSurfaces.add(extra.lowercase())) {
-                    candidateList.add(
-                        ConversionCandidate(
-                            surface = extra,
-                            reading = rawWord,
-                            isPrediction = false,
-                            source = "english_cap",
-                            obsPenalty = 0.0f
-                        )
-                    )
-                }
             }
 
             // 6. Contextual Language Model Reranking (SLM)

@@ -3,9 +3,10 @@ package com.example.myasr.context.english.domain
 import android.view.inputmethod.EditorInfo
 
 /**
- * Intelligent analyzer for English QWERTY input to determine appropriate
- * capitalization (Sentence Start, Pronoun 'I' and its contractions, Acronyms, Title Case)
- * without disruptive auto-replace, providing candidates directly to CandidateStripView.
+ * Algorithmic analyzer for English QWERTY and Swipe input that determines
+ * truecasing and capitalization candidates (Sentence Start, Pronoun 'I' and
+ * contractions, Corpus Acronyms, OOV Acronyms, Proper Nouns, Mixed-Case brands)
+ * via [SentenceBoundaryDetector], [EnglishCaseModel], and [BayesianCaseRanker].
  */
 object EnglishCapitalizationAnalyzer {
 
@@ -20,42 +21,30 @@ object EnglishCapitalizationAnalyzer {
     data class CapitalizationResult(
         val type: CapitalizationType,
         val primaryCandidate: String?,
-        val additionalCandidates: List<String> = emptyList()
+        val additionalCandidates: List<String> = emptyList(),
+        val bosProbability: Float = 0.0f
     )
 
-    // Common acronyms where all-caps is the standard convention
-    private val ACRONYMS = hashSetOf(
-        "ai", "api", "app", "asap", "atm", "aws", "ceo", "cfo", "cio", "coo", "cpu", "cto",
-        "diy", "dna", "eta", "faq", "fyi", "fyi", "gdp", "gpu", "html", "http", "https",
-        "id", "ime", "io", "iot", "ip", "iso", "json", "led", "llm", "nasa", "nba", "nfl",
-        "npc", "ocr", "ok", "os", "pdf", "pin", "qa", "ram", "rgb", "sdk", "sim", "sms",
-        "sql", "ssl", "tcp", "tls", "tv", "ui", "uk", "uri", "url", "usa", "usb", "utc",
-        "uuid", "ux", "vip", "vpn", "wifi", "xml"
-    )
-
-    // Pronoun 'I' and common contractions without apostrophes
-    private val PRONOUN_CONTRACTIONS = mapOf(
-        "i" to "I",
-        "im" to "I'm",
-        "i'm" to "I'm",
-        "ive" to "I've",
-        "i've" to "I've",
-        "ill" to "I'll",
-        "i'll" to "I'll",
-        "id" to "I'd",
-        "i'd" to "I'd"
-    )
-
-    // Common proper nouns (days of the week, months, common countries/tech)
-    private val PROPER_NOUNS = mapOf(
-        "monday" to "Monday", "tuesday" to "Tuesday", "wednesday" to "Wednesday",
-        "thursday" to "Thursday", "friday" to "Friday", "saturday" to "Saturday", "sunday" to "Sunday",
-        "january" to "January", "february" to "February", "march" to "March", "april" to "April",
-        "may" to "May", "june" to "June", "july" to "July", "august" to "August",
-        "september" to "September", "october" to "October", "november" to "November", "december" to "December",
-        "japan" to "Japan", "tokyo" to "Tokyo", "america" to "America", "english" to "English",
-        "japanese" to "Japanese", "google" to "Google", "android" to "Android"
-    )
+    /**
+     * Maps Android [EditorInfo] and pre-cursor symbols to a pure domain [InputFieldCapPolicy].
+     */
+    fun resolveFieldPolicy(editorInfo: EditorInfo?, textBeforeCursor: String): InputFieldCapPolicy {
+        if (shouldBypassCapitalization(editorInfo, textBeforeCursor)) {
+            return InputFieldCapPolicy.BYPASS
+        }
+        if (editorInfo != null) {
+            if ((editorInfo.inputType and EditorInfo.TYPE_TEXT_FLAG_CAP_CHARACTERS) != 0) {
+                return InputFieldCapPolicy.CAP_CHARACTERS
+            }
+            if ((editorInfo.inputType and EditorInfo.TYPE_TEXT_FLAG_CAP_WORDS) != 0) {
+                return InputFieldCapPolicy.CAP_WORDS
+            }
+            if ((editorInfo.inputType and EditorInfo.TYPE_TEXT_FLAG_CAP_SENTENCES) != 0) {
+                return InputFieldCapPolicy.CAP_SENTENCES
+            }
+        }
+        return InputFieldCapPolicy.STANDARD
+    }
 
     /**
      * Determines whether capitalization suggestions should be completely bypassed
@@ -82,11 +71,13 @@ object EnglishCapitalizationAnalyzer {
             }
         }
 
-        // Check if preceding character is special programming or web identifier symbol
+        // Check if preceding character is a programming, mention, or path identifier symbol
         val rawPrefix = textBeforeCursor.dropLastWhile { it.isLetter() || it == '\'' }
         if (rawPrefix.isNotEmpty()) {
             val lastChar = rawPrefix.last()
-            if (lastChar == '@' || lastChar == '/' || lastChar == '#' || lastChar == '$' || lastChar == '_') {
+            if (lastChar == '@' || lastChar == '/' || lastChar == '#' || lastChar == '$' ||
+                lastChar == '_' || lastChar == '\\'
+            ) {
                 return true
             }
         }
@@ -95,90 +86,81 @@ object EnglishCapitalizationAnalyzer {
     }
 
     /**
-     * Analyzes context and current word to produce capitalization candidates.
-     *
-     * @param rawWord Currently typed letters (e.g. "hello", "i", "im", "usa")
-     * @param textBeforeCursor Recent text before cursor (up to 64 chars)
-     * @param isShiftActive True if shift / caps lock is currently turned on
+     * Analyzes context and current word to produce algorithmic truecasing candidates.
      */
     fun analyze(
         rawWord: String,
         textBeforeCursor: String,
-        isShiftActive: Boolean
+        isShiftActive: Boolean,
+        policy: InputFieldCapPolicy = InputFieldCapPolicy.STANDARD
     ): CapitalizationResult {
-        if (rawWord.isEmpty()) {
+        if (rawWord.isEmpty() || policy == InputFieldCapPolicy.BYPASS) {
             return CapitalizationResult(CapitalizationType.NONE, null)
         }
 
-        val lowerWord = rawWord.lowercase()
-
-        // 1. If user already explicitly entered first character as uppercase or shift is active,
-        // we preserve user's explicit intent.
+        // Preserve user's explicit Shift or manual uppercase intent
         if (isShiftActive || rawWord.first().isUpperCase()) {
             return CapitalizationResult(CapitalizationType.NONE, null)
         }
 
-        // 2. Pronoun 'I' and contractions (e.g. i -> I, im -> I'm, ive -> I've)
-        PRONOUN_CONTRACTIONS[lowerWord]?.let { pronounUpper ->
-            val extras = mutableListOf<String>()
-            if (lowerWord == "id") {
-                // "id" can mean either "ID" or "I'd"
-                extras.add("ID")
+        val bosProb = SentenceBoundaryDetector.computeBosProbability(rawWord, textBeforeCursor, policy)
+        val ranked = BayesianCaseRanker.generateCaseVariants(
+            baseWord = rawWord,
+            bosProb = bosProb,
+            policy = policy,
+            source = "english_cap",
+            isRawWord = true
+        )
+
+        if (ranked.isEmpty()) {
+            return CapitalizationResult(CapitalizationType.NONE, null, bosProbability = bosProb)
+        }
+
+        val top = ranked.first()
+        // If the top-ranked candidate is identical to rawWord, check if any secondary capitalized variant exists
+        val capitalizedVariants = ranked.filter { it.surface != rawWord }.map { it.surface }
+        if (top.surface == rawWord) {
+            if (capitalizedVariants.isEmpty()) {
+                return CapitalizationResult(CapitalizationType.NONE, null, bosProbability = bosProb)
             }
-            return CapitalizationResult(CapitalizationType.PRONOUN_I, pronounUpper, extras)
+            // Ambiguous word where lowercase is slightly more frequent (e.g. "us" -> ["us", "US"]),
+            // still expose the secondary capitalized candidate in additionalCandidates!
+            return CapitalizationResult(
+                type = CapitalizationType.NONE,
+                primaryCandidate = null,
+                additionalCandidates = capitalizedVariants,
+                bosProbability = bosProb
+            )
         }
 
-        // 3. Known common proper nouns (e.g. monday -> Monday, tokyo -> Tokyo)
-        PROPER_NOUNS[lowerWord]?.let { properUpper ->
-            return CapitalizationResult(CapitalizationType.PROPER_NOUN, properUpper)
-        }
-
-        // 4. Acronyms (e.g. usa -> USA, ai -> AI, asap -> ASAP)
-        if (ACRONYMS.contains(lowerWord)) {
-            return CapitalizationResult(CapitalizationType.ALL_CAPS, lowerWord.uppercase())
-        }
-
-        // 5. Sentence start check
-        if (isSentenceStart(rawWord, textBeforeCursor)) {
-            val capitalized = lowerWord.replaceFirstChar { it.uppercase() }
-            return CapitalizationResult(CapitalizationType.SENTENCE_START, capitalized)
-        }
-
-        return CapitalizationResult(CapitalizationType.NONE, null)
+        val type = classifyCapitalizationType(top.surface, bosProb)
+        return CapitalizationResult(
+            type = type,
+            primaryCandidate = top.surface,
+            additionalCandidates = capitalizedVariants.drop(1),
+            bosProbability = bosProb
+        )
     }
 
     /**
-     * Inspects preceding text before rawWord to detect sentence start.
+     * Inspects preceding text before rawWord to detect sentence start via
+     * Punkt-style probabilistic boundary detection.
      */
     fun isSentenceStart(rawWord: String, textBeforeCursor: String): Boolean {
-        // Strip the current rawWord from the end of textBeforeCursor
-        val prefix = if (textBeforeCursor.endsWith(rawWord, ignoreCase = true)) {
-            textBeforeCursor.substring(0, textBeforeCursor.length - rawWord.length)
-        } else {
-            textBeforeCursor
-        }
+        return SentenceBoundaryDetector.computeBosProbability(rawWord, textBeforeCursor) >= 0.5f
+    }
 
-        val trimmed = prefix.trimEnd(' ', '\t', '\r')
-        if (trimmed.isEmpty()) {
-            // Text field start
-            return true
+    private fun classifyCapitalizationType(surface: String, bosProb: Float): CapitalizationType {
+        if (surface == "I" || surface.startsWith("I'")) {
+            return CapitalizationType.PRONOUN_I
         }
-
-        val lastChar = trimmed.last()
-        if (lastChar == '.' || lastChar == '?' || lastChar == '!' || lastChar == '\n') {
-            return true
-        }
-
-        // Check if immediately inside opening quote or bracket that starts after sentence boundary or start
-        if (lastChar == '"' || lastChar == '“' || lastChar == '\'' || lastChar == '‘' ||
-            lastChar == '(' || lastChar == '[' || lastChar == '{' || lastChar == '<'
-        ) {
-            val beforeQuote = trimmed.dropLast(1).trimEnd(' ', '\t', '\r')
-            if (beforeQuote.isEmpty() || beforeQuote.last() in charArrayOf('.', '?', '!', '\n')) {
-                return true
+        return when (BayesianCaseRanker.classifyShape(surface)) {
+            BayesianCaseRanker.CaseShape.UPPER -> CapitalizationType.ALL_CAPS
+            BayesianCaseRanker.CaseShape.TITLE,
+            BayesianCaseRanker.CaseShape.SPECIAL -> {
+                if (bosProb >= 0.5f) CapitalizationType.SENTENCE_START else CapitalizationType.PROPER_NOUN
             }
+            BayesianCaseRanker.CaseShape.LOWER -> CapitalizationType.NONE
         }
-
-        return false
     }
 }

@@ -30,6 +30,7 @@ This document records the core architectural decisions, design rationales, criti
   - [ADR-021: Virtual Suffix-Completed LM Evaluation, Boltzmann Log-Sum-Exp Marginalization & 2D-MMR Stratified Interleaving](#adr-021-virtual-suffix-completed-lm-evaluation-boltzmann-log-sum-exp-marginalization--2d-mmr-stratified-interleaving)
    - [ADR-022: Systematic Mozc OSS Potential Verb Stem Preservation & Viterbi Subword Beam Expansion](#adr-022-systematic-mozc-oss-potential-verb-stem-preservation--viterbi-subword-beam-expansion)
    - [ADR-023: Algorithmic Resolution for Colloquial Predicate Ranking & Morphological Length Normalization (Ideas A + B + D)](#adr-023-algorithmic-resolution-for-colloquial-predicate-ranking--morphological-length-normalization-ideas-a--b--d)
+   - [ADR-024: Corpus-Derived Algorithmic English Truecasing, 2-State Character LM OOV Acronym Detection & Punkt-Style Sentence Boundary Mixture](#adr-024-corpus-derived-algorithmic-english-truecasing-2-state-character-lm-oov-acronym-detection--punkt-style-sentence-boundary-mixture)
 2. [Technical Findings & Post-Mortems](#2-technical-findings--post-mortems)
    - [Finding 1: Sherpa-ONNX `cjkchar` FST Hotword Space-Separation Bug](#finding-1-sherpa-onnx-cjkchar-fst-hotword-space-separation-bug)
    - [Finding 2: 5-Fold Stratified Cross-Validation on 1,000 Tricky Japanese Sentences](#finding-2-5-fold-stratified-cross-validation-on-1000-tricky-japanese-sentences)
@@ -2119,6 +2120,26 @@ When users type colloquial conversational compounds such as `じむいけた` (i
 - **20 Homophone Verbs Stress Test**: Top-1 improved from **12/20 $\to$ 16/20**; Top-6 recall reached **20/20 (100%)**.
 - **Compound `じむいけた`**: `ジム行けた` advances from rank #19 to **#4** in base candidates, and promoted to **#1** by SLM re-ranking.
 - **Reference**: Full design specifications documented in [`docs/colloquial_predicate_ranking_design.md`](docs/colloquial_predicate_ranking_design.md).
+
+---
+
+## ADR-024: Corpus-Derived Algorithmic English Truecasing, 2-State Character LM OOV Acronym Detection & Punkt-Style Sentence Boundary Mixture
+
+### 1. Problem Statement
+The initial English capitalization analyzer relied on hardcoded `ACRONYMS`, `PROPER_NOUNS`, and `PRONOUN_CONTRACTIONS` sets and simple suffix punctuation heuristics. This violated the anti-anecdotal policy, could not detect unseen acronyms (e.g., `SDK`, `VPN`, `LLM`, `GRPC`, `RLHF`), misclassified abbreviation periods (`e.g.`, `i.e.`, `vs.`, `Mr.`, `Fig. 1.`) as sentence boundaries, and suffered from a lowercase-deduplication bug (`seenSurfaces.add(adapted.lowercase())`) in `VoiceInputMethodService.kt` that dropped `"US"` whenever `"us"` was present (or vice versa).
+
+### 2. Architectural Decision
+Replaced all hardcoded word lists with a principled 4-component algorithmic pipeline inside `context.english.domain`:
+1. **Corpus-Derived Lexical Case Prior (`english_case_lexicon.tsv`, `english_lower_vocab.txt`)**: Built via `tools/build_english_case_model.py` from non-sentence-initial, non-headline tokens in NLTK `brown`, `reuters`, and `webtext`, plus apostrophe-stripped contraction alignment (`im` $\to$ `I'm`, `ive` $\to$ `I've`, `id` $\to$ `I'd`/`ID`/`id`) from `tools/futo_swipe/vocab.txt` (while excluding lowercased `vocab.txt` from `english_lower_vocab.txt`).
+2. **2-State Character Bigram LM (`english_acro_char_lm.tsv`)**: Computes length-normalized log-likelihood ratio $\text{LLR}(w)$ between ALL_CAPS corpus types and lowercase word types to detect OOV acronyms without hardcoded lists.
+3. **Punkt-Style Sentence Boundary Detector (`SentenceBoundaryDetector`)**: Outputs continuous $P_{\text{BOS}}(\text{ctx}) \in [0, 1]$ using internal-period detection, single-letter initial guards, numbered-list vs. inline ordinal disambiguation, and corpus-derived `english_abbrev_eos.tsv` ($P(\text{EOS} \mid \text{stem}, \text{'.'})$).
+4. **Generative Mixture Case Ranker (`BayesianCaseRanker`) & Exact-Surface Deduplication**: Computes $P_{\text{case}}(s \mid w, \text{ctx}) = P_{\text{BOS}} P_{\text{BOS\text{-}shape}}(s \mid w) + (1 - P_{\text{BOS}}) P_{\text{notBOS}}(s \mid w)$ across tap, SymSpell typo, and FUTO Swipe beam candidates, deduplicating by **exact surface** so `"US"`/`"us"`, `"May"`/`"may"`, and `"I'd"`/`"ID"`/`"id"` coexist for downstream SLM contextual reranking.
+
+### 3. Verification & Metrics
+- **60-Case Truecasing Benchmark (`EnglishTruecasingEvaluationTest`)**: **93.3% Top-1 (56/60)**, **98.3% Top-3 (59/60)**, **0.108 ms** average latency.
+- **OOV Acronym LM**: 15/15 unseen tech/domain acronyms detected, 0/11 false positives on normal English words.
+- **Reference**: [`docs/prd_and_system_design_qwerty_capitalization_and_spell_candidates.md`](docs/prd_and_system_design_qwerty_capitalization_and_spell_candidates.md).
+
 
 
 

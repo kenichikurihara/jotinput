@@ -326,6 +326,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 62. [Google Drive 履歴同期の設定画面統合 & 定期バックグラウンド同期 PRD & 形式設計](docs/prd_and_design_google_drive_sync_settings.md)
     - 設定タブからの常時連携・同期先変更・即時同期・解除と、`JobScheduler` による定期バックグラウンド同期継続のための PRD、4つの JTBD、4つの CUJ、コーナーケース対策、[`HistorySyncDecisionModel`](app/src/main/java/com/example/myasr/context/kanakanji/domain/HistorySyncDecisionModel.kt)（DMN 決定表2種）、および [`history_sync_settings.als`](app/src/test/resources/alloy/history_sync_settings.als) による形式検証仕様。
 
+63. [英語 QWERTY Truecasing & 大文字化候補 PRD・CUJ・アルゴリズミック設計・定量評価レポート](docs/prd_and_system_design_qwerty_capitalization_and_spell_candidates.md)
+    - 静的ヒューリスティックを排したコーパス由来 $P_{\text{lex}}(s \mid w)$、OOV アクロニム検出用 2-state 文字バイグラム言語モデル、Punkt 型確率的文境界検出器（`SentenceBoundaryDetector`）、およびベイズ混合ケースランキング（`BayesianCaseRanker`）によるタップ・タイポ・FUTO Swipe 統合設計、CUJ-1〜7、および 60 ケース定量評価結果（Top-1 93.3%, Top-3 98.3%, 平均 0.108 ms）。
+
 ---
 
 ## 📂 Source Code Layout
