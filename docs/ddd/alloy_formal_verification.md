@@ -31,3 +31,10 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`NeverPinsWithinWindowUnlessTouching`**: 100ms ウィンドウ内（非タッチ時）はピン留めしないこと。
 - **`NeverPinsPartialOverFullSpan`**: 部分一致プレフィックスより完全スパン候補を優先すること。
 - **`ClipboardNeverIntrudesDuringActiveInput`**: 入力中・音声アクティブ時にクリップボード提案が割り込まないこと。
+
+### 3.3 [`custom_dictionary_ui.als`](app/src/test/resources/alloy/custom_dictionary_ui.als)
+ユーザー辞書画面（[`DictionaryActivity`](app/src/main/java/com/example/myasr/DictionaryActivity.kt)）および [`DictionaryRepository`](app/src/main/java/com/example/myasr/context/vocabulary/infrastructure/DictionaryRepository.kt) の状態遷移をモデル化し、以下を検証する：
+- **`ActiveAndTombstoneDisjoint`**: アクティブ単語と削除墓標（Tombstone）が同一キーで同時存在しないこと。
+- **`UndoSlotConsistent` / `UndoRestoresDeletedAndClearsTombstone`**: 削除直後の Undo が確実に単語を復元し Tombstone を除去すること。
+- **`VisibleSubsetOfActive` / `UnfilteredShowsAllActive` / `SearchFilterPreservesRepository`**: 検索フィルタがリポジトリ状態を変更せず、常に整合した部分集合のみを表示すること。
+

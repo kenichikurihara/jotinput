@@ -77,4 +77,9 @@ class AlloyVerificationTest {
     fun `dmn_decision_safety formal model satisfies all decision table invariants and reachability checks`() {
         verifyAlloyModel("alloy/dmn_decision_safety.als")
     }
+
+    @Test
+    fun `custom_dictionary_ui formal model satisfies all undo, tombstone, and filter invariants`() {
+        verifyAlloyModel("alloy/custom_dictionary_ui.als")
+    }
 }

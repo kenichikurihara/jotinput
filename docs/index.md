@@ -314,6 +314,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 58. [評価セット・評価方法 統合ガイド (Master Evaluation Index)](docs/evaluation_suites_and_methods.md)
     - リポジトリ内の全7ドメイン（日本語ASR・音声入力UX/句読点・音声×タッチ調停/Alloy形式検証・かな漢字変換/Mozc連接行列/N-Best多様性・SLMリランキング/LM-First・英語Swipe/補完/スペル・実機ODPM電力/レイテンシ）の評価データセット、スクリプト、C++ベンチマーク、JVM単体テスト、実行コマンド、および運用ルールを統合整理したマスターインデックス。
 
+59. [ユーザー辞書（単語登録）UI刷新 PRD & 形式設計 (Custom Dictionary UI PRD & Alloy Spec)](docs/prd_and_design_custom_dictionary_ui.md)
+    - JTBD と 5つの CUJ に基づく Zero-Friction 登録フォーム（表記先行・英語1ステップ自動判定・カタカナ読み自動提案）、リアルタイム検索フィルタ、ボトムシート編集・クラウド同期分離、即時削除＋Snackbar Undo、および [`custom_dictionary_ui.als`](app/src/test/resources/alloy/custom_dictionary_ui.als) による状態整合性検証。
+
 ---
 
 ## 📂 Source Code Layout

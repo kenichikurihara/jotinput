@@ -18,7 +18,8 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="14dp">
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="12dp">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -38,7 +39,7 @@
                     android:layout_height="wrap_content"
                     android:text="中村"
                     android:textColor="@color/text_primary"
-                    android:textSize="17sp"
+                    android:textSize="16sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -48,29 +49,30 @@
                     android:layout_marginStart="8dp"
                     android:background="@drawable/badge_background"
                     android:backgroundTint="@color/badge_info_bg"
-                    android:paddingHorizontal="6dp"
+                    android:paddingHorizontal="7dp"
                     android:paddingVertical="2dp"
-                    android:text="標準"
+                    android:text="最優先"
                     android:textColor="@color/badge_info_text"
                     android:textSize="10sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <TextView
                 android:id="@+id/tvReading"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
-                android:text="よみ: なかむら (ナカムラ)"
+                android:layout_marginTop="2dp"
+                android:text="なかむら / ナカムラ"
                 android:textColor="@color/text_secondary"
-                android:textSize="13sp" />
+                android:textSize="12sp" />
         </LinearLayout>
 
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchEnabled"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="6dp"
+            android:layout_marginEnd="4dp"
             android:checked="true" />
 
         <ImageButton
@@ -78,7 +80,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Delete entry"
+            android:contentDescription="削除"
             android:src="@android:drawable/ic_menu_delete"
             app:tint="@color/text_muted" />
 

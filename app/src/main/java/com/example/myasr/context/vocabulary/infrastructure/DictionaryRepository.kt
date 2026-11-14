@@ -129,6 +129,15 @@ class DictionaryRepository(private val context: Context) {
         return saved
     }
 
+    /**
+     * Restores a previously deleted entry (e.g., via Snackbar Undo), reviving its exact
+     * ID, priority, and enabled state while removing any matching tombstone.
+     */
+    @Synchronized
+    fun restore(entry: DictionaryEntry): Boolean {
+        return add(entry.copy(updatedAtMillis = System.currentTimeMillis()))
+    }
+
     @Synchronized
     fun toggle(id: String): Boolean {
         val index = entries.indexOfFirst { it.id == id }
