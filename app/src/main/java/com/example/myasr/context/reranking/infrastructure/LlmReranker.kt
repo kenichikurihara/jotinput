@@ -896,14 +896,18 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
             val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
             val surfaces = nativePredictNextPhrases(effectiveContext, maxCandidates, maxTokens) ?: return emptyList()
-            return surfaces.filter { it.isNotBlank() }.map { surface ->
-                ConversionCandidate(
-                    surface = surface,
-                    reading = surface,
-                    isPrediction = true,
-                    source = "slm"
-                )
-            }
+            return surfaces
+                .map { it.trim { ch -> ch.isWhitespace() || ch == '\u3000' } }
+                .filter { it.isNotEmpty() }
+                .distinct()
+                .map { surface ->
+                    ConversionCandidate(
+                        surface = surface,
+                        reading = surface,
+                        isPrediction = true,
+                        source = "slm"
+                    )
+                }
         } catch (e: Exception) {
             Log.w(TAG, "SLM predictNextPhrases failed: ${e.message}")
             return emptyList()

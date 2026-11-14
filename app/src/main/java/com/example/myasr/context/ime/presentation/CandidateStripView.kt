@@ -82,16 +82,37 @@ class CandidateStripView @JvmOverloads constructor(
         onEmptyStatusShown?.invoke()
     }
 
+    companion object {
+        internal fun filterAndDeduplicateDisplayCandidates(
+            candidates: List<ConversionCandidate>
+        ): List<ConversionCandidate> {
+            val seenSurfaces = HashSet<String>()
+            val result = ArrayList<ConversionCandidate>(candidates.size)
+            for (cand in candidates) {
+                val trimmedSurface = cand.surface.trim { it.isWhitespace() || it == '\u3000' }
+                val shouldDisplay = cand.isPrediction ||
+                    cand.reading != cand.surface ||
+                    !JapaneseKanaUtils.isAllHiragana(cand.surface)
+                if (trimmedSurface.isNotEmpty() && shouldDisplay && seenSurfaces.add(trimmedSurface)) {
+                    result.add(
+                        if (trimmedSurface == cand.surface) cand else cand.copy(surface = trimmedSurface)
+                    )
+                }
+            }
+            return result
+        }
+    }
+
     fun setCandidates(candidates: List<ConversionCandidate>) {
         // Retain candidates from engine (redundant Hiragana matching composing text is already excluded by engine)
-        val displayCandidates = candidates.filter { it.isPrediction || it.reading != it.surface || !JapaneseKanaUtils.isAllHiragana(it.surface) }
+        val displayCandidates = filterAndDeduplicateDisplayCandidates(candidates)
         if (displayCandidates.isEmpty()) {
             showEmptyStatus("話すか、フリックで入力")
             return
         }
 
         // Zero-Jitter optimization: If surfaces are identical to current strip, skip DOM recreation
-        val currentSurfaces = currentCandidates.filter { it.isPrediction || it.reading != it.surface || !JapaneseKanaUtils.isAllHiragana(it.surface) }.map { it.surface }
+        val currentSurfaces = filterAndDeduplicateDisplayCandidates(currentCandidates).map { it.surface }
         val newSurfaces = displayCandidates.map { it.surface }
         if (currentSurfaces == newSurfaces && container.childCount > 0) {
             currentCandidates = candidates

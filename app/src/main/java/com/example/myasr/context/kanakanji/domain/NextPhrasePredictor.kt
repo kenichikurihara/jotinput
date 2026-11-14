@@ -191,8 +191,14 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         val seenSurfaces = HashSet<String>()
 
         fun addCandidate(cand: ConversionCandidate) {
-            if (cand.surface.isNotBlank() && seenSurfaces.add(cand.surface)) {
-                result.add(cand)
+            val trimmedSurface = cand.surface.trim { it.isWhitespace() || it == '\u3000' }
+            if (trimmedSurface.isNotEmpty() && seenSurfaces.add(trimmedSurface)) {
+                val normalizedCand = if (trimmedSurface == cand.surface) {
+                    cand
+                } else {
+                    cand.copy(surface = trimmedSurface)
+                }
+                result.add(normalizedCand)
             }
         }
 

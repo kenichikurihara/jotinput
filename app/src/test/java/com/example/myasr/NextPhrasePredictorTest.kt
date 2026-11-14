@@ -133,4 +133,19 @@ class NextPhrasePredictorTest {
         // 5. Opt-out flag
         assertFalse("Should respect suggestPeriod = false", predictor.predict("完了しました", suggestPeriod = false).any { it.surface == "。" })
     }
+
+    @Test
+    fun testNoDuplicatePeriodWhenHistoryContainsPeriodOrWhitespaceVariants() {
+        predictor.recordTransition("完了しました", "。")
+        predictor.mergeHistory(
+            mapOf(
+                "完了しました" to mapOf("。\n" to 3, " 。" to 2, "　。 " to 1)
+            )
+        )
+
+        val preds = predictor.predict("完了しました")
+        val periodCandidates = preds.filter { it.surface.trim { ch -> ch.isWhitespace() || ch == '\u3000' } == "。" }
+        assertEquals("Period '。' should appear at most once", 1, periodCandidates.size)
+        assertEquals("。", periodCandidates.first().surface)
+    }
 }

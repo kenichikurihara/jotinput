@@ -513,6 +513,49 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
                     scored_tokens.end(),
                     [](const auto& a, const auto& b) { return a.first > b.first; });
 
+  auto trim_text = [](const std::string& s) -> std::string {
+    size_t start = 0;
+    size_t end = s.size();
+    auto is_ascii_ws = [](char c) {
+      return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+    };
+    while (start < end) {
+      if (is_ascii_ws(s[start])) {
+        ++start;
+      } else if (start + 3 <= end &&
+                 static_cast<unsigned char>(s[start]) == 0xE3 &&
+                 static_cast<unsigned char>(s[start + 1]) == 0x80 &&
+                 static_cast<unsigned char>(s[start + 2]) == 0x80) {
+        start += 3;
+      } else {
+        break;
+      }
+    }
+    while (end > start) {
+      if (is_ascii_ws(s[end - 1])) {
+        --end;
+      } else if (end >= start + 3 &&
+                 static_cast<unsigned char>(s[end - 3]) == 0xE3 &&
+                 static_cast<unsigned char>(s[end - 2]) == 0x80 &&
+                 static_cast<unsigned char>(s[end - 1]) == 0x80) {
+        end -= 3;
+      } else {
+        break;
+      }
+    }
+    return s.substr(start, end - start);
+  };
+
+  auto ends_with = [](const std::string& s, const std::string& suffix) -> bool {
+    return s.size() >= suffix.size() &&
+           s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
+  };
+
+  auto is_terminal_punct = [&](const std::string& s) -> bool {
+    return ends_with(s, "。") || ends_with(s, "！") || ends_with(s, "？") ||
+           ends_with(s, "、") || ends_with(s, ".") || ends_with(s, "!") || ends_with(s, "?");
+  };
+
   llama_memory_t mem = llama_get_memory(ctx_);
   int start_pos = cached_context_n_tokens_;
 
@@ -525,62 +568,75 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
     char piece_buf[256];
     int piece_len = llama_token_to_piece(vocab_, t0, piece_buf, sizeof(piece_buf), 0, false);
     if (piece_len <= 0) continue;
-    std::string piece(piece_buf, piece_len);
-    if (piece.empty() || piece == " " || piece == "\n" || piece == "\t") continue;
+    std::string piece = trim_text(std::string(piece_buf, piece_len));
+    if (piece.empty()) continue;
 
     std::vector<llama_token> generated_tokens = { t0 };
     std::string generated_text = piece;
 
-    // Speculatively decode next tokens
-    for (int step = 1; step < max_tokens; ++step) {
-      if (abort_prediction_.load()) {
-        break;
-      }
-      llama_batch b = llama_batch_init(1, 0, 1);
-      b.token[0]     = generated_tokens.back();
-      b.pos[0]       = start_pos + step - 1;
-      b.n_seq_id[0]  = 1;
-      b.seq_id[0][0] = 0;
-      b.logits[0]    = true;
-      b.n_tokens     = 1;
-
-      if (llama_decode(ctx_, b) != 0) {
-        llama_batch_free(b);
-        break;
-      }
-      llama_batch_free(b);
-
-      float* next_logits = llama_get_logits_ith(ctx_, -1);
-      if (!next_logits) break;
-
-      llama_token best_next = 0;
-      float best_next_l = -1e9f;
-      for (llama_token v = 0; v < n_vocab; ++v) {
-        if (next_logits[v] > best_next_l) {
-          best_next_l = next_logits[v];
-          best_next = v;
+    // Speculatively decode next tokens unless the initial piece already ends at punctuation
+    if (!is_terminal_punct(generated_text)) {
+      for (int step = 1; step < max_tokens; ++step) {
+        if (abort_prediction_.load()) {
+          break;
         }
-      }
+        llama_batch b = llama_batch_init(1, 0, 1);
+        b.token[0]     = generated_tokens.back();
+        b.pos[0]       = start_pos + step - 1;
+        b.n_seq_id[0]  = 1;
+        b.seq_id[0][0] = 0;
+        b.logits[0]    = true;
+        b.n_tokens     = 1;
 
-      if (llama_vocab_is_eog(vocab_, best_next)) break;
+        if (llama_decode(ctx_, b) != 0) {
+          llama_batch_free(b);
+          break;
+        }
+        llama_batch_free(b);
 
-      char next_piece_buf[256];
-      int npl = llama_token_to_piece(vocab_, best_next, next_piece_buf, sizeof(next_piece_buf), 0, false);
-      if (npl <= 0) break;
-      std::string next_piece(next_piece_buf, npl);
+        float* next_logits = llama_get_logits_ith(ctx_, -1);
+        if (!next_logits) break;
 
-      if (next_piece == "。" || next_piece == "\n" || next_piece == "！" || next_piece == "？") {
+        llama_token best_next = 0;
+        float best_next_l = -1e9f;
+        for (llama_token v = 0; v < n_vocab; ++v) {
+          if (next_logits[v] > best_next_l) {
+            best_next_l = next_logits[v];
+            best_next = v;
+          }
+        }
+
+        if (llama_vocab_is_eog(vocab_, best_next)) break;
+
+        char next_piece_buf[256];
+        int npl = llama_token_to_piece(vocab_, best_next, next_piece_buf, sizeof(next_piece_buf), 0, false);
+        if (npl <= 0) break;
+        std::string next_piece(next_piece_buf, npl);
+
+        size_t nl_pos = next_piece.find_first_of("\n\r");
+        if (nl_pos != std::string::npos) {
+          if (nl_pos > 0) {
+            generated_text += next_piece.substr(0, nl_pos);
+          }
+          break;
+        }
+
+        if (next_piece == "。" || next_piece == "！" || next_piece == "？") {
+          if (!ends_with(generated_text, next_piece)) {
+            generated_text += next_piece;
+          }
+          break;
+        }
+
+        generated_tokens.push_back(best_next);
         generated_text += next_piece;
-        break;
       }
 
-      generated_tokens.push_back(best_next);
-      generated_text += next_piece;
+      // Roll back speculative tokens in KV cache
+      llama_memory_seq_rm(mem, 0, start_pos, -1);
     }
 
-    // Roll back speculative tokens in KV cache
-    llama_memory_seq_rm(mem, 0, start_pos, -1);
-
+    generated_text = trim_text(generated_text);
     if (!generated_text.empty() &&
         std::find(out_predictions->begin(), out_predictions->end(), generated_text) == out_predictions->end()) {
       out_predictions->push_back(generated_text);

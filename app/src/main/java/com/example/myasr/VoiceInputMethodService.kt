@@ -1188,23 +1188,28 @@ class VoiceInputMethodService : InputMethodService() {
                     val combined = mutableListOf<ConversionCandidate>()
                     val seenSurfaces = HashSet<String>()
 
+                    fun addCombinedCandidate(cand: ConversionCandidate) {
+                        val trimmedSurface = cand.surface.trim { it.isWhitespace() || it == '\u3000' }
+                        if (trimmedSurface.isNotEmpty() && seenSurfaces.add(trimmedSurface)) {
+                            combined.add(
+                                if (trimmedSurface == cand.surface) cand else cand.copy(surface = trimmedSurface)
+                            )
+                        }
+                    }
+
                     // 1. Priority: User history bigrams
                     for (cand in fastPredictions) {
-                        if (cand.source == "history_bigram" && seenSurfaces.add(cand.surface)) {
-                            combined.add(cand)
+                        if (cand.source == "history_bigram") {
+                            addCombinedCandidate(cand)
                         }
                     }
                     // 2. Priority: Contextual SLM generation
                     for (cand in slmContinuations) {
-                        if (seenSurfaces.add(cand.surface)) {
-                            combined.add(cand)
-                        }
+                        addCombinedCandidate(cand)
                     }
                     // 3. Priority: Remaining canonical and particle candidates
                     for (cand in fastPredictions) {
-                        if (seenSurfaces.add(cand.surface)) {
-                            combined.add(cand)
-                        }
+                        addCombinedCandidate(cand)
                     }
 
                     // If candidates exist, rerank the top candidates using SLM log-likelihood
