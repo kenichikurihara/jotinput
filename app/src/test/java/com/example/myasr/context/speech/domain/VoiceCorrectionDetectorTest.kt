@@ -14,7 +14,8 @@ class VoiceCorrectionDetectorTest {
             afterText = "明日の会議は山﨑さんが担当です。",
             language = AsrLanguage.JAPANESE,
             elapsedSinceVoiceCommitMs = 3_000L,
-            typedReadingHint = "やまざき"
+            typedReadingHint = "やまざき",
+            readingResolver = { "やまざき" }
         )
         assertNotNull(result)
         assertEquals("山崎", result?.originalSurface)
@@ -89,7 +90,7 @@ class VoiceCorrectionDetectorTest {
             afterText = "今日はかなり涼しいですね。",
             language = AsrLanguage.JAPANESE,
             elapsedSinceVoiceCommitMs = 3_000L,
-            readingResolver = { if (it == "暑い") "あつい" else "すずしい" }
+            readingResolver = { if (it.contains("暑")) "とてもあつい" else "かなりすずしい" }
         )
         assertNull(semanticJp)
 
