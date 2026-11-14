@@ -354,8 +354,9 @@ class VoiceInputMethodService : InputMethodService() {
             ConversionCandidate(
                 surface = s.correctedSurface,
                 reading = s.originalSurface,
-                cost = 0,
-                source = "voice_correction_suggest"
+                isPrediction = true,
+                source = "voice_correction_suggest",
+                priority = s.score
             )
         }
         candidateStripView?.setCandidates(candidates)

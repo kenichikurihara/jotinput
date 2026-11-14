@@ -56,7 +56,7 @@ object VoiceCorrectionDecisionModel {
                 `when` { it.phoneticDistance <= it.phoneticThreshold }
                 thenValue(CorrectionCategory.VALID_PHONETIC_NEAR_MISS)
             }
-            defaultOutput(CorrectionCategory.REJECT_SEMANTIC_REWRITE)
+            defaultValue(CorrectionCategory.REJECT_SEMANTIC_REWRITE)
         }
 
     val voiceCorrectionBoostPolicyDecisionTable: DecisionTable<BoostPolicyInput, BoostAction> =
@@ -84,7 +84,7 @@ object VoiceCorrectionDecisionModel {
                 `when` { it.netCount >= 2 && it.slmCoherencePassed }
                 thenValue(BoostAction.AUTO_REPLACE_AND_HOTWORD)
             }
-            defaultOutput(BoostAction.SUPPRESSED_NO_BOOST)
+            defaultValue(BoostAction.SUPPRESSED_NO_BOOST)
         }
 
     fun evaluateEligibility(input: EligibilityInput): DecisionTrace<CorrectionCategory> =
