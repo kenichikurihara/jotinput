@@ -6,6 +6,8 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 
 ## 📚 Table of Contents
 
+> 🧭 **[トップレベル PRD — プロダクトビジョン・最重要 CUJ・North Star Metric (EIS)](prd_top_level.md)** — 全機能 PRD・評価セットが従属する最上位 PRD。統一トップレベルメトリック **EIS（有効入力速度, 意図どおり文字/分）** とリリースゲート（ガードレール）を定義
+>
 > 🎯 **[評価セット・評価方法 統合ガイド (Master Evaluation Index)](docs/evaluation_suites_and_methods.md)** — リポジトリ内の全評価データセット・評価スクリプト・JVM単体テスト・C++ベンチマーク・形式検証の全体マップ
 
 0. [Domain-Driven Design (DDD) Architecture](docs/ddd/README.md)

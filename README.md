@@ -9,6 +9,7 @@ A lightweight, fully offline, on-device Android Japanese voice & flick keyboard 
 ## 📖 Documentation
 
 Detailed documentation is available in the [`docs/`](docs/index.md) folder:
+- [Top-Level PRD & North Star Metric (EIS)](docs/prd_top_level.md): Product vision, prioritized CUJs, and the single top-level metric (Effective Intended-text Speed) with release guardrails.
 - [System Architecture](docs/architecture.md): Audio pipeline, dictionary subsystem, keyboard (IME), SLM re-ranking, component breakdown, and data flow.
 - [Custom Dictionary Improvement & Evaluation Plan](docs/dictionary_improvement_plan.md): Root cause post-mortem, space tokenization fix, and 20-case quantitative evaluation benchmark.
 - [Custom Dictionary Implementation Plan](docs/dictionary_implementation_plan.md): Step-by-step design of repository, hotwords, post-processing, and UI.

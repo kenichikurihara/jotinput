@@ -4,6 +4,8 @@
 
 > **関連スキル**: エージェント向けのコマンド・分類要約は [`myasr-eval`](../.agent/skills/myasr-eval/SKILL.md)（※環境スキル参照）にも定義されていますが、本ドキュメントはリポジトリ内の全評価資産（音声・かな漢字・SLM・英語入力・電力/レイテンシ・形式検証）を網羅する**唯一の正規ドキュメント（Single Source of Truth）**です。
 
+> 🧭 **トップレベルメトリック**: 以下の 7 ドメインの指標はすべて **L2 診断指標** です。プロダクトの意思決定は [`prd_top_level.md`](prd_top_level.md) で定義する North Star Metric **EIS（有効入力速度, 意図どおり文字/分）** と CUJ 別 $\mathrm{EIS}_c$、およびガードレール G1〜G9 で行います。新しい評価セットを追加するときは、どの CUJ バケットに入り、どの時間項（$T_{\text{wait}}, T_{\text{select}}, T_{\text{correct}}, T_{\text{produce}}$）を通じて EIS に影響するかを明記してください。
+
 ---
 
 ## 📊 全体マップ（クイックリファレンス）
