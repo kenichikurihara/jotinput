@@ -891,9 +891,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val rest = candidates.filter { it.source != "user" && it.source != "context_collocation" }
 
         // Current-input candidates: exact matches, voicing/typo corrections of current input length
-        val currentCands = rest.filter { it.source != "phrase_chunk" && it.reading.length <= normalized.length }
+        val currentCands = rest.filter { it.source != "phrase_chunk" && it.reading.length <= normalized.length }.toMutableList()
         // Future predictive candidates: multi-bunsetsu phrase chunks and prefix completions
-        val futurePredCands = rest.filter { it.source == "phrase_chunk" || it.reading.length > normalized.length }
+        val futurePredCands = rest.filter { it.source == "phrase_chunk" || it.reading.length > normalized.length }.toMutableList()
 
         if (futurePredCands.isEmpty() || currentCands.isEmpty()) {
             return candidates
@@ -909,13 +909,16 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         for (c in userCands) add(c)
         for (c in collocCands) add(c)
 
+        // Slot 1 (if no user/colloc candidate): Always preserve the natural #1 ranked candidate
+        if (interleaved.isEmpty()) {
+            val topCandidate = candidates.first()
+            add(topCandidate)
+            currentCands.remove(topCandidate)
+            futurePredCands.remove(topCandidate)
+        }
+
         var curIdx = 0
         var predIdx = 0
-
-        // Slot 1 (if no colloc/user): Top candidate for current typed input
-        if (interleaved.isEmpty() && curIdx < currentCands.size) {
-            add(currentCands[curIdx++])
-        }
 
         // Slot 2: Top future predictive candidate / compound phrase chunk
         if (predIdx < futurePredCands.size) {
