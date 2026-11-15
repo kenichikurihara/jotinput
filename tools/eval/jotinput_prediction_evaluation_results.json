@@ -1,0 +1,4419 @@
+{
+  "english_cases": [
+    {
+      "target_word": "you",
+      "language": "en",
+      "id": "en_bi_001",
+      "prev_word": "Thank",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "you",
+            "God",
+            "the"
+          ],
+          "no_history": [],
+          "with_history": ["you"],
+          "ref_with_history": [
+            "you",
+            "your",
+            "again"
+          ]
+        },
+        "two_char": {
+          "query": "yo",
+          "ref_no_history": [
+            "you",
+            "your",
+            "yours"
+          ],
+          "no_history": [
+            "you",
+            "you're",
+            "your"
+          ],
+          "with_history": [
+            "you",
+            "you're",
+            "your"
+          ],
+          "ref_with_history": [
+            "you",
+            "your",
+            "yours"
+          ]
+        },
+        "one_char": {
+          "query": "y",
+          "ref_no_history": [
+            "you",
+            "your",
+            "yet"
+          ],
+          "no_history": [
+            "years",
+            "you",
+            "year"
+          ],
+          "with_history": [
+            "you",
+            "years",
+            "year"
+          ],
+          "ref_with_history": [
+            "you",
+            "your",
+            "yes"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "very",
+      "language": "en",
+      "id": "en_bi_002",
+      "prev_word": "you",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "are",
+            "can",
+            "so"
+          ],
+          "no_history": [],
+          "with_history": ["very"],
+          "ref_with_history": [
+            "very",
+            "are",
+            "so"
+          ]
+        },
+        "two_char": {
+          "query": "ve",
+          "ref_no_history": [
+            "very",
+            "version",
+            "venue"
+          ],
+          "no_history": [
+            "very",
+            "version",
+            "versions"
+          ],
+          "with_history": [
+            "very",
+            "version",
+            "versions"
+          ],
+          "ref_with_history": [
+            "very",
+            "version",
+            "venue"
+          ]
+        },
+        "one_char": {
+          "query": "v",
+          "ref_no_history": [
+            "very",
+            "via",
+            "view"
+          ],
+          "no_history": [
+            "very",
+            "various",
+            "village"
+          ],
+          "with_history": [
+            "very",
+            "various",
+            "village"
+          ],
+          "ref_with_history": [
+            "very",
+            "via",
+            "view"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "much",
+      "language": "en",
+      "id": "en_bi_003",
+      "prev_word": "very",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "much",
+            "good",
+            "well"
+          ],
+          "no_history": [],
+          "with_history": ["much"],
+          "ref_with_history": [
+            "much",
+            "well",
+            "good"
+          ]
+        },
+        "two_char": {
+          "query": "mu",
+          "ref_no_history": [
+            "much",
+            "must",
+            "music"
+          ],
+          "no_history": [
+            "must",
+            "music",
+            "much"
+          ],
+          "with_history": [
+            "much",
+            "must",
+            "music"
+          ],
+          "ref_with_history": [
+            "much",
+            "must",
+            "music"
+          ]
+        },
+        "one_char": {
+          "query": "m",
+          "ref_no_history": [
+            "much",
+            "many",
+            "more"
+          ],
+          "no_history": [
+            "me",
+            "more",
+            "must"
+          ],
+          "with_history": [
+            "much",
+            "me",
+            "more"
+          ],
+          "ref_with_history": [
+            "much",
+            "many",
+            "more"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "let",
+      "language": "en",
+      "id": "en_bi_004",
+      "prev_word": "Please",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "find",
+            "let",
+            "see"
+          ],
+          "no_history": [],
+          "with_history": ["let"],
+          "ref_with_history": [
+            "let",
+            "find",
+            "see"
+          ]
+        },
+        "two_char": {
+          "query": "le",
+          "ref_no_history": [
+            "let",
+            "leave",
+            "learn"
+          ],
+          "no_history": [
+            "left",
+            "led",
+            "level"
+          ],
+          "with_history": [
+            "let",
+            "left",
+            "led"
+          ],
+          "ref_with_history": [
+            "let",
+            "leave",
+            "less"
+          ]
+        },
+        "one_char": {
+          "query": "l",
+          "ref_no_history": [
+            "let",
+            "look",
+            "like"
+          ],
+          "no_history": [
+            "later",
+            "life",
+            "located"
+          ],
+          "with_history": [
+            "let",
+            "later",
+            "life"
+          ],
+          "ref_with_history": [
+            "let",
+            "look",
+            "like"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "me",
+      "language": "en",
+      "id": "en_bi_005",
+      "prev_word": "let",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "me",
+            "us",
+            "you"
+          ],
+          "no_history": [],
+          "with_history": ["me"],
+          "ref_with_history": [
+            "me",
+            "us",
+            "you"
+          ]
+        },
+        "two_char": {
+          "query": "me",
+          "ref_no_history": [
+            "me",
+            "meet",
+            "message"
+          ],
+          "no_history": [
+            "me",
+            "member",
+            "members"
+          ],
+          "with_history": [
+            "me",
+            "member",
+            "members"
+          ],
+          "ref_with_history": [
+            "me",
+            "meet",
+            "men"
+          ]
+        },
+        "one_char": {
+          "query": "m",
+          "ref_no_history": [
+            "me",
+            "make",
+            "more"
+          ],
+          "no_history": [
+            "me",
+            "more",
+            "must"
+          ],
+          "with_history": [
+            "me",
+            "more",
+            "must"
+          ],
+          "ref_with_history": [
+            "me",
+            "my",
+            "more"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "know",
+      "language": "en",
+      "id": "en_bi_006",
+      "prev_word": "me",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "know",
+            "if",
+            "a"
+          ],
+          "no_history": [],
+          "with_history": ["know"],
+          "ref_with_history": [
+            "know",
+            "if",
+            "a"
+          ]
+        },
+        "two_char": {
+          "query": "kn",
+          "ref_no_history": [
+            "know",
+            "knowledge",
+            "known"
+          ],
+          "no_history": [
+            "known",
+            "know",
+            "knowledge"
+          ],
+          "with_history": [
+            "know",
+            "known",
+            "knowledge"
+          ],
+          "ref_with_history": [
+            "know",
+            "knowledge",
+            "known"
+          ]
+        },
+        "one_char": {
+          "query": "k",
+          "ref_no_history": [
+            "know",
+            "keep",
+            "key"
+          ],
+          "no_history": [
+            "killed",
+            "known",
+            "king"
+          ],
+          "with_history": [
+            "know",
+            "killed",
+            "known"
+          ],
+          "ref_with_history": [
+            "know",
+            "keep",
+            "key"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "are",
+      "language": "en",
+      "id": "en_bi_007",
+      "prev_word": "How",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "are",
+            "to",
+            "is"
+          ],
+          "no_history": [],
+          "with_history": ["are"],
+          "ref_with_history": [
+            "are",
+            "to",
+            "is"
+          ]
+        },
+        "two_char": {
+          "query": "ar",
+          "ref_no_history": [
+            "are",
+            "around",
+            "area"
+          ],
+          "no_history": [
+            "are",
+            "area",
+            "around"
+          ],
+          "with_history": [
+            "are",
+            "area",
+            "around"
+          ],
+          "ref_with_history": [
+            "are",
+            "around",
+            "area"
+          ]
+        },
+        "one_char": {
+          "query": "a",
+          "ref_no_history": [
+            "are",
+            "about",
+            "all"
+          ],
+          "no_history": [
+            "and",
+            "a",
+            "as"
+          ],
+          "with_history": [
+            "are",
+            "and",
+            "a"
+          ],
+          "ref_with_history": [
+            "are",
+            "about",
+            "all"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "you",
+      "language": "en",
+      "id": "en_bi_008",
+      "prev_word": "are",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "you",
+            "the",
+            "not"
+          ],
+          "no_history": [],
+          "with_history": ["you"],
+          "ref_with_history": [
+            "you",
+            "your",
+            "not"
+          ]
+        },
+        "two_char": {
+          "query": "yo",
+          "ref_no_history": [
+            "you",
+            "your",
+            "yours"
+          ],
+          "no_history": [
+            "you",
+            "you're",
+            "your"
+          ],
+          "with_history": [
+            "you",
+            "you're",
+            "your"
+          ],
+          "ref_with_history": [
+            "you",
+            "your",
+            "yours"
+          ]
+        },
+        "one_char": {
+          "query": "y",
+          "ref_no_history": [
+            "you",
+            "your",
+            "yet"
+          ],
+          "no_history": [
+            "years",
+            "you",
+            "year"
+          ],
+          "with_history": [
+            "you",
+            "years",
+            "year"
+          ],
+          "ref_with_history": [
+            "you",
+            "your",
+            "yes"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "doing",
+      "language": "en",
+      "id": "en_bi_009",
+      "prev_word": "you",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "doing",
+            "are",
+            "have"
+          ],
+          "no_history": [],
+          "with_history": ["doing"],
+          "ref_with_history": [
+            "doing",
+            "are",
+            "have"
+          ]
+        },
+        "two_char": {
+          "query": "do",
+          "ref_no_history": [
+            "doing",
+            "do",
+            "done"
+          ],
+          "no_history": [
+            "don't",
+            "down",
+            "do"
+          ],
+          "with_history": [
+            "doing",
+            "don't",
+            "down"
+          ],
+          "ref_with_history": [
+            "doing",
+            "do",
+            "done"
+          ]
+        },
+        "one_char": {
+          "query": "d",
+          "ref_no_history": [
+            "doing",
+            "do",
+            "don't"
+          ],
+          "no_history": [
+            "don't",
+            "during",
+            "day"
+          ],
+          "with_history": [
+            "doing",
+            "don't",
+            "during"
+          ],
+          "ref_with_history": [
+            "doing",
+            "do",
+            "done"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "will",
+      "language": "en",
+      "id": "en_bi_010",
+      "prev_word": "I",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "have",
+            "am",
+            "will"
+          ],
+          "no_history": [],
+          "with_history": ["will"],
+          "ref_with_history": [
+            "will",
+            "have",
+            "am"
+          ]
+        },
+        "two_char": {
+          "query": "wi",
+          "ref_no_history": [
+            "will",
+            "with",
+            "wish"
+          ],
+          "no_history": [
+            "with",
+            "will",
+            "within"
+          ],
+          "with_history": [
+            "will",
+            "with",
+            "within"
+          ],
+          "ref_with_history": [
+            "will",
+            "with",
+            "wish"
+          ]
+        },
+        "one_char": {
+          "query": "w",
+          "ref_no_history": [
+            "will",
+            "was",
+            "would"
+          ],
+          "no_history": [
+            "was",
+            "with",
+            "were"
+          ],
+          "with_history": [
+            "will",
+            "was",
+            "with"
+          ],
+          "ref_with_history": [
+            "will",
+            "was",
+            "would"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "be",
+      "language": "en",
+      "id": "en_bi_011",
+      "prev_word": "will",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "be",
+            "have",
+            "not"
+          ],
+          "no_history": [],
+          "with_history": ["be"],
+          "ref_with_history": [
+            "be",
+            "have",
+            "not"
+          ]
+        },
+        "two_char": {
+          "query": "be",
+          "ref_no_history": [
+            "be",
+            "been",
+            "better"
+          ],
+          "no_history": [
+            "been",
+            "be",
+            "between"
+          ],
+          "with_history": [
+            "be",
+            "been",
+            "between"
+          ],
+          "ref_with_history": [
+            "be",
+            "been",
+            "become"
+          ]
+        },
+        "one_char": {
+          "query": "b",
+          "ref_no_history": [
+            "be",
+            "by",
+            "back"
+          ],
+          "no_history": [
+            "by",
+            "but",
+            "been"
+          ],
+          "with_history": [
+            "be",
+            "by",
+            "but"
+          ],
+          "ref_with_history": [
+            "be",
+            "back",
+            "by"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "there",
+      "language": "en",
+      "id": "en_bi_012",
+      "prev_word": "be",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "able",
+            "a",
+            "in"
+          ],
+          "no_history": [],
+          "with_history": ["there"],
+          "ref_with_history": [
+            "there",
+            "able",
+            "a"
+          ]
+        },
+        "two_char": {
+          "query": "th",
+          "ref_no_history": [
+            "the",
+            "there",
+            "that"
+          ],
+          "no_history": [
+            "the",
+            "this",
+            "that"
+          ],
+          "with_history": [
+            "there",
+            "the",
+            "this"
+          ],
+          "ref_with_history": [
+            "there",
+            "the",
+            "that"
+          ]
+        },
+        "one_char": {
+          "query": "t",
+          "ref_no_history": [
+            "the",
+            "there",
+            "to"
+          ],
+          "no_history": [
+            "the",
+            "to",
+            "this"
+          ],
+          "with_history": [
+            "there",
+            "the",
+            "to"
+          ],
+          "ref_with_history": [
+            "there",
+            "the",
+            "to"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "soon",
+      "language": "en",
+      "id": "en_bi_013",
+      "prev_word": "there",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "is",
+            "are",
+            "for"
+          ],
+          "no_history": [],
+          "with_history": ["soon"],
+          "ref_with_history": [
+            "soon",
+            "is",
+            "are"
+          ]
+        },
+        "two_char": {
+          "query": "so",
+          "ref_no_history": [
+            "so",
+            "soon",
+            "some"
+          ],
+          "no_history": [
+            "some",
+            "so",
+            "son"
+          ],
+          "with_history": [
+            "soon",
+            "some",
+            "so"
+          ],
+          "ref_with_history": [
+            "soon",
+            "so",
+            "some"
+          ]
+        },
+        "one_char": {
+          "query": "s",
+          "ref_no_history": [
+            "so",
+            "soon",
+            "still"
+          ],
+          "no_history": [
+            "she",
+            "such",
+            "some"
+          ],
+          "with_history": [
+            "soon",
+            "she",
+            "such"
+          ],
+          "ref_with_history": [
+            "soon",
+            "so",
+            "still"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "forward",
+      "language": "en",
+      "id": "en_bi_014",
+      "prev_word": "Looking",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "forward",
+            "at",
+            "for"
+          ],
+          "no_history": [],
+          "with_history": ["forward"],
+          "ref_with_history": [
+            "forward",
+            "at",
+            "for"
+          ]
+        },
+        "two_char": {
+          "query": "fo",
+          "ref_no_history": [
+            "forward",
+            "for",
+            "follow"
+          ],
+          "no_history": [
+            "for",
+            "four",
+            "following"
+          ],
+          "with_history": [
+            "forward",
+            "for",
+            "four"
+          ],
+          "ref_with_history": [
+            "forward",
+            "for",
+            "follow"
+          ]
+        },
+        "one_char": {
+          "query": "f",
+          "ref_no_history": [
+            "forward",
+            "for",
+            "from"
+          ],
+          "no_history": [
+            "for",
+            "from",
+            "first"
+          ],
+          "with_history": [
+            "forward",
+            "for",
+            "from"
+          ],
+          "ref_with_history": [
+            "forward",
+            "for",
+            "from"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "to",
+      "language": "en",
+      "id": "en_bi_015",
+      "prev_word": "forward",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "to",
+            "and",
+            "with"
+          ],
+          "no_history": [],
+          "with_history": ["to"],
+          "ref_with_history": [
+            "to",
+            "and",
+            "with"
+          ]
+        },
+        "two_char": {
+          "query": "to",
+          "ref_no_history": [
+            "to",
+            "today",
+            "tomorrow"
+          ],
+          "no_history": [
+            "to",
+            "town",
+            "too"
+          ],
+          "with_history": [
+            "to",
+            "town",
+            "too"
+          ],
+          "ref_with_history": [
+            "to",
+            "today",
+            "tomorrow"
+          ]
+        },
+        "one_char": {
+          "query": "t",
+          "ref_no_history": [
+            "to",
+            "the",
+            "that"
+          ],
+          "no_history": [
+            "the",
+            "to",
+            "this"
+          ],
+          "with_history": [
+            "to",
+            "the",
+            "this"
+          ],
+          "ref_with_history": [
+            "to",
+            "the",
+            "that"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "seeing",
+      "language": "en",
+      "id": "en_bi_016",
+      "prev_word": "to",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "the",
+            "see",
+            "hearing"
+          ],
+          "no_history": [],
+          "with_history": ["seeing"],
+          "ref_with_history": [
+            "seeing",
+            "see",
+            "hearing"
+          ]
+        },
+        "two_char": {
+          "query": "se",
+          "ref_no_history": [
+            "see",
+            "seeing",
+            "send"
+          ],
+          "no_history": [
+            "second",
+            "season",
+            "several"
+          ],
+          "with_history": [
+            "seeing",
+            "second",
+            "season"
+          ],
+          "ref_with_history": [
+            "seeing",
+            "see",
+            "send"
+          ]
+        },
+        "one_char": {
+          "query": "s",
+          "ref_no_history": [
+            "see",
+            "seeing",
+            "start"
+          ],
+          "no_history": [
+            "she",
+            "such",
+            "some"
+          ],
+          "with_history": [
+            "seeing",
+            "she",
+            "such"
+          ],
+          "ref_with_history": [
+            "seeing",
+            "see",
+            "start"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "a",
+      "language": "en",
+      "id": "en_bi_017",
+      "prev_word": "Have",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "a",
+            "been",
+            "to"
+          ],
+          "no_history": [],
+          "with_history": ["a"],
+          "ref_with_history": [
+            "a",
+            "been",
+            "to"
+          ]
+        },
+        "two_char": {
+          "query": "an",
+          "ref_no_history": [
+            "an",
+            "and",
+            "another"
+          ],
+          "no_history": [
+            "and",
+            "an",
+            "any"
+          ],
+          "with_history": [
+            "and",
+            "an",
+            "any"
+          ],
+          "ref_with_history": [
+            "an",
+            "and",
+            "another"
+          ]
+        },
+        "one_char": {
+          "query": "a",
+          "ref_no_history": [
+            "a",
+            "all",
+            "any"
+          ],
+          "no_history": [
+            "and",
+            "a",
+            "as"
+          ],
+          "with_history": [
+            "a",
+            "and",
+            "as"
+          ],
+          "ref_with_history": [
+            "a",
+            "all",
+            "any"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "great",
+      "language": "en",
+      "id": "en_bi_018",
+      "prev_word": "a",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "great",
+            "good",
+            "lot"
+          ],
+          "no_history": [],
+          "with_history": ["great"],
+          "ref_with_history": [
+            "great",
+            "good",
+            "lot"
+          ]
+        },
+        "two_char": {
+          "query": "gr",
+          "ref_no_history": [
+            "great",
+            "group",
+            "ground"
+          ],
+          "no_history": [
+            "group",
+            "great",
+            "groups"
+          ],
+          "with_history": [
+            "great",
+            "group",
+            "groups"
+          ],
+          "ref_with_history": [
+            "great",
+            "group",
+            "ground"
+          ]
+        },
+        "one_char": {
+          "query": "g",
+          "ref_no_history": [
+            "great",
+            "good",
+            "go"
+          ],
+          "no_history": [
+            "get",
+            "going",
+            "good"
+          ],
+          "with_history": [
+            "great",
+            "get",
+            "going"
+          ],
+          "ref_with_history": [
+            "great",
+            "good",
+            "group"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "day",
+      "language": "en",
+      "id": "en_bi_019",
+      "prev_word": "great",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "day",
+            "time",
+            "week"
+          ],
+          "no_history": [],
+          "with_history": ["day"],
+          "ref_with_history": [
+            "day",
+            "time",
+            "weekend"
+          ]
+        },
+        "two_char": {
+          "query": "da",
+          "ref_no_history": [
+            "day",
+            "days",
+            "daily"
+          ],
+          "no_history": [
+            "day",
+            "days",
+            "daughter"
+          ],
+          "with_history": [
+            "day",
+            "days",
+            "daughter"
+          ],
+          "ref_with_history": [
+            "day",
+            "daily",
+            "days"
+          ]
+        },
+        "one_char": {
+          "query": "d",
+          "ref_no_history": [
+            "day",
+            "deal",
+            "difference"
+          ],
+          "no_history": [
+            "don't",
+            "during",
+            "day"
+          ],
+          "with_history": [
+            "day",
+            "don't",
+            "during"
+          ],
+          "ref_with_history": [
+            "day",
+            "deal",
+            "difference"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "the",
+      "language": "en",
+      "id": "en_bi_020",
+      "prev_word": "check",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "the",
+            "it",
+            "out"
+          ],
+          "no_history": [],
+          "with_history": ["the"],
+          "ref_with_history": [
+            "the",
+            "out",
+            "it"
+          ]
+        },
+        "two_char": {
+          "query": "th",
+          "ref_no_history": [
+            "the",
+            "this",
+            "that"
+          ],
+          "no_history": [
+            "the",
+            "this",
+            "that"
+          ],
+          "with_history": [
+            "the",
+            "this",
+            "that"
+          ],
+          "ref_with_history": [
+            "the",
+            "this",
+            "that"
+          ]
+        },
+        "one_char": {
+          "query": "t",
+          "ref_no_history": [
+            "the",
+            "this",
+            "that"
+          ],
+          "no_history": [
+            "the",
+            "to",
+            "this"
+          ],
+          "with_history": [
+            "the",
+            "to",
+            "this"
+          ],
+          "ref_with_history": [
+            "the",
+            "this",
+            "that"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "details",
+      "language": "en",
+      "id": "en_bi_021",
+      "prev_word": "the",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "same",
+            "first",
+            "new"
+          ],
+          "no_history": [],
+          "with_history": ["details"],
+          "ref_with_history": [
+            "details",
+            "same",
+            "first"
+          ]
+        },
+        "two_char": {
+          "query": "de",
+          "ref_no_history": [
+            "details",
+            "detail",
+            "development"
+          ],
+          "no_history": [
+            "death",
+            "development",
+            "developed"
+          ],
+          "with_history": [
+            "details",
+            "death",
+            "development"
+          ],
+          "ref_with_history": [
+            "details",
+            "detail",
+            "development"
+          ]
+        },
+        "one_char": {
+          "query": "d",
+          "ref_no_history": [
+            "data",
+            "difference",
+            "details"
+          ],
+          "no_history": [
+            "don't",
+            "during",
+            "day"
+          ],
+          "with_history": [
+            "details",
+            "don't",
+            "during"
+          ],
+          "ref_with_history": [
+            "details",
+            "data",
+            "difference"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "you",
+      "language": "en",
+      "id": "en_bi_022",
+      "prev_word": "hope",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "you",
+            "this",
+            "to"
+          ],
+          "no_history": [],
+          "with_history": ["you"],
+          "ref_with_history": [
+            "you",
+            "this",
+            "to"
+          ]
+        },
+        "two_char": {
+          "query": "yo",
+          "ref_no_history": [
+            "you",
+            "your",
+            "yours"
+          ],
+          "no_history": [
+            "you",
+            "you're",
+            "your"
+          ],
+          "with_history": [
+            "you",
+            "you're",
+            "your"
+          ],
+          "ref_with_history": [
+            "you",
+            "your",
+            "yours"
+          ]
+        },
+        "one_char": {
+          "query": "y",
+          "ref_no_history": [
+            "you",
+            "your",
+            "yes"
+          ],
+          "no_history": [
+            "years",
+            "you",
+            "year"
+          ],
+          "with_history": [
+            "you",
+            "years",
+            "year"
+          ],
+          "ref_with_history": [
+            "you",
+            "your",
+            "yes"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "well",
+      "language": "en",
+      "id": "en_bi_023",
+      "prev_word": "are",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "doing",
+            "going",
+            "well"
+          ],
+          "no_history": [],
+          "with_history": ["well"],
+          "ref_with_history": [
+            "well",
+            "doing",
+            "going"
+          ]
+        },
+        "two_char": {
+          "query": "we",
+          "ref_no_history": [
+            "well",
+            "welcome",
+            "went"
+          ],
+          "no_history": [
+            "were",
+            "we",
+            "well"
+          ],
+          "with_history": [
+            "well",
+            "were",
+            "we"
+          ],
+          "ref_with_history": [
+            "well",
+            "welcome",
+            "week"
+          ]
+        },
+        "one_char": {
+          "query": "w",
+          "ref_no_history": [
+            "well",
+            "with",
+            "working"
+          ],
+          "no_history": [
+            "was",
+            "with",
+            "were"
+          ],
+          "with_history": [
+            "well",
+            "was",
+            "with"
+          ],
+          "ref_with_history": [
+            "well",
+            "working",
+            "with"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "me",
+      "language": "en",
+      "id": "en_bi_024",
+      "prev_word": "help",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "me",
+            "you",
+            "us"
+          ],
+          "no_history": [],
+          "with_history": ["me"],
+          "ref_with_history": [
+            "me",
+            "you",
+            "us"
+          ]
+        },
+        "two_char": {
+          "query": "me",
+          "ref_no_history": [
+            "me",
+            "meet",
+            "men"
+          ],
+          "no_history": [
+            "me",
+            "member",
+            "members"
+          ],
+          "with_history": [
+            "me",
+            "member",
+            "members"
+          ],
+          "ref_with_history": [
+            "me",
+            "meet",
+            "men"
+          ]
+        },
+        "one_char": {
+          "query": "m",
+          "ref_no_history": [
+            "me",
+            "make",
+            "my"
+          ],
+          "no_history": [
+            "me",
+            "more",
+            "must"
+          ],
+          "with_history": [
+            "me",
+            "more",
+            "must"
+          ],
+          "ref_with_history": [
+            "me",
+            "my",
+            "more"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "this",
+      "language": "en",
+      "id": "en_bi_025",
+      "prev_word": "with",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "the",
+            "a",
+            "this"
+          ],
+          "no_history": [],
+          "with_history": ["this"],
+          "ref_with_history": [
+            "this",
+            "the",
+            "a"
+          ]
+        },
+        "two_char": {
+          "query": "th",
+          "ref_no_history": [
+            "this",
+            "the",
+            "that"
+          ],
+          "no_history": [
+            "the",
+            "this",
+            "that"
+          ],
+          "with_history": [
+            "this",
+            "the",
+            "that"
+          ],
+          "ref_with_history": [
+            "this",
+            "the",
+            "that"
+          ]
+        },
+        "one_char": {
+          "query": "t",
+          "ref_no_history": [
+            "the",
+            "this",
+            "that"
+          ],
+          "no_history": [
+            "the",
+            "to",
+            "this"
+          ],
+          "with_history": [
+            "this",
+            "the",
+            "to"
+          ],
+          "ref_with_history": [
+            "this",
+            "the",
+            "that"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "you",
+      "language": "en",
+      "id": "en_bi_026",
+      "prev_word": "See",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "you",
+            "the",
+            "what"
+          ],
+          "no_history": [],
+          "with_history": ["you"],
+          "ref_with_history": [
+            "you",
+            "the",
+            "again"
+          ]
+        },
+        "two_char": {
+          "query": "yo",
+          "ref_no_history": [
+            "you",
+            "your",
+            "yours"
+          ],
+          "no_history": [
+            "you",
+            "you're",
+            "your"
+          ],
+          "with_history": [
+            "you",
+            "you're",
+            "your"
+          ],
+          "ref_with_history": [
+            "you",
+            "your",
+            "yours"
+          ]
+        },
+        "one_char": {
+          "query": "y",
+          "ref_no_history": [
+            "you",
+            "your",
+            "yet"
+          ],
+          "no_history": [
+            "years",
+            "you",
+            "year"
+          ],
+          "with_history": [
+            "you",
+            "years",
+            "year"
+          ],
+          "ref_with_history": [
+            "you",
+            "your",
+            "yes"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "tomorrow",
+      "language": "en",
+      "id": "en_bi_027",
+      "prev_word": "you",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "soon",
+            "there",
+            "later"
+          ],
+          "no_history": [],
+          "with_history": ["tomorrow"],
+          "ref_with_history": [
+            "tomorrow",
+            "soon",
+            "later"
+          ]
+        },
+        "two_char": {
+          "query": "to",
+          "ref_no_history": [
+            "tomorrow",
+            "tonight",
+            "today"
+          ],
+          "no_history": [
+            "to",
+            "town",
+            "too"
+          ],
+          "with_history": [
+            "tomorrow",
+            "to",
+            "town"
+          ],
+          "ref_with_history": [
+            "tomorrow",
+            "today",
+            "tonight"
+          ]
+        },
+        "one_char": {
+          "query": "t",
+          "ref_no_history": [
+            "there",
+            "tomorrow",
+            "then"
+          ],
+          "no_history": [
+            "the",
+            "to",
+            "this"
+          ],
+          "with_history": [
+            "tomorrow",
+            "the",
+            "to"
+          ],
+          "ref_with_history": [
+            "tomorrow",
+            "there",
+            "then"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "morning",
+      "language": "en",
+      "id": "en_bi_028",
+      "prev_word": "tomorrow",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "morning",
+            "at",
+            "night"
+          ],
+          "no_history": [],
+          "with_history": ["morning"],
+          "ref_with_history": [
+            "morning",
+            "at",
+            "night"
+          ]
+        },
+        "two_char": {
+          "query": "mo",
+          "ref_no_history": [
+            "morning",
+            "more",
+            "most"
+          ],
+          "no_history": [
+            "more",
+            "most",
+            "moved"
+          ],
+          "with_history": [
+            "morning",
+            "more",
+            "most"
+          ],
+          "ref_with_history": [
+            "morning",
+            "more",
+            "most"
+          ]
+        },
+        "one_char": {
+          "query": "m",
+          "ref_no_history": [
+            "morning",
+            "meeting",
+            "more"
+          ],
+          "no_history": [
+            "me",
+            "more",
+            "must"
+          ],
+          "with_history": [
+            "morning",
+            "me",
+            "more"
+          ],
+          "ref_with_history": [
+            "morning",
+            "meeting",
+            "more"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "for",
+      "language": "en",
+      "id": "en_bi_029",
+      "prev_word": "sorry",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "for",
+            "to",
+            "about"
+          ],
+          "no_history": [],
+          "with_history": ["for"],
+          "ref_with_history": [
+            "for",
+            "to",
+            "about"
+          ]
+        },
+        "two_char": {
+          "query": "fo",
+          "ref_no_history": [
+            "for",
+            "following",
+            "forward"
+          ],
+          "no_history": [
+            "for",
+            "four",
+            "following"
+          ],
+          "with_history": [
+            "for",
+            "four",
+            "following"
+          ],
+          "ref_with_history": [
+            "for",
+            "forward",
+            "following"
+          ]
+        },
+        "one_char": {
+          "query": "f",
+          "ref_no_history": [
+            "for",
+            "from",
+            "first"
+          ],
+          "no_history": [
+            "for",
+            "from",
+            "first"
+          ],
+          "with_history": [
+            "for",
+            "from",
+            "first"
+          ],
+          "ref_with_history": [
+            "for",
+            "from",
+            "first"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "delay",
+      "language": "en",
+      "id": "en_bi_030",
+      "prev_word": "the",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "first",
+            "inconvenience",
+            "late"
+          ],
+          "no_history": [],
+          "with_history": ["delay"],
+          "ref_with_history": [
+            "delay",
+            "inconvenience",
+            "first"
+          ]
+        },
+        "two_char": {
+          "query": "de",
+          "ref_no_history": [
+            "delay",
+            "details",
+            "decision"
+          ],
+          "no_history": [
+            "death",
+            "development",
+            "developed"
+          ],
+          "with_history": [
+            "delay",
+            "death",
+            "development"
+          ],
+          "ref_with_history": [
+            "delay",
+            "details",
+            "decision"
+          ]
+        },
+        "one_char": {
+          "query": "d",
+          "ref_no_history": [
+            "delay",
+            "difference",
+            "day"
+          ],
+          "no_history": [
+            "don't",
+            "during",
+            "day"
+          ],
+          "with_history": [
+            "delay",
+            "don't",
+            "during"
+          ],
+          "ref_with_history": [
+            "delay",
+            "difference",
+            "damage"
+          ]
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "total_cases_evaluated": 60,
+    "evaluator": "JotInput Prediction Evaluator v1.0",
+    "timestamp": 1794716779690
+  },
+  "summary_metrics": {
+    "japanese": {
+      "ref_concordance_at_1": 0.28888888888888886,
+      "target_hit_at_3": 0.3277777777777778,
+      "ref_concordance_at_3": 0.37777777777777777,
+      "by_slot": {
+        "two_char_with_hist": {
+          "ref_concordance_at_1": 0.06666666666666667,
+          "target_hit_at_3": 0.13333333333333333,
+          "ref_concordance_at_3": 0.2,
+          "mrr": 0.09444444444444443,
+          "target_hit_at_1": 0.06666666666666667
+        },
+        "one_char_no_hist": {
+          "ref_concordance_at_1": 0,
+          "target_hit_at_3": 0.03333333333333333,
+          "ref_concordance_at_3": 0.06666666666666667,
+          "mrr": 0.016666666666666666,
+          "target_hit_at_1": 0
+        },
+        "zero_char_with_hist": {
+          "ref_concordance_at_1": 1,
+          "target_hit_at_3": 1,
+          "ref_concordance_at_3": 1,
+          "mrr": 1,
+          "target_hit_at_1": 1
+        },
+        "zero_char_no_hist": {
+          "ref_concordance_at_1": 0.6,
+          "target_hit_at_3": 0.6333333333333333,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.5833333333333334,
+          "target_hit_at_1": 0.5333333333333333
+        },
+        "two_char_no_hist": {
+          "ref_concordance_at_1": 0.06666666666666667,
+          "target_hit_at_3": 0.13333333333333333,
+          "ref_concordance_at_3": 0.2,
+          "mrr": 0.09444444444444443,
+          "target_hit_at_1": 0.06666666666666667
+        },
+        "one_char_with_hist": {
+          "ref_concordance_at_1": 0,
+          "target_hit_at_3": 0.03333333333333333,
+          "ref_concordance_at_3": 0.1,
+          "mrr": 0.016666666666666666,
+          "target_hit_at_1": 0
+        }
+      },
+      "mrr": 0.30092592592592593,
+      "target_hit_at_1": 0.2777777777777778,
+      "total_queries": 180
+    },
+    "english": {
+      "ref_concordance_at_1": 0.6611111111111111,
+      "target_hit_at_3": 0.7444444444444445,
+      "ref_concordance_at_3": 0.8,
+      "by_slot": {
+        "two_char_with_hist": {
+          "ref_concordance_at_1": 1,
+          "target_hit_at_3": 1,
+          "ref_concordance_at_3": 1,
+          "mrr": 1,
+          "target_hit_at_1": 1
+        },
+        "one_char_no_hist": {
+          "ref_concordance_at_1": 0.3333333333333333,
+          "target_hit_at_3": 0.6333333333333333,
+          "ref_concordance_at_3": 0.9,
+          "mrr": 0.43333333333333335,
+          "target_hit_at_1": 0.26666666666666666
+        },
+        "zero_char_with_hist": {
+          "ref_concordance_at_1": 1,
+          "target_hit_at_3": 1,
+          "ref_concordance_at_3": 1,
+          "mrr": 1,
+          "target_hit_at_1": 1
+        },
+        "zero_char_no_hist": {
+          "ref_concordance_at_1": 0,
+          "target_hit_at_3": 0,
+          "ref_concordance_at_3": 0,
+          "mrr": 0,
+          "target_hit_at_1": 0
+        },
+        "two_char_no_hist": {
+          "ref_concordance_at_1": 0.6333333333333333,
+          "target_hit_at_3": 0.8333333333333334,
+          "ref_concordance_at_3": 0.9,
+          "mrr": 0.7055555555555556,
+          "target_hit_at_1": 0.6
+        },
+        "one_char_with_hist": {
+          "ref_concordance_at_1": 1,
+          "target_hit_at_3": 1,
+          "ref_concordance_at_3": 1,
+          "mrr": 1,
+          "target_hit_at_1": 1
+        }
+      },
+      "mrr": 0.6898148148148148,
+      "target_hit_at_1": 0.6444444444444445,
+      "total_queries": 180
+    },
+    "overall": {
+      "ref_concordance_at_1": 0.475,
+      "target_hit_at_3": 0.5361111111111111,
+      "ref_concordance_at_3": 0.5888888888888889,
+      "mrr": 0.49537037037037035,
+      "target_hit_at_1": 0.46111111111111114
+    }
+  },
+  "japanese_cases": [
+    {
+      "target_word": "お願い",
+      "language": "ja",
+      "id": "ja_bi_001",
+      "target_reading": "おねがい",
+      "prev_word": "よろしく",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "お願いします",
+            "お願いいたします",
+            "どうぞ"
+          ],
+          "no_history": [
+            "お願いします",
+            "お願いいたします",
+            "どうぞ"
+          ],
+          "with_history": [
+            "お願い",
+            "お願いします",
+            "お願いいたします"
+          ],
+          "ref_with_history": [
+            "お願い",
+            "お願いします",
+            "お願いいたします"
+          ]
+        },
+        "two_char": {
+          "query": "おね",
+          "ref_no_history": [
+            "お願いします",
+            "お願い",
+            "お願いいたします"
+          ],
+          "no_history": [
+            "姐",
+            "姉",
+            "あね"
+          ],
+          "with_history": [
+            "姐",
+            "姉",
+            "あね"
+          ],
+          "ref_with_history": [
+            "お願い",
+            "お願いします",
+            "お願いいたします"
+          ]
+        },
+        "one_char": {
+          "query": "お",
+          "ref_no_history": [
+            "お願いします",
+            "お願いいたします",
+            "お知らせ"
+          ],
+          "no_history": [
+            "御",
+            "雄",
+            "あ"
+          ],
+          "with_history": [
+            "御",
+            "雄",
+            "あ"
+          ],
+          "ref_with_history": [
+            "お願い",
+            "お願いします",
+            "お願いいたします"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "します",
+      "language": "ja",
+      "id": "ja_bi_002",
+      "target_reading": "します",
+      "prev_word": "お願い",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "します",
+            "いたします",
+            "申し上げます"
+          ],
+          "no_history": [
+            "します",
+            "いたします",
+            "申し上げます"
+          ],
+          "with_history": [
+            "します",
+            "いたします",
+            "申し上げます"
+          ],
+          "ref_with_history": [
+            "します",
+            "いたします",
+            "申し上げます"
+          ]
+        },
+        "two_char": {
+          "query": "しま",
+          "ref_no_history": [
+            "します",
+            "した",
+            "しました"
+          ],
+          "no_history": [
+            "シマ",
+            "志摩",
+            "志麻"
+          ],
+          "with_history": [
+            "シマ",
+            "志摩",
+            "志麻"
+          ],
+          "ref_with_history": [
+            "します",
+            "した",
+            "しました"
+          ]
+        },
+        "one_char": {
+          "query": "し",
+          "ref_no_history": [
+            "します",
+            "した",
+            "してください"
+          ],
+          "no_history": [
+            "死",
+            "視",
+            "市"
+          ],
+          "with_history": [
+            "死",
+            "視",
+            "市"
+          ],
+          "ref_with_history": [
+            "します",
+            "した",
+            "して"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "お世話",
+      "language": "ja",
+      "id": "ja_bi_003",
+      "target_reading": "おせわ",
+      "prev_word": "いつも",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "お世話になっております",
+            "ありがとうございます",
+            "お世話になります"
+          ],
+          "no_history": [
+            "お世話になっております",
+            "ありがとうございます"
+          ],
+          "with_history": [
+            "お世話",
+            "お世話になっております",
+            "ありがとうございます"
+          ],
+          "ref_with_history": [
+            "お世話",
+            "お世話になっております",
+            "ありがとうございます"
+          ]
+        },
+        "two_char": {
+          "query": "おせ",
+          "ref_no_history": [
+            "お世話になっております",
+            "お世話",
+            "お世話になります"
+          ],
+          "no_history": [
+            "押せ",
+            "推せ",
+            "尾瀬"
+          ],
+          "with_history": [
+            "押せ",
+            "推せ",
+            "尾瀬"
+          ],
+          "ref_with_history": [
+            "お世話",
+            "お世話になっております",
+            "お世話になります"
+          ]
+        },
+        "one_char": {
+          "query": "お",
+          "ref_no_history": [
+            "お世話になっております",
+            "お世話",
+            "お願い"
+          ],
+          "no_history": [
+            "御",
+            "雄",
+            "あ"
+          ],
+          "with_history": [
+            "御",
+            "雄",
+            "あ"
+          ],
+          "ref_with_history": [
+            "お世話",
+            "お世話になっております",
+            "お願い"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "に",
+      "language": "ja",
+      "id": "ja_bi_004",
+      "target_reading": "に",
+      "prev_word": "お世話",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "になっております",
+            "になります",
+            "の"
+          ],
+          "no_history": [
+            "になっております",
+            "になります",
+            "は"
+          ],
+          "with_history": [
+            "に",
+            "になっております",
+            "になります"
+          ],
+          "ref_with_history": [
+            "に",
+            "になっております",
+            "になります"
+          ]
+        },
+        "two_char": {
+          "query": "にな",
+          "ref_no_history": [
+            "になっております",
+            "になります",
+            "らなかった"
+          ],
+          "no_history": [
+            "7",
+            "には",
+            "なな"
+          ],
+          "with_history": [
+            "7",
+            "には",
+            "なな"
+          ],
+          "ref_with_history": [
+            "になっております",
+            "になります",
+            "らない"
+          ]
+        },
+        "one_char": {
+          "query": "に",
+          "ref_no_history": [
+            "になっております",
+            "になります",
+            "には"
+          ],
+          "no_history": [
+            "2",
+            "似",
+            "煮"
+          ],
+          "with_history": [
+            "2",
+            "似",
+            "煮"
+          ],
+          "ref_with_history": [
+            "に",
+            "になっております",
+            "になります"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "しました",
+      "language": "ja",
+      "id": "ja_bi_005",
+      "target_reading": "しました",
+      "prev_word": "確認",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "しました",
+            "いたします",
+            "お願いします"
+          ],
+          "no_history": [
+            "しました",
+            "いたします",
+            "お願いします"
+          ],
+          "with_history": [
+            "しました",
+            "いたします",
+            "お願いします"
+          ],
+          "ref_with_history": [
+            "しました",
+            "いたします",
+            "お願いします"
+          ]
+        },
+        "two_char": {
+          "query": "しま",
+          "ref_no_history": [
+            "しました",
+            "します",
+            "した"
+          ],
+          "no_history": [
+            "シマ",
+            "志摩",
+            "志麻"
+          ],
+          "with_history": [
+            "シマ",
+            "志摩",
+            "志麻"
+          ],
+          "ref_with_history": [
+            "しました",
+            "します",
+            "した"
+          ]
+        },
+        "one_char": {
+          "query": "し",
+          "ref_no_history": [
+            "しました",
+            "します",
+            "してください"
+          ],
+          "no_history": [
+            "死",
+            "視",
+            "市"
+          ],
+          "with_history": [
+            "死",
+            "視",
+            "市"
+          ],
+          "ref_with_history": [
+            "しました",
+            "します",
+            "して"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "様",
+      "language": "ja",
+      "id": "ja_bi_006",
+      "target_reading": "さま",
+      "prev_word": "お疲れ",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "様です",
+            "様でした",
+            "様"
+          ],
+          "no_history": [
+            "様です",
+            "様でした",
+            "は"
+          ],
+          "with_history": [
+            "様",
+            "様です",
+            "様でした"
+          ],
+          "ref_with_history": [
+            "様",
+            "様です",
+            "様でした"
+          ]
+        },
+        "two_char": {
+          "query": "さま",
+          "ref_no_history": [
+            "様です",
+            "様でした",
+            "様"
+          ],
+          "no_history": [
+            "様",
+            "サマ",
+            "座間"
+          ],
+          "with_history": [
+            "様",
+            "サマ",
+            "座間"
+          ],
+          "ref_with_history": [
+            "様",
+            "様です",
+            "様でした"
+          ]
+        },
+        "one_char": {
+          "query": "さ",
+          "ref_no_history": [
+            "様です",
+            "様でした",
+            "様"
+          ],
+          "no_history": [
+            "差",
+            "The",
+            "座"
+          ],
+          "with_history": [
+            "差",
+            "The",
+            "座"
+          ],
+          "ref_with_history": [
+            "様",
+            "様です",
+            "様でした"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "です",
+      "language": "ja",
+      "id": "ja_bi_007",
+      "target_reading": "です",
+      "prev_word": "様",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "です",
+            "でした",
+            "！"
+          ],
+          "no_history": [
+            "は",
+            "が",
+            "を"
+          ],
+          "with_history": [
+            "です",
+            "は",
+            "が"
+          ],
+          "ref_with_history": [
+            "です",
+            "でした",
+            "！"
+          ]
+        },
+        "two_char": {
+          "query": "です",
+          "ref_no_history": [
+            "です",
+            "ですか",
+            "ですよね"
+          ],
+          "no_history": [
+            "デス",
+            "でく",
+            "デス・スター"
+          ],
+          "with_history": [
+            "デス",
+            "でく",
+            "デス・スター"
+          ],
+          "ref_with_history": [
+            "です",
+            "ですか",
+            "ですよね"
+          ]
+        },
+        "one_char": {
+          "query": "で",
+          "ref_no_history": [
+            "です",
+            "でした",
+            "でも"
+          ],
+          "no_history": [
+            "デ",
+            "出",
+            "でも"
+          ],
+          "with_history": [
+            "デ",
+            "出",
+            "でも"
+          ],
+          "ref_with_history": [
+            "です",
+            "でした",
+            "でも"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "ございます",
+      "language": "ja",
+      "id": "ja_bi_008",
+      "target_reading": "ございます",
+      "prev_word": "ありがとう",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "ございます",
+            "ございました",
+            "！"
+          ],
+          "no_history": [
+            "ございます",
+            "ございました",
+            "は"
+          ],
+          "with_history": [
+            "ございます",
+            "ございました",
+            "は"
+          ],
+          "ref_with_history": [
+            "ございます",
+            "ございました",
+            "！"
+          ]
+        },
+        "two_char": {
+          "query": "ござ",
+          "ref_no_history": [
+            "ございます",
+            "ございました",
+            "座います"
+          ],
+          "no_history": [
+            "ゴザイ",
+            "ゴザル",
+            "ござい"
+          ],
+          "with_history": [
+            "ゴザイ",
+            "ゴザル",
+            "ござい"
+          ],
+          "ref_with_history": [
+            "ございます",
+            "ございました",
+            "座います"
+          ]
+        },
+        "one_char": {
+          "query": "ご",
+          "ref_no_history": [
+            "ございます",
+            "ございました",
+            "座います"
+          ],
+          "no_history": [
+            "御",
+            "後",
+            "5"
+          ],
+          "with_history": [
+            "御",
+            "後",
+            "5"
+          ],
+          "ref_with_history": [
+            "ございます",
+            "ございました",
+            "座います"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "ありません",
+      "language": "ja",
+      "id": "ja_bi_009",
+      "target_reading": "ありません",
+      "prev_word": "申し訳",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "ございません",
+            "ありません",
+            "ない"
+          ],
+          "no_history": [
+            "ありません",
+            "ございません",
+            "ない"
+          ],
+          "with_history": [
+            "ありません",
+            "ございません",
+            "ない"
+          ],
+          "ref_with_history": [
+            "ありません",
+            "ございません",
+            "ない"
+          ]
+        },
+        "two_char": {
+          "query": "あり",
+          "ref_no_history": [
+            "ありません",
+            "ありがとうございます",
+            "あります"
+          ],
+          "no_history": [
+            "有り",
+            "アリ",
+            "在り"
+          ],
+          "with_history": [
+            "有り",
+            "アリ",
+            "在り"
+          ],
+          "ref_with_history": [
+            "ありません",
+            "あります",
+            "ありがとうございます"
+          ]
+        },
+        "one_char": {
+          "query": "あ",
+          "ref_no_history": [
+            "ありません",
+            "ある",
+            "あれば"
+          ],
+          "no_history": [
+            "亜",
+            "い",
+            "う"
+          ],
+          "with_history": [
+            "亜",
+            "い",
+            "う"
+          ],
+          "ref_with_history": [
+            "ありません",
+            "ある",
+            "あれば"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "は",
+      "language": "ja",
+      "id": "ja_bi_010",
+      "target_reading": "は",
+      "prev_word": "今日",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "は",
+            "の",
+            "も"
+          ],
+          "no_history": [
+            "は",
+            "の",
+            "中に"
+          ],
+          "with_history": [
+            "は",
+            "の",
+            "中に"
+          ],
+          "ref_with_history": [
+            "は",
+            "の",
+            "も"
+          ]
+        },
+        "two_char": {
+          "query": "はい",
+          "ref_no_history": [
+            "はい",
+            "入って",
+            "配達"
+          ],
+          "no_history": [
+            "履い",
+            "ハイ",
+            "吐い"
+          ],
+          "with_history": [
+            "履い",
+            "ハイ",
+            "吐い"
+          ],
+          "ref_with_history": [
+            "はい",
+            "配達",
+            "入って"
+          ]
+        },
+        "one_char": {
+          "query": "は",
+          "ref_no_history": [
+            "は",
+            "早く",
+            "花"
+          ],
+          "no_history": [
+            "葉",
+            "派",
+            "波"
+          ],
+          "with_history": [
+            "葉",
+            "派",
+            "波"
+          ],
+          "ref_with_history": [
+            "は",
+            "早く",
+            "花"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "天気",
+      "language": "ja",
+      "id": "ja_bi_011",
+      "target_reading": "てんき",
+      "prev_word": "良い",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "天気",
+            "一日を",
+            "人"
+          ],
+          "no_history": [
+            "は",
+            "が",
+            "を"
+          ],
+          "with_history": [
+            "天気",
+            "は",
+            "が"
+          ],
+          "ref_with_history": [
+            "天気",
+            "一日を",
+            "方向"
+          ]
+        },
+        "two_char": {
+          "query": "てん",
+          "ref_no_history": [
+            "天気",
+            "点",
+            "展望"
+          ],
+          "no_history": [
+            "点",
+            "展",
+            "店"
+          ],
+          "with_history": [
+            "点",
+            "展",
+            "店"
+          ],
+          "ref_with_history": [
+            "天気",
+            "点",
+            "展開"
+          ]
+        },
+        "one_char": {
+          "query": "て",
+          "ref_no_history": [
+            "天気",
+            "提案",
+            "手紙"
+          ],
+          "no_history": [
+            "手",
+            "で",
+            "デ"
+          ],
+          "with_history": [
+            "手",
+            "で",
+            "デ"
+          ],
+          "ref_with_history": [
+            "天気",
+            "提案",
+            "手紙"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "の",
+      "language": "ja",
+      "id": "ja_bi_012",
+      "target_reading": "の",
+      "prev_word": "明日",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "の",
+            "は",
+            "も"
+          ],
+          "no_history": [
+            "は",
+            "の",
+            "までに"
+          ],
+          "with_history": [
+            "の",
+            "は",
+            "までに"
+          ],
+          "ref_with_history": [
+            "の",
+            "は",
+            "も"
+          ]
+        },
+        "two_char": {
+          "query": "のち",
+          "ref_no_history": [
+            "のち",
+            "後ほど",
+            "後"
+          ],
+          "no_history": [
+            "後",
+            "なち",
+            "ナチ"
+          ],
+          "with_history": [
+            "後",
+            "なち",
+            "ナチ"
+          ],
+          "ref_with_history": [
+            "のち",
+            "後ほど",
+            "後"
+          ]
+        },
+        "one_char": {
+          "query": "の",
+          "ref_no_history": [
+            "の",
+            "残して",
+            "予定"
+          ],
+          "no_history": [
+            "ノ",
+            "之",
+            "な"
+          ],
+          "with_history": [
+            "ノ",
+            "之",
+            "な"
+          ],
+          "ref_with_history": [
+            "の",
+            "予定",
+            "残して"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "会議",
+      "language": "ja",
+      "id": "ja_bi_013",
+      "target_reading": "かいぎ",
+      "prev_word": "の",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "件",
+            "件名",
+            "予定"
+          ],
+          "no_history": [],
+          "with_history": ["会議"],
+          "ref_with_history": [
+            "会議",
+            "件",
+            "予定"
+          ]
+        },
+        "two_char": {
+          "query": "かい",
+          "ref_no_history": [
+            "会議",
+            "会社",
+            "開始"
+          ],
+          "no_history": [
+            "会",
+            "階",
+            "回"
+          ],
+          "with_history": [
+            "会",
+            "階",
+            "回"
+          ],
+          "ref_with_history": [
+            "会議",
+            "会社",
+            "開始"
+          ]
+        },
+        "one_char": {
+          "query": "か",
+          "ref_no_history": [
+            "会議",
+            "確認",
+            "関係"
+          ],
+          "no_history": [
+            "化",
+            "下",
+            "過"
+          ],
+          "with_history": [
+            "化",
+            "下",
+            "過"
+          ],
+          "ref_with_history": [
+            "会議",
+            "確認",
+            "関係"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "に",
+      "language": "ja",
+      "id": "ja_bi_014",
+      "target_reading": "に",
+      "prev_word": "会議",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "の",
+            "に",
+            "は"
+          ],
+          "no_history": [
+            "の",
+            "に",
+            "は"
+          ],
+          "with_history": [
+            "に",
+            "の",
+            "は"
+          ],
+          "ref_with_history": [
+            "に",
+            "の",
+            "は"
+          ]
+        },
+        "two_char": {
+          "query": "につ",
+          "ref_no_history": [
+            "について",
+            "についても",
+            "に関する"
+          ],
+          "no_history": [
+            "なつ",
+            "夏",
+            "ナツ"
+          ],
+          "with_history": [
+            "なつ",
+            "夏",
+            "ナツ"
+          ],
+          "ref_with_history": [
+            "について",
+            "についても",
+            "に関する"
+          ]
+        },
+        "one_char": {
+          "query": "に",
+          "ref_no_history": [
+            "について",
+            "に関する",
+            "における"
+          ],
+          "no_history": [
+            "2",
+            "似",
+            "煮"
+          ],
+          "with_history": [
+            "2",
+            "似",
+            "煮"
+          ],
+          "ref_with_history": [
+            "に",
+            "について",
+            "に関する"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "参加",
+      "language": "ja",
+      "id": "ja_bi_015",
+      "target_reading": "さんか",
+      "prev_word": "に",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "関して",
+            "ついて",
+            "おいて"
+          ],
+          "no_history": [],
+          "with_history": ["参加"],
+          "ref_with_history": [
+            "参加",
+            "関して",
+            "ついて"
+          ]
+        },
+        "two_char": {
+          "query": "さん",
+          "ref_no_history": [
+            "参加",
+            "賛成",
+            "参考"
+          ],
+          "no_history": [
+            "産",
+            "3",
+            "山"
+          ],
+          "with_history": [
+            "産",
+            "3",
+            "山"
+          ],
+          "ref_with_history": [
+            "参加",
+            "参考",
+            "賛成"
+          ]
+        },
+        "one_char": {
+          "query": "さ",
+          "ref_no_history": [
+            "参加",
+            "させて",
+            "際して"
+          ],
+          "no_history": [
+            "差",
+            "The",
+            "座"
+          ],
+          "with_history": [
+            "差",
+            "The",
+            "座"
+          ],
+          "ref_with_history": [
+            "参加",
+            "させて",
+            "際して"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "を",
+      "language": "ja",
+      "id": "ja_bi_016",
+      "target_reading": "を",
+      "prev_word": "資料",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "を",
+            "の",
+            "作成"
+          ],
+          "no_history": [
+            "を",
+            "の",
+            "作成"
+          ],
+          "with_history": [
+            "を",
+            "の",
+            "作成"
+          ],
+          "ref_with_history": [
+            "を",
+            "の",
+            "作成"
+          ]
+        },
+        "two_char": {
+          "query": "をお",
+          "ref_no_history": [
+            "をお送りします",
+            "をお願いします",
+            "を送りいたします"
+          ],
+          "no_history": [
+            "ヲオ",
+            "ｦｵ"
+          ],
+          "with_history": [
+            "ヲオ",
+            "ｦｵ"
+          ],
+          "ref_with_history": [
+            "をお送りします",
+            "をお願いします",
+            "を送りいたします"
+          ]
+        },
+        "one_char": {
+          "query": "を",
+          "ref_no_history": [
+            "を",
+            "お送り",
+            "添付"
+          ],
+          "no_history": [
+            "ヲ",
+            "ヲは",
+            "ヲも"
+          ],
+          "with_history": [
+            "ヲ",
+            "ヲは",
+            "ヲも"
+          ],
+          "ref_with_history": [
+            "を",
+            "お送り",
+            "添付"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "送信",
+      "language": "ja",
+      "id": "ja_bi_017",
+      "target_reading": "そうしん",
+      "prev_word": "を",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "ご確認",
+            "お送り",
+            "作成"
+          ],
+          "no_history": [],
+          "with_history": ["送信"],
+          "ref_with_history": [
+            "送信",
+            "ご確認",
+            "お送り"
+          ]
+        },
+        "two_char": {
+          "query": "そう",
+          "ref_no_history": [
+            "送信",
+            "送付",
+            "相談"
+          ],
+          "no_history": [
+            "総",
+            "創",
+            "層"
+          ],
+          "with_history": [
+            "総",
+            "創",
+            "層"
+          ],
+          "ref_with_history": [
+            "送信",
+            "送付",
+            "早期"
+          ]
+        },
+        "one_char": {
+          "query": "そ",
+          "ref_no_history": [
+            "送信",
+            "送付",
+            "添えて"
+          ],
+          "no_history": [
+            "粗",
+            "ソ",
+            "蘇"
+          ],
+          "with_history": [
+            "粗",
+            "ソ",
+            "蘇"
+          ],
+          "ref_with_history": [
+            "送信",
+            "送付",
+            "添えて"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "検討",
+      "language": "ja",
+      "id": "ja_bi_018",
+      "target_reading": "けんとう",
+      "prev_word": "ご",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "連絡",
+            "確認",
+            "案内"
+          ],
+          "no_history": [
+            "連絡",
+            "確認",
+            "案内"
+          ],
+          "with_history": [
+            "検討",
+            "連絡",
+            "確認"
+          ],
+          "ref_with_history": [
+            "検討",
+            "連絡",
+            "確認"
+          ]
+        },
+        "two_char": {
+          "query": "けん",
+          "ref_no_history": [
+            "検討",
+            "件名",
+            "研究"
+          ],
+          "no_history": [
+            "県",
+            "件",
+            "兼"
+          ],
+          "with_history": [
+            "県",
+            "件",
+            "兼"
+          ],
+          "ref_with_history": [
+            "検討",
+            "件名",
+            "研究"
+          ]
+        },
+        "one_char": {
+          "query": "け",
+          "ref_no_history": [
+            "検討",
+            "計画",
+            "結果"
+          ],
+          "no_history": [
+            "家",
+            "毛",
+            "下"
+          ],
+          "with_history": [
+            "家",
+            "毛",
+            "下"
+          ],
+          "ref_with_history": [
+            "検討",
+            "計画",
+            "結果"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "ください",
+      "language": "ja",
+      "id": "ja_bi_019",
+      "target_reading": "ください",
+      "prev_word": "検討",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "のほどよろしくお願いいたします",
+            "ください",
+            "中"
+          ],
+          "no_history": [
+            "は",
+            "が",
+            "を"
+          ],
+          "with_history": [
+            "ください",
+            "は",
+            "が"
+          ],
+          "ref_with_history": [
+            "ください",
+            "のほどよろしくお願いいたします",
+            "中"
+          ]
+        },
+        "two_char": {
+          "query": "くだ",
+          "ref_no_history": [
+            "ください",
+            "くださいますよう",
+            "くださり"
+          ],
+          "no_history": [
+            "須田",
+            "すだ",
+            "くださっ"
+          ],
+          "with_history": [
+            "須田",
+            "すだ",
+            "くださっ"
+          ],
+          "ref_with_history": [
+            "ください",
+            "くださいますよう",
+            "くださり"
+          ]
+        },
+        "one_char": {
+          "query": "く",
+          "ref_no_history": [
+            "ください",
+            "くださいますよう",
+            "比べ"
+          ],
+          "no_history": [
+            "区",
+            "句",
+            "九"
+          ],
+          "with_history": [
+            "区",
+            "句",
+            "九"
+          ],
+          "ref_with_history": [
+            "ください",
+            "くださいますよう",
+            "比べ"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "ありません",
+      "language": "ja",
+      "id": "ja_bi_020",
+      "target_reading": "ありません",
+      "prev_word": "問題",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "ありません",
+            "ない",
+            "ですか"
+          ],
+          "no_history": [
+            "ありません",
+            "ない",
+            "ですか"
+          ],
+          "with_history": [
+            "ありません",
+            "ない",
+            "ですか"
+          ],
+          "ref_with_history": [
+            "ありません",
+            "ない",
+            "ですか"
+          ]
+        },
+        "two_char": {
+          "query": "あり",
+          "ref_no_history": [
+            "ありません",
+            "あります",
+            "ありました"
+          ],
+          "no_history": [
+            "有り",
+            "アリ",
+            "在り"
+          ],
+          "with_history": [
+            "有り",
+            "アリ",
+            "在り"
+          ],
+          "ref_with_history": [
+            "ありません",
+            "あります",
+            "ありました"
+          ]
+        },
+        "one_char": {
+          "query": "あ",
+          "ref_no_history": [
+            "ありません",
+            "ある",
+            "あれば"
+          ],
+          "no_history": [
+            "亜",
+            "い",
+            "う"
+          ],
+          "with_history": [
+            "亜",
+            "い",
+            "う"
+          ],
+          "ref_with_history": [
+            "ありません",
+            "ある",
+            "あれば"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "しました",
+      "language": "ja",
+      "id": "ja_bi_021",
+      "target_reading": "しました",
+      "prev_word": "了解",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "しました",
+            "いたしました",
+            "です"
+          ],
+          "no_history": [
+            "しました",
+            "いたしました",
+            "です"
+          ],
+          "with_history": [
+            "しました",
+            "いたしました",
+            "です"
+          ],
+          "ref_with_history": [
+            "しました",
+            "いたしました",
+            "です"
+          ]
+        },
+        "two_char": {
+          "query": "しま",
+          "ref_no_history": [
+            "しました",
+            "します",
+            "した"
+          ],
+          "no_history": [
+            "シマ",
+            "志摩",
+            "志麻"
+          ],
+          "with_history": [
+            "シマ",
+            "志摩",
+            "志麻"
+          ],
+          "ref_with_history": [
+            "しました",
+            "します",
+            "した"
+          ]
+        },
+        "one_char": {
+          "query": "し",
+          "ref_no_history": [
+            "しました",
+            "します",
+            "して"
+          ],
+          "no_history": [
+            "死",
+            "視",
+            "市"
+          ],
+          "with_history": [
+            "死",
+            "視",
+            "市"
+          ],
+          "ref_with_history": [
+            "しました",
+            "します",
+            "して"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "いたしました",
+      "language": "ja",
+      "id": "ja_bi_022",
+      "target_reading": "いたしました",
+      "prev_word": "承知",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "いたしました",
+            "しました",
+            "致しました"
+          ],
+          "no_history": [
+            "いたしました",
+            "しました",
+            "は"
+          ],
+          "with_history": [
+            "いたしました",
+            "しました",
+            "は"
+          ],
+          "ref_with_history": [
+            "いたしました",
+            "しました",
+            "致しました"
+          ]
+        },
+        "two_char": {
+          "query": "いた",
+          "ref_no_history": [
+            "いたしました",
+            "いたします",
+            "致しました"
+          ],
+          "no_history": [
+            "痛",
+            "詣",
+            "甚"
+          ],
+          "with_history": [
+            "痛",
+            "詣",
+            "甚"
+          ],
+          "ref_with_history": [
+            "いたしました",
+            "いたします",
+            "致しました"
+          ]
+        },
+        "one_char": {
+          "query": "い",
+          "ref_no_history": [
+            "いたしました",
+            "致します",
+            "いたします"
+          ],
+          "no_history": [
+            "居",
+            "異",
+            "位"
+          ],
+          "with_history": [
+            "居",
+            "異",
+            "位"
+          ],
+          "ref_with_history": [
+            "いたしました",
+            "いたします",
+            "致します"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "いたしました",
+      "language": "ja",
+      "id": "ja_bi_023",
+      "target_reading": "いたしました",
+      "prev_word": "お待たせ",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "いたしました",
+            "しました",
+            "して申し訳ございません"
+          ],
+          "no_history": [
+            "いたしました",
+            "しました",
+            "は"
+          ],
+          "with_history": [
+            "いたしました",
+            "しました",
+            "は"
+          ],
+          "ref_with_history": [
+            "いたしました",
+            "しました",
+            "して申し訳ございません"
+          ]
+        },
+        "two_char": {
+          "query": "いた",
+          "ref_no_history": [
+            "いたしました",
+            "いたします",
+            "致しました"
+          ],
+          "no_history": [
+            "痛",
+            "詣",
+            "甚"
+          ],
+          "with_history": [
+            "痛",
+            "詣",
+            "甚"
+          ],
+          "ref_with_history": [
+            "いたしました",
+            "いたします",
+            "致しました"
+          ]
+        },
+        "one_char": {
+          "query": "い",
+          "ref_no_history": [
+            "いたしました",
+            "いたします",
+            "致します"
+          ],
+          "no_history": [
+            "居",
+            "異",
+            "位"
+          ],
+          "with_history": [
+            "居",
+            "異",
+            "位"
+          ],
+          "ref_with_history": [
+            "いたしました",
+            "いたします",
+            "致します"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "します",
+      "language": "ja",
+      "id": "ja_bi_024",
+      "target_reading": "します",
+      "prev_word": "電話",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "します",
+            "いたします",
+            "番号"
+          ],
+          "no_history": [
+            "します",
+            "いたします",
+            "番号"
+          ],
+          "with_history": [
+            "します",
+            "いたします",
+            "番号"
+          ],
+          "ref_with_history": [
+            "します",
+            "いたします",
+            "番号"
+          ]
+        },
+        "two_char": {
+          "query": "しま",
+          "ref_no_history": [
+            "します",
+            "した",
+            "しました"
+          ],
+          "no_history": [
+            "シマ",
+            "志摩",
+            "志麻"
+          ],
+          "with_history": [
+            "シマ",
+            "志摩",
+            "志麻"
+          ],
+          "ref_with_history": [
+            "します",
+            "した",
+            "しました"
+          ]
+        },
+        "one_char": {
+          "query": "し",
+          "ref_no_history": [
+            "します",
+            "しました",
+            "して"
+          ],
+          "no_history": [
+            "死",
+            "視",
+            "市"
+          ],
+          "with_history": [
+            "死",
+            "視",
+            "市"
+          ],
+          "ref_with_history": [
+            "します",
+            "しました",
+            "して"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "を",
+      "language": "ja",
+      "id": "ja_bi_025",
+      "target_reading": "を",
+      "prev_word": "作業",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "中",
+            "を",
+            "完了"
+          ],
+          "no_history": [
+            "中",
+            "完了",
+            "内容"
+          ],
+          "with_history": [
+            "を",
+            "中",
+            "完了"
+          ],
+          "ref_with_history": [
+            "を",
+            "中",
+            "完了"
+          ]
+        },
+        "two_char": {
+          "query": "を進",
+          "ref_no_history": [
+            "を進めます",
+            "を進めてまいります",
+            "を進めております"
+          ],
+          "no_history": [
+            "ヲ進",
+            "ｦ進"
+          ],
+          "with_history": [
+            "ヲ進",
+            "ｦ進"
+          ],
+          "ref_with_history": [
+            "を進めます",
+            "を進めてまいります",
+            "を進めております"
+          ]
+        },
+        "one_char": {
+          "query": "を",
+          "ref_no_history": [
+            "を進めます",
+            "をお願いします",
+            "を行います"
+          ],
+          "no_history": [
+            "ヲ",
+            "ヲは",
+            "ヲも"
+          ],
+          "with_history": [
+            "ヲ",
+            "ヲは",
+            "ヲも"
+          ],
+          "ref_with_history": [
+            "を",
+            "を進めます",
+            "をお願いします"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "進めます",
+      "language": "ja",
+      "id": "ja_bi_026",
+      "target_reading": "すすめます",
+      "prev_word": "を",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "進めます",
+            "行います",
+            "開始します"
+          ],
+          "no_history": [],
+          "with_history": ["進めます"],
+          "ref_with_history": [
+            "進めます",
+            "行います",
+            "開始します"
+          ]
+        },
+        "two_char": {
+          "query": "すす",
+          "ref_no_history": [
+            "進めます",
+            "進めて",
+            "進めさせていただきます"
+          ],
+          "no_history": [
+            "すず",
+            "涼しかろ",
+            "涼しく"
+          ],
+          "with_history": [
+            "すず",
+            "涼しかろ",
+            "涼しく"
+          ],
+          "ref_with_history": [
+            "進めます",
+            "進めて",
+            "進めさせていただきます"
+          ]
+        },
+        "one_char": {
+          "query": "す",
+          "ref_no_history": [
+            "進めます",
+            "進めて",
+            "すぐ"
+          ],
+          "no_history": [
+            "ず",
+            "図",
+            "頭"
+          ],
+          "with_history": [
+            "ず",
+            "図",
+            "頭"
+          ],
+          "ref_with_history": [
+            "進めます",
+            "進めて",
+            "すぐ"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "が",
+      "language": "ja",
+      "id": "ja_bi_027",
+      "target_reading": "が",
+      "prev_word": "準備",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "中",
+            "が",
+            "を"
+          ],
+          "no_history": [
+            "は",
+            "が",
+            "を"
+          ],
+          "with_history": [
+            "が",
+            "は",
+            "を"
+          ],
+          "ref_with_history": [
+            "が",
+            "中",
+            "を"
+          ]
+        },
+        "two_char": {
+          "query": "が完",
+          "ref_no_history": [
+            "が完了しました",
+            "が完了いたしました",
+            "が完了次第"
+          ],
+          "no_history": [
+            "ガ完",
+            "ｶﾞ完"
+          ],
+          "with_history": [
+            "ガ完",
+            "ｶﾞ完"
+          ],
+          "ref_with_history": [
+            "が完了しました",
+            "が完了いたしました",
+            "が完了次第"
+          ]
+        },
+        "one_char": {
+          "query": "が",
+          "ref_no_history": [
+            "完了しました",
+            "整いました",
+            "できました"
+          ],
+          "no_history": [
+            "画",
+            "がい",
+            "垓"
+          ],
+          "with_history": [
+            "画",
+            "がい",
+            "垓"
+          ],
+          "ref_with_history": [
+            "が",
+            "完了しました",
+            "整いました"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "完了",
+      "language": "ja",
+      "id": "ja_bi_028",
+      "target_reading": "かんりょう",
+      "prev_word": "が",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "完了",
+            "必要",
+            "可能"
+          ],
+          "no_history": [],
+          "with_history": ["完了"],
+          "ref_with_history": [
+            "完了",
+            "必要",
+            "可能"
+          ]
+        },
+        "two_char": {
+          "query": "かん",
+          "ref_no_history": [
+            "完了",
+            "関係",
+            "完了しました"
+          ],
+          "no_history": [
+            "澗",
+            "感",
+            "間"
+          ],
+          "with_history": [
+            "澗",
+            "感",
+            "間"
+          ],
+          "ref_with_history": [
+            "完了",
+            "完了しました",
+            "関係"
+          ]
+        },
+        "one_char": {
+          "query": "か",
+          "ref_no_history": [
+            "完了",
+            "確認",
+            "可能"
+          ],
+          "no_history": [
+            "化",
+            "下",
+            "過"
+          ],
+          "with_history": [
+            "化",
+            "下",
+            "過"
+          ],
+          "ref_with_history": [
+            "完了",
+            "確認",
+            "可能"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "は",
+      "language": "ja",
+      "id": "ja_bi_029",
+      "target_reading": "は",
+      "prev_word": "質問",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "は",
+            "が",
+            "等"
+          ],
+          "no_history": [
+            "は",
+            "が",
+            "を"
+          ],
+          "with_history": [
+            "は",
+            "が",
+            "を"
+          ],
+          "ref_with_history": [
+            "は",
+            "が",
+            "等"
+          ]
+        },
+        "two_char": {
+          "query": "はあ",
+          "ref_no_history": [
+            "ありますか",
+            "あるか",
+            "ありますでしょうか"
+          ],
+          "no_history": [
+            "ハア",
+            "場合",
+            "ばあちゃん"
+          ],
+          "with_history": [
+            "ハア",
+            "場合",
+            "ばあちゃん"
+          ],
+          "ref_with_history": [
+            "ありますか",
+            "ありますでしょうか",
+            "あるか"
+          ]
+        },
+        "one_char": {
+          "query": "は",
+          "ref_no_history": [
+            "ありますか",
+            "ございませんか",
+            "ない"
+          ],
+          "no_history": [
+            "葉",
+            "派",
+            "波"
+          ],
+          "with_history": [
+            "葉",
+            "派",
+            "波"
+          ],
+          "ref_with_history": [
+            "は",
+            "ありますか",
+            "ございませんか"
+          ]
+        }
+      }
+    },
+    {
+      "target_word": "ありますか",
+      "language": "ja",
+      "id": "ja_bi_030",
+      "target_reading": "ありますか",
+      "prev_word": "は",
+      "predictions": {
+        "zero_char": {
+          "ref_no_history": [
+            "ありますか",
+            "ございませんか",
+            "どうでしょうか"
+          ],
+          "no_history": [],
+          "with_history": ["ありますか"],
+          "ref_with_history": [
+            "ありますか",
+            "ございませんか",
+            "どうでしょうか"
+          ]
+        },
+        "two_char": {
+          "query": "あり",
+          "ref_no_history": [
+            "ありますか",
+            "あります",
+            "ありません"
+          ],
+          "no_history": [
+            "有り",
+            "アリ",
+            "在り"
+          ],
+          "with_history": [
+            "有り",
+            "アリ",
+            "在り"
+          ],
+          "ref_with_history": [
+            "ありますか",
+            "あります",
+            "ありません"
+          ]
+        },
+        "one_char": {
+          "query": "あ",
+          "ref_no_history": [
+            "ありますか",
+            "ある",
+            "ありがとうございます"
+          ],
+          "no_history": [
+            "亜",
+            "い",
+            "う"
+          ],
+          "with_history": [
+            "亜",
+            "い",
+            "う"
+          ],
+          "ref_with_history": [
+            "ありますか",
+            "ある",
+            "ありがとうございます"
+          ]
+        }
+      }
+    }
+  ]
+}
