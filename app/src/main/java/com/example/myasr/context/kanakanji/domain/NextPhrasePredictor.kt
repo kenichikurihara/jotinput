@@ -132,11 +132,11 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 CollocationEntry("中", "ちゅう")
             ),
             "作業" to listOf(
+                CollocationEntry("を進めます", "をすすめます"),
                 CollocationEntry("を", "を"),
                 CollocationEntry("中", "ちゅう"),
                 CollocationEntry("完了", "かんりょう"),
-                CollocationEntry("内容", "ないよう"),
-                CollocationEntry("を進めます", "をすすめます")
+                CollocationEntry("内容", "ないよう")
             ),
             "準備" to listOf(
                 CollocationEntry("が", "が"),

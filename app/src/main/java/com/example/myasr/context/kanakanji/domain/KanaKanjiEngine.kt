@@ -880,7 +880,15 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         candidates: List<ConversionCandidate>,
         normalized: String
     ): List<ConversionCandidate> {
-        if (normalized.length < 2 || candidates.size <= 2) {
+        // Step 3 predictive interleaving only targets short prefix typing (2..4 characters).
+        // For long phrases (5+ characters), preserve full Viterbi multi-prefix and 2D diversity ranking.
+        if (normalized.length !in 2..4 || candidates.size <= 2) {
+            return candidates
+        }
+
+        // If the top ranked candidate is already a predictive candidate (e.g. voicing/typo expansion like "すーは" -> "スーパー"),
+        // preserve the natural engine ranking.
+        if (candidates.first().isPrediction) {
             return candidates
         }
 
