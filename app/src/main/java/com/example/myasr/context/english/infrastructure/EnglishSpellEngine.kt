@@ -28,11 +28,14 @@ class EnglishSpellEngine private constructor(private val context: Context) {
             }
         }
 
+        private var isLibraryLoaded = false
+
         init {
             try {
                 System.loadLibrary("myasr_llm")
+                isLibraryLoaded = true
                 Log.i(TAG, "Native library myasr_llm loaded successfully")
-            } catch (e: UnsatisfiedLinkError) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Failed to load native library myasr_llm: ${e.message}")
             }
         }
@@ -43,7 +46,8 @@ class EnglishSpellEngine private constructor(private val context: Context) {
      */
     @Synchronized
     fun ensureInitialized(): Boolean {
-        if (isInitialized && nativeIsReady()) return true
+        if (!isLibraryLoaded) return false
+        if (isInitialized && (try { nativeIsReady() } catch (_: Throwable) { false })) return true
 
         val modelDir = File(context.getExternalFilesDir(null), "english_spelling")
         val encFile = File(modelDir, "gec-encoder-int8.onnx")
@@ -70,13 +74,13 @@ class EnglishSpellEngine private constructor(private val context: Context) {
                 Log.w(TAG, "nativeInitialize returned false")
             }
             success
-        } catch (e: Exception) {
-            Log.e(TAG, "Error initializing EnglishSpellEngine: ${e.message}", e)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Error initializing EnglishSpellEngine: ${t.message}", t)
             false
         }
     }
 
-    fun isReady(): Boolean = isInitialized && nativeIsReady()
+    fun isReady(): Boolean = isLibraryLoaded && isInitialized && try { nativeIsReady() } catch (_: Throwable) { false }
 
     /**
      * Fast-path typo correction (< 1ms).
@@ -85,7 +89,13 @@ class EnglishSpellEngine private constructor(private val context: Context) {
      */
     fun suggestTypo(word: String, maxCandidates: Int = 5): List<String> {
         if (!isReady() || word.isBlank()) return emptyList()
-        return nativeSuggestTypo(word.trim(), maxCandidates).toList()
+        return try {
+            val cands = nativeSuggestTypo(word.trim(), maxCandidates)
+            cands?.toList() ?: emptyList()
+        } catch (t: Throwable) {
+            Log.e(TAG, "suggestTypo error: ${t.message}", t)
+            emptyList()
+        }
     }
 
     /**
@@ -95,7 +105,12 @@ class EnglishSpellEngine private constructor(private val context: Context) {
      */
     fun correctSentence(text: String, lang: String = "en"): String {
         if (!isReady() || text.isBlank()) return text
-        return nativeCorrectSentence(text.trim(), lang)
+        return try {
+            nativeCorrectSentence(text.trim(), lang) ?: text
+        } catch (t: Throwable) {
+            Log.e(TAG, "correctSentence error: ${t.message}", t)
+            text
+        }
     }
 
     fun syncUserDictionary(entries: List<DictionaryEntry>) {
@@ -106,8 +121,8 @@ class EnglishSpellEngine private constructor(private val context: Context) {
             val prios = FloatArray(englishEntries.size) { englishEntries[it].priority.score }
             nativeSyncUserDictionary(words, prios)
             Log.d(TAG, "Synced ${englishEntries.size} user dictionary entries to native EnglishSpellEngine")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync user dictionary to EnglishSpellEngine: ${e.message}", e)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to sync user dictionary to EnglishSpellEngine: ${t.message}", t)
         }
     }
 
@@ -115,6 +130,6 @@ class EnglishSpellEngine private constructor(private val context: Context) {
     private external fun nativeInitialize(modelDir: String): Boolean
     private external fun nativeIsReady(): Boolean
     private external fun nativeSyncUserDictionary(words: Array<String>, priorities: FloatArray)
-    private external fun nativeSuggestTypo(word: String, maxCandidates: Int): Array<String>
-    private external fun nativeCorrectSentence(text: String, lang: String): String
+    private external fun nativeSuggestTypo(word: String, maxCandidates: Int): Array<String>?
+    private external fun nativeCorrectSentence(text: String, lang: String): String?
 }

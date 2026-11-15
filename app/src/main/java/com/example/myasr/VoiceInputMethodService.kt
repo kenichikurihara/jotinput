@@ -131,9 +131,16 @@ class VoiceInputMethodService : InputMethodService() {
     private val clipboardSuggestionPolicy = ClipboardSuggestionPolicy()
 
     private val prefsListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
-        applyKeyboardDimensions()
-        updateContextBar()
-        flickKeyboardView?.syncPreferences()
+        val action = Runnable {
+            applyKeyboardDimensions()
+            updateContextBar()
+            flickKeyboardView?.syncPreferences()
+        }
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            action.run()
+        } else {
+            android.os.Handler(android.os.Looper.getMainLooper()).post(action)
+        }
     }
 
     override fun onCreate() {
@@ -265,7 +272,7 @@ class VoiceInputMethodService : InputMethodService() {
         ModelWarmUpManager.getInstance(this).startWarmUpAsync()
         serviceScope.launch(Dispatchers.Default) {
             try {
-                AsrApp.instance.syncAllUserDictionaries()
+                AsrApp.instanceOrNull?.syncAllUserDictionaries()
             } catch (e: Exception) {
                 Log.w(TAG, "IME user dictionary sync error: ${e.message}")
             }
@@ -324,7 +331,7 @@ class VoiceInputMethodService : InputMethodService() {
                     readingResolver = readingResolver
                 ) ?: return@launch
 
-                val repo = AsrApp.instance.voiceCorrectionRepository
+                val repo = AsrApp.instanceOrNull?.voiceCorrectionRepository ?: return@launch
                 val revertedPair = synchronized(recentAutoAppliedCorrections) {
                     recentAutoAppliedCorrections[detected.originalSurface]
                 }
@@ -521,7 +528,7 @@ class VoiceInputMethodService : InputMethodService() {
             mode == JapaneseKanaUtils.KeyboardMode.ALPHABET
         return AsrLanguagePolicy.resolveLanguage(
             isEnglishKeyboardMode = isEnglishMode,
-            isEnglishModelAvailable = AsrApp.instance.asrManager.isEnglishModelAvailable()
+            isEnglishModelAvailable = AsrApp.instanceOrNull?.asrManager?.isEnglishModelAvailable() ?: false
         )
     }
 
@@ -536,13 +543,13 @@ class VoiceInputMethodService : InputMethodService() {
         } else {
             currentInputConnection?.getTextBeforeCursor(500, 0)?.toString() ?: ""
         }
-        val app = AsrApp.instance
+        val app = AsrApp.instanceOrNull
         val learnedCorrections = try {
-            app.voiceCorrectionRepository.getActiveBoostEntries(language)
+            app?.voiceCorrectionRepository?.getActiveBoostEntries(language) ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
-        val slmDeltaProvider: ((String, String) -> Float?)? = if (useSlmGate && app.llmReranker.isReady()) {
+        val slmDeltaProvider: ((String, String) -> Float?)? = if (useSlmGate && app?.llmReranker?.isReady() == true) {
             { orig, corr -> app.llmReranker.scorePairDeltaNll(ctx, orig, corr) }
         } else {
             null
@@ -556,11 +563,11 @@ class VoiceInputMethodService : InputMethodService() {
             )
         }
         val activeEntries = try {
-            app.dictionaryRepository.getActive()
+            app?.dictionaryRepository?.getActive() ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
-        val pResult = app.contextAwareProcessor.processWithCorrectionsAndPunctuation(
+        val pResult = app?.contextAwareProcessor?.processWithCorrectionsAndPunctuation(
             rawText = text,
             contextBefore = ctx,
             entries = activeEntries,
@@ -568,9 +575,9 @@ class VoiceInputMethodService : InputMethodService() {
             slmCoherenceDeltaProvider = slmDeltaProvider
         )
         return com.example.myasr.context.speech.domain.VoiceCorrectionApplyResult(
-            formattedText = pResult.formattedText,
-            appliedCorrections = pResult.appliedCorrections,
-            suggestedChips = pResult.suggestedChips
+            formattedText = pResult?.formattedText ?: text,
+            appliedCorrections = pResult?.appliedCorrections ?: emptyList(),
+            suggestedChips = pResult?.suggestedChips ?: emptyList()
         )
     }
 
@@ -661,7 +668,7 @@ class VoiceInputMethodService : InputMethodService() {
                     }
                     val lang = activeVoiceCorrectionChipsLanguage
                     serviceScope.launch(Dispatchers.Default) {
-                        AsrApp.instance.voiceCorrectionRepository.recordAccept(lang, orig, corr)
+                        AsrApp.instanceOrNull?.voiceCorrectionRepository?.recordAccept(lang, orig, corr)
                     }
                     candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                     return
@@ -850,7 +857,6 @@ class VoiceInputMethodService : InputMethodService() {
 
             override fun onSpacePressed() {
                 clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
-                val prevPhrase = arbitrator.previousCommittedPhrase
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
                 val currentMode = flickKeyboardView?.currentMode
                 val spaceChar = if (currentMode == JapaneseKanaUtils.KeyboardMode.KANA) "　" else " "
@@ -1236,8 +1242,8 @@ class VoiceInputMethodService : InputMethodService() {
                 var appliedCorrections: List<VoiceCorrectionSuggestion> = emptyList()
                 var error: String? = null
                 try {
-                    val app = AsrApp.instance
-                    if (!app.ensureModelInitialized(asrLanguage)) {
+                    val app = AsrApp.instanceOrNull
+                    if (app == null || !app.ensureModelInitialized(asrLanguage)) {
                         error = getString(R.string.error_model_not_initialized)
                     } else {
                         val activeEntries = if (asrLanguage == AsrLanguage.JAPANESE) {
@@ -1752,8 +1758,8 @@ class VoiceInputMethodService : InputMethodService() {
     private fun startStreamingLoop() {
         streamingJob?.cancel()
         streamingJob = serviceScope.launch(Dispatchers.Default) {
-            val app = AsrApp.instance
-            if (!app.ensureModelInitialized()) {
+            val app = AsrApp.instanceOrNull
+            if (app == null || !app.ensureModelInitialized()) {
                 Log.w(TAG, "Streaming loop skipped: model not initialized")
                 return@launch
             }
@@ -1926,8 +1932,8 @@ class VoiceInputMethodService : InputMethodService() {
                         var error: String? = null
 
                         try {
-                            val app = AsrApp.instance
-                            if (!app.ensureModelInitialized(asrLanguage)) {
+                            val app = AsrApp.instanceOrNull
+                            if (app == null || !app.ensureModelInitialized(asrLanguage)) {
                                 error = getString(R.string.error_model_not_initialized)
                             } else {
                                 val activeEntries = if (asrLanguage == AsrLanguage.JAPANESE) {
@@ -2287,6 +2293,8 @@ class VoiceInputMethodService : InputMethodService() {
     override fun onDestroy() {
         clipboardExpirationJob?.cancel()
         rerankJob?.cancel()
+        englishCandidateJob?.cancel()
+        streamingJob?.cancel()
         getSharedPreferences(KeyboardHeightManager.PREFS_NAME, Context.MODE_PRIVATE)
             .unregisterOnSharedPreferenceChangeListener(prefsListener)
         flickKeyboardView?.dismissPopup()

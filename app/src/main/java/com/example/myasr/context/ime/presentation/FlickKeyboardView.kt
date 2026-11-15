@@ -111,7 +111,8 @@ class FlickKeyboardView @JvmOverloads constructor(
         var isPressed: Boolean = false
     )
 
-    private val keys = ArrayList<Key>()
+    @Volatile
+    private var keys: List<Key> = emptyList()
     private var activeKey: Key? = null
     private var touchStartX = 0f
     private var touchStartY = 0f
@@ -397,18 +398,22 @@ class FlickKeyboardView @JvmOverloads constructor(
     }
 
     private fun layoutKeys(width: Float, height: Float) {
-        keys.clear()
-        if (width <= 0 || height <= 0) return
-
-        when (currentMode) {
-            JapaneseKanaUtils.KeyboardMode.KANA -> layoutGboardFlickKeys(width, height)
-            JapaneseKanaUtils.KeyboardMode.QWERTY -> layoutGboardQwertyKeys(width, height)
-            JapaneseKanaUtils.KeyboardMode.QWERTY_SYMBOLS -> layoutGboardSymbolsKeys(width, height)
-            JapaneseKanaUtils.KeyboardMode.NUMBER -> layoutGboardNumpadKeys(width, height)
+        if (width <= 0 || height <= 0) {
+            keys = emptyList()
+            return
         }
+
+        val targetList = ArrayList<Key>()
+        when (currentMode) {
+            JapaneseKanaUtils.KeyboardMode.KANA -> targetList.layoutGboardFlickKeys(width, height)
+            JapaneseKanaUtils.KeyboardMode.QWERTY -> targetList.layoutGboardQwertyKeys(width, height)
+            JapaneseKanaUtils.KeyboardMode.QWERTY_SYMBOLS -> targetList.layoutGboardSymbolsKeys(width, height)
+            JapaneseKanaUtils.KeyboardMode.NUMBER -> targetList.layoutGboardNumpadKeys(width, height)
+        }
+        keys = targetList
     }
 
-    private fun addKey(
+    private fun MutableList<Key>.addKey(
         type: KeyType,
         left: Float,
         top: Float,
@@ -425,7 +430,7 @@ class FlickKeyboardView @JvmOverloads constructor(
     ) {
         val visualRect = RectF(left + marginX, top + marginY, right - marginX, bottom - marginY)
         val hitRect = RectF(left, top, right, bottom)
-        keys.add(
+        add(
             Key(
                 type = type,
                 kanaIndex = kanaIndex,
@@ -446,7 +451,7 @@ class FlickKeyboardView @JvmOverloads constructor(
      * - Center 3x4 Grid (69.0%): Clean primary labels only (あ か さ / た な は / ま や ら / ゛゜大⇔小 わ 、。？！…)
      * - Right Function Column (15.5%): Delete (⌫), Cursor Right (▶), Space (␣ / 変換), Enter Pill (↵ / 確定)
      */
-    private fun layoutGboardFlickKeys(width: Float, height: Float) {
+    private fun MutableList<Key>.layoutGboardFlickKeys(width: Float, height: Float) {
         val density = resources.displayMetrics.density
         val rowHeight = height / 4f
         val colFnWidth = width * 0.155f
@@ -522,7 +527,7 @@ class FlickKeyboardView @JvmOverloads constructor(
      * - Row C: Shift (15%), z x c v b n m (10% each), Delete (15%)
      * - Row D: あa pill (13%), ?123 (11%), ',' (9%), Space pill (34%), '.' (9%), ◀ (5.5%), ▶ (5.5%), Enter pill (13%)
      */
-    private fun layoutGboardQwertyKeys(width: Float, height: Float) {
+    private fun MutableList<Key>.layoutGboardQwertyKeys(width: Float, height: Float) {
         val density = resources.displayMetrics.density
         val totalRows = if (showNumberRowInQwerty) 5 else 4
         val rowHeight = height / totalRows.toFloat()
@@ -705,7 +710,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         val alphaHeight = (qwertyAlphaBottom - qwertyAlphaTop).coerceAtLeast(1f)
         val safeWidth = width.coerceAtLeast(1f)
         val keyCenters = FloatArray(52)
-        for (k in keys) {
+        for (k in this) {
             if (isAlphabetSwipeKey(k)) {
                 val idx = k.label[0].lowercaseChar() - 'a'
                 if (idx in 0..25) {
@@ -714,13 +719,17 @@ class FlickKeyboardView @JvmOverloads constructor(
                 }
             }
         }
-        FutoSwipeEngine.getInstance(context).updateLayoutKeys(keyCenters)
+        try {
+            FutoSwipeEngine.getInstance(context).updateLayoutKeys(keyCenters)
+        } catch (t: Throwable) {
+            android.util.Log.w("FlickKeyboardView", "Failed to update layout keys: ${t.message}")
+        }
     }
 
     /**
      * Gboard-inspired QWERTY Symbols Layout (?123 from QWERTY)
      */
-    private fun layoutGboardSymbolsKeys(width: Float, height: Float) {
+    private fun MutableList<Key>.layoutGboardSymbolsKeys(width: Float, height: Float) {
         val density = resources.displayMetrics.density
         val rowHeight = height / 4f
         val marginX = 2.2f * density
@@ -811,7 +820,7 @@ class FlickKeyboardView @JvmOverloads constructor(
     /**
      * Gboard-inspired 12-key Numpad Layout (gboard_numpad.png)
      */
-    private fun layoutGboardNumpadKeys(width: Float, height: Float) {
+    private fun MutableList<Key>.layoutGboardNumpadKeys(width: Float, height: Float) {
         val density = resources.displayMetrics.density
         val rowHeight = height / 4f
         val colFnWidth = width * 0.155f
@@ -869,8 +878,9 @@ class FlickKeyboardView @JvmOverloads constructor(
         super.onDraw(canvas)
         val density = resources.displayMetrics.density
         val defaultRadius = 8f * density
+        val currentKeys = keys
 
-        for (key in keys) {
+        for (key in currentKeys) {
             val radius = if (key.isPill) key.rect.height() / 2f else defaultRadius
             val bgPaint = when {
                 key.isPressed -> keyPressedPaint
@@ -982,8 +992,7 @@ class FlickKeyboardView @JvmOverloads constructor(
     }
 
     fun dismissPopup() {
-        handler.removeCallbacks(repeatRunnable)
-        handler.removeCallbacks(qwertyLongPressRunnable)
+        handler.removeCallbacksAndMessages(null)
         deleteRepeatStartTimeMs = 0L
         deleteRepeatCount = 0
         lastRepeatHapticTimeMs = 0L
@@ -1054,7 +1063,8 @@ class FlickKeyboardView @JvmOverloads constructor(
                 swipeTrajectory.clear()
                 spacebarSwipeTracker.reset()
 
-                val hitKey = keys.firstOrNull { it.hitRect.contains(x, y) }
+                val currentKeys = keys
+                val hitKey = currentKeys.firstOrNull { it.hitRect.contains(x, y) }
                 if (hitKey != null) {
                     activeKey = hitKey
                     hitKey.isPressed = true

@@ -20,20 +20,56 @@ interface EditorBridge {
 }
 
 class InputConnectionEditorBridge(private val provider: () -> InputConnection?) : EditorBridge {
-    override fun beginBatchEdit(): Boolean = provider()?.beginBatchEdit() ?: false
-    override fun endBatchEdit(): Boolean = provider()?.endBatchEdit() ?: false
-    override fun setComposingText(text: String, newCursorPosition: Int): Boolean =
+    override fun beginBatchEdit(): Boolean = try {
+        provider()?.beginBatchEdit() ?: false
+    } catch (_: Throwable) {
+        false
+    }
+
+    override fun endBatchEdit(): Boolean = try {
+        provider()?.endBatchEdit() ?: false
+    } catch (_: Throwable) {
+        false
+    }
+
+    override fun setComposingText(text: String, newCursorPosition: Int): Boolean = try {
         provider()?.setComposingText(text, newCursorPosition) ?: false
-    override fun commitText(text: String, newCursorPosition: Int): Boolean =
+    } catch (_: Throwable) {
+        false
+    }
+
+    override fun commitText(text: String, newCursorPosition: Int): Boolean = try {
         provider()?.commitText(text, newCursorPosition) ?: false
-    override fun finishComposingText(): Boolean =
+    } catch (_: Throwable) {
+        false
+    }
+
+    override fun finishComposingText(): Boolean = try {
         provider()?.finishComposingText() ?: false
-    override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean =
-        provider()?.deleteSurroundingText(beforeLength, afterLength) ?: false
-    override fun getTextBeforeCursor(length: Int, flags: Int): String =
-        provider()?.getTextBeforeCursor(length, flags)?.toString() ?: ""
-    override fun getSelectedText(flags: Int): String? =
+    } catch (_: Throwable) {
+        false
+    }
+
+    override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean = try {
+        val safeBefore = beforeLength.coerceAtLeast(0)
+        val safeAfter = afterLength.coerceAtLeast(0)
+        provider()?.deleteSurroundingText(safeBefore, safeAfter) ?: false
+    } catch (_: Throwable) {
+        false
+    }
+
+    override fun getTextBeforeCursor(length: Int, flags: Int): String = try {
+        val safeLen = length.coerceAtLeast(0)
+        provider()?.getTextBeforeCursor(safeLen, flags)?.toString() ?: ""
+    } catch (_: Throwable) {
+        ""
+    }
+
+    override fun getSelectedText(flags: Int): String? = try {
         provider()?.getSelectedText(flags)?.toString()
+    } catch (_: Throwable) {
+        null
+    }
 }
 
 /**

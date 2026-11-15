@@ -2166,6 +2166,26 @@ Established an automated, dual-language reference benchmark:
 - **Unit Test Pass**: All 60 test cases validate schema integrity, non-empty candidate rankings, and personalization promotion invariants with 100% pass in `./gradlew testDebugUnitTest`.
 - **Reference Spec**: Fully documented in [`docs/reference_bigram_prediction_benchmark.md`](docs/reference_bigram_prediction_benchmark.md).
 
+---
+
+## 51. Keyboard Crash Remediation: Thread-Safe Atomic Key Layout, InputConnection IPC Resilience & Smoke Verification
+
+### 1. Problem & Root Causes
+Users experienced frequent keyboard crashes during active typing, rapid deletion, and mode switching:
+1. **`FlickKeyboardView` Layout & Draw Concurrency Race**: `keys` was stored as a mutable `ArrayList<Key>()`. Calling `layoutKeys()` cleared the list (`keys.clear()`) and repopulated it. If `onDraw()`, `onTouchEvent()`, or state updates ran concurrently or during a callback while `keys` was in a half-cleared or reallocated state, `ConcurrentModificationException` or `IndexOutOfBoundsException` crashed the IME process.
+2. **`InputConnectionEditorBridge` IPC Exception Vulnerability**: Host apps or Android window manager tearing down an input connection or throwing unexpected IPC exceptions (`DeadObjectException`, `SecurityException`, `IndexOutOfBoundsException`) during `deleteSurroundingText()`, `commitText()`, or `getTextBeforeCursor()` immediately crashed the IME process due to lack of exception boundaries.
+3. **`AsrApp.instance` Uninitialized Property Access**: Multiple call sites in `VoiceInputMethodService.kt` accessed `AsrApp.instance` directly. When accessed outside full application lifecycle or during early test instantiation, `UninitializedPropertyAccessException` was thrown.
+4. **`FlickPopupWindow` Show-Failure Handling**: Computation and token verification were partially outside try-catch, and transient `BadTokenException` permanently disabled the popup window via `hasFailed = true`.
+5. **Preference Listener Cross-Thread UI Touch**: `prefsListener` executed on arbitrary caller threads without dispatching to the Main looper, potentially throwing `CalledFromWrongThreadException`.
+
+### 2. Architectural Solution
+1. **Atomic Key Snapshot (`FlickKeyboardView.kt`)**: Replaced mutable `keys` with `@Volatile private var keys: List<Key> = emptyList()`. `layoutKeys()` constructs a complete `ArrayList<Key>()` locally and assigns the list atomically in a single reference write. `onDraw()` and `onTouchEvent()` take a local reference snapshot (`val currentKeys = keys`), guaranteeing zero concurrent modification or partially populated key reads.
+2. **Fault-Tolerant `InputConnectionEditorBridge`**: All bridge delegation methods wrap IPC calls in `try { ... } catch (_: Throwable) { ... }` with defensive length clamping (`coerceAtLeast(0)`), completely isolating the IME from target-app IPC crashes.
+3. **Null-Safe `AsrApp.instanceOrNull`**: Replaced all naked `AsrApp.instance` accesses in `VoiceInputMethodService` with `instanceOrNull` and safe default fallbacks.
+4. **Transient Exception Isolation in Popup**: Wrapped entire `FlickPopupWindow.show()` in try-catch and eliminated permanent popup disabling.
+5. **Main-Looper Dispatched Preference Listener**: Ensured UI dimension and context bar updates execute on `Looper.getMainLooper()`.
+6. **Local Pre-Commit Smoke Test Suite (`KeyboardSmokeUnitTest.kt`)**: Added comprehensive JVM unit tests covering InputConnection exception resilience, multimodal typing/deletion lifecycle, popup geometry bounds, multi-stage repeat acceleration, and uninitialized engine safety.
+
 
 
 

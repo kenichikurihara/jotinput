@@ -33,11 +33,14 @@ class FutoSwipeEngine private constructor(private val context: Context) {
             }
         }
 
+        private var isLibraryLoaded = false
+
         init {
             try {
                 System.loadLibrary("myasr_llm")
+                isLibraryLoaded = true
                 Log.i(TAG, "Native library myasr_llm (with FUTO Swipe) loaded successfully")
-            } catch (e: UnsatisfiedLinkError) {
+            } catch (e: Throwable) {
                 Log.e(TAG, "Failed to load native library myasr_llm: ${e.message}")
             }
         }
@@ -48,7 +51,8 @@ class FutoSwipeEngine private constructor(private val context: Context) {
      */
     @Synchronized
     fun ensureInitialized(): Boolean {
-        if (isInitialized && nativeIsReady()) return true
+        if (!isLibraryLoaded) return false
+        if (isInitialized && (try { nativeIsReady() } catch (_: Throwable) { false })) return true
 
         val modelDir = File(context.getExternalFilesDir(null), "futo_swipe")
         val encFile = File(modelDir, "encoder.onnx")
@@ -69,7 +73,11 @@ class FutoSwipeEngine private constructor(private val context: Context) {
                 Log.i(TAG, "FUTO Swipe engine initialized successfully from ${modelDir.absolutePath}")
                 pendingLayoutKeys?.let { keys ->
                     if (keys.size >= 52) {
-                        nativeSetLayoutKeys(keys)
+                        try {
+                            nativeSetLayoutKeys(keys)
+                        } catch (t: Throwable) {
+                            Log.w(TAG, "Failed to apply pending layout keys: ${t.message}")
+                        }
                     }
                 }
                 try {
@@ -82,15 +90,15 @@ class FutoSwipeEngine private constructor(private val context: Context) {
                 Log.w(TAG, "nativeInitialize returned false")
             }
             success
-        } catch (e: Exception) {
-            Log.e(TAG, "Error initializing FUTO Swipe engine: ${e.message}", e)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Error initializing FUTO Swipe engine: ${t.message}", t)
             false
         }
     }
 
     private var pendingLayoutKeys: FloatArray? = null
 
-    fun isReady(): Boolean = isInitialized && nativeIsReady()
+    fun isReady(): Boolean = isLibraryLoaded && isInitialized && try { nativeIsReady() } catch (_: Throwable) { false }
 
     /**
      * Updates the normalized (x, y) centers for the 26 QWERTY alphabet keys ('a'..'z', size = 52).
@@ -101,8 +109,8 @@ class FutoSwipeEngine private constructor(private val context: Context) {
         if (!isReady()) return
         try {
             nativeSetLayoutKeys(keyCentersXy)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to update layout keys in FUTO Swipe: ${e.message}", e)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to update layout keys in FUTO Swipe: ${t.message}", t)
         }
     }
 
@@ -121,20 +129,25 @@ class FutoSwipeEngine private constructor(private val context: Context) {
     ): List<String> {
         if (!isReady() || trajectory.size < 2) return emptyList()
 
-        val count = trajectory.size
-        val xs = FloatArray(count)
-        val ys = FloatArray(count)
-        val ts = LongArray(count)
+        return try {
+            val count = trajectory.size
+            val xs = FloatArray(count)
+            val ys = FloatArray(count)
+            val ts = LongArray(count)
 
-        for (i in 0 until count) {
-            xs[i] = trajectory[i].x
-            ys[i] = trajectory[i].y
-            ts[i] = trajectory[i].t
+            for (i in 0 until count) {
+                xs[i] = trajectory[i].x
+                ys[i] = trajectory[i].y
+                ts[i] = trajectory[i].t
+            }
+
+            val prevArray = previousWords.toTypedArray()
+            val cands = nativeDecode(xs, ys, ts, prevArray, beamWidth, maxCandidates) ?: return emptyList()
+            cands.toList()
+        } catch (t: Throwable) {
+            Log.e(TAG, "Swipe decode error: ${t.message}", t)
+            emptyList()
         }
-
-        val prevArray = previousWords.toTypedArray()
-        val cands = nativeDecode(xs, ys, ts, prevArray, beamWidth, maxCandidates) ?: return emptyList()
-        return cands.toList()
     }
 
     fun syncUserDictionary(entries: List<DictionaryEntry>) {
@@ -145,14 +158,18 @@ class FutoSwipeEngine private constructor(private val context: Context) {
             val prios = FloatArray(englishEntries.size) { englishEntries[it].priority.score }
             nativeSyncUserDictionary(words, prios)
             Log.d(TAG, "Synced ${englishEntries.size} user dictionary entries to native FUTO Swipe")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync user dictionary to FUTO Swipe: ${e.message}", e)
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to sync user dictionary to FUTO Swipe: ${t.message}", t)
         }
     }
 
     fun release() {
-        if (isInitialized) {
-            nativeRelease()
+        if (isLibraryLoaded && isInitialized) {
+            try {
+                nativeRelease()
+            } catch (t: Throwable) {
+                Log.w(TAG, "Error releasing FUTO Swipe: ${t.message}")
+            }
             isInitialized = false
         }
     }

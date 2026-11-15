@@ -47,31 +47,31 @@ class FlickPopupWindow(context: Context) {
         direction: JapaneseKanaUtils.FlickDirection,
         singleLabel: String? = null
     ): Boolean {
-        if (hasFailed || !anchor.isAttachedToWindow || anchor.windowToken == null) {
+        if (!anchor.isAttachedToWindow || anchor.windowToken == null) {
             return false
         }
 
-        val winLoc = IntArray(2)
-        val scrLoc = IntArray(2)
-        anchor.getLocationInWindow(winLoc)
-        anchor.getLocationOnScreen(scrLoc)
-
-        val anchorKeyX = winLoc[0] + keyCenterXInView
-        val anchorKeyY = winLoc[1] + keyCenterYInView
-        val density = anchor.resources.displayMetrics.density
-        val containerWidth = anchor.resources.displayMetrics.widthPixels
-
-        val spec = FlickPopupGeometry.compute(
-            keyCenterX = anchorKeyX,
-            keyCenterY = anchorKeyY,
-            rowHeight = rowHeight,
-            density = density,
-            containerWidthPx = containerWidth
-        )
-
-        contentView.bind(spec, kanaIndex, mode, direction, singleLabel)
-
         return try {
+            val winLoc = IntArray(2)
+            val scrLoc = IntArray(2)
+            anchor.getLocationInWindow(winLoc)
+            anchor.getLocationOnScreen(scrLoc)
+
+            val anchorKeyX = winLoc[0] + keyCenterXInView
+            val anchorKeyY = winLoc[1] + keyCenterYInView
+            val density = anchor.resources.displayMetrics.density
+            val containerWidth = anchor.resources.displayMetrics.widthPixels
+
+            val spec = FlickPopupGeometry.compute(
+                keyCenterX = anchorKeyX,
+                keyCenterY = anchorKeyY,
+                rowHeight = rowHeight,
+                density = density,
+                containerWidthPx = containerWidth
+            )
+
+            contentView.bind(spec, kanaIndex, mode, direction, singleLabel)
+
             popupWindow.width = spec.popupSizePx
             popupWindow.height = spec.popupSizePx
             if (popupWindow.isShowing) {
@@ -87,7 +87,6 @@ class FlickPopupWindow(context: Context) {
             true
         } catch (e: Exception) {
             Log.w(TAG, "PopupWindow show failed, falling back to in-view popup: ${e.message}")
-            hasFailed = true
             false
         }
     }
