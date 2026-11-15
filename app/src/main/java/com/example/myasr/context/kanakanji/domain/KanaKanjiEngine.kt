@@ -899,6 +899,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             return candidates
         }
 
+        // Prioritize intentional phrase chunks (priority 3.5f) over unvoiced/distant prefix tokens
+        futurePredCands.sortByDescending { it.priority }
+
         val interleaved = mutableListOf<ConversionCandidate>()
         val seen = HashSet<String>()
 
