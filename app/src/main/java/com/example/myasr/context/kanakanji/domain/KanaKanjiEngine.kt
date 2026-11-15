@@ -622,28 +622,6 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             }
         }
 
-        // 0.5 Compound Multi-Bunsetsu Chunk Prediction (Step 3: Strategic Leap)
-        if (normalized.length >= 2) {
-            for ((stemSurface, stemReading) in NextPhrasePredictor.CANONICAL_STEM_READINGS) {
-                val continuations = NextPhrasePredictor.CANONICAL_COLLOCATIONS[stemSurface] ?: continue
-                for (entry in continuations) {
-                    val fullSurface = stemSurface + entry.surface
-                    val fullReading = stemReading + entry.reading
-                    if (fullReading.startsWith(normalized) && fullSurface != normalized) {
-                        addCandidate(
-                            ConversionCandidate(
-                                surface = fullSurface,
-                                reading = fullReading,
-                                isPrediction = true,
-                                source = "phrase_chunk",
-                                priority = 3.5f
-                            )
-                        )
-                    }
-                }
-            }
-        }
-
             // 1. User dictionary entries (Absolute priority)
             val matchingPaths = findMatchingTrieNodes(normalized)
             val exactPath = matchingPaths.firstOrNull { it.voicingDistance == 0 && it.typoCostPenalty == 0 }
@@ -853,6 +831,28 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "DB prefix query failed: ${e.message}")
+            }
+
+            // 5.5 Compound Multi-Bunsetsu Chunk Prediction (Step 3: Strategic Leap)
+            if (normalized.length in 2..4) {
+                for ((stemSurface, stemReading) in NextPhrasePredictor.CANONICAL_STEM_READINGS) {
+                    val continuations = NextPhrasePredictor.CANONICAL_COLLOCATIONS[stemSurface] ?: continue
+                    for (entry in continuations) {
+                        val fullSurface = stemSurface + entry.surface
+                        val fullReading = stemReading + entry.reading
+                        if (fullReading.startsWith(normalized) && fullSurface != normalized) {
+                            addCandidate(
+                                ConversionCandidate(
+                                    surface = fullSurface,
+                                    reading = fullReading,
+                                    isPrediction = true,
+                                    source = "phrase_chunk",
+                                    priority = 3.5f
+                                )
+                            )
+                        }
+                    }
+                }
             }
 
             // 6. Katakana conversion
