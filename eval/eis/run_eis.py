@@ -20,6 +20,8 @@ from klm import CUJ_WEIGHTS, EIS_VERSION  # noqa: E402
 
 # (name, {cuj: variant}) -- everything else stays "shipped"
 ABLATIONS = [
+    ("予測候補なし (CUJ-2: 変換のみ)", {"CUJ-2": "no_prediction"}),
+    ("予測 SLM OFF (CUJ-2: Mozc 単体予測)", {"CUJ-2": "no_slm"}),
     ("ユーザー辞書なし (CUJ-3: 単語を登録しない)", {"CUJ-3": "no_dictionary"}),
     ("Swipe ContextLM OFF (CUJ-4: 空間モデルのみ)", {"CUJ-4": "spatial_only"}),
     ("音声に辞書バイアス適用 (CUJ-1: hybrid)", {"CUJ-1": "with_dictionary"}),

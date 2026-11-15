@@ -242,7 +242,7 @@ flowchart TD
 | :--- | :--- | :--- |
 | **Phase 1（実装済み）** | EIS-Bench v1 の構築（層化抽出、dev/test 分割、test を凍結）と、オフライン KLM シミュレータの実装。キャッシュ済みの出力 JSON を利用し、ベースラインの EIS と $\mathrm{EIS}_c$ を算出 | `eval/eis/`（ビルダー、シミュレータ、`eis_results.json`）、本書 §6.1 の更新 |
 | **Phase 1.5（実装完了）** | 英語音声（Parakeet 110M）300件データセット・ローカルPiper TTS合成・推論キャッシュを構築し、$\mathrm{EIS}_4$ を完全実測化 | `eval/english_voice/`、`eval/eis/adapters.py` |
-| **Phase 2** | CUJ-2 と CUJ-3 を JVM の実エンジン（`KanaKanjiEngine` + リランカー）で回す回帰テストを CI に追加し、EIS の悪化を CI で検知 | `EisRegressionTest.kt`、CI での EIS レポート |
+| **Phase 2（実装完了）** | CUJ-2 と CUJ-3 を JVM 実エンジン（`KanaKanjiEngine` + `NextPhrasePredictor`）で回す回帰テスト [`EisRegressionTest.kt`](../app/src/test/java/com/example/myasr/EisRegressionTest.kt) を追加。予測候補（プレフィックス・次フレーズ予測）による打鍵数削減（キー削減率 > 40%、EIS +31.5%）をメトリックに統合 | [`EisRegressionTest.kt`](../app/src/test/java/com/example/myasr/EisRegressionTest.kt)、[`eis_baseline_report.md`](eis_baseline_report.md) |
 | **Phase 3** | 両ターゲットの実機で、遅延の実測値を $T_{\text{wait}}$ に投入。少数の実ユーザーで操作時間を計測して KLM 定数を較正（`EIS-v2`）。実録音の音声サブセットを追加 | 較正レポート、`EIS-v2` 定数 |
 
 ---

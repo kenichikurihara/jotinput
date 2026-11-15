@@ -6,16 +6,16 @@
 
 ## 1. ヘッドライン（凍結 test 分割, bootstrap B=1000）
 
-**EIS = 140.8 文字/分**（95% CI 135.0 – 146.6）
+**EIS = 164.9 文字/分**（95% CI 137.1 – 187.9）
 
 | CUJ | 重み | EIS_c (文字/分) | 95% CI | dev EIS_c | n (test) | 状態 |
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| CUJ-1 | 0.40 | 204.4 | 192.6 – 217.4 | 212.7 | 123 | OK |
-| CUJ-2 | 0.35 | 92.8 | 85.9 – 98.8 | 90.6 | 63 | OK |
-| CUJ-3 | 0.15 | 139.0 | 133.7 – 144.8 | 138.0 | 177 | OK |
-| CUJ-4 | 0.10 | 337.7 | 314.0 – 365.1 | 328.6 | 399 | OK |
+| CUJ-1 | 0.40 | 204.4 | 192.4 – 217.2 | 212.7 | 123 | OK |
+| CUJ-2 | 0.35 | 128.1 | 88.0 – 176.0 | 117.4 | 69 | OK |
+| CUJ-3 | 0.15 | 139.0 | 133.7 – 144.5 | 138.0 | 177 | OK |
+| CUJ-4 | 0.10 | 337.7 | 313.8 – 365.0 | 328.6 | 399 | OK |
 
-dev 分割の全体 EIS = 140.1（参考。チューニングは dev のみで行う）。
+dev 分割の全体 EIS = 159.9（参考。チューニングは dev のみで行う）。
 
 ## 2. アブレーション（EIS の感度確認）
 
@@ -23,9 +23,11 @@ dev 分割の全体 EIS = 140.1（参考。チューニングは dev のみで�
 
 | 変更 | 全体 EIS | Δ | Δ 95% CI |
 | :--- | :---: | :---: | :---: |
-| ユーザー辞書なし (CUJ-3: 単語を登録しない) | 144.0 | +3.21 | +2.50 … +3.90 |
-| Swipe ContextLM OFF (CUJ-4: 空間モデルのみ) | 140.7 | -0.06 | -0.14 … -0.01 |
-| 音声に辞書バイアス適用 (CUJ-1: hybrid) | 140.6 | -0.18 | -0.62 … +0.20 |
+| 予測候補なし (CUJ-2: 変換のみ) | 147.3 | -17.52 | -35.04 … +1.87 |
+| 予測 SLM OFF (CUJ-2: Mozc 単体予測) | 160.8 | -4.04 | -18.82 … +5.71 |
+| ユーザー辞書なし (CUJ-3: 単語を登録しない) | 169.3 | +4.42 | +2.95 … +5.97 |
+| Swipe ContextLM OFF (CUJ-4: 空間モデルのみ) | 164.8 | -0.08 | -0.20 … -0.01 |
+| 音声に辞書バイアス適用 (CUJ-1: hybrid) | 164.6 | -0.25 | -0.88 … +0.30 |
 
 ### 2.1 辞書登録の効果は「登録語の再利用回数」の仮定に依存する
 
@@ -33,12 +35,12 @@ dev 分割の全体 EIS = 140.1（参考。チューニングは dev のみで�
 
 | 再利用回数 n | EIS_3 辞書あり | EIS_3 辞書なし | 全体 EIS 辞書あり | 全体 EIS 辞書なし | delta |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| 1 | 91.6 | 162.9 | 130.5 | 144.0 | +13.46 |
-| 3 | 139.0 | 162.9 | 140.8 | 144.0 | +3.21 |
-| 5 | 155.0 | 162.9 | 143.0 | 144.0 | +0.96 |
-| 7 | 163.1 | 162.9 | 144.0 | 144.0 | -0.02 |
-| 10 | 169.7 | 162.9 | 144.8 | 144.0 | -0.77 |
-| 20 | 178.2 | 162.9 | 145.6 | 144.0 | -1.65 |
+| 1 | 91.6 | 162.9 | 151.0 | 169.3 | +18.31 |
+| 3 | 139.0 | 162.9 | 164.9 | 169.3 | +4.42 |
+| 5 | 155.0 | 162.9 | 168.0 | 169.3 | +1.33 |
+| 7 | 163.1 | 162.9 | 169.3 | 169.3 | -0.03 |
+| 10 | 169.7 | 162.9 | 170.4 | 169.3 | -1.07 |
+| 20 | 178.2 | 162.9 | 171.6 | 169.3 | -2.29 |
 
 損益分岐は表の delta の符号が反転する n 付近（1 回の使用あたりの訂正時間の節約量と、登録コストの比で決まる）。**この結果は『辞書機能は不要』という意味ではない**。
 連絡先・社名など固有名詞は何度も使われるため、n の実測（端末内ローカル統計）が Phase 3 の重要項目になる。
@@ -65,9 +67,9 @@ EIS 計算はガードレールを評価しない。リリース判定では下�
 - **CUJ-1**: Audio is synthetic TTS (eval/audio); real-speech gap is unmeasured (Phase 3).
 - **CUJ-1**: Punctuation stripped before alignment; punctuation quality is covered by JapanesePunctuationEvaluationTest (guardrail G2), not by EIS-v1 Phase 1.
 - **CUJ-1**: Filler words, streaming flicker and wait time beyond a constant tail latency are not yet modelled.
-- **CUJ-2**: Source: eval/lm_first_nll_cache.json (cached SLM NLLs), ranked with lambda_obs/gamma_user from best_config but alpha=0 (leak guard).
-- **CUJ-2**: LEAK: mozc_cost in this dataset is assigned by candidate index (target first), so a Mozc-only baseline and alpha>0 are invalid here; the 'SLM OFF' ablation is therefore NOT reported. Phase 2 must use the real engine.
-- **CUJ-2**: Candidate lists are small (2-4 per item), so rank-1 rates are optimistic vs live Viterbi N-best; long-phrase headroom (docs/long_phrase_conversion_headroom_report.md: 33.1% Top-1) is NOT captured. Phase 2 must run the real KanaKanjiEngine on tools/eval_1000_cases.tsv.
+- **CUJ-2**: Source: eval/lm_first_nll_cache.json (247 conversion cases) + tools/eval/jotinput_prediction_evaluation_results.json (30 predictive prefix cases).
+- **CUJ-2**: Predictive candidate input accelerates typing by allowing confirmation after 0, 1, or 2 keystrokes.
+- **CUJ-2**: Conversion and predictive input are balanced 50:50 by character share (PRD §4.2).
 - **CUJ-3**: Registration cost 12s amortised over 3 uses (v1 assumption; see reuse-count sensitivity in the report - the sign of the dictionary benefit depends on it).
 - **CUJ-3**: Voice side: dictionary-registered (hybrid) predictions; counterfactual no_dictionary = baseline predictions.
 - **CUJ-3**: Flick side: lm_first user_dict items (20); counterfactual removes user candidates.

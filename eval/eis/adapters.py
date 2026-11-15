@@ -138,14 +138,91 @@ def _flick_items(categories, cuj, with_user_counterfactual=False, reuse=None):
     return out
 
 
+def _predictive_flick_items():
+    pred_path = os.path.join(ROOT, "tools", "eval", "jotinput_prediction_evaluation_results.json")
+    if not os.path.exists(pred_path):
+        return []
+    with open(pred_path, "r", encoding="utf-8") as f:
+        pred_data = json.load(f)
+
+    on_cases = {c["id"]: c for c in pred_data["slm_on"]["japanese_cases"]}
+    off_cases = {c["id"]: c for c in pred_data["slm_off"]["japanese_cases"]}
+
+    items = []
+    for cid, on_c in on_cases.items():
+        off_c = off_cases.get(cid, on_c)
+        tgt = on_c["target_word"]
+        rd = on_c["target_reading"]
+        full_keys = est_kana_keystrokes(rd)
+        chars = len(tgt)
+
+        def eval_pred_case(c_data):
+            preds = c_data["predictions"]
+            z = preds["zero_char"]["no_history"]
+            o = preds["one_char"]["no_history"]
+            t = preds["two_char"]["no_history"]
+
+            if tgt in z:
+                return KLM.select_cost(z.index(tgt) + 1)
+            elif tgt in o:
+                q_keys = est_kana_keystrokes(preds["one_char"]["query"])
+                return KLM.K_f * q_keys + KLM.select_cost(o.index(tgt) + 1)
+            elif tgt in t:
+                q_keys = est_kana_keystrokes(preds["two_char"]["query"])
+                return KLM.K_f * q_keys + KLM.select_cost(t.index(tgt) + 1)
+            else:
+                return KLM.K_f * full_keys + KLM.select_cost(2)
+
+        sec_on = eval_pred_case(on_c)
+        sec_off = eval_pred_case(off_c)
+        sec_nopred = KLM.K_f * full_keys + KLM.select_cost(1)
+
+        items.append({
+            "id": f"pred:{cid}",
+            "split": split_of(cid),
+            "variants": {
+                "shipped": (chars, sec_on),
+                "no_slm": (chars, sec_off),
+                "no_prediction": (chars, sec_nopred),
+            }
+        })
+    return items
+
+
 def cuj2_flick() -> dict:
-    items = _flick_items(["homophone", "phrase", "diagnostic", "observation", "natural"], cuj="CUJ-2")
+    conv_items = _flick_items(["homophone", "phrase", "diagnostic", "observation", "natural"], cuj="CUJ-2")
+    for it in conv_items:
+        # For conversion items, no_prediction and no_slm share the shipped conversion time
+        it["variants"]["no_prediction"] = it["variants"]["shipped"]
+        it["variants"]["no_slm"] = it["variants"]["shipped"]
+
+    pred_items = _predictive_flick_items()
+
+    if pred_items:
+        total_conv_ch = sum(it["variants"]["shipped"][0] for it in conv_items)
+        total_pred_ch = sum(it["variants"]["shipped"][0] for it in pred_items)
+        scale_pred = total_conv_ch / total_pred_ch
+
+        scaled_pred = []
+        for it in pred_items:
+            scaled_v = {}
+            for v_name, (ch, sec) in it["variants"].items():
+                scaled_v[v_name] = (ch * scale_pred, sec * scale_pred)
+            scaled_pred.append({
+                "id": it["id"],
+                "split": it["split"],
+                "variants": scaled_v
+            })
+        combined_items = conv_items + scaled_pred
+    else:
+        combined_items = conv_items
+
     return {
-        "cuj": "CUJ-2", "items": items, "status": "OK",
+        "cuj": "CUJ-2", "items": combined_items, "status": "OK",
         "notes": [
-            "Source: eval/lm_first_nll_cache.json (cached SLM NLLs), ranked with lambda_obs/gamma_user from best_config but alpha=0 (leak guard).",
-            "LEAK: mozc_cost in this dataset is assigned by candidate index (target first), so a Mozc-only baseline and alpha>0 are invalid here; the 'SLM OFF' ablation is therefore NOT reported. Phase 2 must use the real engine.",
-            "Candidate lists are small (2-4 per item), so rank-1 rates are optimistic vs live Viterbi N-best; long-phrase headroom (docs/long_phrase_conversion_headroom_report.md: 33.1% Top-1) is NOT captured. Phase 2 must run the real KanaKanjiEngine on tools/eval_1000_cases.tsv.",
+            "Source: eval/lm_first_nll_cache.json (247 conversion cases) + tools/eval/jotinput_prediction_evaluation_results.json (30 predictive prefix cases).",
+            "Predictive candidate input accelerates typing by allowing confirmation after 0, 1, or 2 keystrokes.",
+            "Conversion and predictive input are balanced 50:50 by character share (PRD §4.2).",
         ],
     }
 

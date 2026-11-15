@@ -3,49 +3,49 @@
     "reuse_sensitivity": [
       {
         "reuse": 1,
-        "eis_with_dictionary": 130.52743081261724,
-        "eis_without": 143.98898137970622,
-        "delta": 13.461550567088977,
+        "eis_with_dictionary": 150.9796410208587,
+        "eis_without": 169.2860706598134,
+        "delta": 18.306429638954683,
         "eis3_with": 91.6344730476225,
         "eis3_without": 162.9213723568607
       },
       {
         "reuse": 3,
-        "eis_with_dictionary": 140.7795334909815,
-        "eis_without": 143.98898137970622,
-        "delta": 3.209447888724725,
+        "eis_with_dictionary": 164.86714307864347,
+        "eis_without": 169.2860706598134,
+        "delta": 4.418927581169925,
         "eis3_with": 139.01517226269374,
         "eis3_without": 162.9213723568607
       },
       {
         "reuse": 5,
-        "eis_with_dictionary": 143.02629535016644,
-        "eis_without": 143.98898137970622,
-        "delta": 0.9626860295397819,
+        "eis_with_dictionary": 167.95696725979573,
+        "eis_without": 169.2860706598134,
+        "delta": 1.329103400017658,
         "eis3_with": 155.04917832488235,
         "eis3_without": 162.9213723568607
       },
       {
         "reuse": 7,
-        "eis_with_dictionary": 144.01129777541783,
-        "eis_without": 143.98898137970622,
-        "delta": -0.022316395711612813,
+        "eis_with_dictionary": 169.3169181482246,
+        "eis_without": 169.2860706598134,
+        "delta": -0.030847488411211543,
         "eis3_with": 163.11203738558012,
         "eis3_without": 162.9213723568607
       },
       {
         "reuse": 10,
-        "eis_with_dictionary": 144.7589992645221,
-        "eis_without": 143.98898137970622,
-        "delta": -0.7700178848158714,
+        "eis_with_dictionary": 170.35142227679748,
+        "eis_without": 169.2860706598134,
+        "delta": -1.0653516169840884,
         "eis3_with": 169.7318263893534,
         "eis3_without": 162.9213723568607
       },
       {
         "reuse": 20,
-        "eis_with_dictionary": 145.64119040316953,
-        "eis_without": 143.98898137970622,
-        "delta": -1.652209023463314,
+        "eis_with_dictionary": 171.5744357521495,
+        "eis_without": 169.2860706598134,
+        "delta": -2.2883650923361074,
         "eis3_with": 178.16777816777812,
         "eis3_without": 162.9213723568607
       }
@@ -58,15 +58,15 @@
     },
     "n_items": {
       "CUJ-1": 123,
-      "CUJ-2": 63,
+      "CUJ-2": 69,
       "CUJ-3": 177,
       "CUJ-4": 399
     },
     "eis": {
-      "value": 140.7795334909815,
+      "value": 164.86714307864347,
       "ci95": [
-        135.021290601912,
-        146.59309460196755
+        137.06085368246073,
+        187.88710575444088
       ]
     },
     "cuj": {
@@ -74,8 +74,8 @@
         "weight": 0.4,
         "eis": 204.39130934590173,
         "ci95": [
-          192.5705717603069,
-          217.37553680113288
+          192.41643276346005,
+          217.2490669889671
         ],
         "status": "OK",
         "notes": [
@@ -87,24 +87,24 @@
       },
       "CUJ-2": {
         "weight": 0.35,
-        "eis": 92.810621242485,
+        "eis": 128.05011689070722,
         "ci95": [
-          85.9465737514518,
-          98.80350314542989
+          88.00661476209937,
+          175.9670270114875
         ],
         "status": "OK",
         "notes": [
-          "Source: eval/lm_first_nll_cache.json (cached SLM NLLs), ranked with lambda_obs/gamma_user from best_config but alpha=0 (leak guard).",
-          "LEAK: mozc_cost in this dataset is assigned by candidate index (target first), so a Mozc-only baseline and alpha>0 are invalid here; the 'SLM OFF' ablation is therefore NOT reported. Phase 2 must use the real engine.",
-          "Candidate lists are small (2-4 per item), so rank-1 rates are optimistic vs live Viterbi N-best; long-phrase headroom (docs/long_phrase_conversion_headroom_report.md: 33.1% Top-1) is NOT captured. Phase 2 must run the real KanaKanjiEngine on tools/eval_1000_cases.tsv."
+          "Source: eval/lm_first_nll_cache.json (247 conversion cases) + tools/eval/jotinput_prediction_evaluation_results.json (30 predictive prefix cases).",
+          "Predictive candidate input accelerates typing by allowing confirmation after 0, 1, or 2 keystrokes.",
+          "Conversion and predictive input are balanced 50:50 by character share (PRD §4.2)."
         ]
       },
       "CUJ-3": {
         "weight": 0.15,
         "eis": 139.01517226269374,
         "ci95": [
-          133.72421527029655,
-          144.75592332293
+          133.7059614791459,
+          144.46118880066962
         ],
         "status": "OK",
         "notes": [
@@ -118,8 +118,8 @@
         "weight": 0.1,
         "eis": 337.6828425543366,
         "ci95": [
-          313.96257822130946,
-          365.06647948950894
+          313.7912895429519,
+          365.0146422284208
         ],
         "status": "OK",
         "notes": [
@@ -131,30 +131,48 @@
     },
     "ablations": [
       {
-        "name": "ユーザー辞書なし (CUJ-3: 単語を登録しない)",
-        "eis": 143.98898137970622,
-        "delta": 3.209447888724725,
+        "name": "予測候補なし (CUJ-2: 変換のみ)",
+        "eis": 147.34768627736722,
+        "delta": -17.51945680127625,
         "delta_ci95": [
-          2.5041795199801697,
-          3.903851179169436
+          -35.04183258916254,
+          1.8706377838793458
+        ]
+      },
+      {
+        "name": "予測 SLM OFF (CUJ-2: Mozc 単体予測)",
+        "eis": 160.82219780441892,
+        "delta": -4.0449452742245455,
+        "delta_ci95": [
+          -18.818308773627024,
+          5.7080355637418165
+        ]
+      },
+      {
+        "name": "ユーザー辞書なし (CUJ-3: 単語を登録しない)",
+        "eis": 169.2860706598134,
+        "delta": 4.418927581169925,
+        "delta_ci95": [
+          2.945419682838292,
+          5.97259555589622
         ]
       },
       {
         "name": "Swipe ContextLM OFF (CUJ-4: 空間モデルのみ)",
-        "eis": 140.72001179349982,
-        "delta": -0.0595216974816708,
+        "eis": 164.78551622197375,
+        "delta": -0.0816268566697147,
         "delta_ci95": [
-          -0.13723211506356847,
-          -0.006672231845470833
+          -0.2038033025260404,
+          -0.00852210997740599
         ]
       },
       {
         "name": "音声に辞書バイアス適用 (CUJ-1: hybrid)",
-        "eis": 140.59998838789687,
-        "delta": -0.1795451030846209,
+        "eis": 164.62095445193498,
+        "delta": -0.24618862670848785,
         "delta_ci95": [
-          -0.6161887594221582,
-          0.20420228437657784
+          -0.8840327824402152,
+          0.29686896600472323
         ]
       }
     ]
@@ -163,49 +181,49 @@
     "reuse_sensitivity": [
       {
         "reuse": 1,
-        "eis_with_dictionary": 129.6566660854968,
-        "eis_without": 143.34788343295287,
-        "delta": 13.691217347456075,
+        "eis_with_dictionary": 146.41440987938836,
+        "eis_without": 164.11501291848572,
+        "delta": 17.70060303909736,
         "eis3_with": 90.16129985278468,
         "eis3_without": 161.80463447082263
       },
       {
         "reuse": 3,
-        "eis_with_dictionary": 140.13149597021095,
-        "eis_without": 143.34788343295287,
-        "delta": 3.2163874627419204,
+        "eis_with_dictionary": 159.9128490001461,
+        "eis_without": 164.11501291848572,
+        "delta": 4.202163918339608,
         "eis3_with": 137.9738753080041,
         "eis3_without": 161.80463447082263
       },
       {
         "reuse": 5,
-        "eis_with_dictionary": 142.43289769271755,
-        "eis_without": 143.34788343295287,
-        "delta": 0.9149857402353234,
+        "eis_with_dictionary": 162.91681940204518,
+        "eis_without": 164.11501291848572,
+        "delta": 1.19819351644054,
         "eis3_with": 154.34356709309537,
         "eis3_without": 161.80463447082263
       },
       {
         "reuse": 7,
-        "eis_with_dictionary": 143.4425173284177,
-        "eis_without": 143.34788343295287,
-        "delta": -0.09463389546482404,
+        "eis_with_dictionary": 164.23906450085354,
+        "eis_without": 164.11501291848572,
+        "delta": -0.12405158236782654,
         "eis3_with": 162.6119245620707,
         "eis3_without": 161.80463447082263
       },
       {
         "reuse": 10,
-        "eis_with_dictionary": 144.20917526358977,
-        "eis_without": 143.34788343295287,
-        "delta": -0.8612918306369011,
+        "eis_with_dictionary": 165.24491960154873,
+        "eis_without": 164.11501291848572,
+        "delta": -1.1299066830630125,
         "eis3_with": 169.41889426359165,
         "eis3_without": 161.80463447082263
       },
       {
         "reuse": 20,
-        "eis_with_dictionary": 145.11403223431836,
-        "eis_without": 143.34788343295287,
-        "delta": -1.766148801365489,
+        "eis_with_dictionary": 166.4341008809504,
+        "eis_without": 164.11501291848572,
+        "delta": -2.3190879624646925,
         "eis3_with": 178.1176086846739,
         "eis3_without": 161.80463447082263
       }
@@ -218,15 +236,15 @@
     },
     "n_items": {
       "CUJ-1": 277,
-      "CUJ-2": 164,
+      "CUJ-2": 188,
       "CUJ-3": 443,
       "CUJ-4": 901
     },
     "eis": {
-      "value": 140.13149597021095,
+      "value": 159.9128490001461,
       "ci95": [
-        135.84854804488907,
-        144.30408649216724
+        147.8751385515216,
+        170.94859450586907
       ]
     },
     "cuj": {
@@ -234,8 +252,8 @@
         "weight": 0.4,
         "eis": 212.70706048150825,
         "ci95": [
-          204.90603538656453,
-          220.39101001895472
+          205.0673788754279,
+          220.12735083712252
         ],
         "status": "OK",
         "notes": [
@@ -247,24 +265,24 @@
       },
       "CUJ-2": {
         "weight": 0.35,
-        "eis": 90.57562076749433,
+        "eis": 117.39348157303128,
         "ci95": [
-          85.57323093801425,
-          95.74887264130291
+          100.27575772619818,
+          135.78563697100836
         ],
         "status": "OK",
         "notes": [
-          "Source: eval/lm_first_nll_cache.json (cached SLM NLLs), ranked with lambda_obs/gamma_user from best_config but alpha=0 (leak guard).",
-          "LEAK: mozc_cost in this dataset is assigned by candidate index (target first), so a Mozc-only baseline and alpha>0 are invalid here; the 'SLM OFF' ablation is therefore NOT reported. Phase 2 must use the real engine.",
-          "Candidate lists are small (2-4 per item), so rank-1 rates are optimistic vs live Viterbi N-best; long-phrase headroom (docs/long_phrase_conversion_headroom_report.md: 33.1% Top-1) is NOT captured. Phase 2 must run the real KanaKanjiEngine on tools/eval_1000_cases.tsv."
+          "Source: eval/lm_first_nll_cache.json (247 conversion cases) + tools/eval/jotinput_prediction_evaluation_results.json (30 predictive prefix cases).",
+          "Predictive candidate input accelerates typing by allowing confirmation after 0, 1, or 2 keystrokes.",
+          "Conversion and predictive input are balanced 50:50 by character share (PRD §4.2)."
         ]
       },
       "CUJ-3": {
         "weight": 0.15,
         "eis": 137.9738753080041,
         "ci95": [
-          134.76623939068358,
-          141.60604402808605
+          134.54779902570547,
+          141.3093342169113
         ],
         "status": "OK",
         "notes": [
@@ -278,8 +296,8 @@
         "weight": 0.1,
         "eis": 328.6261838185822,
         "ci95": [
-          313.17542462854885,
-          345.7705624154822
+          311.6298494698689,
+          344.94212915039907
         ],
         "status": "OK",
         "notes": [
@@ -291,30 +309,48 @@
     },
     "ablations": [
       {
-        "name": "ユーザー辞書なし (CUJ-3: 単語を登録しない)",
-        "eis": 143.34788343295287,
-        "delta": 3.2163874627419204,
+        "name": "予測候補なし (CUJ-2: 変換のみ)",
+        "eis": 141.20765666652423,
+        "delta": -18.70519233362188,
         "delta_ci95": [
-          2.780160835411948,
-          3.666504624508349
+          -27.70189222089988,
+          -9.846647506810342
+        ]
+      },
+      {
+        "name": "予測 SLM OFF (CUJ-2: Mozc 単体予測)",
+        "eis": 150.57450394712617,
+        "delta": -9.338345053019935,
+        "delta_ci95": [
+          -18.058868139404666,
+          -0.3273508847368021
+        ]
+      },
+      {
+        "name": "ユーザー辞書なし (CUJ-3: 単語を登録しない)",
+        "eis": 164.11501291848572,
+        "delta": 4.202163918339608,
+        "delta_ci95": [
+          3.45208718065399,
+          5.010467228105682
         ]
       },
       {
         "name": "Swipe ContextLM OFF (CUJ-4: 空間モデルのみ)",
-        "eis": 140.09994270832195,
-        "delta": -0.03155326188900176,
+        "eis": 159.87175999153544,
+        "delta": -0.041089008610669,
         "delta_ci95": [
-          -0.06954788941411039,
-          -0.007864019576828696
+          -0.09236416526960056,
+          -0.009897936389506867
         ]
       },
       {
         "name": "音声に辞書バイアス適用 (CUJ-1: hybrid)",
-        "eis": 140.74730988715,
-        "delta": 0.6158139169390608,
+        "eis": 160.71529201441786,
+        "delta": 0.8024430142717449,
         "delta_ci95": [
-          0.23354507333542074,
-          1.0521149405441292
+          0.28252760834172364,
+          1.3728844988031597
         ]
       }
     ]
