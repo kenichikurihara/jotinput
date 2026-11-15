@@ -303,13 +303,14 @@ class VoiceInputMethodService : InputMethodService() {
                 val normHint = JapaneseKanaUtils.normalizeReading(anchor.typedReadingHint)
                 val readingResolver: ((String) -> String?)? = if (lang == AsrLanguage.JAPANESE && normHint.isNotEmpty()) {
                     val hintCandidates = kanaKanjiEngine.getBaseCandidates(normHint)
-                    { surface ->
+                    val resolver: (String) -> String? = { surface ->
                         if (hintCandidates.any { it.surface == surface || (it.surface.isNotEmpty() && surface.startsWith(it.surface)) }) {
                             normHint
                         } else {
                             null
                         }
                     }
+                    resolver
                 } else {
                     null
                 }
