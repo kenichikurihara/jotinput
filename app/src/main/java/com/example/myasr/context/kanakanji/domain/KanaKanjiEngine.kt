@@ -886,20 +886,16 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             return candidates
         }
 
-        // If the top ranked candidate is already a predictive candidate (e.g. voicing/typo expansion like "すーは" -> "スーパー"),
-        // preserve the natural engine ranking.
-        if (candidates.first().isPrediction) {
-            return candidates
-        }
-
         val userCands = candidates.filter { it.source == "user" }
         val collocCands = candidates.filter { it.source == "context_collocation" }
         val rest = candidates.filter { it.source != "user" && it.source != "context_collocation" }
 
-        val exactCands = rest.filter { !it.isPrediction && it.source != "viterbi_prefix" }
-        val predCands = rest.filter { it.isPrediction || it.source == "viterbi_prefix" }
+        // Current-input candidates: exact matches, voicing/typo corrections of current input length
+        val currentCands = rest.filter { it.source != "phrase_chunk" && it.reading.length <= normalized.length }
+        // Future predictive candidates: multi-bunsetsu phrase chunks and prefix completions
+        val futurePredCands = rest.filter { it.source == "phrase_chunk" || it.reading.length > normalized.length }
 
-        if (predCands.isEmpty()) {
+        if (futurePredCands.isEmpty() || currentCands.isEmpty()) {
             return candidates
         }
 
@@ -913,37 +909,37 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         for (c in userCands) add(c)
         for (c in collocCands) add(c)
 
-        var exactIdx = 0
+        var curIdx = 0
         var predIdx = 0
 
-        // Slot 1 (if no colloc/user): First exact candidate
-        if (interleaved.isEmpty() && exactIdx < exactCands.size) {
-            add(exactCands[exactIdx++])
+        // Slot 1 (if no colloc/user): Top candidate for current typed input
+        if (interleaved.isEmpty() && curIdx < currentCands.size) {
+            add(currentCands[curIdx++])
         }
 
-        // Slot 2: Top predictive candidate / phrase chunk
-        if (predIdx < predCands.size) {
-            add(predCands[predIdx++])
+        // Slot 2: Top future predictive candidate / compound phrase chunk
+        if (predIdx < futurePredCands.size) {
+            add(futurePredCands[predIdx++])
         }
 
-        // Slot 3: Second exact candidate
-        if (exactIdx < exactCands.size) {
-            add(exactCands[exactIdx++])
+        // Slot 3: Second candidate for current typed input
+        if (curIdx < currentCands.size) {
+            add(currentCands[curIdx++])
         }
 
-        // Slot 4: Second predictive candidate
-        if (predIdx < predCands.size) {
-            add(predCands[predIdx++])
+        // Slot 4: Second future predictive candidate
+        if (predIdx < futurePredCands.size) {
+            add(futurePredCands[predIdx++])
         }
 
-        // Rest of exact candidates
-        while (exactIdx < exactCands.size) {
-            add(exactCands[exactIdx++])
+        // Rest of current-input candidates
+        while (curIdx < currentCands.size) {
+            add(currentCands[curIdx++])
         }
 
-        // Rest of predictive candidates
-        while (predIdx < predCands.size) {
-            add(predCands[predIdx++])
+        // Rest of future predictive candidates
+        while (predIdx < futurePredCands.size) {
+            add(futurePredCands[predIdx++])
         }
 
         return interleaved
