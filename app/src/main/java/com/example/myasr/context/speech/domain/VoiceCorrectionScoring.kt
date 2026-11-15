@@ -20,7 +20,13 @@ object VoiceCorrectionScoring {
         "構成", "校正", "厚生",
         "制作", "製作",
         "対象", "対照", "対称",
-        "移行", "意向"
+        "移行", "意向",
+        "描く", "書く", "描いて", "書いて", "描いた", "書いた",
+        "聞く", "聴く", "聞いて", "聴いて", "聞いた", "聴いた",
+        "会う", "合う", "会って", "合って", "会った", "合った",
+        "早い", "速い", "治る", "直る", "治す", "直す",
+        "見る", "診る", "見て", "診て", "作る", "造る", "作って", "造って",
+        "変える", "替える", "換える", "変えて", "替えて", "換えて"
     )
 
     private val AMBIGUOUS_EN_HOMOPHONES = setOf(
@@ -35,11 +41,19 @@ object VoiceCorrectionScoring {
         "break", "brake"
     )
 
+    private fun isKanjiChar(ch: Char): Boolean {
+        return ch in '\u4E00'..'\u9FFF' || ch in '\u3400'..'\u4DBF' || ch in '\uF900'..'\uFAFF'
+    }
+
     fun isAmbiguousCommonHomophone(entry: VoiceCorrectionEntry): Boolean {
         return when (entry.language) {
             AsrLanguage.JAPANESE ->
                 entry.originalSurface in AMBIGUOUS_JP_HOMOPHONES ||
-                    entry.correctedSurface in AMBIGUOUS_JP_HOMOPHONES
+                    entry.correctedSurface in AMBIGUOUS_JP_HOMOPHONES ||
+                    (entry.originalSurface.length == 1 &&
+                        entry.correctedSurface.length == 1 &&
+                        isKanjiChar(entry.originalSurface[0]) &&
+                        isKanjiChar(entry.correctedSurface[0]))
             AsrLanguage.ENGLISH ->
                 entry.originalSurface.lowercase() in AMBIGUOUS_EN_HOMOPHONES ||
                     entry.correctedSurface.lowercase() in AMBIGUOUS_EN_HOMOPHONES

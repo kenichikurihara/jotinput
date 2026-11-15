@@ -300,13 +300,27 @@ class VoiceInputMethodService : InputMethodService() {
         val lang = if (hasJapanese) AsrLanguage.JAPANESE else AsrLanguage.ENGLISH
         serviceScope.launch(Dispatchers.Default) {
             try {
+                val normHint = JapaneseKanaUtils.normalizeReading(anchor.typedReadingHint)
+                val readingResolver: ((String) -> String?)? = if (lang == AsrLanguage.JAPANESE && normHint.isNotEmpty()) {
+                    val hintCandidates = kanaKanjiEngine.getBaseCandidates(normHint)
+                    { surface ->
+                        if (hintCandidates.any { it.surface == surface || (it.surface.isNotEmpty() && surface.startsWith(it.surface)) }) {
+                            normHint
+                        } else {
+                            null
+                        }
+                    }
+                } else {
+                    null
+                }
                 val detected = VoiceCorrectionDetector.detect(
                     beforeText = anchor.committedText,
                     afterText = editedText,
                     language = lang,
                     contextBefore = anchor.contextBefore,
                     elapsedSinceVoiceCommitMs = elapsedMs,
-                    typedReadingHint = anchor.typedReadingHint
+                    typedReadingHint = anchor.typedReadingHint,
+                    readingResolver = readingResolver
                 ) ?: return@launch
 
                 val repo = AsrApp.instance.voiceCorrectionRepository
@@ -510,26 +524,66 @@ class VoiceInputMethodService : InputMethodService() {
         )
     }
 
-    private fun formatVoiceText(
+    private fun formatVoiceTextWithCorrections(
         text: String,
         textBeforeCursor: String = "",
-        language: AsrLanguage = resolveCurrentAsrLanguage()
-    ): String {
+        language: AsrLanguage = resolveCurrentAsrLanguage(),
+        useSlmGate: Boolean = false
+    ): com.example.myasr.context.speech.domain.VoiceCorrectionApplyResult {
         val ctx = if (textBeforeCursor.isNotEmpty()) {
             textBeforeCursor
         } else {
             currentInputConnection?.getTextBeforeCursor(500, 0)?.toString() ?: ""
         }
-        if (language == AsrLanguage.ENGLISH) {
-            return EnglishVoicePostProcessor.format(text, ctx)
-        }
         val app = AsrApp.instance
+        val learnedCorrections = try {
+            app.voiceCorrectionRepository.getActiveBoostEntries(language)
+        } catch (e: Exception) {
+            emptyList()
+        }
+        val slmDeltaProvider: ((String, String) -> Float?)? = if (useSlmGate && app.llmReranker.isReady()) {
+            { orig, corr -> app.llmReranker.scorePairDeltaNll(ctx, orig, corr) }
+        } else {
+            null
+        }
+        if (language == AsrLanguage.ENGLISH) {
+            return EnglishVoicePostProcessor.formatWithCorrections(
+                rawText = text,
+                contextBefore = ctx,
+                learnedCorrections = learnedCorrections,
+                slmCoherenceDeltaProvider = slmDeltaProvider
+            )
+        }
         val activeEntries = try {
             app.dictionaryRepository.getActive()
         } catch (e: Exception) {
             emptyList()
         }
-        return app.contextAwareProcessor.process(text, ctx, activeEntries)
+        val pResult = app.contextAwareProcessor.processWithCorrectionsAndPunctuation(
+            rawText = text,
+            contextBefore = ctx,
+            entries = activeEntries,
+            learnedCorrections = learnedCorrections,
+            slmCoherenceDeltaProvider = slmDeltaProvider
+        )
+        return com.example.myasr.context.speech.domain.VoiceCorrectionApplyResult(
+            formattedText = pResult.formattedText,
+            appliedCorrections = pResult.appliedCorrections,
+            suggestedChips = pResult.suggestedChips
+        )
+    }
+
+    private fun formatVoiceText(
+        text: String,
+        textBeforeCursor: String = "",
+        language: AsrLanguage = resolveCurrentAsrLanguage()
+    ): String {
+        return formatVoiceTextWithCorrections(
+            text = text,
+            textBeforeCursor = textBeforeCursor,
+            language = language,
+            useSlmGate = false
+        ).formattedText
     }
 
     private fun flushPreTypingSpeechIfNeeded() {
@@ -1740,7 +1794,12 @@ class VoiceInputMethodService : InputMethodService() {
                         }
 
                         if (rawText.isNotBlank() && genId == arbitrator.streamingGenerationId) {
-                            val formatted = formatVoiceText(rawText, textBeforeCursor, asrLanguage)
+                            val formatted = formatVoiceTextWithCorrections(
+                                text = rawText,
+                                textBeforeCursor = textBeforeCursor,
+                                language = asrLanguage,
+                                useSlmGate = true
+                            ).formattedText
 
                             withContext(Dispatchers.Main) {
                                 if (currentState == State.RECORDING && isStreamingActive && genId == arbitrator.streamingGenerationId && !arbitrator.isKeyboardComposing()) {
@@ -1808,13 +1867,31 @@ class VoiceInputMethodService : InputMethodService() {
         // If streaming composing text is already on screen, commit it immediately on stop so
         // any subsequent keystrokes typed during State.DECODING appear strictly after it.
         if (hadStreamingComposing) {
+            var streamingChips: List<VoiceCorrectionSuggestion> = emptyList()
+            var streamingApplied: List<VoiceCorrectionSuggestion> = emptyList()
             arbitrator.commitActiveStreamingComposing(
                 editor = editorBridge,
                 onResetAudioUtterance = {},
-                formatFn = { formatVoiceText(it, textBeforeCursor, asrLanguage) }
+                formatFn = { raw ->
+                    val res = formatVoiceTextWithCorrections(raw, textBeforeCursor, asrLanguage, useSlmGate = false)
+                    streamingChips = res.suggestedChips
+                    streamingApplied = res.appliedCorrections
+                    res.formattedText
+                }
             )
-            if (!arbitrator.isKeyboardComposing() && arbitrator.previousCommittedPhrase.isNotEmpty()) {
-                showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+            if (streamingApplied.isNotEmpty()) {
+                synchronized(recentAutoAppliedCorrections) {
+                    for (a in streamingApplied) {
+                        recentAutoAppliedCorrections[a.correctedSurface] = Pair(a.originalSurface, asrLanguage)
+                    }
+                }
+            }
+            if (!arbitrator.isKeyboardComposing()) {
+                if (streamingChips.isNotEmpty()) {
+                    renderVoiceCorrectionSuggestions(streamingChips, asrLanguage)
+                } else if (arbitrator.previousCommittedPhrase.isNotEmpty()) {
+                    showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+                }
             }
         } else if (wasStreaming) {
             arbitrator.resetStreamingSessionState()

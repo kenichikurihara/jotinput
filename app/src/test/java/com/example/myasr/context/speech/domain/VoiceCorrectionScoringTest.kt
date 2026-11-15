@@ -103,4 +103,40 @@ class VoiceCorrectionScoringTest {
         assertTrue(result.appliedCorrections.isEmpty())
         assertTrue(result.suggestedChips.isEmpty())
     }
+
+    @Test
+    fun `kun-yomi verb 描いて to 書いて uses SLM coherence gate to protect 絵を描いて`() {
+        val entry = VoiceCorrectionEntry(
+            language = AsrLanguage.JAPANESE,
+            originalSurface = "描いて",
+            correctedSurface = "書いて",
+            normalizedReading = "かいて",
+            correctionCount = 2
+        )
+        assertTrue(VoiceCorrectionScoring.isAmbiguousCommonHomophone(entry))
+
+        // Coherent context: "デザインドキュメントを描いて" -> SLM favors "書いて"
+        val docResult = VoiceCorrectionScoring.applyCorrections(
+            text = "デザインドキュメントを描いて",
+            contextBefore = "",
+            entries = listOf(entry),
+            language = AsrLanguage.JAPANESE,
+            slmCoherenceDeltaProvider = { _, _ -> -2.5f }
+        )
+        assertEquals("デザインドキュメントを書いて", docResult.formattedText)
+        assertEquals(1, docResult.appliedCorrections.size)
+
+        // Adversarial context: "絵を描いて" -> SLM strongly prefers "描いて"
+        val artResult = VoiceCorrectionScoring.applyCorrections(
+            text = "絵を描いて",
+            contextBefore = "",
+            entries = listOf(entry),
+            language = AsrLanguage.JAPANESE,
+            slmCoherenceDeltaProvider = { _, _ -> 8.0f }
+        )
+        assertEquals("絵を描いて", artResult.formattedText)
+        assertTrue(artResult.appliedCorrections.isEmpty())
+        assertEquals(1, artResult.suggestedChips.size)
+        assertEquals(BoostAction.GATE_OFF_KEEP_ORIGINAL_WITH_CHIP, artResult.suggestedChips.first().action)
+    }
 }

@@ -159,6 +159,7 @@ class VoiceTouchInputArbitrator {
         private set
     var streamingLastComposingText: String = ""
         private set
+    private val streamingAnchorBuffer = StringBuilder()
     val streamingInferenceHistory = mutableListOf<String>()
     @Volatile
     var streamingGenerationId: Long = 0L
@@ -241,6 +242,7 @@ class VoiceTouchInputArbitrator {
         streamingGenerationId++
         streamingCommittedPrefix = ""
         streamingLastComposingText = ""
+        streamingAnchorBuffer.clear()
         streamingInferenceHistory.clear()
         pendingImeSelectionDelta = 0
         clearUndoState()
@@ -256,6 +258,7 @@ class VoiceTouchInputArbitrator {
         streamingGenerationId++
         streamingCommittedPrefix = ""
         streamingLastComposingText = ""
+        streamingAnchorBuffer.clear()
         streamingInferenceHistory.clear()
     }
 
@@ -274,10 +277,17 @@ class VoiceTouchInputArbitrator {
 
         if (streamingLastComposingText.isEmpty()) {
             streamingCommittedPrefix = ""
+            if (streamingAnchorBuffer.isNotEmpty()) {
+                val fullFrozen = streamingAnchorBuffer.toString()
+                streamingAnchorBuffer.clear()
+                recordVoiceAnchor(editor, fullFrozen)
+            }
             return null
         }
 
         val finalized = formatFn(streamingLastComposingText)
+        val frozenPrefix = streamingAnchorBuffer.toString()
+        streamingAnchorBuffer.clear()
         streamingCommittedPrefix = ""
         streamingLastComposingText = ""
         clearUndoState()
@@ -286,9 +296,12 @@ class VoiceTouchInputArbitrator {
             editor?.commitText(finalized, 1)
             recordDirectCommitForInFlightDecodes(finalized)
             previousCommittedPhrase = finalized.takeLast(6)
-            recordVoiceAnchor(editor, finalized)
+            recordVoiceAnchor(editor, frozenPrefix + finalized)
         } else {
             editor?.finishComposingText()
+            if (frozenPrefix.isNotEmpty()) {
+                recordVoiceAnchor(editor, frozenPrefix)
+            }
         }
         return finalized
     }
@@ -931,6 +944,7 @@ class VoiceTouchInputArbitrator {
         if (frozenPrefix.isNotEmpty() && frozenPrefix.length > streamingCommittedPrefix.length) {
             val newlyFrozen = frozenPrefix.substring(streamingCommittedPrefix.length)
             editor?.commitText(newlyFrozen, 1)
+            streamingAnchorBuffer.append(newlyFrozen)
             streamingCommittedPrefix = frozenPrefix
             streamingLastComposingText = activeSuffix
             lastImeComposingEditTimeMs = System.currentTimeMillis()

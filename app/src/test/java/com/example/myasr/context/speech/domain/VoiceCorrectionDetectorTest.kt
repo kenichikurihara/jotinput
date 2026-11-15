@@ -114,4 +114,19 @@ class VoiceCorrectionDetectorTest {
         )
         assertNull(late)
     }
+
+    @Test
+    fun `detects inflected kun-yomi verb correction 描いて to 書いて even without readingResolver`() {
+        val result = VoiceCorrectionDetector.detect(
+            beforeText = "デザインドキュメントを描いて",
+            afterText = "デザインドキュメントを書いて",
+            language = AsrLanguage.JAPANESE,
+            elapsedSinceVoiceCommitMs = 3_500L,
+            typedReadingHint = "かいて"
+        )
+        assertNotNull(result)
+        assertEquals("描いて", result?.originalSurface)
+        assertEquals("書いて", result?.correctedSurface)
+        assertEquals("かいて", result?.normalizedReading)
+    }
 }

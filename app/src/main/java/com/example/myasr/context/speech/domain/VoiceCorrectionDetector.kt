@@ -106,6 +106,10 @@ object VoiceCorrectionDetector {
             else -> {
                 if (resolvedReadingOrig.isNotEmpty() && resolvedReadingCorr.isNotEmpty()) {
                     weightedKanaDistance(resolvedReadingOrig, resolvedReadingCorr)
+                } else if (normTypedReading.isNotEmpty() &&
+                    isTypedKanaInflectionOrKanjiFix(uOrig, uCorr, normTypedReading)
+                ) {
+                    0.05f
                 } else {
                     // Fallback when reading resolver cannot resolve one side (e.g. mixed script/Kanji variant)
                     fallbackJapaneseSurfaceDistance(uOrig, uCorr)
@@ -252,8 +256,91 @@ object VoiceCorrectionDetector {
                     break
                 }
             }
+
+            // Expand 1-2 char Kanji stems to include shared trailing Hiragana okurigana
+            // (e.g. "描" + "いて" -> "描いて", "書" + "いて" -> "書いて")
+            if (uOrig.length in 1..2 && uCorr.length in 1..2 &&
+                uOrig.all { isKanji(it) } && uCorr.all { isKanji(it) }
+            ) {
+                val okurigana = extractSharedOkurigana(before, oe, after, ce)
+                if (okurigana.isNotEmpty()) {
+                    uOrig += okurigana
+                    uCorr += okurigana
+                }
+            }
             return uOrig to uCorr
         }
+    }
+
+    private val OKURIGANA_STOP_CHARS = setOf(
+        'を', 'が', 'に', 'へ', 'で', 'と', 'の', 'は', 'も', 'や', 'か',
+        '、', '。', '！', '？', ',', '.', '!', '?', '「', '」', '(', ')', ' ', '\n'
+    )
+
+    private fun extractSharedOkurigana(
+        before: String,
+        beforeEnd: Int,
+        after: String,
+        afterEnd: Int
+    ): String {
+        val sb = StringBuilder()
+        var i = 0
+        while (i < 3 && (beforeEnd + i) < before.length && (afterEnd + i) < after.length) {
+            val c1 = before[beforeEnd + i]
+            val c2 = after[afterEnd + i]
+            if (c1 != c2 || c1 !in '\u3041'..'\u3096' || c1 in OKURIGANA_STOP_CHARS) {
+                break
+            }
+            sb.append(c1)
+            i++
+        }
+        val candidate = sb.toString()
+        if (candidate.startsWith("さん") || candidate.startsWith("さま") ||
+            candidate.startsWith("くん") || candidate.startsWith("ちゃん") ||
+            candidate.startsWith("ます") || candidate.startsWith("した") ||
+            candidate.startsWith("する")
+        ) {
+            return ""
+        }
+        return candidate
+    }
+
+    private fun isTypedKanaInflectionOrKanjiFix(
+        uOrig: String,
+        uCorr: String,
+        normTypedReading: String
+    ): Boolean {
+        if (uOrig.length > 5 || uCorr.length > 5) return false
+        val origHasKanji = uOrig.any { isKanji(it) }
+        val corrHasKanji = uCorr.any { isKanji(it) }
+        if (!origHasKanji || !corrHasKanji) return false
+
+        // Single-Kanji cursor replacement with explicit typed reading
+        if (uOrig.length == 1 && uCorr.length == 1) return true
+
+        // Shared okurigana suffix (e.g. "描いて" vs "書いて" with typedReadingHint="かいて")
+        var sharedSufLen = 0
+        while (sharedSufLen < min(uOrig.length, uCorr.length)) {
+            val c1 = uOrig[uOrig.length - 1 - sharedSufLen]
+            val c2 = uCorr[uCorr.length - 1 - sharedSufLen]
+            if (c1 == c2 && c1 in '\u3041'..'\u3096') {
+                sharedSufLen++
+            } else {
+                break
+            }
+        }
+        if (sharedSufLen > 0) {
+            val sharedSuf = uCorr.takeLast(sharedSufLen)
+            val stemOrig = uOrig.dropLast(sharedSufLen)
+            val stemCorr = uCorr.dropLast(sharedSufLen)
+            if (stemOrig.length in 1..2 && stemCorr.length in 1..2 &&
+                stemOrig.all { isKanji(it) } && stemCorr.all { isKanji(it) } &&
+                normTypedReading.endsWith(sharedSuf)
+            ) {
+                return true
+            }
+        }
+        return false
     }
 
     private fun normalizeForExactComparison(text: String, language: AsrLanguage): String {
