@@ -31,6 +31,7 @@ This document records the core architectural decisions, design rationales, criti
    - [ADR-022: Systematic Mozc OSS Potential Verb Stem Preservation & Viterbi Subword Beam Expansion](#adr-022-systematic-mozc-oss-potential-verb-stem-preservation--viterbi-subword-beam-expansion)
    - [ADR-023: Algorithmic Resolution for Colloquial Predicate Ranking & Morphological Length Normalization (Ideas A + B + D)](#adr-023-algorithmic-resolution-for-colloquial-predicate-ranking--morphological-length-normalization-ideas-a--b--d)
    - [ADR-024: Corpus-Derived Algorithmic English Truecasing, 2-State Character LM OOV Acronym Detection & Punkt-Style Sentence Boundary Mixture](#adr-024-corpus-derived-algorithmic-english-truecasing-2-state-character-lm-oov-acronym-detection--punkt-style-sentence-boundary-mixture)
+   - [ADR-025: Reference Bigram Prediction Golden Set & Dual-Mode History Evaluation Benchmark](#adr-025-reference-bigram-prediction-golden-set--dual-mode-history-evaluation-benchmark)
 2. [Technical Findings & Post-Mortems](#2-technical-findings--post-mortems)
    - [Finding 1: Sherpa-ONNX `cjkchar` FST Hotword Space-Separation Bug](#finding-1-sherpa-onnx-cjkchar-fst-hotword-space-separation-bug)
    - [Finding 2: 5-Fold Stratified Cross-Validation on 1,000 Tricky Japanese Sentences](#finding-2-5-fold-stratified-cross-validation-on-1000-tricky-japanese-sentences)
@@ -2139,6 +2140,32 @@ Replaced all hardcoded word lists with a principled 4-component algorithmic pipe
 - **60-Case Truecasing Benchmark (`EnglishTruecasingEvaluationTest`)**: **93.3% Top-1 (56/60)**, **98.3% Top-3 (59/60)**, **0.108 ms** average latency.
 - **OOV Acronym LM**: 15/15 unseen tech/domain acronyms detected, 0/11 false positives on normal English words.
 - **Reference**: [`docs/prd_and_system_design_qwerty_capitalization_and_spell_candidates.md`](docs/prd_and_system_design_qwerty_capitalization_and_spell_candidates.md).
+
+---
+
+## ADR-025: Reference Bigram Prediction Golden Set & Dual-Mode History Evaluation Benchmark
+
+### 1. Problem Statement
+Evaluating predictive text continuation quality across Japanese and English on-device input systems requires realistic, empirically verified reference baselines. Without a structured golden set covering preceding-word constraints (bigram transitions), prefix query depths (0-char, 1-char, 2-char), and user adaptation states (unseen zero-prior vs. repeated session history), predictive improvements cannot be objectively measured or regression-tested.
+
+### 2. Architectural Decision
+Established an automated, dual-language reference benchmark:
+1. **Curated Dual-Language Bigram Corpus**: 60 diverse conversational, polite, and transactional bigram contexts (30 Japanese, 30 English).
+2. **Tri-Prefix Evaluation Depths**:
+   - **0-Char Prefix**: Zero-query candidate strip immediately upon preceding word ($W_1$) commit.
+   - **1-Char Prefix**: Candidate strip upon typing the 1st character of target word ($W_2$).
+   - **2-Char Prefix**: Candidate strip upon typing the 1st and 2nd characters of target word ($W_2$).
+3. **Dual-Mode Personalization Evaluation**:
+   - `no_history`: Pristine baseline state without prior personalization cache.
+   - `with_history`: State immediately following one complete pass of typing and committing the reference sentence.
+4. **Isolated Extraction & Verification via ARCVM**: Verified under ARCVM with complete top-3 candidate extraction across all 360 query conditions (1,080 candidate datapoints).
+5. **Neutral Reference Contract**: Per specification, recorded neutrally without vendor-specific attribution as standard on-device baseline benchmark data.
+6. **Automated JVM Test Harness**: Archived in `app/src/test/resources/prediction_eval/reference_bigram_prediction_golden_set.json` and validated by `ReferencePredictionEvaluationTest.kt`.
+
+### 3. Verification & Compliance
+- **Unit Test Pass**: All 60 test cases validate schema integrity, non-empty candidate rankings, and personalization promotion invariants with 100% pass in `./gradlew testDebugUnitTest`.
+- **Reference Spec**: Fully documented in [`docs/reference_bigram_prediction_benchmark.md`](docs/reference_bigram_prediction_benchmark.md).
+
 
 
 
