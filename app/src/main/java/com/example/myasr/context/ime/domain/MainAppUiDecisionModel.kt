@@ -283,4 +283,75 @@ object MainAppUiDecisionModel {
 
     fun evaluateAiEngineStatus(input: AiEngineStatusInput): AiEngineStatusDecision =
         aiEngineStatusDecisionTable.evaluate(input)
+
+    // ------------------------------------------------------------------------
+
+    data class RerankEngineSelectionInput(
+        val rerankEnabled: Boolean,
+        val currentEngine: RerankEngineType?
+    )
+
+    data class RerankEngineSelectionDecision(
+        val effectiveRerankEnabled: Boolean,
+        val selectedEngine: RerankEngineType,
+        val shouldInitializeModel: Boolean,
+        val reason: String
+    )
+
+    val rerankEngineSelectionDecisionTable: DecisionTable<RerankEngineSelectionInput, RerankEngineSelectionDecision> =
+        decisionTable(
+            name = "RerankEngineSelectionDecisionTable",
+            hitPolicy = HitPolicy.FIRST
+        ) {
+            rule(id = "RERANK_SEL_R1", description = "Disable rerank engine when switch is turned off") {
+                `when` { !it.rerankEnabled }
+                thenValue(
+                    RerankEngineSelectionDecision(
+                        effectiveRerankEnabled = false,
+                        selectedEngine = RerankEngineType.NONE,
+                        shouldInitializeModel = false,
+                        reason = "rerank_disabled"
+                    )
+                )
+            }
+            rule(id = "RERANK_SEL_R2", description = "Keep 1.5B model when rerank is enabled and 1.5B was active") {
+                `when` { it.currentEngine == RerankEngineType.LOCAL_SLM_1_5B }
+                thenValue(
+                    RerankEngineSelectionDecision(
+                        effectiveRerankEnabled = true,
+                        selectedEngine = RerankEngineType.LOCAL_SLM_1_5B,
+                        shouldInitializeModel = true,
+                        reason = "keep_1_5b"
+                    )
+                )
+            }
+            rule(id = "RERANK_SEL_R3", description = "Keep 0.5B model when rerank is enabled and 0.5B was active") {
+                `when` { it.currentEngine == RerankEngineType.LOCAL_SLM }
+                thenValue(
+                    RerankEngineSelectionDecision(
+                        effectiveRerankEnabled = true,
+                        selectedEngine = RerankEngineType.LOCAL_SLM,
+                        shouldInitializeModel = true,
+                        reason = "keep_0_5b"
+                    )
+                )
+            }
+            defaultValue(
+                id = "RERANK_SEL_DEFAULT",
+                description = "Default to 0.5B model when rerank is enabled without a valid active model (invariant: enabled rerank requires a selected model)",
+                value = RerankEngineSelectionDecision(
+                    effectiveRerankEnabled = true,
+                    selectedEngine = RerankEngineType.LOCAL_SLM,
+                    shouldInitializeModel = true,
+                    reason = "default_to_0_5b_when_enabled"
+                )
+            )
+        }
+
+    fun evaluateRerankEngineSelection(input: RerankEngineSelectionInput): RerankEngineSelectionDecision =
+        rerankEngineSelectionDecisionTable.evaluate(input)
+
+    fun evaluateRerankEngineSelectionWithTrace(input: RerankEngineSelectionInput): DecisionTrace<RerankEngineSelectionDecision> =
+        rerankEngineSelectionDecisionTable.evaluateWithTrace(input)
 }
+

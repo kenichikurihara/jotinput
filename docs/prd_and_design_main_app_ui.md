@@ -43,8 +43,11 @@
 #### CUJ-M3: 入力設定のカスタマイズ（設定タブ）
 1. ボトムナビゲーションの **「設定」** タブをタップする。
 2. 「キーボード表示（高さ5段階・QWERTY数字行）」「入力アシスト（英語スワイプ・リアルタイム音声ストリーミング）」「AI 変換エンジン（ON/OFF ＆ 0.5B / 1.5B 選択）」が論理グループごとに整理されており、スクロール迷子にならず設定できる。
-3. AI 変換エンジンが OFF のときはモデル選択ラジオボタンを自動的に `View.GONE` とする。
-4. 最下部の折りたたみセクション「詳細設定・開発者ツール」を開くと、$\alpha$ / $\lambda$ スライダーおよび `[SLM]` デバッグ表示スイッチへアクセスできる。
+3. **AI 変換エンジン ON 時のモデル選択保証**:
+   - スイッチを ON にした際、現在モデルが未選択（NONE / 未設定）の場合は **DMN 決定表（`RerankEngineSelectionDecisionTable`）により自動的に高速標準モデル「Qwen2.5-0.5B」がデフォルト選択** される。
+   - 「リランクが ON ならば必ず有効なモデルが選択されていなければならない（空欄や NONE のまま放置されない）」というドメイン不変条件（Invariant）を DMN および UI の双方向バインディングで厳格に担保する。
+4. AI 変換エンジンが OFF のときはモデル選択ラジオボタンを自動的に `View.GONE` とする。
+5. 最下部の折りたたみセクション「詳細設定・開発者ツール」を開くと、$\alpha$ / $\lambda$ スライダーおよび `[SLM]` デバッグ表示スイッチへアクセスできる。
 
 #### CUJ-M4: モデル・拡張辞書のダウンロードと更新管理（データタブ）
 1. ボトムナビゲーションの **「データ」** タブをタップする。
@@ -71,7 +74,7 @@ flowchart TD
 
 ## Part 2: DMN 決定表設計 (Decision Model and Notation)
 
-[`MainAppUiDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/MainAppUiDecisionModel.kt) に以下の 3 つの純粋な DMN `DecisionTable` を定義し、`MainActivity` の表示状態・CTA・バッジを宣言的に決定する。
+[`MainAppUiDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/MainAppUiDecisionModel.kt) に以下の 4 つの純粋な DMN `DecisionTable` を定義し、`MainActivity` の表示状態・CTA・バッジ・AIモデル選択を宣言的に決定する。
 
 1. **`HomeHeroActionDecisionTable` (`HitPolicy.FIRST`)**:
    - 入力: `imeEnabled`, `imeSelected`, `japaneseAsrReady`, `totalDictWords`, `outdatedDictCount`
@@ -82,6 +85,10 @@ flowchart TD
 3. **`AiEngineStatusDecisionTable` (`HitPolicy.FIRST`)**:
    - 入力: `slmEnabled`, `engineType`, `rerankerState`, `modelInstalled`
    - 出力 (`AiEngineStatusDecision`): セレクタ表示可否、ステータスバッジ文言、バッジトーン、説明文。
+4. **`RerankEngineSelectionDecisionTable` (`HitPolicy.FIRST`)**:
+   - 入力: `rerankEnabled`, `currentEngine`
+   - 出力 (`RerankEngineSelectionDecision`): `effectiveRerankEnabled`, `selectedEngine`, `shouldInitializeModel`, `reason`
+   - 不変条件: `rerankEnabled == true` のとき `selectedEngine` は絶対に `NONE` にならず、未選択/NONEの場合は `LOCAL_SLM` (0.5B) がデフォルト選択される。
 
 ---
 
@@ -94,3 +101,5 @@ flowchart TD
 - **`TabSwitchPreservesState`**: `Home` ↔ `Settings` ↔ `Data` のタブ切替は、プロビジョニング状態・AI設定・セットアップ状態を一切破壊しないこと。
 - **`SlmSelectorHiddenWhenDisabled`**: AI 変換エンジンが OFF のときは、サブモデル選択パネルが必ず非表示であること。
 - **`GlobalBannerVisibleDuringProvisioning`**: バックグラウンドでダウンロード/コンパイルが進行中または待機中のときは、どのタブを表示していてもグローバル進捗バナーが表示されること。
+- **`RerankEnabledImpliesValidModel`**: AI リランクが ON のとき、モデルは必ず有効なモデル（0.5B または 1.5B）が選択されており、モデル未選択（NONE）のまま放置されないこと。
+

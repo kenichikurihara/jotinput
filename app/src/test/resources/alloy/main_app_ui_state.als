@@ -30,6 +30,9 @@ one sig
     HeroReady
 extends HeroAction {}
 
+abstract sig EngineType {}
+one sig Engine0_5B, Engine1_5B, EngineNone extends EngineType {}
+
 sig State {
     activeTab: one Tab,
     imeEnabled: one Bool,
@@ -39,6 +42,7 @@ sig State {
     outdatedDicts: one Bool,
     provisioningActive: one Bool,
     slmEnabled: one Bool,
+    selectedEngine: one EngineType,
     // Derived UI projections
     heroAction: one HeroAction,
     showGlobalBanner: one Bool,
@@ -70,6 +74,7 @@ pred init[s: State] {
     s.outdatedDicts = False
     s.provisioningActive = False
     s.slmEnabled = True
+    s.selectedEngine = Engine0_5B
     deriveUi[s]
 }
 
@@ -82,6 +87,7 @@ pred switchTab[s, sNext: State, t: Tab] {
     sNext.outdatedDicts = s.outdatedDicts
     sNext.provisioningActive = s.provisioningActive
     sNext.slmEnabled = s.slmEnabled
+    sNext.selectedEngine = s.selectedEngine
     deriveUi[sNext]
 }
 
@@ -94,6 +100,7 @@ pred enableAndSelectIme[s, sNext: State] {
     sNext.outdatedDicts = s.outdatedDicts
     sNext.provisioningActive = s.provisioningActive
     sNext.slmEnabled = s.slmEnabled
+    sNext.selectedEngine = s.selectedEngine
     deriveUi[sNext]
 }
 
@@ -106,6 +113,7 @@ pred startProvisioning[s, sNext: State] {
     sNext.outdatedDicts = s.outdatedDicts
     sNext.provisioningActive = True
     sNext.slmEnabled = s.slmEnabled
+    sNext.selectedEngine = s.selectedEngine
     deriveUi[sNext]
 }
 
@@ -119,6 +127,7 @@ pred completeProvisioning[s, sNext: State] {
     sNext.outdatedDicts = False
     sNext.provisioningActive = False
     sNext.slmEnabled = s.slmEnabled
+    sNext.selectedEngine = s.selectedEngine
     deriveUi[sNext]
 }
 
@@ -130,7 +139,28 @@ pred toggleSlm[s, sNext: State] {
     sNext.baseDictReady = s.baseDictReady
     sNext.outdatedDicts = s.outdatedDicts
     sNext.provisioningActive = s.provisioningActive
-    sNext.slmEnabled = (s.slmEnabled = True implies False else True)
+    (s.slmEnabled = True) implies {
+        sNext.slmEnabled = False
+        sNext.selectedEngine = EngineNone
+    } else {
+        sNext.slmEnabled = True
+        // DMN RerankEngineSelectionDecisionTable defaults to 0.5B when previously NONE
+        sNext.selectedEngine = Engine0_5B
+    }
+    deriveUi[sNext]
+}
+
+pred select15B[s, sNext: State] {
+    s.slmEnabled = True
+    sNext.activeTab = s.activeTab
+    sNext.imeEnabled = s.imeEnabled
+    sNext.imeSelected = s.imeSelected
+    sNext.jaAsrReady = s.jaAsrReady
+    sNext.baseDictReady = s.baseDictReady
+    sNext.outdatedDicts = s.outdatedDicts
+    sNext.provisioningActive = s.provisioningActive
+    sNext.slmEnabled = True
+    sNext.selectedEngine = Engine1_5B
     deriveUi[sNext]
 }
 
@@ -141,7 +171,8 @@ fact Traces {
         enableAndSelectIme[s, sNext] or
         startProvisioning[s, sNext] or
         completeProvisioning[s, sNext] or
-        toggleSlm[s, sNext]
+        toggleSlm[s, sNext] or
+        select15B[s, sNext]
 }
 
 // ============================================================================
@@ -171,12 +202,14 @@ assert TabSwitchPreservesState {
             sNext.baseDictReady = s.baseDictReady and
             sNext.outdatedDicts = s.outdatedDicts and
             sNext.provisioningActive = s.provisioningActive and
-            sNext.slmEnabled = s.slmEnabled
+            sNext.slmEnabled = s.slmEnabled and
+            sNext.selectedEngine = s.selectedEngine
         ) or
         (sNext.imeEnabled != s.imeEnabled) or
         (sNext.imeSelected != s.imeSelected) or
         (sNext.provisioningActive != s.provisioningActive) or
-        (sNext.slmEnabled != s.slmEnabled)
+        (sNext.slmEnabled != s.slmEnabled) or
+        (sNext.selectedEngine != s.selectedEngine)
 }
 
 assert SlmSelectorHiddenWhenDisabled {
@@ -187,11 +220,21 @@ assert GlobalBannerVisibleDuringProvisioning {
     all s: State | s.provisioningActive = True implies s.showGlobalBanner = True
 }
 
+assert RerankEnabledImpliesValidModel {
+    all s: State | s.slmEnabled = True implies (s.selectedEngine = Engine0_5B or s.selectedEngine = Engine1_5B)
+}
+
+assert RerankDisabledImpliesEngineNone {
+    all s: State | s.slmEnabled = False implies s.selectedEngine = EngineNone
+}
+
 check ReadyImpliesAllPrerequisitesMet for 6 State
 check HeroEnableImeHighestPriority for 6 State
 check TabSwitchPreservesState for 6 State
 check SlmSelectorHiddenWhenDisabled for 6 State
 check GlobalBannerVisibleDuringProvisioning for 6 State
+check RerankEnabledImpliesValidModel for 6 State
+check RerankDisabledImpliesEngineNone for 6 State
 
 // ============================================================================
 // Reachability (Non-Vacuity)

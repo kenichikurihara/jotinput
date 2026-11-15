@@ -44,6 +44,8 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`TabSwitchPreservesState`**: タブ切替がプロビジョニングやセットアップ状態・AI設定を破壊しないこと。
 - **`SlmSelectorHiddenWhenDisabled`**: AI エンジン OFF 時はエンジン選択 UI が必ず非表示であること。
 - **`GlobalBannerVisibleDuringProvisioning`**: バックグラウンド処理中はタブを問わず進捗バナーが表示されること。
+- **`RerankEnabledImpliesValidModel`**: AI リランクが ON のとき、モデルは必ず有効なモデル（0.5B または 1.5B）が選択されており、モデル未選択（NONE）のまま放置されないこと。
+- **`RerankDisabledImpliesEngineNone`**: AI リランクが OFF のとき、エンジンは必ず NONE に解決されること。
 
 ### 3.5 [`onboarding_flow.als`](app/src/test/resources/alloy/onboarding_flow.als)
 オンボーディングフロー（[`OnboardingActivity`](app/src/main/java/com/example/myasr/OnboardingActivity.kt) / [`OnboardingDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/OnboardingDecisionModel.kt)）の状態遷移とコーナーケースをモデル化し、以下を検証する：

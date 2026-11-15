@@ -6,6 +6,8 @@ import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.AiRuntimeStat
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.HeroActionKind
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.HomeHeroInput
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.ProvisioningBannerInput
+import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.RerankEngineSelectionDecision
+import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.RerankEngineSelectionInput
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.StatusTone
 import com.example.myasr.context.ime.domain.OnboardingDecisionModel
 import com.example.myasr.context.ime.domain.OnboardingDecisionModel.LaunchAction
@@ -359,19 +361,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupRerankEngineUI() {
-        val current = KeyboardHeightManager.getRerankEngineType(this)
-
         rbEngineLocalSlm.isEnabled = true
         rbEngineLocalSlm15B.isEnabled = true
         rbEngineNone.isEnabled = true
 
-        when (current) {
-            RerankEngineType.LOCAL_SLM -> rbEngineLocalSlm.isChecked = true
-            RerankEngineType.LOCAL_SLM_1_5B -> rbEngineLocalSlm15B.isChecked = true
-            RerankEngineType.NONE -> rbEngineNone.isChecked = true
-        }
-
-        switchSlmRerankEnabled.isChecked = KeyboardHeightManager.isSlmRerankEnabled(this)
+        val initialEnabled = KeyboardHeightManager.isSlmRerankEnabled(this)
+        val initialEngine = KeyboardHeightManager.getRerankEngineType(this)
+        val initialDecision = MainAppUiDecisionModel.evaluateRerankEngineSelection(
+            RerankEngineSelectionInput(
+                rerankEnabled = initialEnabled,
+                currentEngine = initialEngine
+            )
+        )
+        applyRerankDecision(initialDecision, notifyToast = false)
 
         rgRerankEngine.setOnCheckedChangeListener { _, checkedId ->
             if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
@@ -380,57 +382,63 @@ class MainActivity : AppCompatActivity() {
                 R.id.rbEngineNone -> RerankEngineType.NONE
                 else -> RerankEngineType.LOCAL_SLM
             }
-            KeyboardHeightManager.setRerankEngineType(this, selected)
-            isUpdatingUiFromPrefs = true
-            try {
-                if (selected == RerankEngineType.NONE) {
-                    KeyboardHeightManager.setSlmRerankEnabled(this, false)
-                    if (switchSlmRerankEnabled.isChecked) {
-                        switchSlmRerankEnabled.isChecked = false
-                    }
-                } else {
-                    KeyboardHeightManager.setSlmRerankEnabled(this, true)
-                    if (!switchSlmRerankEnabled.isChecked) {
-                        switchSlmRerankEnabled.isChecked = true
-                    }
-                    if (selected == RerankEngineType.LOCAL_SLM || selected == RerankEngineType.LOCAL_SLM_1_5B) {
-                        AsrApp.instance.llmReranker.initializeIfAvailable(lifecycleScope, selected.modelFileName) {
-                            runOnUiThread { updateSlmStatusBadge() }
-                        }
-                    }
-                }
-            } finally {
-                isUpdatingUiFromPrefs = false
-            }
-            updateSlmStatusBadge()
-            Toast.makeText(this, "AI 変換エンジン: ${selected.displayName} を選択しました", Toast.LENGTH_SHORT).show()
+            val isEnabled = selected != RerankEngineType.NONE
+            val decision = MainAppUiDecisionModel.evaluateRerankEngineSelection(
+                RerankEngineSelectionInput(
+                    rerankEnabled = isEnabled,
+                    currentEngine = selected
+                )
+            )
+            applyRerankDecision(decision, notifyToast = true)
         }
 
         switchSlmRerankEnabled.setOnCheckedChangeListener { _, isChecked ->
             if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
-            KeyboardHeightManager.setSlmRerankEnabled(this, isChecked)
-            isUpdatingUiFromPrefs = true
-            try {
-                if (!isChecked) {
-                    if (!rbEngineNone.isChecked) {
-                        rbEngineNone.isChecked = true
-                    }
-                } else if (KeyboardHeightManager.getRerankEngineType(this) == RerankEngineType.NONE) {
-                    val defaultEngine = RerankEngineType.LOCAL_SLM
-                    KeyboardHeightManager.setRerankEngineType(this, defaultEngine)
-                    rbEngineLocalSlm.isChecked = true
-                    AsrApp.instance.llmReranker.initializeIfAvailable(lifecycleScope, defaultEngine.modelFileName) {
-                        runOnUiThread { updateSlmStatusBadge() }
-                    }
-                }
-            } finally {
-                isUpdatingUiFromPrefs = false
-            }
-            updateSlmStatusBadge()
-            val status = if (isChecked) "有効 (ON)" else "無効 (OFF: Mozc辞書・Viterbiのみ)"
-            Toast.makeText(this, "AI 変換エンジン: $status", Toast.LENGTH_SHORT).show()
+            val currentEngine = KeyboardHeightManager.getRerankEngineType(this)
+            val decision = MainAppUiDecisionModel.evaluateRerankEngineSelection(
+                RerankEngineSelectionInput(
+                    rerankEnabled = isChecked,
+                    currentEngine = currentEngine
+                )
+            )
+            applyRerankDecision(decision, notifyToast = true)
         }
     }
+
+    private fun applyRerankDecision(
+        decision: RerankEngineSelectionDecision,
+        notifyToast: Boolean
+    ) {
+        KeyboardHeightManager.setSlmRerankEnabled(this, decision.effectiveRerankEnabled)
+        KeyboardHeightManager.setRerankEngineType(this, decision.selectedEngine)
+
+        isUpdatingUiFromPrefs = true
+        try {
+            switchSlmRerankEnabled.isChecked = decision.effectiveRerankEnabled
+            when (decision.selectedEngine) {
+                RerankEngineType.LOCAL_SLM -> rbEngineLocalSlm.isChecked = true
+                RerankEngineType.LOCAL_SLM_1_5B -> rbEngineLocalSlm15B.isChecked = true
+                RerankEngineType.NONE -> rbEngineNone.isChecked = true
+            }
+            if (decision.shouldInitializeModel) {
+                AsrApp.instance.llmReranker.initializeIfAvailable(lifecycleScope, decision.selectedEngine.modelFileName) {
+                    runOnUiThread { updateSlmStatusBadge() }
+                }
+            }
+        } finally {
+            isUpdatingUiFromPrefs = false
+        }
+        updateSlmStatusBadge()
+        if (notifyToast) {
+            val toastMsg = if (decision.effectiveRerankEnabled) {
+                "AI 変換エンジン: ${decision.selectedEngine.displayName} を選択しました"
+            } else {
+                "AI 変換エンジン: 無効 (OFF: Mozc辞書・Viterbiのみ)"
+            }
+            Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show()
+        }
+    }
+
 
     private fun updateSlmStatusBadge() {
         val isRerankEnabled = KeyboardHeightManager.isSlmRerankEnabled(this)
