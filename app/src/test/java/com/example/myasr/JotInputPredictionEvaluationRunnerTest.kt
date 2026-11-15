@@ -207,8 +207,15 @@ class JotInputPredictionEvaluationRunnerTest {
         val rootOutDir = if (File("tools").exists()) File("tools/eval") else File("../tools/eval")
         rootOutDir.mkdirs()
         val outFile = File(rootOutDir, "jotinput_prediction_evaluation_results.json")
-        outFile.writeText(fullOutput.toString(2), Charsets.UTF_8)
-        println("Saved evaluation results to: ${outFile.absolutePath}")
+        val isDualModeAlreadyPresent = outFile.exists() && outFile.readText().contains("\"slm_on\"")
+        if (!isDualModeAlreadyPresent) {
+            outFile.writeText(fullOutput.toString(2), Charsets.UTF_8)
+            println("Saved baseline evaluation results to: ${outFile.absolutePath}")
+        } else {
+            val baselineOut = File(rootOutDir, "jotinput_prediction_evaluation_results_baseline.json")
+            baselineOut.writeText(fullOutput.toString(2), Charsets.UTF_8)
+            println("Preserved dual-mode evaluation in ${outFile.name}, saved baseline to: ${baselineOut.absolutePath}")
+        }
 
         // Validate that metrics are non-trivial
         val overall = summaryScores.getJSONObject("overall")

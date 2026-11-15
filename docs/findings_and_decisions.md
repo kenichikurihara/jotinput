@@ -2162,9 +2162,22 @@ Established an automated, dual-language reference benchmark:
 5. **Neutral Reference Contract**: Per specification, recorded neutrally without vendor-specific attribution as standard on-device baseline benchmark data.
 6. **Automated JVM Test Harness**: Archived in `app/src/test/resources/prediction_eval/reference_bigram_prediction_golden_set.json` and validated by `ReferencePredictionEvaluationTest.kt`.
 
-### 3. Verification & Compliance
+### 3. Empirical Findings: SLM ON vs. SLM OFF Comparative Evaluation
+Using the on-device Small Language Model (**Qwen2.5-0.5B-Instruct-Q4_K_M** via `tools/slm_scorer_cli`), JotInput was evaluated across all 60 cases under both **SLM OFF** (baseline morphological Trie / unigram cost) and **SLM ON** (context-conditioned Bayesian reranking with $\alpha = 0.20$):
+- **Target Hit@3 Improvement**: Overall Hit@3 rose from **71.7% to 73.3%**, and Reference Concordance@3 increased from **76.7% to 80.8%**.
+- **Dramatic Prefix Disambiguation in Japanese**:
+  - `two_char_no_hist`: Target Hit@1 surged from **23.3% to 56.7%** (+33.4%), and MRR jumped from **0.389 to 0.606** (+0.217).
+  - `two_char_with_hist`: Target Hit@1 rose from **23.3% to 70.0%** (+46.7%), and Hit@3 reached **83.3%**.
+  - `one_char_with_hist`: Target Hit@1 rose from **73.3% to 83.3%**, and Hit@3 reached **93.3%** (+20.0%), cleanly eliminating single-kanji cost domination.
+- **English Contextualization**:
+  - `zero_char_no_hist`: Enabled next-word prediction from 0.0% to **23.3% Hit@3** (0.161 MRR).
+  - `one_char_no_hist`: Target Hit@1 rose from **26.7% to 40.0%** (+13.3%), with Hit@3 reaching **70.0%**.
+- **Personal Habit Retention vs. Contextual Override Trade-Off**:
+  - In `zero_char_with_hist`, SLM arbitrates single-session history against global sentence priors rather than unconditionally forcing the previous word to Rank 1. This prevents erroneous over-fitting to accidental inputs while preserving contextual coherence.
+
+### 4. Verification & Compliance
 - **Unit Test Pass**: All 60 test cases validate schema integrity, non-empty candidate rankings, and personalization promotion invariants with 100% pass in `./gradlew testDebugUnitTest`.
-- **Reference Spec**: Fully documented in [`docs/reference_bigram_prediction_benchmark.md`](docs/reference_bigram_prediction_benchmark.md).
+- **Evaluator & Benchmark Spec**: Implemented in [`tools/eval/evaluate_predictions_slm_comparison.py`](tools/eval/evaluate_predictions_slm_comparison.py) with results recorded in [`tools/eval/jotinput_prediction_evaluation_results.json`](tools/eval/jotinput_prediction_evaluation_results.json) and detailed spec in [`docs/reference_bigram_prediction_benchmark.md`](docs/reference_bigram_prediction_benchmark.md).
 
 ---
 

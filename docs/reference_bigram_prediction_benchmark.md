@@ -158,7 +158,47 @@ flowchart TD
 
 ---
 
-## 5. Evaluation Harness & Test Suite Integration
+## 5. SLM ON vs SLM OFF Comparative Evaluation & Empirical Results
+
+Using the on-device Small Language Model (**Qwen2.5-0.5B-Instruct-Q4_K_M** via [`tools/slm_scorer_cli`](tools/slm_scorer_cli)), JotInput was evaluated across all 60 cases under both **SLM OFF** (baseline morphological Trie / unigram cost) and **SLM ON** (context-conditioned Bayesian reranking with $\alpha = 0.20$).
+
+Full evaluation records (Top-3 predictions per sample per slot across both modes) are stored at [`tools/eval/jotinput_prediction_evaluation_results.json`](tools/eval/jotinput_prediction_evaluation_results.json).
+
+### 5.1 Macro Performance Comparison
+
+| Metric | SLM OFF | SLM ON | Delta ($\Delta$) | Description |
+| :--- | :---: | :---: | :---: | :--- |
+| **Target Hit@1** | 60.3% | 55.0% | -5.3% | Proportion where target word appears at Rank 1 |
+| **Target Hit@3** | 71.7% | **73.3%** | **+1.7%** | Proportion where target word appears within Top-3 |
+| **Reference Concordance@1** | 60.3% | 52.8% | -7.5% | Exact match with reference Top-1 candidate |
+| **Reference Concordance@3** | 76.7% | **80.8%** | **+4.2%** | Overlap with reference Top-3 candidates |
+| **MRR (Mean Reciprocal Rank)** | 0.653 | 0.628 | -0.025 | Average reciprocal rank of target word |
+
+### 5.2 Slot-by-Slot Breakdown & Key Insights
+
+#### Japanese (`ja`)
+| Slot | OFF Hit@1 | ON Hit@1 | OFF Hit@3 | ON Hit@3 | OFF MRR | ON MRR | Key Observation |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| `zero_char_no_hist` | 43.3% | 26.7% | 46.7% | **56.7%** | 0.450 | 0.394 | SLM proposes diverse natural continuations (+10% Hit@3). |
+| `zero_char_with_hist` | 100.0% | 63.3% | 100.0% | 76.7% | 1.000 | 0.694 | SLM balances strong history against generic sentence priors (HPR/COR trade-off). |
+| `one_char_no_hist` | **73.3%** | 53.3% | 73.3% | **76.7%** | **0.733** | 0.633 | High prefix candidate pool; SLM elevates contextual words into Top-3. |
+| `one_char_with_hist` | 73.3% | **83.3%** | 73.3% | **93.3%** | 0.733 | **0.878** | **+10% Hit@1, +20% Hit@3**: SLM + history cleanly filters out single-kanji noise. |
+| `two_char_no_hist` | 23.3% | **56.7%** | 60.0% | **66.7%** | 0.389 | **0.606** | **+33.4% Hit@1, +0.217 MRR**: Massive jump as 2 chars provide strong context fit. |
+| `two_char_with_hist` | 23.3% | **70.0%** | 60.0% | **83.3%** | 0.389 | **0.750** | **+46.7% Hit@1, +23.3% Hit@3**: Near-complete convergence to target. |
+
+#### English (`en`)
+| Slot | OFF Hit@1 | ON Hit@1 | OFF Hit@3 | ON Hit@3 | OFF MRR | ON MRR | Key Observation |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| `zero_char_no_hist` | 0.0% | **10.0%** | 0.0% | **23.3%** | 0.000 | **0.161** | Baseline had no zero-char model; SLM provides next-word capability. |
+| `zero_char_with_hist` | 100.0% | 36.7% | 100.0% | 70.0% | 1.000 | 0.500 | Single-shot history vs language prior arbitration. |
+| `one_char_no_hist` | 26.7% | **40.0%** | 63.3% | **70.0%** | 0.433 | **0.533** | **+13.3% Hit@1, +6.7% Hit@3**: Replaces raw unigram frequency with context. |
+| `one_char_with_hist` | 100.0% | 83.3% | 100.0% | 90.0% | 1.000 | 0.861 | High retention with linguistic coherence. |
+| `two_char_no_hist` | 60.0% | 53.3% | 83.3% | 76.7% | 0.706 | 0.639 | Phonetic constraint is already strong at 2 letters. |
+| `two_char_with_hist` | 100.0% | 83.3% | 100.0% | 96.7% | 1.000 | 0.889 | Overwhelming target retention. |
+
+---
+
+## 6. Evaluation Harness & Test Suite Integration
 
 The reference golden set is integrated directly into the automated CI test suite via [`ReferencePredictionEvaluationTest.kt`](app/src/test/java/com/example/myasr/ReferencePredictionEvaluationTest.kt):
 
