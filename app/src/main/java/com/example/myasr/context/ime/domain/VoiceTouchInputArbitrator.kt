@@ -562,13 +562,16 @@ class VoiceTouchInputArbitrator {
     fun onDeletePressed(
         editor: EditorBridge?,
         onDiscardUnflushedSpeech: () -> Unit = {},
-        onResetStreamingUtterance: () -> Unit = {}
+        onResetStreamingUtterance: () -> Unit = {},
+        count: Int = 1
     ): DeleteOutcome {
+        val deleteCount = count.coerceAtLeast(1)
         clearAutoAssistState()
         if (composingText.isNotEmpty()) {
             clearUndoState()
             previousCommittedPhrase = ""
-            composingText.deleteCharAt(composingText.length - 1)
+            val removeCount = minOf(deleteCount, composingText.length)
+            composingText.delete(composingText.length - removeCount, composingText.length)
             lastImeComposingEditTimeMs = System.currentTimeMillis()
             return if (composingText.isEmpty()) {
                 activeComposingSessionId = 0L
@@ -584,7 +587,8 @@ class VoiceTouchInputArbitrator {
         if (streamingLastComposingText.isNotEmpty()) {
             clearUndoState()
             previousCommittedPhrase = ""
-            val shortened = streamingLastComposingText.dropLast(1)
+            val removeCount = minOf(deleteCount, streamingLastComposingText.length)
+            val shortened = streamingLastComposingText.dropLast(removeCount)
             streamingGenerationId++
             streamingCommittedPrefix = ""
             streamingLastComposingText = ""
@@ -625,9 +629,9 @@ class VoiceTouchInputArbitrator {
             editor.commitText("", 1)
             clearInFlightCommittedTracking()
         } else {
-            recordImeDirectEditDelta(-1)
-            editor?.deleteSurroundingText(1, 0)
-            recordDeleteCharsForInFlightDecodes(1)
+            recordImeDirectEditDelta(-deleteCount)
+            editor?.deleteSurroundingText(deleteCount, 0)
+            recordDeleteCharsForInFlightDecodes(deleteCount)
         }
         markVoiceAnchorEdited()
         return DeleteOutcome.DELETED_SURROUNDING_TEXT

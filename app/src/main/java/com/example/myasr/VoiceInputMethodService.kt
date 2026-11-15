@@ -803,7 +803,7 @@ class VoiceInputMethodService : InputMethodService() {
                 }
             }
 
-            override fun onDeletePressed() {
+            override fun onDeletePressed(count: Int) {
                 clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 audioRecorder.notifyUserTyping(350L)
                 val outcome = arbitrator.onDeletePressed(
@@ -813,7 +813,8 @@ class VoiceInputMethodService : InputMethodService() {
                             audioRecorder.discardCurrentSpeech()
                         }
                     },
-                    onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() }
+                    onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() },
+                    count = count
                 )
                 syncKeyboardState()
                 when (outcome) {
@@ -831,7 +832,7 @@ class VoiceInputMethodService : InputMethodService() {
                         rerankJob?.cancel()
                         englishCandidateJob?.cancel()
                         isCurrentCandidatesReranked = false
-                        if (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
+                        if (count <= 1 && flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
                             updateEnglishTypoAndSpellingCandidates()
                         } else {
                             candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())

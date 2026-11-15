@@ -14,6 +14,7 @@ android {
         targetSdk = 34
         versionCode = 2
         versionName = "1.1"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
             abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
@@ -87,4 +88,7 @@ dependencies {
     testImplementation("org.json:json:20240303")
     testImplementation("com.lemonappdev:konsist:0.17.3")
     testImplementation("org.alloytools:org.alloytools.alloy.core:6.2.0")
+
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }

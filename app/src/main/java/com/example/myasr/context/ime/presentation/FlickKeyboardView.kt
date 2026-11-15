@@ -27,7 +27,7 @@ class FlickKeyboardView @JvmOverloads constructor(
     interface OnKeyboardActionListener {
         fun onTextChar(text: String)
         fun onModifierPressed(direction: JapaneseKanaUtils.FlickDirection = JapaneseKanaUtils.FlickDirection.CENTER)
-        fun onDeletePressed()
+        fun onDeletePressed(count: Int = 1)
         fun onSpacePressed()
         fun onEnterPressed()
         fun onGlobePressed()
@@ -121,14 +121,26 @@ class FlickKeyboardView @JvmOverloads constructor(
     private var usingWindowPopup = false
 
     private val handler = Handler(Looper.getMainLooper())
+    private var deleteRepeatStartTimeMs = 0L
+    private var deleteRepeatCount = 0
+    private var lastRepeatHapticTimeMs = 0L
     private val repeatRunnable = object : Runnable {
         override fun run() {
             val key = activeKey ?: return
             when (key.type) {
                 KeyType.DELETE -> {
-                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
-                    listener?.onDeletePressed()
-                    handler.postDelayed(this, 65L)
+                    val now = android.os.SystemClock.uptimeMillis()
+                    if (deleteRepeatStartTimeMs == 0L) {
+                        deleteRepeatStartTimeMs = now
+                    }
+                    val step = DeleteRepeatAccelerator.stepForElapsedMs(now - deleteRepeatStartTimeMs)
+                    deleteRepeatCount++
+                    if (now - lastRepeatHapticTimeMs >= DeleteRepeatAccelerator.MIN_HAPTIC_INTERVAL_MS) {
+                        performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                        lastRepeatHapticTimeMs = now
+                    }
+                    listener?.onDeletePressed(step.deleteCount)
+                    handler.postDelayed(this, step.delayMs)
                 }
                 KeyType.CURSOR_LEFT -> {
                     performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
@@ -972,6 +984,9 @@ class FlickKeyboardView @JvmOverloads constructor(
     fun dismissPopup() {
         handler.removeCallbacks(repeatRunnable)
         handler.removeCallbacks(qwertyLongPressRunnable)
+        deleteRepeatStartTimeMs = 0L
+        deleteRepeatCount = 0
+        lastRepeatHapticTimeMs = 0L
         flickPopupWindow.dismiss()
         usingWindowPopup = false
         longPressTriggered = false
@@ -1028,6 +1043,9 @@ class FlickKeyboardView @JvmOverloads constructor(
             MotionEvent.ACTION_DOWN -> {
                 handler.removeCallbacks(repeatRunnable)
                 handler.removeCallbacks(qwertyLongPressRunnable)
+                deleteRepeatStartTimeMs = 0L
+                deleteRepeatCount = 0
+                lastRepeatHapticTimeMs = 0L
                 touchStartX = x
                 touchStartY = y
                 activeDirection = JapaneseKanaUtils.FlickDirection.CENTER
@@ -1055,7 +1073,9 @@ class FlickKeyboardView @JvmOverloads constructor(
                         swipeTrajectory.add(FutoSwipeEngine.SwipePoint(normX, normY, event.eventTime))
                     }
 
-                    if (hitKey.type == KeyType.DELETE || hitKey.type == KeyType.CURSOR_LEFT || hitKey.type == KeyType.CURSOR_RIGHT) {
+                    if (hitKey.type == KeyType.DELETE) {
+                        handler.postDelayed(repeatRunnable, DeleteRepeatAccelerator.INITIAL_DELAY_MS)
+                    } else if (hitKey.type == KeyType.CURSOR_LEFT || hitKey.type == KeyType.CURSOR_RIGHT) {
                         handler.postDelayed(repeatRunnable, 400L)
                     } else if (hitKey.type == KeyType.QWERTY_CHAR && hitKey.subLabel.isNotEmpty()) {
                         handler.postDelayed(qwertyLongPressRunnable, 300L)
@@ -1214,6 +1234,9 @@ class FlickKeyboardView @JvmOverloads constructor(
                     key.isPressed = false
                     handleKeyRelease(key)
                 }
+                deleteRepeatStartTimeMs = 0L
+                deleteRepeatCount = 0
+                lastRepeatHapticTimeMs = 0L
                 longPressTriggered = false
                 activeKey = null
                 activeDirection = JapaneseKanaUtils.FlickDirection.CENTER
@@ -1291,7 +1314,7 @@ class FlickKeyboardView @JvmOverloads constructor(
             KeyType.UNDO -> listener?.onUndoPressed()
             KeyType.CURSOR_LEFT -> listener?.onCursorLeft()
             KeyType.CURSOR_RIGHT -> listener?.onCursorRight()
-            KeyType.DELETE -> listener?.onDeletePressed()
+            KeyType.DELETE -> if (deleteRepeatCount == 0) listener?.onDeletePressed(1)
             KeyType.SPACE -> listener?.onSpacePressed()
             KeyType.ENTER -> listener?.onEnterPressed()
             KeyType.GLOBE -> listener?.onGlobePressed()

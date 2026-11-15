@@ -630,4 +630,27 @@ class VoiceInputArbitratorTest {
         val stopSamples = recorder.stop()
         assertTrue(stopSamples.isEmpty())
     }
+
+    @Test
+    fun testBatchDeleteStopsAtKeyboardComposingBoundaryAndDeletesCommittedInBatch() {
+        val editor = RealisticMockEditorBridge()
+        val arbitrator = VoiceTouchInputArbitrator()
+        editor.commitText("Hello ", 1)
+        arbitrator.onTypeKana(editor, "あ")
+        arbitrator.onTypeKana(editor, "い")
+        arbitrator.onTypeKana(editor, "う")
+        assertEquals("Hello ", editor.committedText)
+        assertEquals("あいう", editor.composingSpan)
+
+        // Batch delete of 8 while composing only 3 chars must stop at composing boundary
+        val outcome1 = arbitrator.onDeletePressed(editor = editor, count = 8)
+        assertEquals(VoiceTouchInputArbitrator.DeleteOutcome.DELETED_FROM_KEYBOARD_COMPOSING_NOW_EMPTY, outcome1)
+        assertEquals("", editor.composingSpan)
+        assertEquals("Hello ", editor.committedText)
+
+        // Next batch delete of 4 deletes 4 committed chars at once
+        val outcome2 = arbitrator.onDeletePressed(editor = editor, count = 4)
+        assertEquals(VoiceTouchInputArbitrator.DeleteOutcome.DELETED_SURROUNDING_TEXT, outcome2)
+        assertEquals("He", editor.committedText)
+    }
 }
