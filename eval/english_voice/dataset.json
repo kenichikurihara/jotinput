@@ -1,0 +1,1502 @@
+[
+  {
+    "id": "en_voice_0001",
+    "category": "conversational",
+    "sentence": "I'll be there in about ten minutes."
+  },
+  {
+    "id": "en_voice_0002",
+    "category": "conversational",
+    "sentence": "Let me know when you get home safely."
+  },
+  {
+    "id": "en_voice_0003",
+    "category": "conversational",
+    "sentence": "Are you free to grab coffee this afternoon?"
+  },
+  {
+    "id": "en_voice_0004",
+    "category": "conversational",
+    "sentence": "Thanks so much for helping me out today."
+  },
+  {
+    "id": "en_voice_0005",
+    "category": "conversational",
+    "sentence": "I'm really looking forward to the weekend."
+  },
+  {
+    "id": "en_voice_0006",
+    "category": "conversational",
+    "sentence": "Could you please send me the address again?"
+  },
+  {
+    "id": "en_voice_0007",
+    "category": "conversational",
+    "sentence": "I completely forgot to turn off the lights."
+  },
+  {
+    "id": "en_voice_0008",
+    "category": "conversational",
+    "sentence": "That sounds like a wonderful idea to me."
+  },
+  {
+    "id": "en_voice_0009",
+    "category": "conversational",
+    "sentence": "Sorry for the late reply, I was in a meeting."
+  },
+  {
+    "id": "en_voice_0010",
+    "category": "conversational",
+    "sentence": "We should definitely catch up soon."
+  },
+  {
+    "id": "en_voice_0011",
+    "category": "conversational",
+    "sentence": "I'm heading out the door right now."
+  },
+  {
+    "id": "en_voice_0012",
+    "category": "conversational",
+    "sentence": "How did your interview go yesterday?"
+  },
+  {
+    "id": "en_voice_0013",
+    "category": "conversational",
+    "sentence": "I'll call you back as soon as I can."
+  },
+  {
+    "id": "en_voice_0014",
+    "category": "conversational",
+    "sentence": "It was really nice seeing you again after so long."
+  },
+  {
+    "id": "en_voice_0015",
+    "category": "conversational",
+    "sentence": "What time does the movie start tonight?"
+  },
+  {
+    "id": "en_voice_0016",
+    "category": "conversational",
+    "sentence": "Don't worry about it, everything will be fine."
+  },
+  {
+    "id": "en_voice_0017",
+    "category": "conversational",
+    "sentence": "Can you pick up some milk on your way back?"
+  },
+  {
+    "id": "en_voice_0018",
+    "category": "conversational",
+    "sentence": "I'm having lunch with my colleagues right now."
+  },
+  {
+    "id": "en_voice_0019",
+    "category": "conversational",
+    "sentence": "Let's meet at the station around noon."
+  },
+  {
+    "id": "en_voice_0020",
+    "category": "conversational",
+    "sentence": "I think we might need to take an umbrella today."
+  },
+  {
+    "id": "en_voice_0021",
+    "category": "conversational",
+    "sentence": "Have a safe trip and enjoy your vacation!"
+  },
+  {
+    "id": "en_voice_0022",
+    "category": "conversational",
+    "sentence": "I'm not sure if I can make it on time."
+  },
+  {
+    "id": "en_voice_0023",
+    "category": "conversational",
+    "sentence": "Please let me know if anything changes."
+  },
+  {
+    "id": "en_voice_0024",
+    "category": "conversational",
+    "sentence": "It's been quite a long and busy week."
+  },
+  {
+    "id": "en_voice_0025",
+    "category": "conversational",
+    "sentence": "I'll check my schedule and get back to you."
+  },
+  {
+    "id": "en_voice_0026",
+    "category": "conversational",
+    "sentence": "Hope you are having a productive day so far."
+  },
+  {
+    "id": "en_voice_0027",
+    "category": "conversational",
+    "sentence": "That restaurant has the best pizza in town."
+  },
+  {
+    "id": "en_voice_0028",
+    "category": "conversational",
+    "sentence": "I really appreciate your quick response."
+  },
+  {
+    "id": "en_voice_0029",
+    "category": "conversational",
+    "sentence": "Let's see how the weather turns out tomorrow."
+  },
+  {
+    "id": "en_voice_0030",
+    "category": "conversational",
+    "sentence": "I have a quick question regarding our dinner plans."
+  },
+  {
+    "id": "en_voice_0031",
+    "category": "conversational",
+    "sentence": "Just wanted to say congratulations on your promotion!"
+  },
+  {
+    "id": "en_voice_0032",
+    "category": "conversational",
+    "sentence": "I'm running a few minutes behind schedule."
+  },
+  {
+    "id": "en_voice_0033",
+    "category": "conversational",
+    "sentence": "Do you want me to bring anything for the party?"
+  },
+  {
+    "id": "en_voice_0034",
+    "category": "conversational",
+    "sentence": "I'll send you the photos as soon as I get home."
+  },
+  {
+    "id": "en_voice_0035",
+    "category": "conversational",
+    "sentence": "It was an absolute pleasure speaking with you."
+  },
+  {
+    "id": "en_voice_0036",
+    "category": "conversational",
+    "sentence": "I'm almost done with my chores for today."
+  },
+  {
+    "id": "en_voice_0037",
+    "category": "conversational",
+    "sentence": "Let's get together sometime next week if possible."
+  },
+  {
+    "id": "en_voice_0038",
+    "category": "conversational",
+    "sentence": "The traffic on the highway was surprisingly light today."
+  },
+  {
+    "id": "en_voice_0039",
+    "category": "conversational",
+    "sentence": "I couldn't agree with you more on that point."
+  },
+  {
+    "id": "en_voice_0040",
+    "category": "conversational",
+    "sentence": "Take your time, there is no rush at all."
+  },
+  {
+    "id": "en_voice_0041",
+    "category": "conversational",
+    "sentence": "I just arrived at the airport terminal."
+  },
+  {
+    "id": "en_voice_0042",
+    "category": "conversational",
+    "sentence": "Could you give me a hand with these boxes?"
+  },
+  {
+    "id": "en_voice_0043",
+    "category": "conversational",
+    "sentence": "That was one of the best books I have ever read."
+  },
+  {
+    "id": "en_voice_0044",
+    "category": "conversational",
+    "sentence": "Let's take a short break before we continue."
+  },
+  {
+    "id": "en_voice_0045",
+    "category": "conversational",
+    "sentence": "I'm feeling much better today, thank you for asking."
+  },
+  {
+    "id": "en_voice_0046",
+    "category": "conversational",
+    "sentence": "Did you get a chance to look at my message?"
+  },
+  {
+    "id": "en_voice_0047",
+    "category": "conversational",
+    "sentence": "I'll be waiting for you right outside the lobby."
+  },
+  {
+    "id": "en_voice_0048",
+    "category": "conversational",
+    "sentence": "We had a fantastic time at the concert last night."
+  },
+  {
+    "id": "en_voice_0049",
+    "category": "conversational",
+    "sentence": "I need to recharge my phone before we head out."
+  },
+  {
+    "id": "en_voice_0050",
+    "category": "conversational",
+    "sentence": "Everything went smoothly according to plan."
+  },
+  {
+    "id": "en_voice_0051",
+    "category": "conversational",
+    "sentence": "I'm about to step into another conference call."
+  },
+  {
+    "id": "en_voice_0052",
+    "category": "conversational",
+    "sentence": "Let me know if you need any assistance with that."
+  },
+  {
+    "id": "en_voice_0053",
+    "category": "conversational",
+    "sentence": "The view from the top of the hill was breathtaking."
+  },
+  {
+    "id": "en_voice_0054",
+    "category": "conversational",
+    "sentence": "I haven't heard from them since Tuesday morning."
+  },
+  {
+    "id": "en_voice_0055",
+    "category": "conversational",
+    "sentence": "Can we talk about this a little later tonight?"
+  },
+  {
+    "id": "en_voice_0056",
+    "category": "conversational",
+    "sentence": "I'm excited to share some great news with you."
+  },
+  {
+    "id": "en_voice_0057",
+    "category": "conversational",
+    "sentence": "That really brightened up my whole day."
+  },
+  {
+    "id": "en_voice_0058",
+    "category": "conversational",
+    "sentence": "Let me double check the reservation details."
+  },
+  {
+    "id": "en_voice_0059",
+    "category": "conversational",
+    "sentence": "I'm looking for a quiet place to work this afternoon."
+  },
+  {
+    "id": "en_voice_0060",
+    "category": "conversational",
+    "sentence": "Have a wonderful weekend with your family!"
+  },
+  {
+    "id": "en_voice_0061",
+    "category": "conversational",
+    "sentence": "I'll make sure to leave a note on the kitchen table."
+  },
+  {
+    "id": "en_voice_0062",
+    "category": "conversational",
+    "sentence": "We are planning a small get-together this Saturday."
+  },
+  {
+    "id": "en_voice_0063",
+    "category": "conversational",
+    "sentence": "Can you send me a link to that video you mentioned?"
+  },
+  {
+    "id": "en_voice_0064",
+    "category": "conversational",
+    "sentence": "It looks like rain is coming later this evening."
+  },
+  {
+    "id": "en_voice_0065",
+    "category": "conversational",
+    "sentence": "I'll follow up with them first thing in the morning."
+  },
+  {
+    "id": "en_voice_0066",
+    "category": "conversational",
+    "sentence": "That seems like the most reasonable approach."
+  },
+  {
+    "id": "en_voice_0067",
+    "category": "conversational",
+    "sentence": "I'll do my best to arrive before seven o'clock."
+  },
+  {
+    "id": "en_voice_0068",
+    "category": "conversational",
+    "sentence": "Thank you for being so patient with me today."
+  },
+  {
+    "id": "en_voice_0069",
+    "category": "conversational",
+    "sentence": "Let's keep each other posted on any updates."
+  },
+  {
+    "id": "en_voice_0070",
+    "category": "conversational",
+    "sentence": "I just finished reading that fascinating article."
+  },
+  {
+    "id": "en_voice_0071",
+    "category": "conversational",
+    "sentence": "Is there anything else I can help you with right now?"
+  },
+  {
+    "id": "en_voice_0072",
+    "category": "conversational",
+    "sentence": "I'm really glad we had the chance to discuss this."
+  },
+  {
+    "id": "en_voice_0073",
+    "category": "conversational",
+    "sentence": "Please say hello to everyone for me."
+  },
+  {
+    "id": "en_voice_0074",
+    "category": "conversational",
+    "sentence": "I need to stop by the grocery store on the way."
+  },
+  {
+    "id": "en_voice_0075",
+    "category": "conversational",
+    "sentence": "We should plan our next trip sometime soon."
+  },
+  {
+    "id": "en_voice_0076",
+    "category": "conversational",
+    "sentence": "I'll let you know as soon as the package arrives."
+  },
+  {
+    "id": "en_voice_0077",
+    "category": "conversational",
+    "sentence": "That was such a delicious meal, thanks for recommending it."
+  },
+  {
+    "id": "en_voice_0078",
+    "category": "conversational",
+    "sentence": "I'm heading over to the gym for an hour."
+  },
+  {
+    "id": "en_voice_0079",
+    "category": "conversational",
+    "sentence": "Could you remind me of the password for the guest wifi?"
+  },
+  {
+    "id": "en_voice_0080",
+    "category": "conversational",
+    "sentence": "I'll be available all morning if you want to chat."
+  },
+  {
+    "id": "en_voice_0081",
+    "category": "conversational",
+    "sentence": "Let me review the notes before making a final decision."
+  },
+  {
+    "id": "en_voice_0082",
+    "category": "conversational",
+    "sentence": "I hope you feel better and recover quickly."
+  },
+  {
+    "id": "en_voice_0083",
+    "category": "conversational",
+    "sentence": "It was great running into you at the bookstore."
+  },
+  {
+    "id": "en_voice_0084",
+    "category": "conversational",
+    "sentence": "I'll send over the itinerary as soon as it's ready."
+  },
+  {
+    "id": "en_voice_0085",
+    "category": "conversational",
+    "sentence": "Let's make sure we have all the supplies we need."
+  },
+  {
+    "id": "en_voice_0086",
+    "category": "conversational",
+    "sentence": "I'm heading to bed early tonight because I'm exhausted."
+  },
+  {
+    "id": "en_voice_0087",
+    "category": "conversational",
+    "sentence": "We had such a lovely walk in the botanical garden."
+  },
+  {
+    "id": "en_voice_0088",
+    "category": "conversational",
+    "sentence": "Can you believe how fast this year has gone by?"
+  },
+  {
+    "id": "en_voice_0089",
+    "category": "conversational",
+    "sentence": "I'll be online if you want to jump on a quick call."
+  },
+  {
+    "id": "en_voice_0090",
+    "category": "conversational",
+    "sentence": "Thanks again for your warm hospitality yesterday."
+  },
+  {
+    "id": "en_voice_0091",
+    "category": "conversational",
+    "sentence": "Let's try that new cafe downtown this Friday."
+  },
+  {
+    "id": "en_voice_0092",
+    "category": "conversational",
+    "sentence": "I'm just finishing up a few remaining errands."
+  },
+  {
+    "id": "en_voice_0093",
+    "category": "conversational",
+    "sentence": "Please drive carefully, the roads might be slippery."
+  },
+  {
+    "id": "en_voice_0094",
+    "category": "conversational",
+    "sentence": "I will keep you updated throughout the afternoon."
+  },
+  {
+    "id": "en_voice_0095",
+    "category": "conversational",
+    "sentence": "That sounds like a very promising opportunity."
+  },
+  {
+    "id": "en_voice_0096",
+    "category": "conversational",
+    "sentence": "I'll leave the keys under the front doormat."
+  },
+  {
+    "id": "en_voice_0097",
+    "category": "conversational",
+    "sentence": "Hope your presentation goes smoothly and successfully."
+  },
+  {
+    "id": "en_voice_0098",
+    "category": "conversational",
+    "sentence": "We should leave early to avoid the rush hour traffic."
+  },
+  {
+    "id": "en_voice_0099",
+    "category": "conversational",
+    "sentence": "I'm truly grateful for all of your kind support."
+  },
+  {
+    "id": "en_voice_0100",
+    "category": "conversational",
+    "sentence": "Looking forward to hearing from you soon!"
+  },
+  {
+    "id": "en_voice_0101",
+    "category": "business_tech",
+    "sentence": "We deployed the latest build to our staging environment."
+  },
+  {
+    "id": "en_voice_0102",
+    "category": "business_tech",
+    "sentence": "The pull request has been approved and merged into main."
+  },
+  {
+    "id": "en_voice_0103",
+    "category": "business_tech",
+    "sentence": "Please review the architectural design document by noon."
+  },
+  {
+    "id": "en_voice_0104",
+    "category": "business_tech",
+    "sentence": "Our team achieved a twenty percent latency reduction."
+  },
+  {
+    "id": "en_voice_0105",
+    "category": "business_tech",
+    "sentence": "The database migration completed without any data loss."
+  },
+  {
+    "id": "en_voice_0106",
+    "category": "business_tech",
+    "sentence": "We need to update our unit test coverage for the payment gateway."
+  },
+  {
+    "id": "en_voice_0107",
+    "category": "business_tech",
+    "sentence": "Let's schedule a sprint retrospective for Thursday morning."
+  },
+  {
+    "id": "en_voice_0108",
+    "category": "business_tech",
+    "sentence": "The microservices communicate over lightweight gRPC protocols."
+  },
+  {
+    "id": "en_voice_0109",
+    "category": "business_tech",
+    "sentence": "We should conduct an end to end load test before production launch."
+  },
+  {
+    "id": "en_voice_0110",
+    "category": "business_tech",
+    "sentence": "The customer feedback indicates strong demand for offline features."
+  },
+  {
+    "id": "en_voice_0111",
+    "category": "business_tech",
+    "sentence": "Our continuous integration pipeline passed all regression tests."
+  },
+  {
+    "id": "en_voice_0112",
+    "category": "business_tech",
+    "sentence": "Please verify that the security token expires after twenty-four hours."
+  },
+  {
+    "id": "en_voice_0113",
+    "category": "business_tech",
+    "sentence": "The mobile app bundle size was reduced by fifteen megabytes."
+  },
+  {
+    "id": "en_voice_0114",
+    "category": "business_tech",
+    "sentence": "We are optimizing the neural network inference for mobile processors."
+  },
+  {
+    "id": "en_voice_0115",
+    "category": "business_tech",
+    "sentence": "The on-device model achieves high throughput with int8 quantization."
+  },
+  {
+    "id": "en_voice_0116",
+    "category": "business_tech",
+    "sentence": "Let's prioritize resolving the high severity bug in the checkout flow."
+  },
+  {
+    "id": "en_voice_0117",
+    "category": "business_tech",
+    "sentence": "The backend API response time averages under fifty milliseconds."
+  },
+  {
+    "id": "en_voice_0118",
+    "category": "business_tech",
+    "sentence": "We migrated our container cluster to the latest Kubernetes release."
+  },
+  {
+    "id": "en_voice_0119",
+    "category": "business_tech",
+    "sentence": "Please ensure all commit messages follow the conventional commit format."
+  },
+  {
+    "id": "en_voice_0120",
+    "category": "business_tech",
+    "sentence": "The quarterly technical roadmap will be presented next Tuesday."
+  },
+  {
+    "id": "en_voice_0121",
+    "category": "business_tech",
+    "sentence": "We noticed a slight regression in cold start application latency."
+  },
+  {
+    "id": "en_voice_0122",
+    "category": "business_tech",
+    "sentence": "The asynchronous background worker handles heavy data processing."
+  },
+  {
+    "id": "en_voice_0123",
+    "category": "business_tech",
+    "sentence": "All sensitive user information is encrypted at rest using AES-256."
+  },
+  {
+    "id": "en_voice_0124",
+    "category": "business_tech",
+    "sentence": "We established an automated monitoring alert for server memory usage."
+  },
+  {
+    "id": "en_voice_0125",
+    "category": "business_tech",
+    "sentence": "The documentation has been updated to reflect the new API endpoints."
+  },
+  {
+    "id": "en_voice_0126",
+    "category": "business_tech",
+    "sentence": "Let's discuss the proposed schema changes during tomorrow's sync."
+  },
+  {
+    "id": "en_voice_0127",
+    "category": "business_tech",
+    "sentence": "The continuous delivery workflow automatically pushes to the test track."
+  },
+  {
+    "id": "en_voice_0128",
+    "category": "business_tech",
+    "sentence": "We achieved ninety-nine point nine percent uptime over the past quarter."
+  },
+  {
+    "id": "en_voice_0129",
+    "category": "business_tech",
+    "sentence": "The distributed cache invalidation strategy needs further optimization."
+  },
+  {
+    "id": "en_voice_0130",
+    "category": "business_tech",
+    "sentence": "Please coordinate with the infrastructure team regarding firewall rules."
+  },
+  {
+    "id": "en_voice_0131",
+    "category": "business_tech",
+    "sentence": "Our speech recognition engine runs completely on device without network calls."
+  },
+  {
+    "id": "en_voice_0132",
+    "category": "business_tech",
+    "sentence": "The neural swipe keyboard leverages spatial 1D convolutional layers."
+  },
+  {
+    "id": "en_voice_0133",
+    "category": "business_tech",
+    "sentence": "We implemented a two-stage candidate retrieval and re-ranking pipeline."
+  },
+  {
+    "id": "en_voice_0134",
+    "category": "business_tech",
+    "sentence": "The profiler showed significant CPU savings through SIMD vector instructions."
+  },
+  {
+    "id": "en_voice_0135",
+    "category": "business_tech",
+    "sentence": "User dictionary entries are synchronized with the native trie structure."
+  },
+  {
+    "id": "en_voice_0136",
+    "category": "business_tech",
+    "sentence": "The design system components ensure consistent visual styling across platforms."
+  },
+  {
+    "id": "en_voice_0137",
+    "category": "business_tech",
+    "sentence": "We added comprehensive integration tests for edge cases and fail-safes."
+  },
+  {
+    "id": "en_voice_0138",
+    "category": "business_tech",
+    "sentence": "The analytics pipeline aggregates anonymized usage telemetry locally."
+  },
+  {
+    "id": "en_voice_0139",
+    "category": "business_tech",
+    "sentence": "Please sign off on the production release checklist by end of day."
+  },
+  {
+    "id": "en_voice_0140",
+    "category": "business_tech",
+    "sentence": "We refactored the legacy service into clean domain-driven architecture."
+  },
+  {
+    "id": "en_voice_0141",
+    "category": "business_tech",
+    "sentence": "The automated build artifact is archived directly on GitHub Actions."
+  },
+  {
+    "id": "en_voice_0142",
+    "category": "business_tech",
+    "sentence": "We validated the memory footprint on devices with limited RAM capacity."
+  },
+  {
+    "id": "en_voice_0143",
+    "category": "business_tech",
+    "sentence": "The real-time audio pipeline captures mono 16kHz audio streams seamlessly."
+  },
+  {
+    "id": "en_voice_0144",
+    "category": "business_tech",
+    "sentence": "We observed zero memory leaks during extended stress test execution."
+  },
+  {
+    "id": "en_voice_0145",
+    "category": "business_tech",
+    "sentence": "The pull request introduces a graceful fallback when models are missing."
+  },
+  {
+    "id": "en_voice_0146",
+    "category": "business_tech",
+    "sentence": "We established strict non-regression benchmarks for all core algorithms."
+  },
+  {
+    "id": "en_voice_0147",
+    "category": "business_tech",
+    "sentence": "The team resolved twenty open issues during the sprint hardening phase."
+  },
+  {
+    "id": "en_voice_0148",
+    "category": "business_tech",
+    "sentence": "Please check the staging server logs to diagnose the network timeout."
+  },
+  {
+    "id": "en_voice_0149",
+    "category": "business_tech",
+    "sentence": "Our offline language model provides instant contextual disambiguation."
+  },
+  {
+    "id": "en_voice_0150",
+    "category": "business_tech",
+    "sentence": "The production deployment went smoothly with zero reported incidents."
+  },
+  {
+    "id": "en_voice_0151",
+    "category": "questions_commands",
+    "sentence": "What time does the conference call begin?"
+  },
+  {
+    "id": "en_voice_0152",
+    "category": "questions_commands",
+    "sentence": "Where did you leave the presentation slides?"
+  },
+  {
+    "id": "en_voice_0153",
+    "category": "questions_commands",
+    "sentence": "Can you send me the revised budget spreadsheet?"
+  },
+  {
+    "id": "en_voice_0154",
+    "category": "questions_commands",
+    "sentence": "How much memory does the background service consume?"
+  },
+  {
+    "id": "en_voice_0155",
+    "category": "questions_commands",
+    "sentence": "Could you please review the attached contract proposal?"
+  },
+  {
+    "id": "en_voice_0156",
+    "category": "questions_commands",
+    "sentence": "Why did the build fail on the continuous integration server?"
+  },
+  {
+    "id": "en_voice_0157",
+    "category": "questions_commands",
+    "sentence": "When will the new feature be available for testing?"
+  },
+  {
+    "id": "en_voice_0158",
+    "category": "questions_commands",
+    "sentence": "Who is responsible for managing the cloud infrastructure?"
+  },
+  {
+    "id": "en_voice_0159",
+    "category": "questions_commands",
+    "sentence": "Is there any update regarding the client contract?"
+  },
+  {
+    "id": "en_voice_0160",
+    "category": "questions_commands",
+    "sentence": "Should we schedule an urgent alignment meeting today?"
+  },
+  {
+    "id": "en_voice_0161",
+    "category": "questions_commands",
+    "sentence": "Turn off the air conditioning before leaving the office."
+  },
+  {
+    "id": "en_voice_0162",
+    "category": "questions_commands",
+    "sentence": "Please make sure all conference room doors are locked."
+  },
+  {
+    "id": "en_voice_0163",
+    "category": "questions_commands",
+    "sentence": "Send the summary email to all stakeholders by five o'clock."
+  },
+  {
+    "id": "en_voice_0164",
+    "category": "questions_commands",
+    "sentence": "Double check the input validation logic before committing."
+  },
+  {
+    "id": "en_voice_0165",
+    "category": "questions_commands",
+    "sentence": "Restart the local development server after pulling the branch."
+  },
+  {
+    "id": "en_voice_0166",
+    "category": "questions_commands",
+    "sentence": "What is the expected delivery date for the hardware prototypes?"
+  },
+  {
+    "id": "en_voice_0167",
+    "category": "questions_commands",
+    "sentence": "Can you verify the benchmark numbers on the physical device?"
+  },
+  {
+    "id": "en_voice_0168",
+    "category": "questions_commands",
+    "sentence": "How do we handle network errors when downloading lexicon assets?"
+  },
+  {
+    "id": "en_voice_0169",
+    "category": "questions_commands",
+    "sentence": "Please archive the obsolete documentation from the wiki page."
+  },
+  {
+    "id": "en_voice_0170",
+    "category": "questions_commands",
+    "sentence": "Could you forward me the invitation link for the seminar?"
+  },
+  {
+    "id": "en_voice_0171",
+    "category": "questions_commands",
+    "sentence": "Did you receive confirmation from the security review board?"
+  },
+  {
+    "id": "en_voice_0172",
+    "category": "questions_commands",
+    "sentence": "What are the main advantages of on-device neural processing?"
+  },
+  {
+    "id": "en_voice_0173",
+    "category": "questions_commands",
+    "sentence": "Please ensure the audio recording permission is granted."
+  },
+  {
+    "id": "en_voice_0174",
+    "category": "questions_commands",
+    "sentence": "Can we proceed with the phased rollout strategy as planned?"
+  },
+  {
+    "id": "en_voice_0175",
+    "category": "questions_commands",
+    "sentence": "How can we minimize battery consumption during background sync?"
+  },
+  {
+    "id": "en_voice_0176",
+    "category": "questions_commands",
+    "sentence": "Check the system logs for any uncaught exceptions or errors."
+  },
+  {
+    "id": "en_voice_0177",
+    "category": "questions_commands",
+    "sentence": "Please add unit test coverage for the boundary conditions."
+  },
+  {
+    "id": "en_voice_0178",
+    "category": "questions_commands",
+    "sentence": "Where can I find the official API documentation for this service?"
+  },
+  {
+    "id": "en_voice_0179",
+    "category": "questions_commands",
+    "sentence": "Who will be presenting the quarterly business review tomorrow?"
+  },
+  {
+    "id": "en_voice_0180",
+    "category": "questions_commands",
+    "sentence": "Can you share your screen and walk us through the demo?"
+  },
+  {
+    "id": "en_voice_0181",
+    "category": "questions_commands",
+    "sentence": "Please update the release notes with the latest bug fixes."
+  },
+  {
+    "id": "en_voice_0182",
+    "category": "questions_commands",
+    "sentence": "How does the model perform under noisy acoustic environments?"
+  },
+  {
+    "id": "en_voice_0183",
+    "category": "questions_commands",
+    "sentence": "Is the custom dictionary saved in persistent internal storage?"
+  },
+  {
+    "id": "en_voice_0184",
+    "category": "questions_commands",
+    "sentence": "Please notify the QA team as soon as the test build is ready."
+  },
+  {
+    "id": "en_voice_0185",
+    "category": "questions_commands",
+    "sentence": "Can we export the benchmark evaluation results to CSV format?"
+  },
+  {
+    "id": "en_voice_0186",
+    "category": "questions_commands",
+    "sentence": "What is the recommended hyperparameter setting for this dataset?"
+  },
+  {
+    "id": "en_voice_0187",
+    "category": "questions_commands",
+    "sentence": "Please confirm that the privacy policy link is working properly."
+  },
+  {
+    "id": "en_voice_0188",
+    "category": "questions_commands",
+    "sentence": "Could you check whether the Bluetooth microphone is connected?"
+  },
+  {
+    "id": "en_voice_0189",
+    "category": "questions_commands",
+    "sentence": "How long does it take to download the language model files?"
+  },
+  {
+    "id": "en_voice_0190",
+    "category": "questions_commands",
+    "sentence": "Please format the source code according to the style guidelines."
+  },
+  {
+    "id": "en_voice_0191",
+    "category": "questions_commands",
+    "sentence": "Did the automated regression test suite finish successfully?"
+  },
+  {
+    "id": "en_voice_0192",
+    "category": "questions_commands",
+    "sentence": "What is the target latency budget for single key stroke processing?"
+  },
+  {
+    "id": "en_voice_0193",
+    "category": "questions_commands",
+    "sentence": "Can you demonstrate how the swipe typing algorithm handles typos?"
+  },
+  {
+    "id": "en_voice_0194",
+    "category": "questions_commands",
+    "sentence": "Please grant storage permission before launching the audio recorder."
+  },
+  {
+    "id": "en_voice_0195",
+    "category": "questions_commands",
+    "sentence": "Why is the CPU utilization higher on the secondary test target?"
+  },
+  {
+    "id": "en_voice_0196",
+    "category": "questions_commands",
+    "sentence": "Could you verify the tokenization output for contracted words?"
+  },
+  {
+    "id": "en_voice_0197",
+    "category": "questions_commands",
+    "sentence": "When should we schedule the next release planning session?"
+  },
+  {
+    "id": "en_voice_0198",
+    "category": "questions_commands",
+    "sentence": "Please review the pull request comments and address the feedback."
+  },
+  {
+    "id": "en_voice_0199",
+    "category": "questions_commands",
+    "sentence": "How do we configure the optimal thread count for mobile devices?"
+  },
+  {
+    "id": "en_voice_0200",
+    "category": "questions_commands",
+    "sentence": "Can you explain the mathematical foundation of this scoring formula?"
+  },
+  {
+    "id": "en_voice_0201",
+    "category": "punctuation_casing",
+    "sentence": "Yes, we'll definitely attend Dr. Johnson's lecture on Monday."
+  },
+  {
+    "id": "en_voice_0202",
+    "category": "punctuation_casing",
+    "sentence": "Don't worry, they've already arrived at JFK International Airport."
+  },
+  {
+    "id": "en_voice_0203",
+    "category": "punctuation_casing",
+    "sentence": "Wait, didn't you mention that the meeting was postponed until 3:00 PM?"
+  },
+  {
+    "id": "en_voice_0204",
+    "category": "punctuation_casing",
+    "sentence": "The CEO announced: 'Our quarterly revenue exceeded all expectations.'"
+  },
+  {
+    "id": "en_voice_0205",
+    "category": "punctuation_casing",
+    "sentence": "It's true; however, we shouldn't overlook the potential risks involved."
+  },
+  {
+    "id": "en_voice_0206",
+    "category": "punctuation_casing",
+    "sentence": "Hello, Dr. Smith! How was your recent trip to San Francisco, California?"
+  },
+  {
+    "id": "en_voice_0207",
+    "category": "punctuation_casing",
+    "sentence": "We're looking forward to visiting the British Museum next summer."
+  },
+  {
+    "id": "en_voice_0208",
+    "category": "punctuation_casing",
+    "sentence": "No, that's not what I meant at all—let me clarify my perspective."
+  },
+  {
+    "id": "en_voice_0209",
+    "category": "punctuation_casing",
+    "sentence": "She exclaimed, 'What an extraordinary achievement for the entire team!'"
+  },
+  {
+    "id": "en_voice_0210",
+    "category": "punctuation_casing",
+    "sentence": "Although it was raining heavily, we enjoyed our visit to Central Park."
+  },
+  {
+    "id": "en_voice_0211",
+    "category": "punctuation_casing",
+    "sentence": "Please contact Ms. Miller at her office in downtown Chicago, Illinois."
+  },
+  {
+    "id": "en_voice_0212",
+    "category": "punctuation_casing",
+    "sentence": "They haven't received the shipment yet; it's scheduled for Wednesday."
+  },
+  {
+    "id": "en_voice_0213",
+    "category": "punctuation_casing",
+    "sentence": "Well, I believe we've found the root cause of the performance bottleneck."
+  },
+  {
+    "id": "en_voice_0214",
+    "category": "punctuation_casing",
+    "sentence": "Professor Williams published his groundbreaking research in Nature."
+  },
+  {
+    "id": "en_voice_0215",
+    "category": "punctuation_casing",
+    "sentence": "Can we meet at the Starbucks on 5th Avenue, or do you prefer Blue Bottle?"
+  },
+  {
+    "id": "en_voice_0216",
+    "category": "punctuation_casing",
+    "sentence": "The user's preferences are saved securely in the Android SharedPreferences."
+  },
+  {
+    "id": "en_voice_0217",
+    "category": "punctuation_casing",
+    "sentence": "Look, here's the deal: we need to deliver the project by December 1st."
+  },
+  {
+    "id": "en_voice_0218",
+    "category": "punctuation_casing",
+    "sentence": "Isn't it fascinating how on-device AI preserves complete user privacy?"
+  },
+  {
+    "id": "en_voice_0219",
+    "category": "punctuation_casing",
+    "sentence": "Yes, Mr. Davis will represent our company at the annual CES exhibition."
+  },
+  {
+    "id": "en_voice_0220",
+    "category": "punctuation_casing",
+    "sentence": "We visited Paris, Rome, and Barcelona during our European tour last year."
+  },
+  {
+    "id": "en_voice_0221",
+    "category": "punctuation_casing",
+    "sentence": "Good morning, everyone! Let's kick off today's standup meeting on time."
+  },
+  {
+    "id": "en_voice_0222",
+    "category": "punctuation_casing",
+    "sentence": "Wait a second—are you certain that the backup archive is intact?"
+  },
+  {
+    "id": "en_voice_0223",
+    "category": "punctuation_casing",
+    "sentence": "The report stated: 'User engagement increased by thirty-five percent.'"
+  },
+  {
+    "id": "en_voice_0224",
+    "category": "punctuation_casing",
+    "sentence": "It's a high-priority ticket, so please address it as soon as possible."
+  },
+  {
+    "id": "en_voice_0225",
+    "category": "punctuation_casing",
+    "sentence": "Dr. Anderson presented a paper titled 'Advances in FastConformer Speech Models'."
+  },
+  {
+    "id": "en_voice_0226",
+    "category": "punctuation_casing",
+    "sentence": "No matter what happens, we'll continue to support our open-source users."
+  },
+  {
+    "id": "en_voice_0227",
+    "category": "punctuation_casing",
+    "sentence": "Have you spoken with Dr. Patel regarding the clinical trial results?"
+  },
+  {
+    "id": "en_voice_0228",
+    "category": "punctuation_casing",
+    "sentence": "Sure, I'll send the PDF document to Sarah, David, and Michael right away."
+  },
+  {
+    "id": "en_voice_0229",
+    "category": "punctuation_casing",
+    "sentence": "That's fantastic news! Congratulations to everyone involved in the launch."
+  },
+  {
+    "id": "en_voice_0230",
+    "category": "punctuation_casing",
+    "sentence": "We're testing the application on both Google Pixel and Samsung Galaxy phones."
+  },
+  {
+    "id": "en_voice_0231",
+    "category": "punctuation_casing",
+    "sentence": "Remember to bring your passport, boarding pass, and driver's license."
+  },
+  {
+    "id": "en_voice_0232",
+    "category": "punctuation_casing",
+    "sentence": "According to Bloomberg, tech stocks rebounded sharply during morning trading."
+  },
+  {
+    "id": "en_voice_0233",
+    "category": "punctuation_casing",
+    "sentence": "Oh, by the way, did you receive the package from Amazon this morning?"
+  },
+  {
+    "id": "en_voice_0234",
+    "category": "punctuation_casing",
+    "sentence": "The software supports English, Japanese, French, German, and Spanish."
+  },
+  {
+    "id": "en_voice_0235",
+    "category": "punctuation_casing",
+    "sentence": "Let's consult with Chief Architect Robert before finalizing the design."
+  },
+  {
+    "id": "en_voice_0236",
+    "category": "punctuation_casing",
+    "sentence": "Indeed, it's essential to maintain 100% test pass rates across all suites."
+  },
+  {
+    "id": "en_voice_0237",
+    "category": "punctuation_casing",
+    "sentence": "Pardon me, could you direct me toward Grand Central Terminal?"
+  },
+  {
+    "id": "en_voice_0238",
+    "category": "punctuation_casing",
+    "sentence": "The company's headquarters are located in Austin, Texas, United States."
+  },
+  {
+    "id": "en_voice_0239",
+    "category": "punctuation_casing",
+    "sentence": "Whatever you decide, we're fully confident in your leadership abilities."
+  },
+  {
+    "id": "en_voice_0240",
+    "category": "punctuation_casing",
+    "sentence": "Please welcome our keynote speaker, Dr. Elizabeth Turner from MIT."
+  },
+  {
+    "id": "en_voice_0241",
+    "category": "punctuation_casing",
+    "sentence": "Don't forget: tomorrow's all-hands meeting starts promptly at 9:30 AM."
+  },
+  {
+    "id": "en_voice_0242",
+    "category": "punctuation_casing",
+    "sentence": "Is there any difference between 'affect' and 'effect' in this context?"
+  },
+  {
+    "id": "en_voice_0243",
+    "category": "punctuation_casing",
+    "sentence": "We'll review the architectural blueprints with Mr. Tanaka from Tokyo."
+  },
+  {
+    "id": "en_voice_0244",
+    "category": "punctuation_casing",
+    "sentence": "Amazing! The inference latency dropped from 100ms down to just 15ms."
+  },
+  {
+    "id": "en_voice_0245",
+    "category": "punctuation_casing",
+    "sentence": "As expected, the team delivered outstanding results ahead of schedule."
+  },
+  {
+    "id": "en_voice_0246",
+    "category": "punctuation_casing",
+    "sentence": "Stop! Please do not delete any files inside the shared repository."
+  },
+  {
+    "id": "en_voice_0247",
+    "category": "punctuation_casing",
+    "sentence": "They've established new research facilities in Zurich, Switzerland."
+  },
+  {
+    "id": "en_voice_0248",
+    "category": "punctuation_casing",
+    "sentence": "I'm certain that Ms. Clark will provide valuable insights during the panel."
+  },
+  {
+    "id": "en_voice_0249",
+    "category": "punctuation_casing",
+    "sentence": "Here's the summary: Phase 1 is complete, and Phase 2 begins next week."
+  },
+  {
+    "id": "en_voice_0250",
+    "category": "punctuation_casing",
+    "sentence": "Congratulations on completing your Master of Science degree at Stanford!"
+  },
+  {
+    "id": "en_voice_0251",
+    "category": "numbers_dates",
+    "sentence": "The total invoice came to $1,450.75 including tax."
+  },
+  {
+    "id": "en_voice_0252",
+    "category": "numbers_dates",
+    "sentence": "Our flight departs at 6:45 AM from Gate 24."
+  },
+  {
+    "id": "en_voice_0253",
+    "category": "numbers_dates",
+    "sentence": "The project deadline has been extended to November 30th, 2026."
+  },
+  {
+    "id": "en_voice_0254",
+    "category": "numbers_dates",
+    "sentence": "We observed a 15% increase in user engagement over 90 days."
+  },
+  {
+    "id": "en_voice_0255",
+    "category": "numbers_dates",
+    "sentence": "The apartment has 3 bedrooms, 2 bathrooms, and 1,200 square feet."
+  },
+  {
+    "id": "en_voice_0256",
+    "category": "numbers_dates",
+    "sentence": "The temperature dropped to -5 degrees Celsius overnight."
+  },
+  {
+    "id": "en_voice_0257",
+    "category": "numbers_dates",
+    "sentence": "Please submit your expense receipts by Friday, October 23rd."
+  },
+  {
+    "id": "en_voice_0258",
+    "category": "numbers_dates",
+    "sentence": "The train leaves every 15 minutes between 7:00 AM and 10:00 PM."
+  },
+  {
+    "id": "en_voice_0259",
+    "category": "numbers_dates",
+    "sentence": "We collected 10,000 samples for the empirical benchmark evaluation."
+  },
+  {
+    "id": "en_voice_0260",
+    "category": "numbers_dates",
+    "sentence": "The company was founded on September 15th, 1998 in California."
+  },
+  {
+    "id": "en_voice_0261",
+    "category": "numbers_dates",
+    "sentence": "Each participant received a $50 gift card for completing the survey."
+  },
+  {
+    "id": "en_voice_0262",
+    "category": "numbers_dates",
+    "sentence": "The battery life lasted for 14 hours and 30 minutes of continuous use."
+  },
+  {
+    "id": "en_voice_0263",
+    "category": "numbers_dates",
+    "sentence": "There are 52 weeks in a standard year and 365 days."
+  },
+  {
+    "id": "en_voice_0264",
+    "category": "numbers_dates",
+    "sentence": "The engine processes 16,000 samples per second of audio input."
+  },
+  {
+    "id": "en_voice_0265",
+    "category": "numbers_dates",
+    "sentence": "We achieved an average real-time factor of 0.045 on 2 CPU cores."
+  },
+  {
+    "id": "en_voice_0266",
+    "category": "numbers_dates",
+    "sentence": "The building is located at 742 Evergreen Terrace, Springfield."
+  },
+  {
+    "id": "en_voice_0267",
+    "category": "numbers_dates",
+    "sentence": "The discount code offers 20% off all purchases over $100."
+  },
+  {
+    "id": "en_voice_0268",
+    "category": "numbers_dates",
+    "sentence": "Our server responded to 25,000 requests per minute during peak hours."
+  },
+  {
+    "id": "en_voice_0269",
+    "category": "numbers_dates",
+    "sentence": "The meeting is scheduled from 2:00 PM to 3:30 PM on August 14th."
+  },
+  {
+    "id": "en_voice_0270",
+    "category": "numbers_dates",
+    "sentence": "The package weighs approximately 4.5 kilograms or 10 pounds."
+  },
+  {
+    "id": "en_voice_0271",
+    "category": "numbers_dates",
+    "sentence": "We invested $2.5 million into research and development this quarter."
+  },
+  {
+    "id": "en_voice_0272",
+    "category": "numbers_dates",
+    "sentence": "The highway speed limit is 65 miles per hour in this zone."
+  },
+  {
+    "id": "en_voice_0273",
+    "category": "numbers_dates",
+    "sentence": "A total of 450 engineers attended the annual developer summit."
+  },
+  {
+    "id": "en_voice_0274",
+    "category": "numbers_dates",
+    "sentence": "The warranty period covers parts and labor for up to 3 years."
+  },
+  {
+    "id": "en_voice_0275",
+    "category": "numbers_dates",
+    "sentence": "We celebrated the 10th anniversary of the open source foundation."
+  },
+  {
+    "id": "en_voice_0276",
+    "category": "numbers_dates",
+    "sentence": "The price of gasoline rose by $0.15 per gallon this week."
+  },
+  {
+    "id": "en_voice_0277",
+    "category": "numbers_dates",
+    "sentence": "Please transfer $350 directly to account number 849201."
+  },
+  {
+    "id": "en_voice_0278",
+    "category": "numbers_dates",
+    "sentence": "The presentation slides contain 42 pages and 18 technical diagrams."
+  },
+  {
+    "id": "en_voice_0279",
+    "category": "numbers_dates",
+    "sentence": "The marathon course spans exactly 26.2 miles or 42.195 kilometers."
+  },
+  {
+    "id": "en_voice_0280",
+    "category": "numbers_dates",
+    "sentence": "Our office will be closed on December 25th and January 1st."
+  },
+  {
+    "id": "en_voice_0281",
+    "category": "numbers_dates",
+    "sentence": "The system detected 3 potential security warnings in the audit log."
+  },
+  {
+    "id": "en_voice_0282",
+    "category": "numbers_dates",
+    "sentence": "The model weights require 126 megabytes of flash storage space."
+  },
+  {
+    "id": "en_voice_0283",
+    "category": "numbers_dates",
+    "sentence": "We conducted 5-fold cross-validation across 1,000 stratified samples."
+  },
+  {
+    "id": "en_voice_0284",
+    "category": "numbers_dates",
+    "sentence": "The store is open 7 days a week from 8:00 AM until 9:00 PM."
+  },
+  {
+    "id": "en_voice_0285",
+    "category": "numbers_dates",
+    "sentence": "The flight duration from Tokyo to San Francisco is roughly 9 hours."
+  },
+  {
+    "id": "en_voice_0286",
+    "category": "numbers_dates",
+    "sentence": "We saved $12,000 annually by migrating to local offline processing."
+  },
+  {
+    "id": "en_voice_0287",
+    "category": "numbers_dates",
+    "sentence": "The survey received 1,250 responses with an 88% satisfaction rating."
+  },
+  {
+    "id": "en_voice_0288",
+    "category": "numbers_dates",
+    "sentence": "The download completed in 4.2 seconds over a 100 Mbps connection."
+  },
+  {
+    "id": "en_voice_0289",
+    "category": "numbers_dates",
+    "sentence": "The team resolved 95 bugs out of 100 reported during testing."
+  },
+  {
+    "id": "en_voice_0290",
+    "category": "numbers_dates",
+    "sentence": "The event will take place on Saturday, July 4th at 7:30 PM."
+  },
+  {
+    "id": "en_voice_0291",
+    "category": "numbers_dates",
+    "sentence": "Our customer support team answers 98% of inquiries within 24 hours."
+  },
+  {
+    "id": "en_voice_0292",
+    "category": "numbers_dates",
+    "sentence": "The vehicle accelerates from 0 to 60 miles per hour in 3.8 seconds."
+  },
+  {
+    "id": "en_voice_0293",
+    "category": "numbers_dates",
+    "sentence": "We distributed 5,000 copies of the documentation to community members."
+  },
+  {
+    "id": "en_voice_0294",
+    "category": "numbers_dates",
+    "sentence": "The exchange rate was 152 yen per US dollar on Friday afternoon."
+  },
+  {
+    "id": "en_voice_0295",
+    "category": "numbers_dates",
+    "sentence": "The hotel room rate is $189 per night plus an 8% municipal tax."
+  },
+  {
+    "id": "en_voice_0296",
+    "category": "numbers_dates",
+    "sentence": "Our experimental trial lasted for 6 consecutive weeks without interruption."
+  },
+  {
+    "id": "en_voice_0297",
+    "category": "numbers_dates",
+    "sentence": "The data center operates with 99.99% network availability."
+  },
+  {
+    "id": "en_voice_0298",
+    "category": "numbers_dates",
+    "sentence": "Please dial extension 4102 to reach the customer billing department."
+  },
+  {
+    "id": "en_voice_0299",
+    "category": "numbers_dates",
+    "sentence": "We achieved a Top-1 accuracy of 93.3% across 60 evaluation cases."
+  },
+  {
+    "id": "en_voice_0300",
+    "category": "numbers_dates",
+    "sentence": "The project roadmap spans 4 quarters ending in December 2027."
+  }
+]

@@ -17,7 +17,7 @@
 | **3. 音声×タッチ調停・形式検証** | マルチモーダル競合調停・Alloy仕様検証・DDD境界 | [`VoiceInputArbitratorTest.kt`](../app/src/test/java/com/example/myasr/VoiceInputArbitratorTest.kt) (24ケース)<br>[`AlloyVerificationTest.kt`](../app/src/test/java/com/example/myasr/formal/AlloyVerificationTest.kt)<br>[`DddArchitectureKonsistTest.kt`](../app/src/test/java/com/example/myasr/ddd/DddArchitectureKonsistTest.kt) | 不変条件 100% 充足, アーキテクチャ純粋性 | `./gradlew testDebugUnitTest` | [`voice_and_touch_interaction_corner_cases.md`](voice_and_touch_interaction_corner_cases.md)<br>[`ddd/alloy_formal_verification.md`](ddd/alloy_formal_verification.md) |
 | **4. かな漢字変換・Mozc辞書** | 2D連接行列・N-Best多様性・長文変換・濁音曖昧検索・数字助数詞 | `tools/eval_nbest_diversity_dataset.jsonl` (350件)<br>[`ConnectionMatrixTest.kt`](../app/src/test/java/com/example/myasr/ConnectionMatrixTest.kt)<br>[`KanaKanjiEngineDiversityTest.kt`](../app/src/test/java/com/example/myasr/KanaKanjiEngineDiversityTest.kt)<br>[`LongPhraseConversionTest.kt`](../app/src/test/java/com/example/myasr/LongPhraseConversionTest.kt) | Top-1/Top-3, MRR, 語幹多様性, 接頭辞再現率, ノイズ排除率 | `python3 eval/evaluate_connection_matrix.py`<br>`python3 tools/eval_nbest_diversity.py`<br>`./gradlew testDebugUnitTest` | [`connection_matrix_evaluation_report.md`](connection_matrix_evaluation_report.md)<br>[`long_phrase_conversion_headroom_report.md`](long_phrase_conversion_headroom_report.md)<br>[`voicing_fuzzy_prefix_search_design_and_evaluation.md`](voicing_fuzzy_prefix_search_design_and_evaluation.md) |
 | **5. SLM リランキング & LM-First** | 同音異義語・Context-Free・α交差検証・未消費スパン・文脈長比較 | `tools/eval_1000_cases.tsv` (1,000件)<br>`tools/eval_500_natural_empty.tsv` (500件)<br>`tools/eval_dataset_10000.jsonl` (10,000件)<br>`eval/lm_first_eval_dataset.json` (247件) | Top-1, Top-3, MRR, Win/Loss比, ΔNLL, ユーザー辞書100% | `python3 eval/tune_and_eval_lm_first.py`<br>`python3 eval/evaluate_slm_mandatory_rerank.py`<br>`tools/cv_optimize_alpha.cc` | [`slm_mandatory_rerank_evaluation_report.md`](slm_mandatory_rerank_evaluation_report.md)<br>[`slm_alpha_cross_validation_report.md`](slm_alpha_cross_validation_report.md)<br>[`context_length_and_segmentation_report.md`](context_length_and_segmentation_report.md)<br>[`rerank_nano2_kekka_sakujo_debug_and_ideas.md`](rerank_nano2_kekka_sakujo_debug_and_ideas.md) |
-| **6. 英語入力 (Swipe / 補完 / スペル)** | FUTO Swipe・英語補完・タイポ訂正・SLMリランク | `eval/futo_swipe/swipe_eval_1000.jsonl` (1,000件)<br>`eval/english_completion/completion_eval_100.json` (100語)<br>[`EnglishTypoRerankTest.kt`](../app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt) | Top-1/Top-3/Top-5, NNレイテンシ(ms), 補完再現率 | `python3 eval/futo_swipe/run_futo_swipe_eval.py`<br>`python3 eval/english_completion/evaluate_completion_golden.py` | [`futo_swipe_phase1_evaluation_report.md`](futo_swipe_phase1_evaluation_report.md)<br>[`prd_and_design_unified_english_dictionary.md`](prd_and_design_unified_english_dictionary.md) |
+| **6. 英語入力 (音声 ASR / Swipe / 補完 / スペル)** | Parakeet ASR・FUTO Swipe・英語補完・タイポ訂正・SLMリランク | `eval/english_voice/dataset.json` (300件)<br>`eval/futo_swipe/swipe_eval_1000.jsonl` (1,000件)<br>`eval/english_completion/completion_eval_100.json` (100語)<br>[`EnglishTypoRerankTest.kt`](../app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt) | WER/CER, RTF, Top-1/Top-3/Top-5, NNレイテンシ(ms), 補完再現率 | `python3 eval/english_voice/evaluate_english_voice.py`<br>`python3 eval/futo_swipe/run_futo_swipe_eval.py`<br>`python3 eval/english_completion/evaluate_completion_golden.py` | [`english_asr_model_selection_and_design.md`](english_asr_model_selection_and_design.md)<br>[`futo_swipe_phase1_evaluation_report.md`](futo_swipe_phase1_evaluation_report.md)<br>[`prd_and_design_unified_english_dictionary.md`](prd_and_design_unified_english_dictionary.md) |
 | **0. トップレベル EIS** | 全 CUJ 統合メトリック（文字/分） | 既存キャッシュ出力を CUJ 別に再解釈（`eval/eis/adapters.py`） | EIS, EIS_c, bootstrap 95% CI, アブレーション Δ | `python3 eval/eis/run_eis.py --report`<br>`python3 -m unittest discover -s eval/eis` | [`eis_baseline_report.md`](eis_baseline_report.md)<br>[`prd_top_level.md`](prd_top_level.md) |
 | **7. レイテンシ・電力・実機計測** | ODPM消費電力・Cold/Warm起動・タイムアウト安全性 | [`ImeLatencyAndAsyncTest.kt`](../app/src/test/java/com/example/myasr/ImeLatencyAndAsyncTest.kt)<br>[`EngineColdVsWarmBenchmarkTest.kt`](../app/src/test/java/com/example/myasr/EngineColdVsWarmBenchmarkTest.kt) | mAh / mJ, CPU時間, KVキャッシュヒット率, ms | `python3 eval/evaluate_battery_power.py`<br>`tools/bench_ime_latency.cc` | [`slm_battery_and_power_consumption_report.md`](slm_battery_and_power_consumption_report.md)<br>[`ime_latency_and_offline_eval_plan.md`](ime_latency_and_offline_eval_plan.md)<br>[`model_warmup_and_latency_evaluation.md`](model_warmup_and_latency_evaluation.md) |
 
@@ -163,9 +163,10 @@ python3 eval/evaluate_context_length_tradeoff.py
 
 ---
 
-## 6. 英語入力（FUTO Swipe・英語補完・スペル訂正・SLMリランク）
+## 6. 英語入力（音声 ASR・FUTO Swipe・英語補完・スペル訂正・SLMリランク）
 
 ### データセット & テスト
+- **英語音声 ASR (300件)**: `eval/english_voice/dataset.json`（5カテゴリ: 会話100, 業務技術50, 質問命令50, 句読点大文字50, 数字日付50） / `eval/english_voice/audio/*.wav`（ローカル Piper TTS 16kHz 合成） / `eval/english_voice/evaluate_english_voice.py` / 結果: `eval/english_voice/english_voice_eval_results.json`（NVIDIA Parakeet TDT-CTC 110M: 平均 WER 10.26%, RTF 0.0281〔~35.6倍速〕）
 - **QWERTY ニューラルスワイプ (1,000件)**: `eval/futo_swipe/swipe_eval_1000.jsonl`（※大容量のためローカル/ダウンロード配置） / `eval/futo_swipe/run_futo_swipe_eval.py` / 結果: `eval/futo_swipe/swipe_eval_results_1000.json`（Spatial単体 Top-1: 89.0% → ContextLM併用: 90.3%）
 - **英語プレフィックス補完 (100語)**: `eval/english_completion/completion_eval_100.json` / `eval/english_completion/target_100_words.json` / `eval/english_completion/evaluate_completion_golden.py`
 - **スペル・タイポ訂正 & SLMリランク**:
@@ -175,6 +176,12 @@ python3 eval/evaluate_context_length_tradeoff.py
 
 ### 実行コマンド
 ```bash
+# 英語音声合成 & Parakeet ASR ベンチマーク (300件)
+python3 eval/english_voice/build_dataset.py
+python3 eval/english_voice/generate_audio.py
+python3 eval/english_voice/evaluate_english_voice.py
+
+# 英語スワイプ & 補完 & スペル
 python3 eval/futo_swipe/run_futo_swipe_eval.py --eval-file eval/futo_swipe/swipe_eval_1000.jsonl --model-dir tools/models/futo_swipe --limit 1000
 python3 eval/english_completion/evaluate_completion_golden.py
 ./gradlew testDebugUnitTest --tests "*English*" --tests "com.example.myasr.FutoSwipeIntegrationTest"

@@ -82,7 +82,7 @@
 - 根拠となる仕様: [`prd_and_design_custom_dictionary_ui.md`](prd_and_design_custom_dictionary_ui.md), [`voice_correction_learning_design_and_evaluation.md`](voice_correction_learning_design_and_evaluation.md), [`context_aware_evaluation_report.md`](context_aware_evaluation_report.md)
 
 **CUJ-4（P2）**: 英語を入力する。経路は (a) 英語音声入力（Parakeet TDT-CTC、自動句読点・大文字化込み）、(b) QWERTY に切り替えてタップまたはスワイプ。必要ならスペル候補・大文字候補を選ぶ → 自動スペース・ピリオド。
-- 内訳の重み（EIS-v1 方針）: 英語音声 0.5 / タッチ（タップ・スワイプ）0.5。英語音声の評価セットは未整備のため、EIS-Bench Phase 1 ではタッチ側のみを算出し、音声側は `NO_DATA` として明示する（§8 Phase 1.5）。
+- 内訳の重み（EIS-v1 方針）: 英語音声 0.5 / タッチ（タップ・スワイプ）0.5。英語音声評価セット（300件、Piper TTS合成 + Parakeet TDT-CTC 110M推論）を構築し、50:50文字比重みで統合完了。
 - 失敗モード: スワイプが Top-1 で外れる、タイポを救済できない、大文字化を誤る。
 - 根拠となる仕様: [`futo_swipe_phase1_evaluation_report.md`](futo_swipe_phase1_evaluation_report.md), [`prd_and_system_design_qwerty_capitalization_and_spell_candidates.md`](prd_and_system_design_qwerty_capitalization_and_spell_candidates.md)
 
@@ -214,7 +214,7 @@ flowchart TD
 | CUJ-1 音声 | `eval/dataset.json` + `eval/audio/*.wav`（1,000 文、文全体が正解）、句読点評価文（67+）、フィラー評価仕様（120）、ストリーミング評価 | $T_{\text{correct}}$（CER スパン・句読点・フィラー）、$T_{\text{wait}}$（確定遅延） |
 | CUJ-2 フリック | `tools/eval_1000_cases.tsv`（文脈あり 1,000）、`tools/eval_500_natural_empty.tsv`（文脈なし 500）、`eval/lm_first_eval_dataset.json`（247）、長文節セット、`FlickTypoAndMozcCorrectionEvaluationTest` | $T_{\text{select}}$（順位 $k$）、$C_\varnothing$、$T_{\text{wait}}$（SLM 遅延） |
 | CUJ-3 自分の語彙 | `eval/dataset.json` の人名 250・地名 150・技術用語 200 + 辞書登録、`eval/dataset_with_context.json`、音声修正学習の評価（`eval/voice_correction_eval_results.json` の系列）、`lm_first` の user_dict カテゴリ | 1 回目と 2 回目以降の $T_{\text{correct}}$ の差、負例による誤爆コスト |
-| CUJ-4 英語 | **英語音声: 評価セット未整備（Phase 1.5 で追加）**、`eval/futo_swipe/swipe_eval_1000.jsonl`、`eval/english_completion/completion_eval_100.json`、大文字化 60 ケース、`EnglishTypoRerankTest` | $T_{\text{select}}$、打ち直し、補完による $T_{\text{produce}}$ の削減 |
+| CUJ-4 英語 | `eval/english_voice/dataset.json` (300件) + `eval/english_voice/audio/*.wav`（Parakeet ASR）、`eval/futo_swipe/swipe_eval_1000.jsonl`、`eval/english_completion/completion_eval_100.json`、大文字化 60 ケース、`EnglishTypoRerankTest` | $T_{\text{select}}$、打ち直し、補完による $T_{\text{produce}}$ の削減 |
 
 > [!IMPORTANT]
 > 現状の音声データ（`eval/audio`）は合成音声に由来します。CUJ-1 の EIS は合成音声上の値であることを明記し、Phase 3 で実録音サブセット（少数でもよい）を追加して乖離を測ります。
@@ -241,7 +241,7 @@ flowchart TD
 | フェーズ | 内容 | 成果物 |
 | :--- | :--- | :--- |
 | **Phase 1（実装済み）** | EIS-Bench v1 の構築（層化抽出、dev/test 分割、test を凍結）と、オフライン KLM シミュレータの実装。キャッシュ済みの出力 JSON を利用し、ベースラインの EIS と $\mathrm{EIS}_c$ を算出 | `eval/eis/`（ビルダー、シミュレータ、`eis_results.json`）、本書 §6.1 の更新 |
-| **Phase 1.5** | 英語音声（Parakeet）の評価セットと出力キャッシュを追加し、$\mathrm{EIS}_4$ の音声側を `NO_DATA` から実測へ | `eval/eis/` の英語音声アダプタ |
+| **Phase 1.5（実装完了）** | 英語音声（Parakeet 110M）300件データセット・ローカルPiper TTS合成・推論キャッシュを構築し、$\mathrm{EIS}_4$ を完全実測化 | `eval/english_voice/`、`eval/eis/adapters.py` |
 | **Phase 2** | CUJ-2 と CUJ-3 を JVM の実エンジン（`KanaKanjiEngine` + リランカー）で回す回帰テストを CI に追加し、EIS の悪化を CI で検知 | `EisRegressionTest.kt`、CI での EIS レポート |
 | **Phase 3** | 両ターゲットの実機で、遅延の実測値を $T_{\text{wait}}$ に投入。少数の実ユーザーで操作時間を計測して KLM 定数を較正（`EIS-v2`）。実録音の音声サブセットを追加 | 較正レポート、`EIS-v2` 定数 |
 

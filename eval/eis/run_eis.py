@@ -125,7 +125,7 @@ def render_report(test: dict, dev: dict) -> str:
     a(f"## 1. ヘッドライン（凍結 test 分割, bootstrap B={test['bootstrap']['B']}）")
     a("")
     e = test["eis"]
-    a(f"**EIS = {e['value']:.1f} 文字/分**（95% CI {e['ci95'][0]:.1f} – {e['ci95'][1]:.1f}）　※ CUJ-4 は英語音声が NO_DATA のため **暫定値**")
+    a(f"**EIS = {e['value']:.1f} 文字/分**（95% CI {e['ci95'][0]:.1f} – {e['ci95'][1]:.1f}）")
     a("")
     a("| CUJ | 重み | EIS_c (文字/分) | 95% CI | dev EIS_c | n (test) | 状態 |")
     a("| :--- | :---: | :---: | :---: | :---: | :---: | :--- |")

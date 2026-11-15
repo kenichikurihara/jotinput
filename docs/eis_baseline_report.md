@@ -6,16 +6,16 @@
 
 ## 1. ヘッドライン（凍結 test 分割, bootstrap B=1000）
 
-**EIS = 140.6 文字/分**（95% CI 134.3 – 145.9）　※ CUJ-4 は英語音声が NO_DATA のため **暫定値**
+**EIS = 140.8 文字/分**（95% CI 135.0 – 146.6）
 
 | CUJ | 重み | EIS_c (文字/分) | 95% CI | dev EIS_c | n (test) | 状態 |
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| CUJ-1 | 0.40 | 204.4 | 192.4 – 217.4 | 212.7 | 123 | OK |
-| CUJ-2 | 0.35 | 92.8 | 85.9 – 99.3 | 90.6 | 63 | OK |
-| CUJ-3 | 0.15 | 139.0 | 134.0 – 144.4 | 138.0 | 177 | OK |
-| CUJ-4 | 0.10 | 326.1 | 294.6 – 360.6 | 297.1 | 310 | PARTIAL |
+| CUJ-1 | 0.40 | 204.4 | 192.6 – 217.4 | 212.7 | 123 | OK |
+| CUJ-2 | 0.35 | 92.8 | 85.9 – 98.8 | 90.6 | 63 | OK |
+| CUJ-3 | 0.15 | 139.0 | 133.7 – 144.8 | 138.0 | 177 | OK |
+| CUJ-4 | 0.10 | 337.7 | 314.0 – 365.1 | 328.6 | 399 | OK |
 
-dev 分割の全体 EIS = 139.5（参考。チューニングは dev のみで行う）。
+dev 分割の全体 EIS = 140.1（参考。チューニングは dev のみで行う）。
 
 ## 2. アブレーション（EIS の感度確認）
 
@@ -23,9 +23,9 @@ dev 分割の全体 EIS = 139.5（参考。チューニングは dev のみで�
 
 | 変更 | 全体 EIS | Δ | Δ 95% CI |
 | :--- | :---: | :---: | :---: |
-| ユーザー辞書なし (CUJ-3: 単語を登録しない) | 143.8 | +3.20 | +2.50 … +3.88 |
-| Swipe ContextLM OFF (CUJ-4: 空間モデルのみ) | 140.5 | -0.12 | -0.28 … -0.01 |
-| 音声に辞書バイアス適用 (CUJ-1: hybrid) | 140.4 | -0.18 | -0.65 … +0.20 |
+| ユーザー辞書なし (CUJ-3: 単語を登録しない) | 144.0 | +3.21 | +2.50 … +3.90 |
+| Swipe ContextLM OFF (CUJ-4: 空間モデルのみ) | 140.7 | -0.06 | -0.14 … -0.01 |
+| 音声に辞書バイアス適用 (CUJ-1: hybrid) | 140.6 | -0.18 | -0.62 … +0.20 |
 
 ### 2.1 辞書登録の効果は「登録語の再利用回数」の仮定に依存する
 
@@ -33,12 +33,12 @@ dev 分割の全体 EIS = 139.5（参考。チューニングは dev のみで�
 
 | 再利用回数 n | EIS_3 辞書あり | EIS_3 辞書なし | 全体 EIS 辞書あり | 全体 EIS 辞書なし | delta |
 | :---: | :---: | :---: | :---: | :---: | :---: |
-| 1 | 91.6 | 162.9 | 130.3 | 143.8 | +13.42 |
-| 3 | 139.0 | 162.9 | 140.6 | 143.8 | +3.20 |
-| 5 | 155.0 | 162.9 | 142.8 | 143.8 | +0.96 |
-| 7 | 163.1 | 162.9 | 143.8 | 143.8 | -0.02 |
-| 10 | 169.7 | 162.9 | 144.5 | 143.8 | -0.77 |
-| 20 | 178.2 | 162.9 | 145.4 | 143.8 | -1.65 |
+| 1 | 91.6 | 162.9 | 130.5 | 144.0 | +13.46 |
+| 3 | 139.0 | 162.9 | 140.8 | 144.0 | +3.21 |
+| 5 | 155.0 | 162.9 | 143.0 | 144.0 | +0.96 |
+| 7 | 163.1 | 162.9 | 144.0 | 144.0 | -0.02 |
+| 10 | 169.7 | 162.9 | 144.8 | 144.0 | -0.77 |
+| 20 | 178.2 | 162.9 | 145.6 | 144.0 | -1.65 |
 
 損益分岐は表の delta の符号が反転する n 付近（1 回の使用あたりの訂正時間の節約量と、登録コストの比で決まる）。**この結果は『辞書機能は不要』という意味ではない**。
 連絡先・社名など固有名詞は何度も使われるため、n の実測（端末内ローカル統計）が Phase 3 の重要項目になる。
@@ -72,8 +72,8 @@ EIS 計算はガードレールを評価しない。リリース判定では下�
 - **CUJ-3**: Voice side: dictionary-registered (hybrid) predictions; counterfactual no_dictionary = baseline predictions.
 - **CUJ-3**: Flick side: lm_first user_dict items (20); counterfactual removes user candidates.
 - **CUJ-3**: Voice-correction learning (repeat-occurrence benefit) is NOT yet in EIS: only layer-level rates exist in eval/voice_correction_eval_results.json (Phase 2).
-- **CUJ-4**: English VOICE (Parakeet) side is NO_DATA (Phase 1.5); EIS_4 currently = touch (swipe) only.
-- **CUJ-4**: Swipe items are pseudo-items reconstructed from aggregate Top-1/3/5 counts (raw per-sample outputs are not in the repo), so bootstrap CIs reflect sampling of the 1,000 words but ranks are not paired to real samples.
-- **CUJ-4**: Tap-typing, spell-correction and capitalisation suites are not yet included.
+- **CUJ-4**: English VOICE: 300 benchmark samples evaluated on NVIDIA Parakeet TDT-CTC 110M (WER 10.26%, RTF 0.0281).
+- **CUJ-4**: English TOUCH: 1,000 FUTO Swipe samples with spatial + ContextLM (Top-1 90.9%).
+- **CUJ-4**: Voice and touch are balanced 50:50 by character share (PRD §4.2).
 - 全 CUJ 共通: KLM 定数は仮定値（PRD §5.3）。重み $w_c$ は PO 承認済みの方針値。
 - 現在の Phase 1 は **既存評価資産の再解釈** であり、新規計測ではない。Phase 2 で実エンジン（KanaKanjiEngine+リランカー）を回し、Phase 3 で実機遅延と定数を較正する。

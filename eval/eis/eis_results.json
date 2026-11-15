@@ -3,49 +3,49 @@
     "reuse_sensitivity": [
       {
         "reuse": 1,
-        "eis_with_dictionary": 130.34790690335194,
-        "eis_without": 143.77054969378582,
-        "delta": 13.422642790433883,
+        "eis_with_dictionary": 130.52743081261724,
+        "eis_without": 143.98898137970622,
+        "delta": 13.461550567088977,
         "eis3_with": 91.6344730476225,
         "eis3_without": 162.9213723568607
       },
       {
         "reuse": 3,
-        "eis_with_dictionary": 140.57072370529625,
-        "eis_without": 143.77054969378582,
-        "delta": 3.1998259884895788,
+        "eis_with_dictionary": 140.7795334909815,
+        "eis_without": 143.98898137970622,
+        "delta": 3.209447888724725,
         "eis3_with": 139.01517226269374,
         "eis3_without": 162.9213723568607
       },
       {
         "reuse": 5,
-        "eis_with_dictionary": 142.8107725091293,
-        "eis_without": 143.77054969378582,
-        "delta": 0.9597771846565308,
+        "eis_with_dictionary": 143.02629535016644,
+        "eis_without": 143.98898137970622,
+        "delta": 0.9626860295397819,
         "eis3_with": 155.04917832488235,
         "eis3_without": 162.9213723568607
       },
       {
         "reuse": 7,
-        "eis_with_dictionary": 143.79279842755412,
-        "eis_without": 143.77054969378582,
-        "delta": -0.022248733768293505,
+        "eis_with_dictionary": 144.01129777541783,
+        "eis_without": 143.98898137970622,
+        "delta": -0.022316395711612813,
         "eis3_with": 163.11203738558012,
         "eis3_without": 162.9213723568607
       },
       {
         "reuse": 10,
-        "eis_with_dictionary": 144.53822688426126,
-        "eis_without": 143.77054969378582,
-        "delta": -0.7676771904754389,
+        "eis_with_dictionary": 144.7589992645221,
+        "eis_without": 143.98898137970622,
+        "delta": -0.7700178848158714,
         "eis3_with": 169.7318263893534,
         "eis3_without": 162.9213723568607
       },
       {
         "reuse": 20,
-        "eis_with_dictionary": 145.41772103589858,
-        "eis_without": 143.77054969378582,
-        "delta": -1.647171342112756,
+        "eis_with_dictionary": 145.64119040316953,
+        "eis_without": 143.98898137970622,
+        "delta": -1.652209023463314,
         "eis3_with": 178.16777816777812,
         "eis3_without": 162.9213723568607
       }
@@ -60,13 +60,13 @@
       "CUJ-1": 123,
       "CUJ-2": 63,
       "CUJ-3": 177,
-      "CUJ-4": 310
+      "CUJ-4": 399
     },
     "eis": {
-      "value": 140.57072370529625,
+      "value": 140.7795334909815,
       "ci95": [
-        134.28986960804403,
-        145.89688648880042
+        135.021290601912,
+        146.59309460196755
       ]
     },
     "cuj": {
@@ -74,8 +74,8 @@
         "weight": 0.4,
         "eis": 204.39130934590173,
         "ci95": [
-          192.40970841009005,
-          217.3951844646331
+          192.5705717603069,
+          217.37553680113288
         ],
         "status": "OK",
         "notes": [
@@ -89,8 +89,8 @@
         "weight": 0.35,
         "eis": 92.810621242485,
         "ci95": [
-          85.89125946317964,
-          99.25495643389317
+          85.9465737514518,
+          98.80350314542989
         ],
         "status": "OK",
         "notes": [
@@ -103,8 +103,8 @@
         "weight": 0.15,
         "eis": 139.01517226269374,
         "ci95": [
-          133.95848702105545,
-          144.4372749729872
+          133.72421527029655,
+          144.75592332293
         ],
         "status": "OK",
         "notes": [
@@ -116,45 +116,45 @@
       },
       "CUJ-4": {
         "weight": 0.1,
-        "eis": 326.06489312624984,
+        "eis": 337.6828425543366,
         "ci95": [
-          294.6227594831179,
-          360.6122448979593
+          313.96257822130946,
+          365.06647948950894
         ],
-        "status": "PARTIAL",
+        "status": "OK",
         "notes": [
-          "English VOICE (Parakeet) side is NO_DATA (Phase 1.5); EIS_4 currently = touch (swipe) only.",
-          "Swipe items are pseudo-items reconstructed from aggregate Top-1/3/5 counts (raw per-sample outputs are not in the repo), so bootstrap CIs reflect sampling of the 1,000 words but ranks are not paired to real samples.",
-          "Tap-typing, spell-correction and capitalisation suites are not yet included."
+          "English VOICE: 300 benchmark samples evaluated on NVIDIA Parakeet TDT-CTC 110M (WER 10.26%, RTF 0.0281).",
+          "English TOUCH: 1,000 FUTO Swipe samples with spatial + ContextLM (Top-1 90.9%).",
+          "Voice and touch are balanced 50:50 by character share (PRD §4.2)."
         ]
       }
     },
     "ablations": [
       {
         "name": "ユーザー辞書なし (CUJ-3: 単語を登録しない)",
-        "eis": 143.77054969378582,
-        "delta": 3.1998259884895788,
+        "eis": 143.98898137970622,
+        "delta": 3.209447888724725,
         "delta_ci95": [
-          2.4974356956663257,
-          3.880856772161337
+          2.5041795199801697,
+          3.903851179169436
         ]
       },
       {
         "name": "Swipe ContextLM OFF (CUJ-4: 空間モデルのみ)",
-        "eis": 140.45433194496184,
-        "delta": -0.1163917603344089,
+        "eis": 140.72001179349982,
+        "delta": -0.0595216974816708,
         "delta_ci95": [
-          -0.2765273676302229,
-          -0.013200928903330578
+          -0.13723211506356847,
+          -0.006672231845470833
         ]
       },
       {
         "name": "音声に辞書バイアス適用 (CUJ-1: hybrid)",
-        "eis": 140.39171048540948,
-        "delta": -0.17901321988676955,
+        "eis": 140.59998838789687,
+        "delta": -0.1795451030846209,
         "delta_ci95": [
-          -0.6530078068786906,
-          0.20046962974674898
+          -0.6161887594221582,
+          0.20420228437657784
         ]
       }
     ]
@@ -163,49 +163,49 @@
     "reuse_sensitivity": [
       {
         "reuse": 1,
-        "eis_with_dictionary": 129.11701304207529,
-        "eis_without": 142.68853243799083,
-        "delta": 13.571519395915544,
+        "eis_with_dictionary": 129.6566660854968,
+        "eis_without": 143.34788343295287,
+        "delta": 13.691217347456075,
         "eis3_with": 90.16129985278468,
         "eis3_without": 161.80463447082263
       },
       {
         "reuse": 3,
-        "eis_with_dictionary": 139.5013365445116,
-        "eis_without": 142.68853243799083,
-        "delta": 3.1871958934792417,
+        "eis_with_dictionary": 140.13149597021095,
+        "eis_without": 143.34788343295287,
+        "delta": 3.2163874627419204,
         "eis3_with": 137.9738753080041,
         "eis3_without": 161.80463447082263
       },
       {
         "reuse": 5,
-        "eis_with_dictionary": 141.78191796166385,
-        "eis_without": 142.68853243799083,
-        "delta": 0.906614476326979,
+        "eis_with_dictionary": 142.43289769271755,
+        "eis_without": 143.34788343295287,
+        "delta": 0.9149857402353234,
         "eis3_with": 154.34356709309537,
         "eis3_without": 161.80463447082263
       },
       {
         "reuse": 7,
-        "eis_with_dictionary": 142.7822974841004,
-        "eis_without": 142.68853243799083,
-        "delta": -0.09376504610958136,
+        "eis_with_dictionary": 143.4425173284177,
+        "eis_without": 143.34788343295287,
+        "delta": -0.09463389546482404,
         "eis3_with": 162.6119245620707,
         "eis3_without": 161.80463447082263
       },
       {
         "reuse": 10,
-        "eis_with_dictionary": 143.54189561400509,
-        "eis_without": 142.68853243799083,
-        "delta": -0.8533631760142555,
+        "eis_with_dictionary": 144.20917526358977,
+        "eis_without": 143.34788343295287,
+        "delta": -0.8612918306369011,
         "eis3_with": 169.41889426359165,
         "eis3_without": 161.80463447082263
       },
       {
         "reuse": 20,
-        "eis_with_dictionary": 144.4383720852833,
-        "eis_without": 142.68853243799083,
-        "delta": -1.7498396472924753,
+        "eis_with_dictionary": 145.11403223431836,
+        "eis_without": 143.34788343295287,
+        "delta": -1.766148801365489,
         "eis3_with": 178.1176086846739,
         "eis3_without": 161.80463447082263
       }
@@ -220,13 +220,13 @@
       "CUJ-1": 277,
       "CUJ-2": 164,
       "CUJ-3": 443,
-      "CUJ-4": 690
+      "CUJ-4": 901
     },
     "eis": {
-      "value": 139.5013365445116,
+      "value": 140.13149597021095,
       "ci95": [
-        135.0789733205458,
-        143.77673153033984
+        135.84854804488907,
+        144.30408649216724
       ]
     },
     "cuj": {
@@ -234,8 +234,8 @@
         "weight": 0.4,
         "eis": 212.70706048150825,
         "ci95": [
-          205.8085538559991,
-          220.37718421990533
+          204.90603538656453,
+          220.39101001895472
         ],
         "status": "OK",
         "notes": [
@@ -249,8 +249,8 @@
         "weight": 0.35,
         "eis": 90.57562076749433,
         "ci95": [
-          85.53914739481748,
-          95.3956834532374
+          85.57323093801425,
+          95.74887264130291
         ],
         "status": "OK",
         "notes": [
@@ -263,8 +263,8 @@
         "weight": 0.15,
         "eis": 137.9738753080041,
         "ci95": [
-          134.47201352510322,
-          141.5382315038793
+          134.76623939068358,
+          141.60604402808605
         ],
         "status": "OK",
         "notes": [
@@ -276,45 +276,45 @@
       },
       "CUJ-4": {
         "weight": 0.1,
-        "eis": 297.14789397468536,
+        "eis": 328.6261838185822,
         "ci95": [
-          277.11819623040304,
-          320.2986087546643
+          313.17542462854885,
+          345.7705624154822
         ],
-        "status": "PARTIAL",
+        "status": "OK",
         "notes": [
-          "English VOICE (Parakeet) side is NO_DATA (Phase 1.5); EIS_4 currently = touch (swipe) only.",
-          "Swipe items are pseudo-items reconstructed from aggregate Top-1/3/5 counts (raw per-sample outputs are not in the repo), so bootstrap CIs reflect sampling of the 1,000 words but ranks are not paired to real samples.",
-          "Tap-typing, spell-correction and capitalisation suites are not yet included."
+          "English VOICE: 300 benchmark samples evaluated on NVIDIA Parakeet TDT-CTC 110M (WER 10.26%, RTF 0.0281).",
+          "English TOUCH: 1,000 FUTO Swipe samples with spatial + ContextLM (Top-1 90.9%).",
+          "Voice and touch are balanced 50:50 by character share (PRD §4.2)."
         ]
       }
     },
     "ablations": [
       {
         "name": "ユーザー辞書なし (CUJ-3: 単語を登録しない)",
-        "eis": 142.68853243799083,
-        "delta": 3.1871958934792417,
+        "eis": 143.34788343295287,
+        "delta": 3.2163874627419204,
         "delta_ci95": [
-          2.7671789007983705,
-          3.625138238825201
+          2.780160835411948,
+          3.666504624508349
         ]
       },
       {
         "name": "Swipe ContextLM OFF (CUJ-4: 空間モデルのみ)",
-        "eis": 139.4382776117181,
-        "delta": -0.06305893279349561,
+        "eis": 140.09994270832195,
+        "delta": -0.03155326188900176,
         "delta_ci95": [
-          -0.1298604930634042,
-          -0.01608044965198019
+          -0.06954788941411039,
+          -0.007864019576828696
         ]
       },
       {
         "name": "音声に辞書バイアス適用 (CUJ-1: hybrid)",
-        "eis": 140.11161232871274,
-        "delta": 0.6102757842011499,
+        "eis": 140.74730988715,
+        "delta": 0.6158139169390608,
         "delta_ci95": [
-          0.23828925036679038,
-          1.0164541728801737
+          0.23354507333542074,
+          1.0521149405441292
         ]
       }
     ]

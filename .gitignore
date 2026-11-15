@@ -27,11 +27,15 @@ tools/models/futo_swipe/models/
 tools/models/english_spelling/*.onnx
 tools/models/english_spelling/*.bin
 tools/models/english_spelling/*.model
+tools/models/parakeet-en-110m/
+tools/models/piper_model/
 tools/mozc_dict/*.bin
 tools/mozc_dict/*.orig
 eval/futo_swipe/*.jsonl
 eval/futo_swipe/*.onnx
 eval/futo_swipe/models/
+eval/english_voice/audio/*.wav
+eval/english_voice/audio/*.mp3
 
 # Ignore third-party / external cloned subtrees and large binary builds in tools
 tools/llama_bin/

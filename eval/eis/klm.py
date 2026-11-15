@@ -134,3 +134,26 @@ def voice_item_time(gt: str, pred: str, latency_s: float, k: Klm = KLM):
     wait = k.wait(latency_s, k.wait_free_voice)
     correct = correction_cost(g, p, k)
     return len(g), produce + wait + correct
+
+
+def retype_cost_en(gt_span: str, k: Klm = KLM) -> float:
+    """Re-enter a corrected English span via QWERTY tap + auto-suggest."""
+    return k.K_q * len(gt_span) + k.select_cost(1)
+
+
+def correction_cost_en(gt: str, pred: str, k: Klm = KLM) -> float:
+    total = 0.0
+    for gt_span, pred_span in error_spans(gt, pred):
+        total += k.L + k.D * len(pred_span) + retype_cost_en(gt_span, k)
+    return total
+
+
+def voice_item_time_en(gt: str, pred: str, latency_s: float, k: Klm = KLM):
+    """Return (chars, seconds) for one spoken English sentence."""
+    words = re.findall(r"\b\w+\b", gt)
+    num_words = max(1, len(words))
+    produce = k.voice_overhead + num_words / k.S_en_wps
+    wait = k.wait(latency_s, k.wait_free_voice)
+    correct = correction_cost_en(gt, pred, k)
+    return len(gt), produce + wait + correct
+

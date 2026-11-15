@@ -1,0 +1,3044 @@
+{
+  "summary": {
+    "total_samples": 300,
+    "total_audio_duration_s": 1039.26,
+    "total_decode_time_s": 29.21,
+    "avg_wer_pct": 10.26,
+    "avg_cer_pct": 10.36,
+    "overall_rtf": 0.0281,
+    "categories": {
+      "conversational": {
+        "count": 100,
+        "wer_pct": 0.91,
+        "cer_pct": 2.46,
+        "rtf": 0.0282
+      },
+      "business_tech": {
+        "count": 50,
+        "wer_pct": 7.58,
+        "cer_pct": 4.27,
+        "rtf": 0.0285
+      },
+      "questions_commands": {
+        "count": 50,
+        "wer_pct": 3.53,
+        "cer_pct": 2.67,
+        "rtf": 0.028
+      },
+      "punctuation_casing": {
+        "count": 50,
+        "wer_pct": 7.16,
+        "cer_pct": 7.21,
+        "rtf": 0.0284
+      },
+      "numbers_dates": {
+        "count": 50,
+        "wer_pct": 41.48,
+        "cer_pct": 43.1,
+        "rtf": 0.0276
+      }
+    }
+  },
+  "items": {
+    "en_voice_0001": {
+      "category": "conversational",
+      "ground_truth": "I'll be there in about ten minutes.",
+      "prediction": "I'll be there in about ten minutes",
+      "cer": 0.0286,
+      "wer": 0.0,
+      "audio_len_s": 1.808,
+      "latency_s": 0.0559,
+      "rtf": 0.0309
+    },
+    "en_voice_0002": {
+      "category": "conversational",
+      "ground_truth": "Let me know when you get home safely.",
+      "prediction": "Let me know when you get home safely",
+      "cer": 0.027,
+      "wer": 0.0,
+      "audio_len_s": 2.208,
+      "latency_s": 0.0664,
+      "rtf": 0.0301
+    },
+    "en_voice_0003": {
+      "category": "conversational",
+      "ground_truth": "Are you free to grab coffee this afternoon?",
+      "prediction": "Are you free to grab coffee this afternoon",
+      "cer": 0.0233,
+      "wer": 0.0,
+      "audio_len_s": 2.512,
+      "latency_s": 0.0695,
+      "rtf": 0.0276
+    },
+    "en_voice_0004": {
+      "category": "conversational",
+      "ground_truth": "Thanks so much for helping me out today.",
+      "prediction": "Thanks so much for helping me out today",
+      "cer": 0.025,
+      "wer": 0.0,
+      "audio_len_s": 2.224,
+      "latency_s": 0.0633,
+      "rtf": 0.0284
+    },
+    "en_voice_0005": {
+      "category": "conversational",
+      "ground_truth": "I'm really looking forward to the weekend.",
+      "prediction": "I'm really looking forward to the weekend",
+      "cer": 0.0238,
+      "wer": 0.0,
+      "audio_len_s": 2.128,
+      "latency_s": 0.0615,
+      "rtf": 0.0289
+    },
+    "en_voice_0006": {
+      "category": "conversational",
+      "ground_truth": "Could you please send me the address again?",
+      "prediction": "Could you please send me the address again",
+      "cer": 0.0233,
+      "wer": 0.0,
+      "audio_len_s": 2.192,
+      "latency_s": 0.0645,
+      "rtf": 0.0294
+    },
+    "en_voice_0007": {
+      "category": "conversational",
+      "ground_truth": "I completely forgot to turn off the lights.",
+      "prediction": "I completely forgot to turn off the lights",
+      "cer": 0.0233,
+      "wer": 0.0,
+      "audio_len_s": 2.272,
+      "latency_s": 0.0654,
+      "rtf": 0.0288
+    },
+    "en_voice_0008": {
+      "category": "conversational",
+      "ground_truth": "That sounds like a wonderful idea to me.",
+      "prediction": "That sounds like a wonderful idea to me",
+      "cer": 0.025,
+      "wer": 0.0,
+      "audio_len_s": 2.304,
+      "latency_s": 0.0648,
+      "rtf": 0.0281
+    },
+    "en_voice_0009": {
+      "category": "conversational",
+      "ground_truth": "Sorry for the late reply, I was in a meeting.",
+      "prediction": "Sorry, for the late reply, I was in a meeting",
+      "cer": 0.0444,
+      "wer": 0.0,
+      "audio_len_s": 2.768,
+      "latency_s": 0.0808,
+      "rtf": 0.0292
+    },
+    "en_voice_0010": {
+      "category": "conversational",
+      "ground_truth": "We should definitely catch up soon.",
+      "prediction": "We should definitely catch up soon",
+      "cer": 0.0286,
+      "wer": 0.0,
+      "audio_len_s": 1.952,
+      "latency_s": 0.0596,
+      "rtf": 0.0305
+    },
+    "en_voice_0011": {
+      "category": "conversational",
+      "ground_truth": "I'm heading out the door right now.",
+      "prediction": "I'm heading out the door right now",
+      "cer": 0.0286,
+      "wer": 0.0,
+      "audio_len_s": 1.856,
+      "latency_s": 0.0519,
+      "rtf": 0.028
+    },
+    "en_voice_0012": {
+      "category": "conversational",
+      "ground_truth": "How did your interview go yesterday?",
+      "prediction": "How did your interview go yesterday",
+      "cer": 0.0278,
+      "wer": 0.0,
+      "audio_len_s": 2.048,
+      "latency_s": 0.0587,
+      "rtf": 0.0286
+    },
+    "en_voice_0013": {
+      "category": "conversational",
+      "ground_truth": "I'll call you back as soon as I can.",
+      "prediction": "I'll call you back as soon as I can",
+      "cer": 0.0278,
+      "wer": 0.0,
+      "audio_len_s": 2.128,
+      "latency_s": 0.0596,
+      "rtf": 0.028
+    },
+    "en_voice_0014": {
+      "category": "conversational",
+      "ground_truth": "It was really nice seeing you again after so long.",
+      "prediction": "It was really nice seeing you again after so long",
+      "cer": 0.02,
+      "wer": 0.0,
+      "audio_len_s": 2.912,
+      "latency_s": 0.0811,
+      "rtf": 0.0279
+    },
+    "en_voice_0015": {
+      "category": "conversational",
+      "ground_truth": "What time does the movie start tonight?",
+      "prediction": "What time does the movie start tonight",
+      "cer": 0.0256,
+      "wer": 0.0,
+      "audio_len_s": 2.016,
+      "latency_s": 0.0584,
+      "rtf": 0.029
+    },
+    "en_voice_0016": {
+      "category": "conversational",
+      "ground_truth": "Don't worry about it, everything will be fine.",
+      "prediction": "Don't worry about it, everything will be fine.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.72,
+      "latency_s": 0.0756,
+      "rtf": 0.0278
+    },
+    "en_voice_0017": {
+      "category": "conversational",
+      "ground_truth": "Can you pick up some milk on your way back?",
+      "prediction": "Can you pick up some milk on your way back",
+      "cer": 0.0233,
+      "wer": 0.0,
+      "audio_len_s": 2.048,
+      "latency_s": 0.0585,
+      "rtf": 0.0286
+    },
+    "en_voice_0018": {
+      "category": "conversational",
+      "ground_truth": "I'm having lunch with my colleagues right now.",
+      "prediction": "I'm having lunch with my colleagues right now",
+      "cer": 0.0217,
+      "wer": 0.0,
+      "audio_len_s": 2.544,
+      "latency_s": 0.0723,
+      "rtf": 0.0284
+    },
+    "en_voice_0019": {
+      "category": "conversational",
+      "ground_truth": "Let's meet at the station around noon.",
+      "prediction": "Let's meet at the station around noon.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.16,
+      "latency_s": 0.0613,
+      "rtf": 0.0284
+    },
+    "en_voice_0020": {
+      "category": "conversational",
+      "ground_truth": "I think we might need to take an umbrella today.",
+      "prediction": "I think we might need to take an umbrella today.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.48,
+      "latency_s": 0.0692,
+      "rtf": 0.0279
+    },
+    "en_voice_0021": {
+      "category": "conversational",
+      "ground_truth": "Have a safe trip and enjoy your vacation!",
+      "prediction": "Have a safe trip and enjoy your vacation",
+      "cer": 0.0244,
+      "wer": 0.0,
+      "audio_len_s": 2.208,
+      "latency_s": 0.0625,
+      "rtf": 0.0283
+    },
+    "en_voice_0022": {
+      "category": "conversational",
+      "ground_truth": "I'm not sure if I can make it on time.",
+      "prediction": "I'm not sure if I can make it on time",
+      "cer": 0.0263,
+      "wer": 0.0,
+      "audio_len_s": 2.176,
+      "latency_s": 0.0628,
+      "rtf": 0.0289
+    },
+    "en_voice_0023": {
+      "category": "conversational",
+      "ground_truth": "Please let me know if anything changes.",
+      "prediction": "Please let me know if anything changes",
+      "cer": 0.0256,
+      "wer": 0.0,
+      "audio_len_s": 2.432,
+      "latency_s": 0.0686,
+      "rtf": 0.0282
+    },
+    "en_voice_0024": {
+      "category": "conversational",
+      "ground_truth": "It's been quite a long and busy week.",
+      "prediction": "It's been quite a long and busy week",
+      "cer": 0.027,
+      "wer": 0.0,
+      "audio_len_s": 2.272,
+      "latency_s": 0.0643,
+      "rtf": 0.0283
+    },
+    "en_voice_0025": {
+      "category": "conversational",
+      "ground_truth": "I'll check my schedule and get back to you.",
+      "prediction": "I'll check my schedule and get back to you",
+      "cer": 0.0233,
+      "wer": 0.0,
+      "audio_len_s": 2.672,
+      "latency_s": 0.0764,
+      "rtf": 0.0286
+    },
+    "en_voice_0026": {
+      "category": "conversational",
+      "ground_truth": "Hope you are having a productive day so far.",
+      "prediction": "Hope you are having a productive day so far",
+      "cer": 0.0227,
+      "wer": 0.0,
+      "audio_len_s": 2.528,
+      "latency_s": 0.0708,
+      "rtf": 0.028
+    },
+    "en_voice_0027": {
+      "category": "conversational",
+      "ground_truth": "That restaurant has the best pizza in town.",
+      "prediction": "That restaurant has the best pizza in town",
+      "cer": 0.0233,
+      "wer": 0.0,
+      "audio_len_s": 2.464,
+      "latency_s": 0.0709,
+      "rtf": 0.0288
+    },
+    "en_voice_0028": {
+      "category": "conversational",
+      "ground_truth": "I really appreciate your quick response.",
+      "prediction": "I really appreciate your quick response",
+      "cer": 0.025,
+      "wer": 0.0,
+      "audio_len_s": 2.304,
+      "latency_s": 0.0638,
+      "rtf": 0.0277
+    },
+    "en_voice_0029": {
+      "category": "conversational",
+      "ground_truth": "Let's see how the weather turns out tomorrow.",
+      "prediction": "Let's see how the weather turns out tomorrow",
+      "cer": 0.0222,
+      "wer": 0.0,
+      "audio_len_s": 2.368,
+      "latency_s": 0.0692,
+      "rtf": 0.0292
+    },
+    "en_voice_0030": {
+      "category": "conversational",
+      "ground_truth": "I have a quick question regarding our dinner plans.",
+      "prediction": "I have a quick question regarding our dinner plans",
+      "cer": 0.0196,
+      "wer": 0.0,
+      "audio_len_s": 2.608,
+      "latency_s": 0.0743,
+      "rtf": 0.0285
+    },
+    "en_voice_0031": {
+      "category": "conversational",
+      "ground_truth": "Just wanted to say congratulations on your promotion!",
+      "prediction": "just wanted to say congratulations on your promotion",
+      "cer": 0.0377,
+      "wer": 0.0,
+      "audio_len_s": 3.008,
+      "latency_s": 0.084,
+      "rtf": 0.0279
+    },
+    "en_voice_0032": {
+      "category": "conversational",
+      "ground_truth": "I'm running a few minutes behind schedule.",
+      "prediction": "I'm running a few minutes behind schedule",
+      "cer": 0.0238,
+      "wer": 0.0,
+      "audio_len_s": 2.208,
+      "latency_s": 0.0638,
+      "rtf": 0.0289
+    },
+    "en_voice_0033": {
+      "category": "conversational",
+      "ground_truth": "Do you want me to bring anything for the party?",
+      "prediction": "Do you want me to bring anything for the party",
+      "cer": 0.0213,
+      "wer": 0.0,
+      "audio_len_s": 2.352,
+      "latency_s": 0.0669,
+      "rtf": 0.0285
+    },
+    "en_voice_0034": {
+      "category": "conversational",
+      "ground_truth": "I'll send you the photos as soon as I get home.",
+      "prediction": "I'll send you the photos as soon as I get home.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.72,
+      "latency_s": 0.0791,
+      "rtf": 0.0291
+    },
+    "en_voice_0035": {
+      "category": "conversational",
+      "ground_truth": "It was an absolute pleasure speaking with you.",
+      "prediction": "It was an absolute pleasure speaking with you",
+      "cer": 0.0217,
+      "wer": 0.0,
+      "audio_len_s": 2.528,
+      "latency_s": 0.0709,
+      "rtf": 0.0281
+    },
+    "en_voice_0036": {
+      "category": "conversational",
+      "ground_truth": "I'm almost done with my chores for today.",
+      "prediction": "I am almost done with my chores for today",
+      "cer": 0.0732,
+      "wer": 0.1111,
+      "audio_len_s": 2.496,
+      "latency_s": 0.0695,
+      "rtf": 0.0279
+    },
+    "en_voice_0037": {
+      "category": "conversational",
+      "ground_truth": "Let's get together sometime next week if possible.",
+      "prediction": "Let's get together sometime next week if possible.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.96,
+      "latency_s": 0.0816,
+      "rtf": 0.0276
+    },
+    "en_voice_0038": {
+      "category": "conversational",
+      "ground_truth": "The traffic on the highway was surprisingly light today.",
+      "prediction": "The traffic on the highway was surprisingly lightate today",
+      "cer": 0.0714,
+      "wer": 0.1111,
+      "audio_len_s": 2.864,
+      "latency_s": 0.0781,
+      "rtf": 0.0273
+    },
+    "en_voice_0039": {
+      "category": "conversational",
+      "ground_truth": "I couldn't agree with you more on that point.",
+      "prediction": "I couldn't agree with you more on that point",
+      "cer": 0.0222,
+      "wer": 0.0,
+      "audio_len_s": 2.224,
+      "latency_s": 0.0644,
+      "rtf": 0.0289
+    },
+    "en_voice_0040": {
+      "category": "conversational",
+      "ground_truth": "Take your time, there is no rush at all.",
+      "prediction": "Take your time, there is no rush at all",
+      "cer": 0.025,
+      "wer": 0.0,
+      "audio_len_s": 2.032,
+      "latency_s": 0.0588,
+      "rtf": 0.0289
+    },
+    "en_voice_0041": {
+      "category": "conversational",
+      "ground_truth": "I just arrived at the airport terminal.",
+      "prediction": "I just arrived at the airport terminal",
+      "cer": 0.0256,
+      "wer": 0.0,
+      "audio_len_s": 2.368,
+      "latency_s": 0.0664,
+      "rtf": 0.028
+    },
+    "en_voice_0042": {
+      "category": "conversational",
+      "ground_truth": "Could you give me a hand with these boxes?",
+      "prediction": "Could you give me a hand with these boxes",
+      "cer": 0.0238,
+      "wer": 0.0,
+      "audio_len_s": 2.176,
+      "latency_s": 0.0615,
+      "rtf": 0.0283
+    },
+    "en_voice_0043": {
+      "category": "conversational",
+      "ground_truth": "That was one of the best books I have ever read.",
+      "prediction": "That was one of the best books I have ever read",
+      "cer": 0.0208,
+      "wer": 0.0,
+      "audio_len_s": 2.288,
+      "latency_s": 0.0665,
+      "rtf": 0.0291
+    },
+    "en_voice_0044": {
+      "category": "conversational",
+      "ground_truth": "Let's take a short break before we continue.",
+      "prediction": "Let's take a short break before we continue",
+      "cer": 0.0227,
+      "wer": 0.0,
+      "audio_len_s": 2.496,
+      "latency_s": 0.0691,
+      "rtf": 0.0277
+    },
+    "en_voice_0045": {
+      "category": "conversational",
+      "ground_truth": "I'm feeling much better today, thank you for asking.",
+      "prediction": "I'm feeling much better today. Thank you for asking.",
+      "cer": 0.0385,
+      "wer": 0.0,
+      "audio_len_s": 3.04,
+      "latency_s": 0.0827,
+      "rtf": 0.0272
+    },
+    "en_voice_0046": {
+      "category": "conversational",
+      "ground_truth": "Did you get a chance to look at my message?",
+      "prediction": "Did you get a chance to look at my message",
+      "cer": 0.0233,
+      "wer": 0.0,
+      "audio_len_s": 2.176,
+      "latency_s": 0.0628,
+      "rtf": 0.0289
+    },
+    "en_voice_0047": {
+      "category": "conversational",
+      "ground_truth": "I'll be waiting for you right outside the lobby.",
+      "prediction": "I'll be waiting for you right outside the lobby.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.56,
+      "latency_s": 0.0695,
+      "rtf": 0.0271
+    },
+    "en_voice_0048": {
+      "category": "conversational",
+      "ground_truth": "We had a fantastic time at the concert last night.",
+      "prediction": "We have fantastic time at the concert last night",
+      "cer": 0.08,
+      "wer": 0.2,
+      "audio_len_s": 2.912,
+      "latency_s": 0.0795,
+      "rtf": 0.0273
+    },
+    "en_voice_0049": {
+      "category": "conversational",
+      "ground_truth": "I need to recharge my phone before we head out.",
+      "prediction": "I need to recharge my phone before we head out",
+      "cer": 0.0213,
+      "wer": 0.0,
+      "audio_len_s": 2.608,
+      "latency_s": 0.0723,
+      "rtf": 0.0277
+    },
+    "en_voice_0050": {
+      "category": "conversational",
+      "ground_truth": "Everything went smoothly according to plan.",
+      "prediction": "Everything went smoothly according to plan.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.56,
+      "latency_s": 0.0698,
+      "rtf": 0.0273
+    },
+    "en_voice_0051": {
+      "category": "conversational",
+      "ground_truth": "I'm about to step into another conference call.",
+      "prediction": "I'm about to step into another conference call",
+      "cer": 0.0213,
+      "wer": 0.0,
+      "audio_len_s": 2.592,
+      "latency_s": 0.0733,
+      "rtf": 0.0283
+    },
+    "en_voice_0052": {
+      "category": "conversational",
+      "ground_truth": "Let me know if you need any assistance with that.",
+      "prediction": "Let me know if you need any assistance with that.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.72,
+      "latency_s": 0.0736,
+      "rtf": 0.0271
+    },
+    "en_voice_0053": {
+      "category": "conversational",
+      "ground_truth": "The view from the top of the hill was breathtaking.",
+      "prediction": "The view from the top of the hill was breathtaking",
+      "cer": 0.0196,
+      "wer": 0.0,
+      "audio_len_s": 2.416,
+      "latency_s": 0.0708,
+      "rtf": 0.0293
+    },
+    "en_voice_0054": {
+      "category": "conversational",
+      "ground_truth": "I haven't heard from them since Tuesday morning.",
+      "prediction": "I haven't heard from them since Tuesday morning",
+      "cer": 0.0208,
+      "wer": 0.0,
+      "audio_len_s": 2.576,
+      "latency_s": 0.0735,
+      "rtf": 0.0285
+    },
+    "en_voice_0055": {
+      "category": "conversational",
+      "ground_truth": "Can we talk about this a little later tonight?",
+      "prediction": "Can we talk about this a little later tonight",
+      "cer": 0.0217,
+      "wer": 0.0,
+      "audio_len_s": 2.176,
+      "latency_s": 0.0625,
+      "rtf": 0.0287
+    },
+    "en_voice_0056": {
+      "category": "conversational",
+      "ground_truth": "I'm excited to share some great news with you.",
+      "prediction": "I'm excited to share some great news with you.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.48,
+      "latency_s": 0.0675,
+      "rtf": 0.0272
+    },
+    "en_voice_0057": {
+      "category": "conversational",
+      "ground_truth": "That really brightened up my whole day.",
+      "prediction": "That really brightened up my whole day",
+      "cer": 0.0256,
+      "wer": 0.0,
+      "audio_len_s": 2.256,
+      "latency_s": 0.0679,
+      "rtf": 0.0301
+    },
+    "en_voice_0058": {
+      "category": "conversational",
+      "ground_truth": "Let me double check the reservation details.",
+      "prediction": "Let me double check the reservation details",
+      "cer": 0.0227,
+      "wer": 0.0,
+      "audio_len_s": 2.736,
+      "latency_s": 0.079,
+      "rtf": 0.0289
+    },
+    "en_voice_0059": {
+      "category": "conversational",
+      "ground_truth": "I'm looking for a quiet place to work this afternoon.",
+      "prediction": "I'm looking for a quiet place to work this afternoon",
+      "cer": 0.0189,
+      "wer": 0.0,
+      "audio_len_s": 2.832,
+      "latency_s": 0.0774,
+      "rtf": 0.0273
+    },
+    "en_voice_0060": {
+      "category": "conversational",
+      "ground_truth": "Have a wonderful weekend with your family!",
+      "prediction": "Have a wonderful weekend with your family",
+      "cer": 0.0238,
+      "wer": 0.0,
+      "audio_len_s": 2.208,
+      "latency_s": 0.064,
+      "rtf": 0.029
+    },
+    "en_voice_0061": {
+      "category": "conversational",
+      "ground_truth": "I'll make sure to leave a note on the kitchen table.",
+      "prediction": "I'll make sure to leave a note on the kitchen table",
+      "cer": 0.0192,
+      "wer": 0.0,
+      "audio_len_s": 2.704,
+      "latency_s": 0.0755,
+      "rtf": 0.0279
+    },
+    "en_voice_0062": {
+      "category": "conversational",
+      "ground_truth": "We are planning a small get-together this Saturday.",
+      "prediction": "We are planning a small get together this Saturday",
+      "cer": 0.0392,
+      "wer": 0.0,
+      "audio_len_s": 2.496,
+      "latency_s": 0.0678,
+      "rtf": 0.0272
+    },
+    "en_voice_0063": {
+      "category": "conversational",
+      "ground_truth": "Can you send me a link to that video you mentioned?",
+      "prediction": "Can you send me a link to that video you mentioned",
+      "cer": 0.0196,
+      "wer": 0.0,
+      "audio_len_s": 2.624,
+      "latency_s": 0.076,
+      "rtf": 0.029
+    },
+    "en_voice_0064": {
+      "category": "conversational",
+      "ground_truth": "It looks like rain is coming later this evening.",
+      "prediction": "It looks like rain is coming later this evening",
+      "cer": 0.0208,
+      "wer": 0.0,
+      "audio_len_s": 2.448,
+      "latency_s": 0.0702,
+      "rtf": 0.0287
+    },
+    "en_voice_0065": {
+      "category": "conversational",
+      "ground_truth": "I'll follow up with them first thing in the morning.",
+      "prediction": "I'll follow up with them first thing in the morning",
+      "cer": 0.0192,
+      "wer": 0.0,
+      "audio_len_s": 2.512,
+      "latency_s": 0.0682,
+      "rtf": 0.0272
+    },
+    "en_voice_0066": {
+      "category": "conversational",
+      "ground_truth": "That seems like the most reasonable approach.",
+      "prediction": "That seems like the most reasonable approach",
+      "cer": 0.0222,
+      "wer": 0.0,
+      "audio_len_s": 2.272,
+      "latency_s": 0.0637,
+      "rtf": 0.028
+    },
+    "en_voice_0067": {
+      "category": "conversational",
+      "ground_truth": "I'll do my best to arrive before seven o'clock.",
+      "prediction": "I'll do my best to arrive before seven o'clock",
+      "cer": 0.0213,
+      "wer": 0.0,
+      "audio_len_s": 2.768,
+      "latency_s": 0.0778,
+      "rtf": 0.0281
+    },
+    "en_voice_0068": {
+      "category": "conversational",
+      "ground_truth": "Thank you for being so patient with me today.",
+      "prediction": "Thank you for being so patient with me today",
+      "cer": 0.0222,
+      "wer": 0.0,
+      "audio_len_s": 2.288,
+      "latency_s": 0.0635,
+      "rtf": 0.0277
+    },
+    "en_voice_0069": {
+      "category": "conversational",
+      "ground_truth": "Let's keep each other posted on any updates.",
+      "prediction": "Let's keep each other posted on any updates",
+      "cer": 0.0227,
+      "wer": 0.0,
+      "audio_len_s": 2.416,
+      "latency_s": 0.0675,
+      "rtf": 0.0279
+    },
+    "en_voice_0070": {
+      "category": "conversational",
+      "ground_truth": "I just finished reading that fascinating article.",
+      "prediction": "I just finished reading that fascinating article",
+      "cer": 0.0204,
+      "wer": 0.0,
+      "audio_len_s": 2.656,
+      "latency_s": 0.0775,
+      "rtf": 0.0292
+    },
+    "en_voice_0071": {
+      "category": "conversational",
+      "ground_truth": "Is there anything else I can help you with right now?",
+      "prediction": "Is there anything else I can help you with right now",
+      "cer": 0.0189,
+      "wer": 0.0,
+      "audio_len_s": 2.512,
+      "latency_s": 0.0674,
+      "rtf": 0.0268
+    },
+    "en_voice_0072": {
+      "category": "conversational",
+      "ground_truth": "I'm really glad we had the chance to discuss this.",
+      "prediction": "I'm really glad we had the chance to discuss this",
+      "cer": 0.02,
+      "wer": 0.0,
+      "audio_len_s": 2.912,
+      "latency_s": 0.0794,
+      "rtf": 0.0273
+    },
+    "en_voice_0073": {
+      "category": "conversational",
+      "ground_truth": "Please say hello to everyone for me.",
+      "prediction": "Please say hello to everyone for me",
+      "cer": 0.0278,
+      "wer": 0.0,
+      "audio_len_s": 2.144,
+      "latency_s": 0.0619,
+      "rtf": 0.0289
+    },
+    "en_voice_0074": {
+      "category": "conversational",
+      "ground_truth": "I need to stop by the grocery store on the way.",
+      "prediction": "I need to stop by the grocery store on the way",
+      "cer": 0.0213,
+      "wer": 0.0,
+      "audio_len_s": 2.592,
+      "latency_s": 0.0736,
+      "rtf": 0.0284
+    },
+    "en_voice_0075": {
+      "category": "conversational",
+      "ground_truth": "We should plan our next trip sometime soon.",
+      "prediction": "We should plan our next trip sometime soon",
+      "cer": 0.0233,
+      "wer": 0.0,
+      "audio_len_s": 2.752,
+      "latency_s": 0.0773,
+      "rtf": 0.0281
+    },
+    "en_voice_0076": {
+      "category": "conversational",
+      "ground_truth": "I'll let you know as soon as the package arrives.",
+      "prediction": "I'll let you know as soon as the package arrives",
+      "cer": 0.0204,
+      "wer": 0.0,
+      "audio_len_s": 2.512,
+      "latency_s": 0.068,
+      "rtf": 0.0271
+    },
+    "en_voice_0077": {
+      "category": "conversational",
+      "ground_truth": "That was such a delicious meal, thanks for recommending it.",
+      "prediction": "That was such a delicious meal, thanks for recommending it",
+      "cer": 0.0169,
+      "wer": 0.0,
+      "audio_len_s": 2.944,
+      "latency_s": 0.0826,
+      "rtf": 0.0281
+    },
+    "en_voice_0078": {
+      "category": "conversational",
+      "ground_truth": "I'm heading over to the gym for an hour.",
+      "prediction": "I'm heading over to the gym for an hour",
+      "cer": 0.025,
+      "wer": 0.0,
+      "audio_len_s": 2.032,
+      "latency_s": 0.0578,
+      "rtf": 0.0285
+    },
+    "en_voice_0079": {
+      "category": "conversational",
+      "ground_truth": "Could you remind me of the password for the guest wifi?",
+      "prediction": "Could you remind me of the password for the guest Wi Fi",
+      "cer": 0.0727,
+      "wer": 0.1818,
+      "audio_len_s": 2.912,
+      "latency_s": 0.0799,
+      "rtf": 0.0274
+    },
+    "en_voice_0080": {
+      "category": "conversational",
+      "ground_truth": "I'll be available all morning if you want to chat.",
+      "prediction": "I'll be available all morning if you want to chat",
+      "cer": 0.02,
+      "wer": 0.0,
+      "audio_len_s": 2.688,
+      "latency_s": 0.0761,
+      "rtf": 0.0283
+    },
+    "en_voice_0081": {
+      "category": "conversational",
+      "ground_truth": "Let me review the notes before making a final decision.",
+      "prediction": "Let me review the notes before making a final decision",
+      "cer": 0.0182,
+      "wer": 0.0,
+      "audio_len_s": 3.088,
+      "latency_s": 0.0867,
+      "rtf": 0.0281
+    },
+    "en_voice_0082": {
+      "category": "conversational",
+      "ground_truth": "I hope you feel better and recover quickly.",
+      "prediction": "I hope you feel better and recover quickly",
+      "cer": 0.0233,
+      "wer": 0.0,
+      "audio_len_s": 2.288,
+      "latency_s": 0.0648,
+      "rtf": 0.0283
+    },
+    "en_voice_0083": {
+      "category": "conversational",
+      "ground_truth": "It was great running into you at the bookstore.",
+      "prediction": "It was great running into you at the bookstore",
+      "cer": 0.0213,
+      "wer": 0.0,
+      "audio_len_s": 2.384,
+      "latency_s": 0.0677,
+      "rtf": 0.0284
+    },
+    "en_voice_0084": {
+      "category": "conversational",
+      "ground_truth": "I'll send over the itinerary as soon as it's ready.",
+      "prediction": "I'll send over the Ierrary as soon as it's ready",
+      "cer": 0.1176,
+      "wer": 0.0833,
+      "audio_len_s": 2.752,
+      "latency_s": 0.0776,
+      "rtf": 0.0282
+    },
+    "en_voice_0085": {
+      "category": "conversational",
+      "ground_truth": "Let's make sure we have all the supplies we need.",
+      "prediction": "Let's make sure we have all the supplies we need.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.64,
+      "latency_s": 0.0744,
+      "rtf": 0.0282
+    },
+    "en_voice_0086": {
+      "category": "conversational",
+      "ground_truth": "I'm heading to bed early tonight because I'm exhausted.",
+      "prediction": "I'm heading to bed early tonight because I'm exhausted",
+      "cer": 0.0182,
+      "wer": 0.0,
+      "audio_len_s": 2.832,
+      "latency_s": 0.0768,
+      "rtf": 0.0271
+    },
+    "en_voice_0087": {
+      "category": "conversational",
+      "ground_truth": "We had such a lovely walk in the botanical garden.",
+      "prediction": "We had such a lovely walk in the botanical garden",
+      "cer": 0.02,
+      "wer": 0.0,
+      "audio_len_s": 2.672,
+      "latency_s": 0.0756,
+      "rtf": 0.0283
+    },
+    "en_voice_0088": {
+      "category": "conversational",
+      "ground_truth": "Can you believe how fast this year has gone by?",
+      "prediction": "Can you believe how fast this year has gone by",
+      "cer": 0.0213,
+      "wer": 0.0,
+      "audio_len_s": 2.672,
+      "latency_s": 0.0738,
+      "rtf": 0.0276
+    },
+    "en_voice_0089": {
+      "category": "conversational",
+      "ground_truth": "I'll be online if you want to jump on a quick call.",
+      "prediction": "I'll be online if you want to jump on a quick call",
+      "cer": 0.0196,
+      "wer": 0.0,
+      "audio_len_s": 2.816,
+      "latency_s": 0.0791,
+      "rtf": 0.0281
+    },
+    "en_voice_0090": {
+      "category": "conversational",
+      "ground_truth": "Thanks again for your warm hospitality yesterday.",
+      "prediction": "Thanks again for your warm hospitality yesterday.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.72,
+      "latency_s": 0.0732,
+      "rtf": 0.0269
+    },
+    "en_voice_0091": {
+      "category": "conversational",
+      "ground_truth": "Let's try that new cafe downtown this Friday.",
+      "prediction": "Let's try that new cafe downtown this Friday",
+      "cer": 0.0222,
+      "wer": 0.0,
+      "audio_len_s": 2.768,
+      "latency_s": 0.078,
+      "rtf": 0.0282
+    },
+    "en_voice_0092": {
+      "category": "conversational",
+      "ground_truth": "I'm just finishing up a few remaining errands.",
+      "prediction": "I'm just finishing up a few remaining errands",
+      "cer": 0.0217,
+      "wer": 0.0,
+      "audio_len_s": 2.544,
+      "latency_s": 0.0687,
+      "rtf": 0.027
+    },
+    "en_voice_0093": {
+      "category": "conversational",
+      "ground_truth": "Please drive carefully, the roads might be slippery.",
+      "prediction": "please drive carefully, the roads might be slippery",
+      "cer": 0.0385,
+      "wer": 0.0,
+      "audio_len_s": 2.864,
+      "latency_s": 0.0776,
+      "rtf": 0.0271
+    },
+    "en_voice_0094": {
+      "category": "conversational",
+      "ground_truth": "I will keep you updated throughout the afternoon.",
+      "prediction": "I will keep you updated throughout the afternoon",
+      "cer": 0.0204,
+      "wer": 0.0,
+      "audio_len_s": 2.544,
+      "latency_s": 0.0706,
+      "rtf": 0.0278
+    },
+    "en_voice_0095": {
+      "category": "conversational",
+      "ground_truth": "That sounds like a very promising opportunity.",
+      "prediction": "That sounds like a very promising opportunity",
+      "cer": 0.0217,
+      "wer": 0.0,
+      "audio_len_s": 2.384,
+      "latency_s": 0.0656,
+      "rtf": 0.0275
+    },
+    "en_voice_0096": {
+      "category": "conversational",
+      "ground_truth": "I'll leave the keys under the front doormat.",
+      "prediction": "I'll leave the keys under the front door met",
+      "cer": 0.0682,
+      "wer": 0.2222,
+      "audio_len_s": 2.352,
+      "latency_s": 0.0655,
+      "rtf": 0.0278
+    },
+    "en_voice_0097": {
+      "category": "conversational",
+      "ground_truth": "Hope your presentation goes smoothly and successfully.",
+      "prediction": "Hope your presentation goes smoothly and successfully",
+      "cer": 0.0185,
+      "wer": 0.0,
+      "audio_len_s": 2.976,
+      "latency_s": 0.0838,
+      "rtf": 0.0282
+    },
+    "en_voice_0098": {
+      "category": "conversational",
+      "ground_truth": "We should leave early to avoid the rush hour traffic.",
+      "prediction": "we should leave early to avoid the rush hour traffic",
+      "cer": 0.0377,
+      "wer": 0.0,
+      "audio_len_s": 3.072,
+      "latency_s": 0.0846,
+      "rtf": 0.0275
+    },
+    "en_voice_0099": {
+      "category": "conversational",
+      "ground_truth": "I'm truly grateful for all of your kind support.",
+      "prediction": "I'm truly grateful for all of your kind support",
+      "cer": 0.0208,
+      "wer": 0.0,
+      "audio_len_s": 2.464,
+      "latency_s": 0.0688,
+      "rtf": 0.0279
+    },
+    "en_voice_0100": {
+      "category": "conversational",
+      "ground_truth": "Looking forward to hearing from you soon!",
+      "prediction": "Looking forward to hearing from you soon",
+      "cer": 0.0244,
+      "wer": 0.0,
+      "audio_len_s": 2.112,
+      "latency_s": 0.0617,
+      "rtf": 0.0292
+    },
+    "en_voice_0101": {
+      "category": "business_tech",
+      "ground_truth": "We deployed the latest build to our staging environment.",
+      "prediction": "We deployed the latest build to our staging environment",
+      "cer": 0.0179,
+      "wer": 0.0,
+      "audio_len_s": 2.896,
+      "latency_s": 0.0833,
+      "rtf": 0.0287
+    },
+    "en_voice_0102": {
+      "category": "business_tech",
+      "ground_truth": "The pull request has been approved and merged into main.",
+      "prediction": "The poll request has been approved and merged into main",
+      "cer": 0.0357,
+      "wer": 0.1,
+      "audio_len_s": 3.216,
+      "latency_s": 0.0904,
+      "rtf": 0.0281
+    },
+    "en_voice_0103": {
+      "category": "business_tech",
+      "ground_truth": "Please review the architectural design document by noon.",
+      "prediction": "Please review the arrchitectural desesign document by Noon.",
+      "cer": 0.0714,
+      "wer": 0.25,
+      "audio_len_s": 3.36,
+      "latency_s": 0.0905,
+      "rtf": 0.0269
+    },
+    "en_voice_0104": {
+      "category": "business_tech",
+      "ground_truth": "Our team achieved a twenty percent latency reduction.",
+      "prediction": "Our team achieved a twenty percent latency reduction",
+      "cer": 0.0189,
+      "wer": 0.0,
+      "audio_len_s": 3.088,
+      "latency_s": 0.0855,
+      "rtf": 0.0277
+    },
+    "en_voice_0105": {
+      "category": "business_tech",
+      "ground_truth": "The database migration completed without any data loss.",
+      "prediction": "The database migration completed without any data loss",
+      "cer": 0.0182,
+      "wer": 0.0,
+      "audio_len_s": 3.104,
+      "latency_s": 0.0849,
+      "rtf": 0.0273
+    },
+    "en_voice_0106": {
+      "category": "business_tech",
+      "ground_truth": "We need to update our unit test coverage for the payment gateway.",
+      "prediction": "We need to update our unit test coverage for the payment gateway",
+      "cer": 0.0154,
+      "wer": 0.0,
+      "audio_len_s": 3.664,
+      "latency_s": 0.0992,
+      "rtf": 0.0271
+    },
+    "en_voice_0107": {
+      "category": "business_tech",
+      "ground_truth": "Let's schedule a sprint retrospective for Thursday morning.",
+      "prediction": "Let's schedule a Srint retrospective for Thursday morning",
+      "cer": 0.0508,
+      "wer": 0.1111,
+      "audio_len_s": 3.008,
+      "latency_s": 0.0817,
+      "rtf": 0.0271
+    },
+    "en_voice_0108": {
+      "category": "business_tech",
+      "ground_truth": "The microservices communicate over lightweight gRPC protocols.",
+      "prediction": "The microservices communicate over lightweight GRPC protocols",
+      "cer": 0.0323,
+      "wer": 0.0,
+      "audio_len_s": 4.064,
+      "latency_s": 0.115,
+      "rtf": 0.0283
+    },
+    "en_voice_0109": {
+      "category": "business_tech",
+      "ground_truth": "We should conduct an end to end load test before production launch.",
+      "prediction": "We should conduct an end to end load tests before production launch",
+      "cer": 0.0299,
+      "wer": 0.0833,
+      "audio_len_s": 3.632,
+      "latency_s": 0.0992,
+      "rtf": 0.0273
+    },
+    "en_voice_0110": {
+      "category": "business_tech",
+      "ground_truth": "The customer feedback indicates strong demand for offline features.",
+      "prediction": "The customer feedback indicates strong demand for offline features",
+      "cer": 0.0149,
+      "wer": 0.0,
+      "audio_len_s": 3.824,
+      "latency_s": 0.1054,
+      "rtf": 0.0276
+    },
+    "en_voice_0111": {
+      "category": "business_tech",
+      "ground_truth": "Our continuous integration pipeline passed all regression tests.",
+      "prediction": "Our continuous integration pipeline passed all regression tests.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 3.68,
+      "latency_s": 0.1027,
+      "rtf": 0.0279
+    },
+    "en_voice_0112": {
+      "category": "business_tech",
+      "ground_truth": "Please verify that the security token expires after twenty-four hours.",
+      "prediction": "Please verify that the security token expires after twenty four hours",
+      "cer": 0.0286,
+      "wer": 0.0,
+      "audio_len_s": 3.984,
+      "latency_s": 0.1135,
+      "rtf": 0.0285
+    },
+    "en_voice_0113": {
+      "category": "business_tech",
+      "ground_truth": "The mobile app bundle size was reduced by fifteen megabytes.",
+      "prediction": "The mobile app bundle size was reduced by fifteen megabytes",
+      "cer": 0.0167,
+      "wer": 0.0,
+      "audio_len_s": 3.696,
+      "latency_s": 0.1023,
+      "rtf": 0.0277
+    },
+    "en_voice_0114": {
+      "category": "business_tech",
+      "ground_truth": "We are optimizing the neural network inference for mobile processors.",
+      "prediction": "We are optimizing the neural network inference for mobile processors",
+      "cer": 0.0145,
+      "wer": 0.0,
+      "audio_len_s": 3.488,
+      "latency_s": 0.0965,
+      "rtf": 0.0277
+    },
+    "en_voice_0115": {
+      "category": "business_tech",
+      "ground_truth": "The on-device model achieves high throughput with int8 quantization.",
+      "prediction": "The O device model achieves high throughput within eight quantization",
+      "cer": 0.1618,
+      "wer": 0.3,
+      "audio_len_s": 3.824,
+      "latency_s": 0.1036,
+      "rtf": 0.0271
+    },
+    "en_voice_0116": {
+      "category": "business_tech",
+      "ground_truth": "Let's prioritize resolving the high severity bug in the checkout flow.",
+      "prediction": "Let's prioritize resolving the high severity bug in the checkout flow",
+      "cer": 0.0143,
+      "wer": 0.0,
+      "audio_len_s": 4.336,
+      "latency_s": 0.1705,
+      "rtf": 0.0393
+    },
+    "en_voice_0117": {
+      "category": "business_tech",
+      "ground_truth": "The backend API response time averages under fifty milliseconds.",
+      "prediction": "The backend API response time averages under fifty milliseconds",
+      "cer": 0.0156,
+      "wer": 0.0,
+      "audio_len_s": 4.256,
+      "latency_s": 0.1504,
+      "rtf": 0.0353
+    },
+    "en_voice_0118": {
+      "category": "business_tech",
+      "ground_truth": "We migrated our container cluster to the latest Kubernetes release.",
+      "prediction": "We migrated our container cluster to the latest Kubernetes release",
+      "cer": 0.0149,
+      "wer": 0.0,
+      "audio_len_s": 3.824,
+      "latency_s": 0.1031,
+      "rtf": 0.027
+    },
+    "en_voice_0119": {
+      "category": "business_tech",
+      "ground_truth": "Please ensure all commit messages follow the conventional commit format.",
+      "prediction": "Please ensure all commit messages follow the conventional commit format",
+      "cer": 0.0139,
+      "wer": 0.0,
+      "audio_len_s": 3.968,
+      "latency_s": 0.1098,
+      "rtf": 0.0277
+    },
+    "en_voice_0120": {
+      "category": "business_tech",
+      "ground_truth": "The quarterly technical roadmap will be presented next Tuesday.",
+      "prediction": "The quarterly technical roadmap will be presented next Tuesday",
+      "cer": 0.0159,
+      "wer": 0.0,
+      "audio_len_s": 3.472,
+      "latency_s": 0.0961,
+      "rtf": 0.0277
+    },
+    "en_voice_0121": {
+      "category": "business_tech",
+      "ground_truth": "We noticed a slight regression in cold start application latency.",
+      "prediction": "We noticed a slight regression in cold start application latency",
+      "cer": 0.0154,
+      "wer": 0.0,
+      "audio_len_s": 4.016,
+      "latency_s": 0.1111,
+      "rtf": 0.0277
+    },
+    "en_voice_0122": {
+      "category": "business_tech",
+      "ground_truth": "The asynchronous background worker handles heavy data processing.",
+      "prediction": "The asynchronous background worker handles heavy data processing",
+      "cer": 0.0154,
+      "wer": 0.0,
+      "audio_len_s": 3.504,
+      "latency_s": 0.0969,
+      "rtf": 0.0277
+    },
+    "en_voice_0123": {
+      "category": "business_tech",
+      "ground_truth": "All sensitive user information is encrypted at rest using AES-256.",
+      "prediction": "All sensitive user information is encrypted at R usings AES two hundred and fifty six",
+      "cer": 0.4697,
+      "wer": 0.6364,
+      "audio_len_s": 5.424,
+      "latency_s": 0.1919,
+      "rtf": 0.0354
+    },
+    "en_voice_0124": {
+      "category": "business_tech",
+      "ground_truth": "We established an automated monitoring alert for server memory usage.",
+      "prediction": "We established an automated monitoring alert for server memory usage",
+      "cer": 0.0145,
+      "wer": 0.0,
+      "audio_len_s": 4.016,
+      "latency_s": 0.1186,
+      "rtf": 0.0295
+    },
+    "en_voice_0125": {
+      "category": "business_tech",
+      "ground_truth": "The documentation has been updated to reflect the new API endpoints.",
+      "prediction": "The documentation has been updated to reflect the new API endpoints",
+      "cer": 0.0147,
+      "wer": 0.0,
+      "audio_len_s": 3.936,
+      "latency_s": 0.1138,
+      "rtf": 0.0289
+    },
+    "en_voice_0126": {
+      "category": "business_tech",
+      "ground_truth": "Let's discuss the proposed schema changes during tomorrow's sync.",
+      "prediction": "Let's discuss the proposed schema changes during tomorrow's Sninkc",
+      "cer": 0.0923,
+      "wer": 0.0909,
+      "audio_len_s": 3.488,
+      "latency_s": 0.0952,
+      "rtf": 0.0273
+    },
+    "en_voice_0127": {
+      "category": "business_tech",
+      "ground_truth": "The continuous delivery workflow automatically pushes to the test track.",
+      "prediction": "The continuous delivery workflow automatically pushes to the task track",
+      "cer": 0.0417,
+      "wer": 0.1,
+      "audio_len_s": 3.968,
+      "latency_s": 0.1111,
+      "rtf": 0.028
+    },
+    "en_voice_0128": {
+      "category": "business_tech",
+      "ground_truth": "We achieved ninety-nine point nine percent uptime over the past quarter.",
+      "prediction": "We achieved ninety nine point nine percent uptime over the past quarter",
+      "cer": 0.0278,
+      "wer": 0.0,
+      "audio_len_s": 3.856,
+      "latency_s": 0.1119,
+      "rtf": 0.029
+    },
+    "en_voice_0129": {
+      "category": "business_tech",
+      "ground_truth": "The distributed cache invalidation strategy needs further optimization.",
+      "prediction": "The distributed cash and validation strategy needs further optimization",
+      "cer": 0.0845,
+      "wer": 0.375,
+      "audio_len_s": 4.176,
+      "latency_s": 0.1189,
+      "rtf": 0.0285
+    },
+    "en_voice_0130": {
+      "category": "business_tech",
+      "ground_truth": "Please coordinate with the infrastructure team regarding firewall rules.",
+      "prediction": "Please coordinate with the infrastructure team regarding firewall rules",
+      "cer": 0.0139,
+      "wer": 0.0,
+      "audio_len_s": 3.856,
+      "latency_s": 0.1092,
+      "rtf": 0.0283
+    },
+    "en_voice_0131": {
+      "category": "business_tech",
+      "ground_truth": "Our speech recognition engine runs completely on device without network calls.",
+      "prediction": "Our speech recognition engine runs completely on device without network calls.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 4.56,
+      "latency_s": 0.1258,
+      "rtf": 0.0276
+    },
+    "en_voice_0132": {
+      "category": "business_tech",
+      "ground_truth": "The neural swipe keyboard leverages spatial 1D convolutional layers.",
+      "prediction": "The neural swwipe keyboard leverages spatial one D convolutional layers.",
+      "cer": 0.0735,
+      "wer": 0.3333,
+      "audio_len_s": 4.24,
+      "latency_s": 0.1204,
+      "rtf": 0.0284
+    },
+    "en_voice_0133": {
+      "category": "business_tech",
+      "ground_truth": "We implemented a two-stage candidate retrieval and re-ranking pipeline.",
+      "prediction": "We implemented a two stage candidate retrieval and reranking pipeline",
+      "cer": 0.0423,
+      "wer": 0.1818,
+      "audio_len_s": 4.304,
+      "latency_s": 0.1196,
+      "rtf": 0.0278
+    },
+    "en_voice_0134": {
+      "category": "business_tech",
+      "ground_truth": "The profiler showed significant CPU savings through SIMD vector instructions.",
+      "prediction": "The profiler showed significant CPU savings through SIMD veector instructions.",
+      "cer": 0.013,
+      "wer": 0.1,
+      "audio_len_s": 4.56,
+      "latency_s": 0.1253,
+      "rtf": 0.0275
+    },
+    "en_voice_0135": {
+      "category": "business_tech",
+      "ground_truth": "User dictionary entries are synchronized with the native trie structure.",
+      "prediction": "User dictionary entries are synchronized with the native triructure",
+      "cer": 0.0694,
+      "wer": 0.2,
+      "audio_len_s": 3.696,
+      "latency_s": 0.1023,
+      "rtf": 0.0277
+    },
+    "en_voice_0136": {
+      "category": "business_tech",
+      "ground_truth": "The design system components ensure consistent visual styling across platforms.",
+      "prediction": "The design system components ensure consistent visual styling across platforms",
+      "cer": 0.0127,
+      "wer": 0.0,
+      "audio_len_s": 4.576,
+      "latency_s": 0.1278,
+      "rtf": 0.0279
+    },
+    "en_voice_0137": {
+      "category": "business_tech",
+      "ground_truth": "We added comprehensive integration tests for edge cases and fail-safes.",
+      "prediction": "We added comprehensive integration tests for edge cases and fail saafes",
+      "cer": 0.0423,
+      "wer": 0.0909,
+      "audio_len_s": 4.384,
+      "latency_s": 0.1232,
+      "rtf": 0.0281
+    },
+    "en_voice_0138": {
+      "category": "business_tech",
+      "ground_truth": "The analytics pipeline aggregates anonymized usage telemetry locally.",
+      "prediction": "The analytics pipeline aggregates anonymized usage telemetry locally",
+      "cer": 0.0145,
+      "wer": 0.0,
+      "audio_len_s": 4.432,
+      "latency_s": 0.122,
+      "rtf": 0.0275
+    },
+    "en_voice_0139": {
+      "category": "business_tech",
+      "ground_truth": "Please sign off on the production release checklist by end of day.",
+      "prediction": "Please sign off on the productdion release checklist by end of day",
+      "cer": 0.0303,
+      "wer": 0.0833,
+      "audio_len_s": 3.584,
+      "latency_s": 0.1003,
+      "rtf": 0.028
+    },
+    "en_voice_0140": {
+      "category": "business_tech",
+      "ground_truth": "We refactored the legacy service into clean domain-driven architecture.",
+      "prediction": "We refactored the legacy service into clean domain driven architecture",
+      "cer": 0.0282,
+      "wer": 0.0,
+      "audio_len_s": 3.824,
+      "latency_s": 0.1012,
+      "rtf": 0.0265
+    },
+    "en_voice_0141": {
+      "category": "business_tech",
+      "ground_truth": "The automated build artifact is archived directly on GitHub Actions.",
+      "prediction": "The automated builduild artifact is archived directly on GitHub actctions.",
+      "cer": 0.1029,
+      "wer": 0.2,
+      "audio_len_s": 4.16,
+      "latency_s": 0.1202,
+      "rtf": 0.0289
+    },
+    "en_voice_0142": {
+      "category": "business_tech",
+      "ground_truth": "We validated the memory footprint on devices with limited RAM capacity.",
+      "prediction": "We validated the memory footprint on devices with limited RAM capacity.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 4.24,
+      "latency_s": 0.1156,
+      "rtf": 0.0273
+    },
+    "en_voice_0143": {
+      "category": "business_tech",
+      "ground_truth": "The real-time audio pipeline captures mono 16kHz audio streams seamlessly.",
+      "prediction": "The realal time audio pipeline captures Mono's sixteen KHC audio stream seamlessly.",
+      "cer": 0.2297,
+      "wer": 0.4545,
+      "audio_len_s": 5.2,
+      "latency_s": 0.1443,
+      "rtf": 0.0278
+    },
+    "en_voice_0144": {
+      "category": "business_tech",
+      "ground_truth": "We observed zero memory leaks during extended stress test execution.",
+      "prediction": "We observe zero memory leaks during extended stress test execution.",
+      "cer": 0.0147,
+      "wer": 0.1,
+      "audio_len_s": 4.24,
+      "latency_s": 0.1172,
+      "rtf": 0.0276
+    },
+    "en_voice_0145": {
+      "category": "business_tech",
+      "ground_truth": "The pull request introduces a graceful fallback when models are missing.",
+      "prediction": "The pull request introduces a graceful fallback when models are missing",
+      "cer": 0.0139,
+      "wer": 0.0,
+      "audio_len_s": 3.856,
+      "latency_s": 0.1104,
+      "rtf": 0.0286
+    },
+    "en_voice_0146": {
+      "category": "business_tech",
+      "ground_truth": "We established strict non-regression benchmarks for all core algorithms.",
+      "prediction": "We established strict non regression benchmarks for all core algorithms",
+      "cer": 0.0278,
+      "wer": 0.0,
+      "audio_len_s": 4.368,
+      "latency_s": 0.1217,
+      "rtf": 0.0279
+    },
+    "en_voice_0147": {
+      "category": "business_tech",
+      "ground_truth": "The team resolved twenty open issues during the sprint hardening phase.",
+      "prediction": "The team resolved twenty open issues during the sprint hardening phase.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 3.84,
+      "latency_s": 0.1027,
+      "rtf": 0.0268
+    },
+    "en_voice_0148": {
+      "category": "business_tech",
+      "ground_truth": "Please check the staging server logs to diagnose the network timeout.",
+      "prediction": "Please check the staging server logs to diagnose the network timeout",
+      "cer": 0.0145,
+      "wer": 0.0,
+      "audio_len_s": 3.728,
+      "latency_s": 0.1047,
+      "rtf": 0.0281
+    },
+    "en_voice_0149": {
+      "category": "business_tech",
+      "ground_truth": "Our offline language model provides instant contextual disambiguation.",
+      "prediction": "Our offline language model provides instant contextual disambiguation.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 4.32,
+      "latency_s": 0.122,
+      "rtf": 0.0282
+    },
+    "en_voice_0150": {
+      "category": "business_tech",
+      "ground_truth": "The production deployment went smoothly with zero reported incidents.",
+      "prediction": "The production deployment went smoothly with zero reported incidents",
+      "cer": 0.0145,
+      "wer": 0.0,
+      "audio_len_s": 3.536,
+      "latency_s": 0.0965,
+      "rtf": 0.0273
+    },
+    "en_voice_0151": {
+      "category": "questions_commands",
+      "ground_truth": "What time does the conference call begin?",
+      "prediction": "What time does the conference call begin",
+      "cer": 0.0244,
+      "wer": 0.0,
+      "audio_len_s": 2.176,
+      "latency_s": 0.0622,
+      "rtf": 0.0286
+    },
+    "en_voice_0152": {
+      "category": "questions_commands",
+      "ground_truth": "Where did you leave the presentation slides?",
+      "prediction": "Where did you leave the presentation slides",
+      "cer": 0.0227,
+      "wer": 0.0,
+      "audio_len_s": 2.352,
+      "latency_s": 0.0653,
+      "rtf": 0.0278
+    },
+    "en_voice_0153": {
+      "category": "questions_commands",
+      "ground_truth": "Can you send me the revised budget spreadsheet?",
+      "prediction": "Can you send me the revised budget spreadsheet",
+      "cer": 0.0213,
+      "wer": 0.0,
+      "audio_len_s": 2.432,
+      "latency_s": 0.0685,
+      "rtf": 0.0282
+    },
+    "en_voice_0154": {
+      "category": "questions_commands",
+      "ground_truth": "How much memory does the background service consume?",
+      "prediction": "How much memory does the background service consume?",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.96,
+      "latency_s": 0.0791,
+      "rtf": 0.0267
+    },
+    "en_voice_0155": {
+      "category": "questions_commands",
+      "ground_truth": "Could you please review the attached contract proposal?",
+      "prediction": "Could you please review the attached contract proposal?",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 3.04,
+      "latency_s": 0.0818,
+      "rtf": 0.0269
+    },
+    "en_voice_0156": {
+      "category": "questions_commands",
+      "ground_truth": "Why did the build fail on the continuous integration server?",
+      "prediction": "Why did the build fail on the continuous intntegration server",
+      "cer": 0.05,
+      "wer": 0.1,
+      "audio_len_s": 3.216,
+      "latency_s": 0.092,
+      "rtf": 0.0286
+    },
+    "en_voice_0157": {
+      "category": "questions_commands",
+      "ground_truth": "When will the new feature be available for testing?",
+      "prediction": "When will the new feature be available for testing",
+      "cer": 0.0196,
+      "wer": 0.0,
+      "audio_len_s": 2.512,
+      "latency_s": 0.0693,
+      "rtf": 0.0276
+    },
+    "en_voice_0158": {
+      "category": "questions_commands",
+      "ground_truth": "Who is responsible for managing the cloud infrastructure?",
+      "prediction": "who is responsible for managing the cloud infrastructure,",
+      "cer": 0.0351,
+      "wer": 0.0,
+      "audio_len_s": 3.04,
+      "latency_s": 0.0819,
+      "rtf": 0.0269
+    },
+    "en_voice_0159": {
+      "category": "questions_commands",
+      "ground_truth": "Is there any update regarding the client contract?",
+      "prediction": "Is there any update regarding the client contract",
+      "cer": 0.02,
+      "wer": 0.0,
+      "audio_len_s": 2.784,
+      "latency_s": 0.0839,
+      "rtf": 0.0301
+    },
+    "en_voice_0160": {
+      "category": "questions_commands",
+      "ground_truth": "Should we schedule an urgent alignment meeting today?",
+      "prediction": "should be scheduled an urgent alignment meeting today",
+      "cer": 0.0755,
+      "wer": 0.25,
+      "audio_len_s": 2.704,
+      "latency_s": 0.0737,
+      "rtf": 0.0273
+    },
+    "en_voice_0161": {
+      "category": "questions_commands",
+      "ground_truth": "Turn off the air conditioning before leaving the office.",
+      "prediction": "Turn off the air conditioning before leaving the office.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 2.8,
+      "latency_s": 0.0775,
+      "rtf": 0.0277
+    },
+    "en_voice_0162": {
+      "category": "questions_commands",
+      "ground_truth": "Please make sure all conference room doors are locked.",
+      "prediction": "Please make sure all conference room doors are locked",
+      "cer": 0.0185,
+      "wer": 0.0,
+      "audio_len_s": 2.688,
+      "latency_s": 0.0759,
+      "rtf": 0.0282
+    },
+    "en_voice_0163": {
+      "category": "questions_commands",
+      "ground_truth": "Send the summary email to all stakeholders by five o'clock.",
+      "prediction": "Send the summary email to all stakeholders by five o'clock",
+      "cer": 0.0169,
+      "wer": 0.0,
+      "audio_len_s": 3.264,
+      "latency_s": 0.0895,
+      "rtf": 0.0274
+    },
+    "en_voice_0164": {
+      "category": "questions_commands",
+      "ground_truth": "Double check the input validation logic before committing.",
+      "prediction": "Double check the input validation logic before committing",
+      "cer": 0.0172,
+      "wer": 0.0,
+      "audio_len_s": 3.184,
+      "latency_s": 0.0873,
+      "rtf": 0.0274
+    },
+    "en_voice_0165": {
+      "category": "questions_commands",
+      "ground_truth": "Restart the local development server after pulling the branch.",
+      "prediction": "Restart the local development server after pulling the branch",
+      "cer": 0.0161,
+      "wer": 0.0,
+      "audio_len_s": 3.168,
+      "latency_s": 0.089,
+      "rtf": 0.0281
+    },
+    "en_voice_0166": {
+      "category": "questions_commands",
+      "ground_truth": "What is the expected delivery date for the hardware prototypes?",
+      "prediction": "What is the expected delivery date for the hardware prototypes",
+      "cer": 0.0159,
+      "wer": 0.0,
+      "audio_len_s": 3.408,
+      "latency_s": 0.0924,
+      "rtf": 0.0271
+    },
+    "en_voice_0167": {
+      "category": "questions_commands",
+      "ground_truth": "Can you verify the benchmark numbers on the physical device?",
+      "prediction": "Can you verify the benchmark numbers on the physical device",
+      "cer": 0.0167,
+      "wer": 0.0,
+      "audio_len_s": 3.056,
+      "latency_s": 0.0839,
+      "rtf": 0.0275
+    },
+    "en_voice_0168": {
+      "category": "questions_commands",
+      "ground_truth": "How do we handle network errors when downloading lexicon assets?",
+      "prediction": "How do we handle network errors when downloading Lexicon assets",
+      "cer": 0.0312,
+      "wer": 0.0,
+      "audio_len_s": 3.584,
+      "latency_s": 0.0969,
+      "rtf": 0.027
+    },
+    "en_voice_0169": {
+      "category": "questions_commands",
+      "ground_truth": "Please archive the obsolete documentation from the wiki page.",
+      "prediction": "Please archive the obsolete documentation from the Wiki page",
+      "cer": 0.0328,
+      "wer": 0.0,
+      "audio_len_s": 3.344,
+      "latency_s": 0.094,
+      "rtf": 0.0281
+    },
+    "en_voice_0170": {
+      "category": "questions_commands",
+      "ground_truth": "Could you forward me the invitation link for the seminar?",
+      "prediction": "Could you forward me the invitation link for the seminar",
+      "cer": 0.0175,
+      "wer": 0.0,
+      "audio_len_s": 2.656,
+      "latency_s": 0.0746,
+      "rtf": 0.0281
+    },
+    "en_voice_0171": {
+      "category": "questions_commands",
+      "ground_truth": "Did you receive confirmation from the security review board?",
+      "prediction": "Did you receive confirmation from the seecurity Review Board",
+      "cer": 0.0667,
+      "wer": 0.1111,
+      "audio_len_s": 3.392,
+      "latency_s": 0.0927,
+      "rtf": 0.0273
+    },
+    "en_voice_0172": {
+      "category": "questions_commands",
+      "ground_truth": "What are the main advantages of on-device neural processing?",
+      "prediction": "What are the main advantages of on device neural processing",
+      "cer": 0.0333,
+      "wer": 0.0,
+      "audio_len_s": 3.264,
+      "latency_s": 0.1068,
+      "rtf": 0.0327
+    },
+    "en_voice_0173": {
+      "category": "questions_commands",
+      "ground_truth": "Please ensure the audio recording permission is granted.",
+      "prediction": "Fes ensure the audio recording permission is granted",
+      "cer": 0.0893,
+      "wer": 0.125,
+      "audio_len_s": 2.912,
+      "latency_s": 0.0997,
+      "rtf": 0.0342
+    },
+    "en_voice_0174": {
+      "category": "questions_commands",
+      "ground_truth": "Can we proceed with the phased rollout strategy as planned?",
+      "prediction": "Can we proceed with the phased rollout strategy as planned",
+      "cer": 0.0169,
+      "wer": 0.0,
+      "audio_len_s": 3.376,
+      "latency_s": 0.0971,
+      "rtf": 0.0288
+    },
+    "en_voice_0175": {
+      "category": "questions_commands",
+      "ground_truth": "How can we minimize battery consumption during background sync?",
+      "prediction": "How can we minimize battery consumption during background sink",
+      "cer": 0.0476,
+      "wer": 0.1111,
+      "audio_len_s": 3.472,
+      "latency_s": 0.1463,
+      "rtf": 0.0421
+    },
+    "en_voice_0176": {
+      "category": "questions_commands",
+      "ground_truth": "Check the system logs for any uncaught exceptions or errors.",
+      "prediction": "Check the system logs for any uncught exceptions or errors",
+      "cer": 0.0333,
+      "wer": 0.1,
+      "audio_len_s": 3.312,
+      "latency_s": 0.0918,
+      "rtf": 0.0277
+    },
+    "en_voice_0177": {
+      "category": "questions_commands",
+      "ground_truth": "Please add unit test coverage for the boundary conditions.",
+      "prediction": "Please add unit test coverage for the boundary conditions",
+      "cer": 0.0172,
+      "wer": 0.0,
+      "audio_len_s": 3.088,
+      "latency_s": 0.084,
+      "rtf": 0.0272
+    },
+    "en_voice_0178": {
+      "category": "questions_commands",
+      "ground_truth": "Where can I find the official API documentation for this service?",
+      "prediction": "Where can I find the official API documentation for this service",
+      "cer": 0.0154,
+      "wer": 0.0,
+      "audio_len_s": 3.664,
+      "latency_s": 0.0993,
+      "rtf": 0.0271
+    },
+    "en_voice_0179": {
+      "category": "questions_commands",
+      "ground_truth": "Who will be presenting the quarterly business review tomorrow?",
+      "prediction": "who will be presenting the quarterly businessiness review to morrow",
+      "cer": 0.129,
+      "wer": 0.3333,
+      "audio_len_s": 3.104,
+      "latency_s": 0.0829,
+      "rtf": 0.0267
+    },
+    "en_voice_0180": {
+      "category": "questions_commands",
+      "ground_truth": "Can you share your screen and walk us through the demo?",
+      "prediction": "Can you share your screen and walk us through the demo",
+      "cer": 0.0182,
+      "wer": 0.0,
+      "audio_len_s": 2.688,
+      "latency_s": 0.0744,
+      "rtf": 0.0277
+    },
+    "en_voice_0181": {
+      "category": "questions_commands",
+      "ground_truth": "Please update the release notes with the latest bug fixes.",
+      "prediction": "Please update the release notes with the latest bug fixes",
+      "cer": 0.0172,
+      "wer": 0.0,
+      "audio_len_s": 3.008,
+      "latency_s": 0.083,
+      "rtf": 0.0276
+    },
+    "en_voice_0182": {
+      "category": "questions_commands",
+      "ground_truth": "How does the model perform under noisy acoustic environments?",
+      "prediction": "How does the model perform under noisy acoustic environments",
+      "cer": 0.0164,
+      "wer": 0.0,
+      "audio_len_s": 3.408,
+      "latency_s": 0.0901,
+      "rtf": 0.0264
+    },
+    "en_voice_0183": {
+      "category": "questions_commands",
+      "ground_truth": "Is the custom dictionary saved in persistent internal storage?",
+      "prediction": "Is the custom dictionary saved and persistent internal storage?",
+      "cer": 0.0323,
+      "wer": 0.1111,
+      "audio_len_s": 3.36,
+      "latency_s": 0.0901,
+      "rtf": 0.0268
+    },
+    "en_voice_0184": {
+      "category": "questions_commands",
+      "ground_truth": "Please notify the QA team as soon as the test build is ready.",
+      "prediction": "Please notify the Kuwa team as soon as the test build is ready.",
+      "cer": 0.0656,
+      "wer": 0.0769,
+      "audio_len_s": 3.28,
+      "latency_s": 0.0906,
+      "rtf": 0.0276
+    },
+    "en_voice_0185": {
+      "category": "questions_commands",
+      "ground_truth": "Can we export the benchmark evaluation results to CSV format?",
+      "prediction": "Can we export the benchmark evaluation results to CSV format?",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 3.84,
+      "latency_s": 0.1018,
+      "rtf": 0.0265
+    },
+    "en_voice_0186": {
+      "category": "questions_commands",
+      "ground_truth": "What is the recommended hyperparameter setting for this dataset?",
+      "prediction": "What is the recommended hyper parameter setting for this dataset?",
+      "cer": 0.0156,
+      "wer": 0.2222,
+      "audio_len_s": 3.2,
+      "latency_s": 0.0872,
+      "rtf": 0.0273
+    },
+    "en_voice_0187": {
+      "category": "questions_commands",
+      "ground_truth": "Please confirm that the privacy policy link is working properly.",
+      "prediction": "Please confirm that the privacy policy link is working properly",
+      "cer": 0.0156,
+      "wer": 0.0,
+      "audio_len_s": 3.408,
+      "latency_s": 0.0917,
+      "rtf": 0.0269
+    },
+    "en_voice_0188": {
+      "category": "questions_commands",
+      "ground_truth": "Could you check whether the Bluetooth microphone is connected?",
+      "prediction": "Could you check whether the Bluetooth microphone is connected",
+      "cer": 0.0161,
+      "wer": 0.0,
+      "audio_len_s": 2.896,
+      "latency_s": 0.0787,
+      "rtf": 0.0272
+    },
+    "en_voice_0189": {
+      "category": "questions_commands",
+      "ground_truth": "How long does it take to download the language model files?",
+      "prediction": "How long does it take to download the language model files",
+      "cer": 0.0169,
+      "wer": 0.0,
+      "audio_len_s": 3.104,
+      "latency_s": 0.0841,
+      "rtf": 0.0271
+    },
+    "en_voice_0190": {
+      "category": "questions_commands",
+      "ground_truth": "Please format the source code according to the style guidelines.",
+      "prediction": "Please format the source code according to the style guidelines",
+      "cer": 0.0156,
+      "wer": 0.0,
+      "audio_len_s": 3.184,
+      "latency_s": 0.0839,
+      "rtf": 0.0263
+    },
+    "en_voice_0191": {
+      "category": "questions_commands",
+      "ground_truth": "Did the automated regression test suite finish successfully?",
+      "prediction": "didid the automated regression test suite finish successfully",
+      "cer": 0.0667,
+      "wer": 0.125,
+      "audio_len_s": 3.424,
+      "latency_s": 0.0946,
+      "rtf": 0.0276
+    },
+    "en_voice_0192": {
+      "category": "questions_commands",
+      "ground_truth": "What is the target latency budget for single key stroke processing?",
+      "prediction": "What is the target latency budget for single key stroke processing?",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 3.6,
+      "latency_s": 0.0966,
+      "rtf": 0.0268
+    },
+    "en_voice_0193": {
+      "category": "questions_commands",
+      "ground_truth": "Can you demonstrate how the swipe typing algorithm handles typos?",
+      "prediction": "Can you demonstrate how the swipe typing algorithm handles typos",
+      "cer": 0.0154,
+      "wer": 0.0,
+      "audio_len_s": 3.632,
+      "latency_s": 0.0987,
+      "rtf": 0.0272
+    },
+    "en_voice_0194": {
+      "category": "questions_commands",
+      "ground_truth": "Please grant storage permission before launching the audio recorder.",
+      "prediction": "Please grant storage permission before launching the audio recorder",
+      "cer": 0.0147,
+      "wer": 0.0,
+      "audio_len_s": 3.472,
+      "latency_s": 0.0935,
+      "rtf": 0.0269
+    },
+    "en_voice_0195": {
+      "category": "questions_commands",
+      "ground_truth": "Why is the CPU utilization higher on the secondary test target?",
+      "prediction": "Why is the CPU utilization higher on the secondary test target",
+      "cer": 0.0159,
+      "wer": 0.0,
+      "audio_len_s": 3.744,
+      "latency_s": 0.1046,
+      "rtf": 0.0279
+    },
+    "en_voice_0196": {
+      "category": "questions_commands",
+      "ground_truth": "Could you verify the tokenization output for contracted words?",
+      "prediction": "Could you verify the tokenization output for contracted words",
+      "cer": 0.0161,
+      "wer": 0.0,
+      "audio_len_s": 3.376,
+      "latency_s": 0.092,
+      "rtf": 0.0272
+    },
+    "en_voice_0197": {
+      "category": "questions_commands",
+      "ground_truth": "When should we schedule the next release planning session?",
+      "prediction": "When should we schedule the next release planning session",
+      "cer": 0.0172,
+      "wer": 0.0,
+      "audio_len_s": 2.992,
+      "latency_s": 0.0843,
+      "rtf": 0.0282
+    },
+    "en_voice_0198": {
+      "category": "questions_commands",
+      "ground_truth": "Please review the pull request comments and address the feedback.",
+      "prediction": "Please review the poull request comments and address the feedback",
+      "cer": 0.0308,
+      "wer": 0.1,
+      "audio_len_s": 3.328,
+      "latency_s": 0.091,
+      "rtf": 0.0273
+    },
+    "en_voice_0199": {
+      "category": "questions_commands",
+      "ground_truth": "How do we configure the optimal thread count for mobile devices?",
+      "prediction": "How do we configure the optimal thread count for mobile devices",
+      "cer": 0.0156,
+      "wer": 0.0,
+      "audio_len_s": 3.632,
+      "latency_s": 0.0992,
+      "rtf": 0.0273
+    },
+    "en_voice_0200": {
+      "category": "questions_commands",
+      "ground_truth": "Can you explain the mathematical foundation of this scoring formula?",
+      "prediction": "Can you explain the mathematical foundation of this scoring formula",
+      "cer": 0.0147,
+      "wer": 0.0,
+      "audio_len_s": 3.312,
+      "latency_s": 0.0936,
+      "rtf": 0.0282
+    },
+    "en_voice_0201": {
+      "category": "punctuation_casing",
+      "ground_truth": "Yes, we'll definitely attend Dr. Johnson's lecture on Monday.",
+      "prediction": "Yes, we'll definitely attend doctor, Johnson's lecture on Monday",
+      "cer": 0.1148,
+      "wer": 0.0909,
+      "audio_len_s": 4.224,
+      "latency_s": 0.118,
+      "rtf": 0.0279
+    },
+    "en_voice_0202": {
+      "category": "punctuation_casing",
+      "ground_truth": "Don't worry, they've already arrived at JFK International Airport.",
+      "prediction": "Don't worry, they've already arrived at JFK International Airport.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 3.92,
+      "latency_s": 0.1107,
+      "rtf": 0.0282
+    },
+    "en_voice_0203": {
+      "category": "punctuation_casing",
+      "ground_truth": "Wait, didn't you mention that the meeting was postponed until 3:00 PM?",
+      "prediction": "Wait, didnidn't you mention that the meeting was postponed until three zer zero PM",
+      "cer": 0.2571,
+      "wer": 0.2857,
+      "audio_len_s": 4.688,
+      "latency_s": 0.1288,
+      "rtf": 0.0275
+    },
+    "en_voice_0204": {
+      "category": "punctuation_casing",
+      "ground_truth": "The CEO announced: 'Our quarterly revenue exceeded all expectations.'",
+      "prediction": "The CEO announced, our quarterly revenue exceeded all expectations",
+      "cer": 0.0725,
+      "wer": 0.0,
+      "audio_len_s": 4.464,
+      "latency_s": 0.1248,
+      "rtf": 0.028
+    },
+    "en_voice_0205": {
+      "category": "punctuation_casing",
+      "ground_truth": "It's true; however, we shouldn't overlook the potential risks involved.",
+      "prediction": "It's true, however, we shouldn't overlook the potential risks involved",
+      "cer": 0.0282,
+      "wer": 0.0,
+      "audio_len_s": 4.352,
+      "latency_s": 0.1207,
+      "rtf": 0.0277
+    },
+    "en_voice_0206": {
+      "category": "punctuation_casing",
+      "ground_truth": "Hello, Dr. Smith! How was your recent trip to San Francisco, California?",
+      "prediction": "Hello, doctor. Smith. How was your recent trip to San Francisco, California?",
+      "cer": 0.0833,
+      "wer": 0.0833,
+      "audio_len_s": 5.36,
+      "latency_s": 0.1911,
+      "rtf": 0.0357
+    },
+    "en_voice_0207": {
+      "category": "punctuation_casing",
+      "ground_truth": "We're looking forward to visiting the British Museum next summer.",
+      "prediction": "We're looking forward to visiting the British Museum next summer",
+      "cer": 0.0154,
+      "wer": 0.0,
+      "audio_len_s": 3.328,
+      "latency_s": 0.1475,
+      "rtf": 0.0443
+    },
+    "en_voice_0208": {
+      "category": "punctuation_casing",
+      "ground_truth": "No, that's not what I meant at all—let me clarify my perspective.",
+      "prediction": "No, that's not what I meant at all. let me clarify my perspective",
+      "cer": 0.0462,
+      "wer": 0.0,
+      "audio_len_s": 3.984,
+      "latency_s": 0.1584,
+      "rtf": 0.0398
+    },
+    "en_voice_0209": {
+      "category": "punctuation_casing",
+      "ground_truth": "She exclaimed, 'What an extraordinary achievement for the entire team!'",
+      "prediction": "She exclaimed, What an extraordinary achievement for the entire team.",
+      "cer": 0.0423,
+      "wer": 0.0,
+      "audio_len_s": 3.76,
+      "latency_s": 0.1071,
+      "rtf": 0.0285
+    },
+    "en_voice_0210": {
+      "category": "punctuation_casing",
+      "ground_truth": "Although it was raining heavily, we enjoyed our visit to Central Park.",
+      "prediction": "Although it was raining heavily, we enjoyed our visit to Central Park.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 3.84,
+      "latency_s": 0.103,
+      "rtf": 0.0268
+    },
+    "en_voice_0211": {
+      "category": "punctuation_casing",
+      "ground_truth": "Please contact Ms. Miller at her office in downtown Chicago, Illinois.",
+      "prediction": "Please contact TS, Miller at her office in downtown Chicago, Illinois",
+      "cer": 0.0571,
+      "wer": 0.0909,
+      "audio_len_s": 4.608,
+      "latency_s": 0.1331,
+      "rtf": 0.0289
+    },
+    "en_voice_0212": {
+      "category": "punctuation_casing",
+      "ground_truth": "They haven't received the shipment yet; it's scheduled for Wednesday.",
+      "prediction": "They haven't received the shipment yet. It's scheduled for Wednesday",
+      "cer": 0.0435,
+      "wer": 0.0,
+      "audio_len_s": 3.792,
+      "latency_s": 0.1037,
+      "rtf": 0.0273
+    },
+    "en_voice_0213": {
+      "category": "punctuation_casing",
+      "ground_truth": "Well, I believe we've found the root cause of the performance bottleneck.",
+      "prediction": "Well, I believe we've found the root cause of the performance bottleneck",
+      "cer": 0.0137,
+      "wer": 0.0,
+      "audio_len_s": 3.776,
+      "latency_s": 0.1057,
+      "rtf": 0.028
+    },
+    "en_voice_0214": {
+      "category": "punctuation_casing",
+      "ground_truth": "Professor Williams published his groundbreaking research in Nature.",
+      "prediction": "Professor Williams published his groundbreaking research in Nature",
+      "cer": 0.0149,
+      "wer": 0.0,
+      "audio_len_s": 3.408,
+      "latency_s": 0.0937,
+      "rtf": 0.0275
+    },
+    "en_voice_0215": {
+      "category": "punctuation_casing",
+      "ground_truth": "Can we meet at the Starbucks on 5th Avenue, or do you prefer Blue Bottle?",
+      "prediction": "Can we meet at the Starbucks on Fifth Avenue or do you prefer Blue Bottle",
+      "cer": 0.0685,
+      "wer": 0.0667,
+      "audio_len_s": 4.096,
+      "latency_s": 0.1153,
+      "rtf": 0.0281
+    },
+    "en_voice_0216": {
+      "category": "punctuation_casing",
+      "ground_truth": "The user's preferences are saved securely in the Android SharedPreferences.",
+      "prediction": "The users' preferences are saved securely in the Android shared preferences",
+      "cer": 0.08,
+      "wer": 0.3636,
+      "audio_len_s": 4.048,
+      "latency_s": 0.1161,
+      "rtf": 0.0287
+    },
+    "en_voice_0217": {
+      "category": "punctuation_casing",
+      "ground_truth": "Look, here's the deal: we need to deliver the project by December 1st.",
+      "prediction": "Look, here's the deal. We need to deliver the project by december first",
+      "cer": 0.1,
+      "wer": 0.0714,
+      "audio_len_s": 4.064,
+      "latency_s": 0.1116,
+      "rtf": 0.0275
+    },
+    "en_voice_0218": {
+      "category": "punctuation_casing",
+      "ground_truth": "Isn't it fascinating how on-device AI preserves complete user privacy?",
+      "prediction": "Ist it fascinating how on device AI preserves complete user privacy",
+      "cer": 0.0571,
+      "wer": 0.1667,
+      "audio_len_s": 4.192,
+      "latency_s": 0.1188,
+      "rtf": 0.0283
+    },
+    "en_voice_0219": {
+      "category": "punctuation_casing",
+      "ground_truth": "Yes, Mr. Davis will represent our company at the annual CES exhibition.",
+      "prediction": "Yes, mister, Davis will represent our company at the Annual CES exhibition",
+      "cer": 0.1127,
+      "wer": 0.0833,
+      "audio_len_s": 4.896,
+      "latency_s": 0.1341,
+      "rtf": 0.0274
+    },
+    "en_voice_0220": {
+      "category": "punctuation_casing",
+      "ground_truth": "We visited Paris, Rome, and Barcelona during our European tour last year.",
+      "prediction": "We visited Paris, Rome, and Barcelona during our European tour last year",
+      "cer": 0.0137,
+      "wer": 0.0,
+      "audio_len_s": 4.752,
+      "latency_s": 0.1308,
+      "rtf": 0.0275
+    },
+    "en_voice_0221": {
+      "category": "punctuation_casing",
+      "ground_truth": "Good morning, everyone! Let's kick off today's standup meeting on time.",
+      "prediction": "Good morning, everyone. Let's kick off today's standup meeeting on T",
+      "cer": 0.0986,
+      "wer": 0.1538,
+      "audio_len_s": 4.368,
+      "latency_s": 0.1197,
+      "rtf": 0.0274
+    },
+    "en_voice_0222": {
+      "category": "punctuation_casing",
+      "ground_truth": "Wait a second—are you certain that the backup archive is intact?",
+      "prediction": "Wait a second, are you certain that the backup archive isn int haact?",
+      "cer": 0.0938,
+      "wer": 0.25,
+      "audio_len_s": 3.12,
+      "latency_s": 0.0866,
+      "rtf": 0.0277
+    },
+    "en_voice_0223": {
+      "category": "punctuation_casing",
+      "ground_truth": "The report stated: 'User engagement increased by thirty-five percent.'",
+      "prediction": "The report stated, user engagement increased by thirty five percent",
+      "cer": 0.0857,
+      "wer": 0.0,
+      "audio_len_s": 4.112,
+      "latency_s": 0.1144,
+      "rtf": 0.0278
+    },
+    "en_voice_0224": {
+      "category": "punctuation_casing",
+      "ground_truth": "It's a high-priority ticket, so please address it as soon as possible.",
+      "prediction": "It's a high priority ticket, so please address it as soon as possible",
+      "cer": 0.0286,
+      "wer": 0.0,
+      "audio_len_s": 3.728,
+      "latency_s": 0.1059,
+      "rtf": 0.0284
+    },
+    "en_voice_0225": {
+      "category": "punctuation_casing",
+      "ground_truth": "Dr. Anderson presented a paper titled 'Advances in FastConformer Speech Models'.",
+      "prediction": "Doctor, Anderson presented a paper titled Advances in Fast Conformer speech models",
+      "cer": 0.1375,
+      "wer": 0.2727,
+      "audio_len_s": 5.024,
+      "latency_s": 0.136,
+      "rtf": 0.0271
+    },
+    "en_voice_0226": {
+      "category": "punctuation_casing",
+      "ground_truth": "No matter what happens, we'll continue to support our open-source users.",
+      "prediction": "no matter what happens, we'll continue to support our open source users",
+      "cer": 0.0417,
+      "wer": 0.0,
+      "audio_len_s": 4.304,
+      "latency_s": 0.1191,
+      "rtf": 0.0277
+    },
+    "en_voice_0227": {
+      "category": "punctuation_casing",
+      "ground_truth": "Have you spoken with Dr. Patel regarding the clinical trial results?",
+      "prediction": "Have you spoken with Doctor, Patel regarding the clinical trial results",
+      "cer": 0.0882,
+      "wer": 0.0909,
+      "audio_len_s": 4.272,
+      "latency_s": 0.1195,
+      "rtf": 0.028
+    },
+    "en_voice_0228": {
+      "category": "punctuation_casing",
+      "ground_truth": "Sure, I'll send the PDF document to Sarah, David, and Michael right away.",
+      "prediction": "Sure, I'll send the PDF document to Sarah, David, and Michael right away",
+      "cer": 0.0137,
+      "wer": 0.0,
+      "audio_len_s": 4.608,
+      "latency_s": 0.1258,
+      "rtf": 0.0273
+    },
+    "en_voice_0229": {
+      "category": "punctuation_casing",
+      "ground_truth": "That's fantastic news! Congratulations to everyone involved in the launch.",
+      "prediction": "That's fantastic news. Congratulations to everyone involved in the launch",
+      "cer": 0.027,
+      "wer": 0.0,
+      "audio_len_s": 4.576,
+      "latency_s": 0.1245,
+      "rtf": 0.0272
+    },
+    "en_voice_0230": {
+      "category": "punctuation_casing",
+      "ground_truth": "We're testing the application on both Google Pixel and Samsung Galaxy phones.",
+      "prediction": "We're testing the application on both Google Pixel and Samsung Galaxy phones.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 4.48,
+      "latency_s": 0.124,
+      "rtf": 0.0277
+    },
+    "en_voice_0231": {
+      "category": "punctuation_casing",
+      "ground_truth": "Remember to bring your passport, boarding pass, and driver's license.",
+      "prediction": "Remember to bring your passport, boarding pass, and driver's license.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 3.84,
+      "latency_s": 0.1036,
+      "rtf": 0.027
+    },
+    "en_voice_0232": {
+      "category": "punctuation_casing",
+      "ground_truth": "According to Bloomberg, tech stocks rebounded sharply during morning trading.",
+      "prediction": "According to Bloomberg, tech stocks rebounded sharply during morning trading",
+      "cer": 0.013,
+      "wer": 0.0,
+      "audio_len_s": 4.176,
+      "latency_s": 0.1154,
+      "rtf": 0.0276
+    },
+    "en_voice_0233": {
+      "category": "punctuation_casing",
+      "ground_truth": "Oh, by the way, did you receive the package from Amazon this morning?",
+      "prediction": "Oh, by the way, did you receive the package from Amazon this morning",
+      "cer": 0.0145,
+      "wer": 0.0,
+      "audio_len_s": 4.128,
+      "latency_s": 0.1175,
+      "rtf": 0.0285
+    },
+    "en_voice_0234": {
+      "category": "punctuation_casing",
+      "ground_truth": "The software supports English, Japanese, French, German, and Spanish.",
+      "prediction": "The software supports English, Japanese, French, German, and Spanish.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 4.72,
+      "latency_s": 0.1282,
+      "rtf": 0.0272
+    },
+    "en_voice_0235": {
+      "category": "punctuation_casing",
+      "ground_truth": "Let's consult with Chief Architect Robert before finalizing the design.",
+      "prediction": "Let's consult with Chief architect Robert before finalizing the design",
+      "cer": 0.0282,
+      "wer": 0.0,
+      "audio_len_s": 4.032,
+      "latency_s": 0.1145,
+      "rtf": 0.0284
+    },
+    "en_voice_0236": {
+      "category": "punctuation_casing",
+      "ground_truth": "Indeed, it's essential to maintain 100% test pass rates across all suites.",
+      "prediction": "Indeed, it's essential to maintain one hundred percent test pass rates across all suites",
+      "cer": 0.2703,
+      "wer": 0.2308,
+      "audio_len_s": 5.184,
+      "latency_s": 0.1424,
+      "rtf": 0.0275
+    },
+    "en_voice_0237": {
+      "category": "punctuation_casing",
+      "ground_truth": "Pardon me, could you direct me toward Grand Central Terminal?",
+      "prediction": "Pardon me, could you direct me to Wward Grand Central Terminal",
+      "cer": 0.0492,
+      "wer": 0.2,
+      "audio_len_s": 3.664,
+      "latency_s": 0.102,
+      "rtf": 0.0278
+    },
+    "en_voice_0238": {
+      "category": "punctuation_casing",
+      "ground_truth": "The company's headquarters are located in Austin, Texas, United States.",
+      "prediction": "The company's headquarters are located in Austin, Texas, United States",
+      "cer": 0.0141,
+      "wer": 0.0,
+      "audio_len_s": 4.384,
+      "latency_s": 0.1209,
+      "rtf": 0.0276
+    },
+    "en_voice_0239": {
+      "category": "punctuation_casing",
+      "ground_truth": "Whatever you decide, we're fully confident in your leadership abilities.",
+      "prediction": "Whatever you decide, we're fully confident in your leadership abilities",
+      "cer": 0.0139,
+      "wer": 0.0,
+      "audio_len_s": 4.064,
+      "latency_s": 0.1136,
+      "rtf": 0.0279
+    },
+    "en_voice_0240": {
+      "category": "punctuation_casing",
+      "ground_truth": "Please welcome our keynote speaker, Dr. Elizabeth Turner from MIT.",
+      "prediction": "Please welcome our keynote speaker, Dror, Elizabeth Turner from MIT",
+      "cer": 0.0606,
+      "wer": 0.1,
+      "audio_len_s": 4.432,
+      "latency_s": 0.1204,
+      "rtf": 0.0272
+    },
+    "en_voice_0241": {
+      "category": "punctuation_casing",
+      "ground_truth": "Don't forget: tomorrow's all-hands meeting starts promptly at 9:30 AM.",
+      "prediction": "Don't forget. Tomorrow's All Hs meeting starts promptly at nine thirty AM.",
+      "cer": 0.2714,
+      "wer": 0.2143,
+      "audio_len_s": 4.56,
+      "latency_s": 0.125,
+      "rtf": 0.0274
+    },
+    "en_voice_0242": {
+      "category": "punctuation_casing",
+      "ground_truth": "Is there any difference between 'affect' and 'effect' in this context?",
+      "prediction": "Is there any difference between effect and effect in this context",
+      "cer": 0.3714,
+      "wer": 0.0909,
+      "audio_len_s": 3.408,
+      "latency_s": 0.0928,
+      "rtf": 0.0272
+    },
+    "en_voice_0243": {
+      "category": "punctuation_casing",
+      "ground_truth": "We'll review the architectural blueprints with Mr. Tanaka from Tokyo.",
+      "prediction": "We'll review the architectural blueprints with Mr. Tanaka from Tokyo.",
+      "cer": 0.0,
+      "wer": 0.0,
+      "audio_len_s": 4.32,
+      "latency_s": 0.1176,
+      "rtf": 0.0272
+    },
+    "en_voice_0244": {
+      "category": "punctuation_casing",
+      "ground_truth": "Amazing! The inference latency dropped from 100ms down to just 15ms.",
+      "prediction": "Amazing. The inference latency dropped from one hundred MS down to just fifteen MS",
+      "cer": 0.3676,
+      "wer": 0.4545,
+      "audio_len_s": 5.008,
+      "latency_s": 0.1365,
+      "rtf": 0.0273
+    },
+    "en_voice_0245": {
+      "category": "punctuation_casing",
+      "ground_truth": "As expected, the team delivered outstanding results ahead of schedule.",
+      "prediction": "As expected, the team delivered outstanding results ahead of schedule",
+      "cer": 0.0143,
+      "wer": 0.0,
+      "audio_len_s": 3.792,
+      "latency_s": 0.1021,
+      "rtf": 0.0269
+    },
+    "en_voice_0246": {
+      "category": "punctuation_casing",
+      "ground_truth": "Stop! Please do not delete any files inside the shared repository.",
+      "prediction": "Stop, please do not delete any files inside the shared repository",
+      "cer": 0.0455,
+      "wer": 0.0,
+      "audio_len_s": 3.984,
+      "latency_s": 0.1108,
+      "rtf": 0.0278
+    },
+    "en_voice_0247": {
+      "category": "punctuation_casing",
+      "ground_truth": "They've established new research facilities in Zurich, Switzerland.",
+      "prediction": "They've established new research facilities in Zurich, Switzerland",
+      "cer": 0.0149,
+      "wer": 0.0,
+      "audio_len_s": 3.568,
+      "latency_s": 0.0993,
+      "rtf": 0.0278
+    },
+    "en_voice_0248": {
+      "category": "punctuation_casing",
+      "ground_truth": "I'm certain that Ms. Clark will provide valuable insights during the panel.",
+      "prediction": "I'm certain that MS, Clarark, will provide valuable insights during the panel",
+      "cer": 0.08,
+      "wer": 0.0769,
+      "audio_len_s": 4.544,
+      "latency_s": 0.1271,
+      "rtf": 0.028
+    },
+    "en_voice_0249": {
+      "category": "punctuation_casing",
+      "ground_truth": "Here's the summary: Phase 1 is complete, and Phase 2 begins next week.",
+      "prediction": "Here's the summary. Phase one is complete, and Phase two begins next week",
+      "cer": 0.1143,
+      "wer": 0.1429,
+      "audio_len_s": 4.432,
+      "latency_s": 0.1207,
+      "rtf": 0.0272
+    },
+    "en_voice_0250": {
+      "category": "punctuation_casing",
+      "ground_truth": "Congratulations on completing your Master of Science degree at Stanford!",
+      "prediction": "Congratulations on completing your Master of science degree at Stanford",
+      "cer": 0.0278,
+      "wer": 0.0,
+      "audio_len_s": 3.632,
+      "latency_s": 0.0996,
+      "rtf": 0.0274
+    },
+    "en_voice_0251": {
+      "category": "numbers_dates",
+      "ground_truth": "The total invoice came to $1,450.75 including tax.",
+      "prediction": "The total invoice came to dollar one thousand four hundred and fifty point seven five including tax",
+      "cer": 1.2,
+      "wer": 1.0,
+      "audio_len_s": 4.992,
+      "latency_s": 0.1353,
+      "rtf": 0.0271
+    },
+    "en_voice_0252": {
+      "category": "numbers_dates",
+      "ground_truth": "Our flight departs at 6:45 AM from Gate 24.",
+      "prediction": "Our flight departs at six forty five AM from gate twenty four",
+      "cer": 0.6047,
+      "wer": 0.5,
+      "audio_len_s": 3.456,
+      "latency_s": 0.0973,
+      "rtf": 0.0281
+    },
+    "en_voice_0253": {
+      "category": "numbers_dates",
+      "ground_truth": "The project deadline has been extended to November 30th, 2026.",
+      "prediction": "The project deadline has been extended to november thirtieth, twenty twenty six.",
+      "cer": 0.4032,
+      "wer": 0.4,
+      "audio_len_s": 4.56,
+      "latency_s": 0.1233,
+      "rtf": 0.027
+    },
+    "en_voice_0254": {
+      "category": "numbers_dates",
+      "ground_truth": "We observed a 15% increase in user engagement over 90 days.",
+      "prediction": "We observed a fifteen percent increase in user engagement over ninety days",
+      "cer": 0.3729,
+      "wer": 0.2727,
+      "audio_len_s": 4.416,
+      "latency_s": 0.1252,
+      "rtf": 0.0283
+    },
+    "en_voice_0255": {
+      "category": "numbers_dates",
+      "ground_truth": "The apartment has 3 bedrooms, 2 bathrooms, and 1,200 square feet.",
+      "prediction": "The apartment has three bedrooms, two bathrooms and one thousand two hundred square feet",
+      "cer": 0.5231,
+      "wer": 0.5,
+      "audio_len_s": 4.816,
+      "latency_s": 0.133,
+      "rtf": 0.0276
+    },
+    "en_voice_0256": {
+      "category": "numbers_dates",
+      "ground_truth": "The temperature dropped to -5 degrees Celsius overnight.",
+      "prediction": "The temperature dropped to minus five degrees Celsius overnight",
+      "cer": 0.1964,
+      "wer": 0.25,
+      "audio_len_s": 3.488,
+      "latency_s": 0.095,
+      "rtf": 0.0272
+    },
+    "en_voice_0257": {
+      "category": "numbers_dates",
+      "ground_truth": "Please submit your expense receipts by Friday, October 23rd.",
+      "prediction": "Please submit your expense receipts by Friday, october twenty third",
+      "cer": 0.2,
+      "wer": 0.2222,
+      "audio_len_s": 4.064,
+      "latency_s": 0.1127,
+      "rtf": 0.0277
+    },
+    "en_voice_0258": {
+      "category": "numbers_dates",
+      "ground_truth": "The train leaves every 15 minutes between 7:00 AM and 10:00 PM.",
+      "prediction": "The train leaves at every fifteen minutes between seven zero zero AM and ten zero zero PM",
+      "cer": 0.619,
+      "wer": 0.5714,
+      "audio_len_s": 5.488,
+      "latency_s": 0.152,
+      "rtf": 0.0277
+    },
+    "en_voice_0259": {
+      "category": "numbers_dates",
+      "ground_truth": "We collected 10,000 samples for the empirical benchmark evaluation.",
+      "prediction": "We collected ten thousand samples for the empirical benchmark evaluation",
+      "cer": 0.194,
+      "wer": 0.2,
+      "audio_len_s": 4.208,
+      "latency_s": 0.1169,
+      "rtf": 0.0278
+    },
+    "en_voice_0260": {
+      "category": "numbers_dates",
+      "ground_truth": "The company was founded on September 15th, 1998 in California.",
+      "prediction": "The company was founded on september fifteenth, nineteen hundred ninety eight in California",
+      "cer": 0.6129,
+      "wer": 0.5,
+      "audio_len_s": 4.608,
+      "latency_s": 0.1264,
+      "rtf": 0.0274
+    },
+    "en_voice_0261": {
+      "category": "numbers_dates",
+      "ground_truth": "Each participant received a $50 gift card for completing the survey.",
+      "prediction": "Each participant received a dollar fifty gift card for completing the survey.",
+      "cer": 0.1765,
+      "wer": 0.1818,
+      "audio_len_s": 4.08,
+      "latency_s": 0.115,
+      "rtf": 0.0282
+    },
+    "en_voice_0262": {
+      "category": "numbers_dates",
+      "ground_truth": "The battery life lasted for 14 hours and 30 minutes of continuous use.",
+      "prediction": "The battery life lasted for fourteen hours and thirty minutes of continuous use",
+      "cer": 0.2143,
+      "wer": 0.1538,
+      "audio_len_s": 4.304,
+      "latency_s": 0.1205,
+      "rtf": 0.028
+    },
+    "en_voice_0263": {
+      "category": "numbers_dates",
+      "ground_truth": "There are 52 weeks in a standard year and 365 days.",
+      "prediction": "There are fifty two weeks in a standard year and three hundred and sixty five days",
+      "cer": 0.7451,
+      "wer": 0.6364,
+      "audio_len_s": 3.856,
+      "latency_s": 0.1084,
+      "rtf": 0.0281
+    },
+    "en_voice_0264": {
+      "category": "numbers_dates",
+      "ground_truth": "The engine processes 16,000 samples per second of audio input.",
+      "prediction": "The engine processes sixteen thousand samples per second of audio input.",
+      "cer": 0.2581,
+      "wer": 0.1818,
+      "audio_len_s": 4.24,
+      "latency_s": 0.1158,
+      "rtf": 0.0273
+    },
+    "en_voice_0265": {
+      "category": "numbers_dates",
+      "ground_truth": "We achieved an average real-time factor of 0.045 on 2 CPU cores.",
+      "prediction": "We achieved an average real time factor of zero point zero four five on two CPU cores",
+      "cer": 0.4688,
+      "wer": 0.4286,
+      "audio_len_s": 5.312,
+      "latency_s": 0.1448,
+      "rtf": 0.0273
+    },
+    "en_voice_0266": {
+      "category": "numbers_dates",
+      "ground_truth": "The building is located at 742 Evergreen Terrace, Springfield.",
+      "prediction": "The building is located at seven hundred and forty two Evergreen Terrace, Springfield.",
+      "cer": 0.4355,
+      "wer": 0.5556,
+      "audio_len_s": 4.4,
+      "latency_s": 0.124,
+      "rtf": 0.0282
+    },
+    "en_voice_0267": {
+      "category": "numbers_dates",
+      "ground_truth": "The discount code offers 20% off all purchases over $100.",
+      "prediction": "The discount code offers twenty per cent off all purchases over dollar one hundred",
+      "cer": 0.5789,
+      "wer": 0.6,
+      "audio_len_s": 4.464,
+      "latency_s": 0.1213,
+      "rtf": 0.0272
+    },
+    "en_voice_0268": {
+      "category": "numbers_dates",
+      "ground_truth": "Our server responded to 25,000 requests per minute during peak hours.",
+      "prediction": "Our server responded to twenty five thousand requests per minute during peak hours",
+      "cer": 0.3043,
+      "wer": 0.25,
+      "audio_len_s": 4.512,
+      "latency_s": 0.1266,
+      "rtf": 0.0281
+    },
+    "en_voice_0269": {
+      "category": "numbers_dates",
+      "ground_truth": "The meeting is scheduled from 2:00 PM to 3:30 PM on August 14th.",
+      "prediction": "The meeting is scheduled from twozero zero PM to three thirty PM on august fourteenth",
+      "cer": 0.5312,
+      "wer": 0.3333,
+      "audio_len_s": 4.576,
+      "latency_s": 0.1247,
+      "rtf": 0.0273
+    },
+    "en_voice_0270": {
+      "category": "numbers_dates",
+      "ground_truth": "The package weighs approximately 4.5 kilograms or 10 pounds.",
+      "prediction": "The package weighs approximately four point five kilograms or ten pounds",
+      "cer": 0.3167,
+      "wer": 0.4,
+      "audio_len_s": 4.176,
+      "latency_s": 0.1178,
+      "rtf": 0.0282
+    },
+    "en_voice_0271": {
+      "category": "numbers_dates",
+      "ground_truth": "We invested $2.5 million into research and development this quarter.",
+      "prediction": "We invested dollar two point five million into research and development this quarter",
+      "cer": 0.3235,
+      "wer": 0.3636,
+      "audio_len_s": 4.336,
+      "latency_s": 0.1191,
+      "rtf": 0.0275
+    },
+    "en_voice_0272": {
+      "category": "numbers_dates",
+      "ground_truth": "The highway speed limit is 65 miles per hour in this zone.",
+      "prediction": "The highway speed limit is sixty five miles per hour in this zone.",
+      "cer": 0.1724,
+      "wer": 0.1667,
+      "audio_len_s": 3.68,
+      "latency_s": 0.0995,
+      "rtf": 0.027
+    },
+    "en_voice_0273": {
+      "category": "numbers_dates",
+      "ground_truth": "A total of 450 engineers attended the annual developer summit.",
+      "prediction": "A total of four hundred and fifty engineers attended the annual Developer Summit",
+      "cer": 0.4032,
+      "wer": 0.4,
+      "audio_len_s": 3.968,
+      "latency_s": 0.1122,
+      "rtf": 0.0283
+    },
+    "en_voice_0274": {
+      "category": "numbers_dates",
+      "ground_truth": "The warranty period covers parts and labor for up to 3 years.",
+      "prediction": "The warranty period covers parts and labor for up to three years.",
+      "cer": 0.082,
+      "wer": 0.0833,
+      "audio_len_s": 3.6,
+      "latency_s": 0.0947,
+      "rtf": 0.0263
+    },
+    "en_voice_0275": {
+      "category": "numbers_dates",
+      "ground_truth": "We celebrated the 10th anniversary of the open source foundation.",
+      "prediction": "We celebrated the tenth anniversary of the openen source Foundation",
+      "cer": 0.1077,
+      "wer": 0.2,
+      "audio_len_s": 3.376,
+      "latency_s": 0.0929,
+      "rtf": 0.0275
+    },
+    "en_voice_0276": {
+      "category": "numbers_dates",
+      "ground_truth": "The price of gasoline rose by $0.15 per gallon this week.",
+      "prediction": "The price of gasoline rose by dollar zero point one five per gallon this week.",
+      "cer": 0.4561,
+      "wer": 0.4167,
+      "audio_len_s": 4.48,
+      "latency_s": 0.1201,
+      "rtf": 0.0268
+    },
+    "en_voice_0277": {
+      "category": "numbers_dates",
+      "ground_truth": "Please transfer $350 directly to account number 849201.",
+      "prediction": "Please transfer dollar three hundred fifty directly to account number eight hundred forty nine thousand two hundred one",
+      "cer": 1.3636,
+      "wer": 1.5,
+      "audio_len_s": 6.192,
+      "latency_s": 0.166,
+      "rtf": 0.0268
+    },
+    "en_voice_0278": {
+      "category": "numbers_dates",
+      "ground_truth": "The presentation slides contain 42 pages and 18 technical diagrams.",
+      "prediction": "The presentation slides contain forty two pages and eighteen technical diagrams",
+      "cer": 0.2687,
+      "wer": 0.3,
+      "audio_len_s": 4.784,
+      "latency_s": 0.1312,
+      "rtf": 0.0274
+    },
+    "en_voice_0279": {
+      "category": "numbers_dates",
+      "ground_truth": "The marathon course spans exactly 26.2 miles or 42.195 kilometers.",
+      "prediction": "The marathon core spans exactly twenty six point two miles or forty two point one nine five kilometers",
+      "cer": 0.7879,
+      "wer": 0.9167,
+      "audio_len_s": 5.728,
+      "latency_s": 0.1563,
+      "rtf": 0.0273
+    },
+    "en_voice_0280": {
+      "category": "numbers_dates",
+      "ground_truth": "Our office will be closed on December 25th and January 1st.",
+      "prediction": "Our office will be closed on december twenty fifth and january first.",
+      "cer": 0.2542,
+      "wer": 0.2727,
+      "audio_len_s": 3.76,
+      "latency_s": 0.1032,
+      "rtf": 0.0274
+    },
+    "en_voice_0281": {
+      "category": "numbers_dates",
+      "ground_truth": "The system detected 3 potential security warnings in the audit log.",
+      "prediction": "The system detected three potential security warnings in the audit log",
+      "cer": 0.0896,
+      "wer": 0.0909,
+      "audio_len_s": 3.936,
+      "latency_s": 0.1093,
+      "rtf": 0.0278
+    },
+    "en_voice_0282": {
+      "category": "numbers_dates",
+      "ground_truth": "The model weights require 126 megabytes of flash storage space.",
+      "prediction": "The model weights require one hundred and twenty six megabytes of flash storage space",
+      "cer": 0.4286,
+      "wer": 0.5,
+      "audio_len_s": 4.384,
+      "latency_s": 0.1209,
+      "rtf": 0.0276
+    },
+    "en_voice_0283": {
+      "category": "numbers_dates",
+      "ground_truth": "We conducted 5-fold cross-validation across 1,000 stratified samples.",
+      "prediction": "We conducted five fold cross validation across one thousand stratified samples",
+      "cer": 0.2754,
+      "wer": 0.2727,
+      "audio_len_s": 4.576,
+      "latency_s": 0.127,
+      "rtf": 0.0278
+    },
+    "en_voice_0284": {
+      "category": "numbers_dates",
+      "ground_truth": "The store is open 7 days a week from 8:00 AM until 9:00 PM.",
+      "prediction": "The store is open seven days a week from eight zero zero AM until nine zero zero PM.",
+      "cer": 0.5763,
+      "wer": 0.4375,
+      "audio_len_s": 5.2,
+      "latency_s": 0.1421,
+      "rtf": 0.0273
+    },
+    "en_voice_0285": {
+      "category": "numbers_dates",
+      "ground_truth": "The flight duration from Tokyo to San Francisco is roughly 9 hours.",
+      "prediction": "The flight duration from Tokyo to San Francisco is roughly nine hours",
+      "cer": 0.0746,
+      "wer": 0.0833,
+      "audio_len_s": 3.904,
+      "latency_s": 0.1113,
+      "rtf": 0.0285
+    },
+    "en_voice_0286": {
+      "category": "numbers_dates",
+      "ground_truth": "We saved $12,000 annually by migrating to local offline processing.",
+      "prediction": "We save dollar twelve thousand doll annually by migrating to local offline processing",
+      "cer": 0.4478,
+      "wer": 0.4545,
+      "audio_len_s": 4.368,
+      "latency_s": 0.1213,
+      "rtf": 0.0278
+    },
+    "en_voice_0287": {
+      "category": "numbers_dates",
+      "ground_truth": "The survey received 1,250 responses with an 88% satisfaction rating.",
+      "prediction": "The survey received one thousand two hundred and fifty responses with an eighty eight percent satisfaction rating",
+      "cer": 0.8088,
+      "wer": 0.8182,
+      "audio_len_s": 5.456,
+      "latency_s": 0.1542,
+      "rtf": 0.0283
+    },
+    "en_voice_0288": {
+      "category": "numbers_dates",
+      "ground_truth": "The download completed in 4.2 seconds over a 100 Mbps connection.",
+      "prediction": "The download completed in four point two seconds over a one hundred MVPS connection",
+      "cer": 0.4462,
+      "wer": 0.5,
+      "audio_len_s": 4.896,
+      "latency_s": 0.1337,
+      "rtf": 0.0273
+    },
+    "en_voice_0289": {
+      "category": "numbers_dates",
+      "ground_truth": "The team resolved 95 bugs out of 100 reported during testing.",
+      "prediction": "The team resolved ninety five bugs out of one hundred reported during testing",
+      "cer": 0.377,
+      "wer": 0.3636,
+      "audio_len_s": 4.384,
+      "latency_s": 0.1203,
+      "rtf": 0.0274
+    },
+    "en_voice_0290": {
+      "category": "numbers_dates",
+      "ground_truth": "The event will take place on Saturday, July 4th at 7:30 PM.",
+      "prediction": "The event will take place on Saturday, july fourth at seven thirty PM",
+      "cer": 0.3051,
+      "wer": 0.2308,
+      "audio_len_s": 4.208,
+      "latency_s": 0.118,
+      "rtf": 0.028
+    },
+    "en_voice_0291": {
+      "category": "numbers_dates",
+      "ground_truth": "Our customer support team answers 98% of inquiries within 24 hours.",
+      "prediction": "Our customer support team answers ninety eight percent of inquiries within twenty four hours",
+      "cer": 0.4776,
+      "wer": 0.4545,
+      "audio_len_s": 5.024,
+      "latency_s": 0.1346,
+      "rtf": 0.0268
+    },
+    "en_voice_0292": {
+      "category": "numbers_dates",
+      "ground_truth": "The vehicle accelerates from 0 to 60 miles per hour in 3.8 seconds.",
+      "prediction": "The vehicle accelerates from zero to sixty miles per hour in three point eight seconds",
+      "cer": 0.403,
+      "wer": 0.3571,
+      "audio_len_s": 4.544,
+      "latency_s": 0.126,
+      "rtf": 0.0277
+    },
+    "en_voice_0293": {
+      "category": "numbers_dates",
+      "ground_truth": "We distributed 5,000 copies of the documentation to community members.",
+      "prediction": "We distributed five thousand copies of the documentation to community members",
+      "cer": 0.2,
+      "wer": 0.1818,
+      "audio_len_s": 4.672,
+      "latency_s": 0.1289,
+      "rtf": 0.0276
+    },
+    "en_voice_0294": {
+      "category": "numbers_dates",
+      "ground_truth": "The exchange rate was 152 yen per US dollar on Friday afternoon.",
+      "prediction": "The exchange rate was one hundred and fifty two yen per US dollar on Friday afternoon",
+      "cer": 0.4062,
+      "wer": 0.4167,
+      "audio_len_s": 4.816,
+      "latency_s": 0.1324,
+      "rtf": 0.0275
+    },
+    "en_voice_0295": {
+      "category": "numbers_dates",
+      "ground_truth": "The hotel room rate is $189 per night plus an 8% municipal tax.",
+      "prediction": "The hotel room rate is dollar one hundred and eighty nineents per night plus an eight percent municipal tax",
+      "cer": 0.8254,
+      "wer": 0.6154,
+      "audio_len_s": 5.312,
+      "latency_s": 0.1441,
+      "rtf": 0.0271
+    },
+    "en_voice_0296": {
+      "category": "numbers_dates",
+      "ground_truth": "Our experimental trial lasted for 6 consecutive weeks without interruption.",
+      "prediction": "Our experimental trial lasted for six consecutive weeks without interruption",
+      "cer": 0.0533,
+      "wer": 0.1,
+      "audio_len_s": 4.528,
+      "latency_s": 0.1273,
+      "rtf": 0.0281
+    },
+    "en_voice_0297": {
+      "category": "numbers_dates",
+      "ground_truth": "The data center operates with 99.99% network availability.",
+      "prediction": "The data center operates with ninety nine point nine nine percent network availability",
+      "cer": 0.6207,
+      "wer": 0.6667,
+      "audio_len_s": 4.816,
+      "latency_s": 0.1304,
+      "rtf": 0.0271
+    },
+    "en_voice_0298": {
+      "category": "numbers_dates",
+      "ground_truth": "Please dial extension 4102 to reach the customer billing department.",
+      "prediction": "Please dial Extension four thousand one hundred two to reach the customer Billing department",
+      "cer": 0.4706,
+      "wer": 0.5,
+      "audio_len_s": 4.672,
+      "latency_s": 0.1276,
+      "rtf": 0.0273
+    },
+    "en_voice_0299": {
+      "category": "numbers_dates",
+      "ground_truth": "We achieved a Top-1 accuracy of 93.3% across 60 evaluation cases.",
+      "prediction": "we achieved a top one accuracy of ninety three point three percent across sixty evaluation cases",
+      "cer": 0.6769,
+      "wer": 0.5385,
+      "audio_len_s": 5.776,
+      "latency_s": 0.1573,
+      "rtf": 0.0272
+    },
+    "en_voice_0300": {
+      "category": "numbers_dates",
+      "ground_truth": "The project roadmap spans 4 quarters ending in December 2027.",
+      "prediction": "The project Roadmap spans four quarters ending in december twenty twenty seven",
+      "cer": 0.4098,
+      "wer": 0.4,
+      "audio_len_s": 4.736,
+      "latency_s": 0.1328,
+      "rtf": 0.028
+    }
+  }
+}
