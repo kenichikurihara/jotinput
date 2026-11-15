@@ -1,0 +1,322 @@
+{
+  "test": {
+    "reuse_sensitivity": [
+      {
+        "reuse": 1,
+        "eis_with_dictionary": 130.34790690335194,
+        "eis_without": 143.77054969378582,
+        "delta": 13.422642790433883,
+        "eis3_with": 91.6344730476225,
+        "eis3_without": 162.9213723568607
+      },
+      {
+        "reuse": 3,
+        "eis_with_dictionary": 140.57072370529625,
+        "eis_without": 143.77054969378582,
+        "delta": 3.1998259884895788,
+        "eis3_with": 139.01517226269374,
+        "eis3_without": 162.9213723568607
+      },
+      {
+        "reuse": 5,
+        "eis_with_dictionary": 142.8107725091293,
+        "eis_without": 143.77054969378582,
+        "delta": 0.9597771846565308,
+        "eis3_with": 155.04917832488235,
+        "eis3_without": 162.9213723568607
+      },
+      {
+        "reuse": 7,
+        "eis_with_dictionary": 143.79279842755412,
+        "eis_without": 143.77054969378582,
+        "delta": -0.022248733768293505,
+        "eis3_with": 163.11203738558012,
+        "eis3_without": 162.9213723568607
+      },
+      {
+        "reuse": 10,
+        "eis_with_dictionary": 144.53822688426126,
+        "eis_without": 143.77054969378582,
+        "delta": -0.7676771904754389,
+        "eis3_with": 169.7318263893534,
+        "eis3_without": 162.9213723568607
+      },
+      {
+        "reuse": 20,
+        "eis_with_dictionary": 145.41772103589858,
+        "eis_without": 143.77054969378582,
+        "delta": -1.647171342112756,
+        "eis3_with": 178.16777816777812,
+        "eis3_without": 162.9213723568607
+      }
+    ],
+    "version": "EIS-v1",
+    "split": "test",
+    "bootstrap": {
+      "B": 1000,
+      "seed": 20261115
+    },
+    "n_items": {
+      "CUJ-1": 123,
+      "CUJ-2": 63,
+      "CUJ-3": 177,
+      "CUJ-4": 310
+    },
+    "eis": {
+      "value": 140.57072370529625,
+      "ci95": [
+        134.28986960804403,
+        145.89688648880042
+      ]
+    },
+    "cuj": {
+      "CUJ-1": {
+        "weight": 0.4,
+        "eis": 204.39130934590173,
+        "ci95": [
+          192.40970841009005,
+          217.3951844646331
+        ],
+        "status": "OK",
+        "notes": [
+          "Source: eval/dataset.json (homophones 250 + negative_control 150) x eval_checkpoint.json predictions.",
+          "Audio is synthetic TTS (eval/audio); real-speech gap is unmeasured (Phase 3).",
+          "Punctuation stripped before alignment; punctuation quality is covered by JapanesePunctuationEvaluationTest (guardrail G2), not by EIS-v1 Phase 1.",
+          "Filler words, streaming flicker and wait time beyond a constant tail latency are not yet modelled."
+        ]
+      },
+      "CUJ-2": {
+        "weight": 0.35,
+        "eis": 92.810621242485,
+        "ci95": [
+          85.89125946317964,
+          99.25495643389317
+        ],
+        "status": "OK",
+        "notes": [
+          "Source: eval/lm_first_nll_cache.json (cached SLM NLLs), ranked with lambda_obs/gamma_user from best_config but alpha=0 (leak guard).",
+          "LEAK: mozc_cost in this dataset is assigned by candidate index (target first), so a Mozc-only baseline and alpha>0 are invalid here; the 'SLM OFF' ablation is therefore NOT reported. Phase 2 must use the real engine.",
+          "Candidate lists are small (2-4 per item), so rank-1 rates are optimistic vs live Viterbi N-best; long-phrase headroom (docs/long_phrase_conversion_headroom_report.md: 33.1% Top-1) is NOT captured. Phase 2 must run the real KanaKanjiEngine on tools/eval_1000_cases.tsv."
+        ]
+      },
+      "CUJ-3": {
+        "weight": 0.15,
+        "eis": 139.01517226269374,
+        "ci95": [
+          133.95848702105545,
+          144.4372749729872
+        ],
+        "status": "OK",
+        "notes": [
+          "Registration cost 12s amortised over 3 uses (v1 assumption; see reuse-count sensitivity in the report - the sign of the dictionary benefit depends on it).",
+          "Voice side: dictionary-registered (hybrid) predictions; counterfactual no_dictionary = baseline predictions.",
+          "Flick side: lm_first user_dict items (20); counterfactual removes user candidates.",
+          "Voice-correction learning (repeat-occurrence benefit) is NOT yet in EIS: only layer-level rates exist in eval/voice_correction_eval_results.json (Phase 2)."
+        ]
+      },
+      "CUJ-4": {
+        "weight": 0.1,
+        "eis": 326.06489312624984,
+        "ci95": [
+          294.6227594831179,
+          360.6122448979593
+        ],
+        "status": "PARTIAL",
+        "notes": [
+          "English VOICE (Parakeet) side is NO_DATA (Phase 1.5); EIS_4 currently = touch (swipe) only.",
+          "Swipe items are pseudo-items reconstructed from aggregate Top-1/3/5 counts (raw per-sample outputs are not in the repo), so bootstrap CIs reflect sampling of the 1,000 words but ranks are not paired to real samples.",
+          "Tap-typing, spell-correction and capitalisation suites are not yet included."
+        ]
+      }
+    },
+    "ablations": [
+      {
+        "name": "ユーザー辞書なし (CUJ-3: 単語を登録しない)",
+        "eis": 143.77054969378582,
+        "delta": 3.1998259884895788,
+        "delta_ci95": [
+          2.4974356956663257,
+          3.880856772161337
+        ]
+      },
+      {
+        "name": "Swipe ContextLM OFF (CUJ-4: 空間モデルのみ)",
+        "eis": 140.45433194496184,
+        "delta": -0.1163917603344089,
+        "delta_ci95": [
+          -0.2765273676302229,
+          -0.013200928903330578
+        ]
+      },
+      {
+        "name": "音声に辞書バイアス適用 (CUJ-1: hybrid)",
+        "eis": 140.39171048540948,
+        "delta": -0.17901321988676955,
+        "delta_ci95": [
+          -0.6530078068786906,
+          0.20046962974674898
+        ]
+      }
+    ]
+  },
+  "dev": {
+    "reuse_sensitivity": [
+      {
+        "reuse": 1,
+        "eis_with_dictionary": 129.11701304207529,
+        "eis_without": 142.68853243799083,
+        "delta": 13.571519395915544,
+        "eis3_with": 90.16129985278468,
+        "eis3_without": 161.80463447082263
+      },
+      {
+        "reuse": 3,
+        "eis_with_dictionary": 139.5013365445116,
+        "eis_without": 142.68853243799083,
+        "delta": 3.1871958934792417,
+        "eis3_with": 137.9738753080041,
+        "eis3_without": 161.80463447082263
+      },
+      {
+        "reuse": 5,
+        "eis_with_dictionary": 141.78191796166385,
+        "eis_without": 142.68853243799083,
+        "delta": 0.906614476326979,
+        "eis3_with": 154.34356709309537,
+        "eis3_without": 161.80463447082263
+      },
+      {
+        "reuse": 7,
+        "eis_with_dictionary": 142.7822974841004,
+        "eis_without": 142.68853243799083,
+        "delta": -0.09376504610958136,
+        "eis3_with": 162.6119245620707,
+        "eis3_without": 161.80463447082263
+      },
+      {
+        "reuse": 10,
+        "eis_with_dictionary": 143.54189561400509,
+        "eis_without": 142.68853243799083,
+        "delta": -0.8533631760142555,
+        "eis3_with": 169.41889426359165,
+        "eis3_without": 161.80463447082263
+      },
+      {
+        "reuse": 20,
+        "eis_with_dictionary": 144.4383720852833,
+        "eis_without": 142.68853243799083,
+        "delta": -1.7498396472924753,
+        "eis3_with": 178.1176086846739,
+        "eis3_without": 161.80463447082263
+      }
+    ],
+    "version": "EIS-v1",
+    "split": "dev",
+    "bootstrap": {
+      "B": 1000,
+      "seed": 20261115
+    },
+    "n_items": {
+      "CUJ-1": 277,
+      "CUJ-2": 164,
+      "CUJ-3": 443,
+      "CUJ-4": 690
+    },
+    "eis": {
+      "value": 139.5013365445116,
+      "ci95": [
+        135.0789733205458,
+        143.77673153033984
+      ]
+    },
+    "cuj": {
+      "CUJ-1": {
+        "weight": 0.4,
+        "eis": 212.70706048150825,
+        "ci95": [
+          205.8085538559991,
+          220.37718421990533
+        ],
+        "status": "OK",
+        "notes": [
+          "Source: eval/dataset.json (homophones 250 + negative_control 150) x eval_checkpoint.json predictions.",
+          "Audio is synthetic TTS (eval/audio); real-speech gap is unmeasured (Phase 3).",
+          "Punctuation stripped before alignment; punctuation quality is covered by JapanesePunctuationEvaluationTest (guardrail G2), not by EIS-v1 Phase 1.",
+          "Filler words, streaming flicker and wait time beyond a constant tail latency are not yet modelled."
+        ]
+      },
+      "CUJ-2": {
+        "weight": 0.35,
+        "eis": 90.57562076749433,
+        "ci95": [
+          85.53914739481748,
+          95.3956834532374
+        ],
+        "status": "OK",
+        "notes": [
+          "Source: eval/lm_first_nll_cache.json (cached SLM NLLs), ranked with lambda_obs/gamma_user from best_config but alpha=0 (leak guard).",
+          "LEAK: mozc_cost in this dataset is assigned by candidate index (target first), so a Mozc-only baseline and alpha>0 are invalid here; the 'SLM OFF' ablation is therefore NOT reported. Phase 2 must use the real engine.",
+          "Candidate lists are small (2-4 per item), so rank-1 rates are optimistic vs live Viterbi N-best; long-phrase headroom (docs/long_phrase_conversion_headroom_report.md: 33.1% Top-1) is NOT captured. Phase 2 must run the real KanaKanjiEngine on tools/eval_1000_cases.tsv."
+        ]
+      },
+      "CUJ-3": {
+        "weight": 0.15,
+        "eis": 137.9738753080041,
+        "ci95": [
+          134.47201352510322,
+          141.5382315038793
+        ],
+        "status": "OK",
+        "notes": [
+          "Registration cost 12s amortised over 3 uses (v1 assumption; see reuse-count sensitivity in the report - the sign of the dictionary benefit depends on it).",
+          "Voice side: dictionary-registered (hybrid) predictions; counterfactual no_dictionary = baseline predictions.",
+          "Flick side: lm_first user_dict items (20); counterfactual removes user candidates.",
+          "Voice-correction learning (repeat-occurrence benefit) is NOT yet in EIS: only layer-level rates exist in eval/voice_correction_eval_results.json (Phase 2)."
+        ]
+      },
+      "CUJ-4": {
+        "weight": 0.1,
+        "eis": 297.14789397468536,
+        "ci95": [
+          277.11819623040304,
+          320.2986087546643
+        ],
+        "status": "PARTIAL",
+        "notes": [
+          "English VOICE (Parakeet) side is NO_DATA (Phase 1.5); EIS_4 currently = touch (swipe) only.",
+          "Swipe items are pseudo-items reconstructed from aggregate Top-1/3/5 counts (raw per-sample outputs are not in the repo), so bootstrap CIs reflect sampling of the 1,000 words but ranks are not paired to real samples.",
+          "Tap-typing, spell-correction and capitalisation suites are not yet included."
+        ]
+      }
+    },
+    "ablations": [
+      {
+        "name": "ユーザー辞書なし (CUJ-3: 単語を登録しない)",
+        "eis": 142.68853243799083,
+        "delta": 3.1871958934792417,
+        "delta_ci95": [
+          2.7671789007983705,
+          3.625138238825201
+        ]
+      },
+      {
+        "name": "Swipe ContextLM OFF (CUJ-4: 空間モデルのみ)",
+        "eis": 139.4382776117181,
+        "delta": -0.06305893279349561,
+        "delta_ci95": [
+          -0.1298604930634042,
+          -0.01608044965198019
+        ]
+      },
+      {
+        "name": "音声に辞書バイアス適用 (CUJ-1: hybrid)",
+        "eis": 140.11161232871274,
+        "delta": 0.6102757842011499,
+        "delta_ci95": [
+          0.23828925036679038,
+          1.0164541728801737
+        ]
+      }
+    ]
+  }
+}

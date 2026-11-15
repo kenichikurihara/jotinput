@@ -61,7 +61,7 @@
 | **P0** | **CUJ-1: 音声で日本語の文章を書く**（句読点・文境界・ストリーミング確定込み） | J1 | 音声 (+修正はタッチ) | **0.40** |
 | **P0** | **CUJ-2: フリックで日本語を書く**（かな漢字変換・文脈同音異義語・長文節・予測） | J2 | フリック | **0.35** |
 | **P1** | **CUJ-3: 自分の語彙（固有名詞・専門用語）を書く**（ユーザー辞書・修正学習。音声とタッチの両方） | J3 | 音声 + フリック | **0.15** |
-| **P2** | **CUJ-4: 英語・英日混在を書く**（QWERTY タップ・Swipe・スペル訂正・大文字化） | J4 | QWERTY / Swipe | **0.10** |
+| **P2** | **CUJ-4: 英語・英日混在を書く**（英語音声入力〔Parakeet〕・QWERTY タップ・Swipe・スペル訂正・大文字化） | J4 | 英語音声 / QWERTY / Swipe | **0.10** |
 
 ### 4.1 各 CUJ のステップと失敗モード
 
@@ -81,7 +81,8 @@
 - 失敗モード: 登録語が音声で出ない、修正が学習されない（例: 描いて→書いて）、過学習による誤爆。
 - 根拠となる仕様: [`prd_and_design_custom_dictionary_ui.md`](prd_and_design_custom_dictionary_ui.md), [`voice_correction_learning_design_and_evaluation.md`](voice_correction_learning_design_and_evaluation.md), [`context_aware_evaluation_report.md`](context_aware_evaluation_report.md)
 
-**CUJ-4（P2）**: QWERTY に切り替える → タップまたはスワイプで入力 → 必要ならスペル候補・大文字候補を選ぶ → 自動スペース・ピリオド。
+**CUJ-4（P2）**: 英語を入力する。経路は (a) 英語音声入力（Parakeet TDT-CTC、自動句読点・大文字化込み）、(b) QWERTY に切り替えてタップまたはスワイプ。必要ならスペル候補・大文字候補を選ぶ → 自動スペース・ピリオド。
+- 内訳の重み（EIS-v1 方針）: 英語音声 0.5 / タッチ（タップ・スワイプ）0.5。英語音声の評価セットは未整備のため、EIS-Bench Phase 1 ではタッチ側のみを算出し、音声側は `NO_DATA` として明示する（§8 Phase 1.5）。
 - 失敗モード: スワイプが Top-1 で外れる、タイポを救済できない、大文字化を誤る。
 - 根拠となる仕様: [`futo_swipe_phase1_evaluation_report.md`](futo_swipe_phase1_evaluation_report.md), [`prd_and_system_design_qwerty_capitalization_and_spell_candidates.md`](prd_and_system_design_qwerty_capitalization_and_spell_candidates.md)
 
@@ -90,7 +91,7 @@
 - CUJ-1 (0.40): プロダクト名と差別化の中心であり、長文を生む主な経路。
 - CUJ-2 (0.35): IME として最も頻度が高い入力経路。音声が使えない場面（静かな場所・公共の場）の受け皿。
 - CUJ-3 (0.15): 文字数の割合は小さい（実際には 5% 前後）ものの、誤ったときの社会的コストが大きいので、利用割合より多めに配分しています。
-- CUJ-4 (0.10): 日本語 IME の付加価値。英単語の混在は頻繁に起きる。
+- CUJ-4 (0.10): 日本語 IME の付加価値。英単語の混在は頻繁に起きる。英語音声入力を含む（プロダクトオーナー確定）。
 - **重みはプロダクトオーナーが決める方針値**です。変更する場合は本書を改訂し、版番号（`EIS-v1` → `v2`）を上げてください。過去のスコアとの比較は同じ版どうしでのみ行います。
 
 ---
@@ -213,18 +214,18 @@ flowchart TD
 | CUJ-1 音声 | `eval/dataset.json` + `eval/audio/*.wav`（1,000 文、文全体が正解）、句読点評価文（67+）、フィラー評価仕様（120）、ストリーミング評価 | $T_{\text{correct}}$（CER スパン・句読点・フィラー）、$T_{\text{wait}}$（確定遅延） |
 | CUJ-2 フリック | `tools/eval_1000_cases.tsv`（文脈あり 1,000）、`tools/eval_500_natural_empty.tsv`（文脈なし 500）、`eval/lm_first_eval_dataset.json`（247）、長文節セット、`FlickTypoAndMozcCorrectionEvaluationTest` | $T_{\text{select}}$（順位 $k$）、$C_\varnothing$、$T_{\text{wait}}$（SLM 遅延） |
 | CUJ-3 自分の語彙 | `eval/dataset.json` の人名 250・地名 150・技術用語 200 + 辞書登録、`eval/dataset_with_context.json`、音声修正学習の評価（`eval/voice_correction_eval_results.json` の系列）、`lm_first` の user_dict カテゴリ | 1 回目と 2 回目以降の $T_{\text{correct}}$ の差、負例による誤爆コスト |
-| CUJ-4 英語 | `eval/futo_swipe/swipe_eval_1000.jsonl`、`eval/english_completion/completion_eval_100.json`、大文字化 60 ケース、`EnglishTypoRerankTest` | $T_{\text{select}}$、打ち直し、補完による $T_{\text{produce}}$ の削減 |
+| CUJ-4 英語 | **英語音声: 評価セット未整備（Phase 1.5 で追加）**、`eval/futo_swipe/swipe_eval_1000.jsonl`、`eval/english_completion/completion_eval_100.json`、大文字化 60 ケース、`EnglishTypoRerankTest` | $T_{\text{select}}$、打ち直し、補完による $T_{\text{produce}}$ の削減 |
 
 > [!IMPORTANT]
 > 現状の音声データ（`eval/audio`）は合成音声に由来します。CUJ-1 の EIS は合成音声上の値であることを明記し、Phase 3 で実録音サブセット（少数でもよい）を追加して乖離を測ります。
 
 ### 6.1 既存の診断指標の参考値（L2, 各レポートより）
-ベースラインの EIS は、まだ算出していません（Phase 1 の成果物）。参考として、各レポートに記載されている L2 指標を示します。
+ベースライン EIS は [`eis_baseline_report.md`](eis_baseline_report.md)（`python3 eval/eis/run_eis.py --report` で再生成）を参照。以下は参考として、各レポートに記載されている L2 指標を示します。
 - CUJ-1/3: 文脈認識 ASR の登録語再現率 84.5%、負例 FPR 0.0%（[`context_aware_evaluation_report.md`](context_aware_evaluation_report.md)）
 - CUJ-2: LM-First 247 件で Top-1 90.3% / Top-3 99.2% / MRR 0.946（`eval/lm_first_tuning_results.json`）。長文節 Top-1 は 33.1%、SLM で到達可能な上限は 92.4%（[`long_phrase_conversion_headroom_report.md`](long_phrase_conversion_headroom_report.md)）
 - CUJ-4: Swipe Top-1 90.3%（4.19 ms）、大文字化 Top-1 93.3%
 
-これらの数値から、**現時点で EIS 上の最大の伸びしろは CUJ-2 の長文節変換と、CUJ-1 の認識誤りに対する修正コスト** にあると推定します（Phase 1 で定量的に検証します）。
+これらの数値から、**現時点で EIS 上の最大の伸びしろは CUJ-2 の長文節変換と、CUJ-1 の認識誤りに対する修正コスト** にあると推定します。Phase 1 の結果では、CUJ別EISは CUJ-2（フリック）が最も低い（約93文字/分、音声CUJ-1は約204）。ただしこれは主に打鍵時間によるもので、候補品質の伸びしろは Phase 2（実エンジン評価）で測る。
 
 ---
 
@@ -239,7 +240,8 @@ flowchart TD
 
 | フェーズ | 内容 | 成果物 |
 | :--- | :--- | :--- |
-| **Phase 1** | EIS-Bench v1 の構築（層化抽出、dev/test 分割、test を凍結）と、オフライン KLM シミュレータの実装。キャッシュ済みの出力 JSON を利用し、ベースラインの EIS と $\mathrm{EIS}_c$ を算出 | `eval/eis/`（ビルダー、シミュレータ、`eis_results.json`）、本書 §6.1 の更新 |
+| **Phase 1（実装済み）** | EIS-Bench v1 の構築（層化抽出、dev/test 分割、test を凍結）と、オフライン KLM シミュレータの実装。キャッシュ済みの出力 JSON を利用し、ベースラインの EIS と $\mathrm{EIS}_c$ を算出 | `eval/eis/`（ビルダー、シミュレータ、`eis_results.json`）、本書 §6.1 の更新 |
+| **Phase 1.5** | 英語音声（Parakeet）の評価セットと出力キャッシュを追加し、$\mathrm{EIS}_4$ の音声側を `NO_DATA` から実測へ | `eval/eis/` の英語音声アダプタ |
 | **Phase 2** | CUJ-2 と CUJ-3 を JVM の実エンジン（`KanaKanjiEngine` + リランカー）で回す回帰テストを CI に追加し、EIS の悪化を CI で検知 | `EisRegressionTest.kt`、CI での EIS レポート |
 | **Phase 3** | 両ターゲットの実機で、遅延の実測値を $T_{\text{wait}}$ に投入。少数の実ユーザーで操作時間を計測して KLM 定数を較正（`EIS-v2`）。実録音の音声サブセットを追加 | 較正レポート、`EIS-v2` 定数 |
 
@@ -252,5 +254,5 @@ flowchart TD
 
 ## 10. 未決事項（プロダクトオーナーの判断が必要）
 1. **CUJ の重み $w_c$**（0.40 / 0.35 / 0.15 / 0.10）: 想定利用構成として妥当か。特に、音声とフリックのどちらを主経路と位置づけるか。
-2. **CUJ-4 英語のスコープ**: 英語音声入力（Parakeet）を CUJ-4 に含めるか。
+2. ~~CUJ-4 英語のスコープ~~ → **確定: 英語音声入力（Parakeet）を CUJ-4 に含める。**
 3. **KLM 定数の較正方法**: Phase 3 で、開発者自身の計測で足りるか、少人数のユーザーテストを行うか。
