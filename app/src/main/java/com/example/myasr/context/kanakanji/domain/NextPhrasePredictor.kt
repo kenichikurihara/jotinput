@@ -48,50 +48,231 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             }
         }
 
+        data class CollocationEntry(
+            val surface: String,
+            val reading: String = surface
+        )
+
         // Static canonical collocations for standard Japanese expressions and POS-aware transitions
-        private val CANONICAL_COLLOCATIONS = mapOf(
-            "よろしく" to listOf("お願いします", "お願いいたします", "お願い", "どうぞ"),
-            "お願い" to listOf("します", "いたします", "申し上げます"),
-            "ありがとう" to listOf("ございます", "ございました"),
-            "お疲れ様" to listOf("です", "でした"),
-            "お疲れ" to listOf("様", "様です", "様でした"),
-            "ご" to listOf("検討", "連絡", "確認", "案内"),
-            "確認" to listOf("しました", "いたします", "お願いします", "中"),
-            "作業" to listOf("を", "中", "完了", "内容", "を進めます"),
-            "準備" to listOf("が", "を", "中", "完了"),
-            "質問" to listOf("は", "が", "を", "ありません"),
-            "了解" to listOf("しました", "いたしました", "です"),
-            "承知" to listOf("いたしました", "しました"),
-            "いつも" to listOf("お世話になっております", "お世話", "ありがとうございます"),
-            "お世話" to listOf("になっております", "になります", "に"),
-            "お待たせ" to listOf("いたしました", "しました"),
-            "ご検討" to listOf("のほどよろしくお願いいたします", "ください"),
-            "検討" to listOf("ください", "します", "いたします", "中"),
-            "申し訳" to listOf("ありません", "ございません", "ない"),
-            "大丈夫" to listOf("です", "ですか", "でしょうか"),
-            "問題" to listOf("ありません", "ない", "ですか"),
-            "連絡" to listOf("します", "いたします", "お待ちしております"),
-            "今日" to listOf("は", "の", "中に", "も"),
-            "明日" to listOf("は", "の", "までに", "も"),
-            "昨日" to listOf("は", "の", "も"),
-            "今" to listOf("から", "は", "のところ"),
-            "会議" to listOf("の", "に", "は", "室"),
-            "資料" to listOf("を", "の", "作成", "確認"),
-            "様" to listOf("です", "でした", "に"),
-            "良い" to listOf("天気", "一日を", "ですね"),
-            "いただき" to listOf("ありがとうございます", "ました"),
-            "させて" to listOf("いただきます", "いただきました"),
-            "電話" to listOf("します", "いたします", "番号"),
-            "伺い" to listOf("ます", "ました"),
-            "行き" to listOf("ます", "ました"),
-            "向かっ" to listOf("ています", "ております"),
-            "思っ" to listOf("ています", "ております"),
-            "知っ" to listOf("ています", "ております"),
-            "を" to listOf("送信", "進めます", "お願いします", "確認", "作成"),
-            "に" to listOf("参加", "ついて", "なります", "連絡", "向かって"),
-            "が" to listOf("完了", "必要", "あります", "できます"),
-            "は" to listOf("ありますか", "大丈夫", "ありません", "いかが"),
-            "の" to listOf("会議", "件", "予定", "連絡", "内容")
+        private val CANONICAL_COLLOCATIONS: Map<String, List<CollocationEntry>> = mapOf(
+            "よろしく" to listOf(
+                CollocationEntry("お願いします", "おねがいします"),
+                CollocationEntry("お願いいたします", "おねがいいたします"),
+                CollocationEntry("お願い", "おねがい"),
+                CollocationEntry("どうぞ", "どうぞ")
+            ),
+            "お願い" to listOf(
+                CollocationEntry("します", "します"),
+                CollocationEntry("いたします", "いたします"),
+                CollocationEntry("申し上げます", "もうしあげます")
+            ),
+            "ありがとう" to listOf(
+                CollocationEntry("ございます", "ございます"),
+                CollocationEntry("ございました", "ございました")
+            ),
+            "お疲れ様" to listOf(
+                CollocationEntry("です", "です"),
+                CollocationEntry("でした", "でした")
+            ),
+            "お疲れ" to listOf(
+                CollocationEntry("様", "さま"),
+                CollocationEntry("様です", "さまです"),
+                CollocationEntry("様でした", "さまでした")
+            ),
+            "ご" to listOf(
+                CollocationEntry("検討", "けんとう"),
+                CollocationEntry("連絡", "れんらく"),
+                CollocationEntry("確認", "かくにん"),
+                CollocationEntry("案内", "あんない")
+            ),
+            "確認" to listOf(
+                CollocationEntry("しました", "しました"),
+                CollocationEntry("いたします", "いたします"),
+                CollocationEntry("お願いします", "おねがいします"),
+                CollocationEntry("中", "ちゅう")
+            ),
+            "作業" to listOf(
+                CollocationEntry("を", "を"),
+                CollocationEntry("中", "ちゅう"),
+                CollocationEntry("完了", "かんりょう"),
+                CollocationEntry("内容", "ないよう"),
+                CollocationEntry("を進めます", "をすすめます")
+            ),
+            "準備" to listOf(
+                CollocationEntry("が", "が"),
+                CollocationEntry("を", "を"),
+                CollocationEntry("中", "ちゅう"),
+                CollocationEntry("完了", "かんりょう")
+            ),
+            "質問" to listOf(
+                CollocationEntry("は", "は"),
+                CollocationEntry("が", "が"),
+                CollocationEntry("を", "を"),
+                CollocationEntry("ありません", "ありません")
+            ),
+            "了解" to listOf(
+                CollocationEntry("しました", "しました"),
+                CollocationEntry("いたしました", "いたしました"),
+                CollocationEntry("です", "です")
+            ),
+            "承知" to listOf(
+                CollocationEntry("いたしました", "いたしました"),
+                CollocationEntry("しました", "しました")
+            ),
+            "いつも" to listOf(
+                CollocationEntry("お世話になっております", "おせわになっております"),
+                CollocationEntry("お世話", "おせわ"),
+                CollocationEntry("ありがとうございます", "ありがとうございます")
+            ),
+            "お世話" to listOf(
+                CollocationEntry("になっております", "になっております"),
+                CollocationEntry("になります", "になります"),
+                CollocationEntry("に", "に")
+            ),
+            "お待たせ" to listOf(
+                CollocationEntry("いたしました", "いたしました"),
+                CollocationEntry("しました", "しました")
+            ),
+            "ご検討" to listOf(
+                CollocationEntry("のほどよろしくお願いいたします", "のほどよろしくおねがいいたします"),
+                CollocationEntry("ください", "ください")
+            ),
+            "検討" to listOf(
+                CollocationEntry("ください", "ください"),
+                CollocationEntry("します", "します"),
+                CollocationEntry("いたします", "いたします"),
+                CollocationEntry("中", "ちゅう")
+            ),
+            "申し訳" to listOf(
+                CollocationEntry("ありません", "ありません"),
+                CollocationEntry("ございません", "ございません"),
+                CollocationEntry("ない", "ない")
+            ),
+            "大丈夫" to listOf(
+                CollocationEntry("です", "です"),
+                CollocationEntry("ですか", "ですか"),
+                CollocationEntry("でしょうか", "でしょうか")
+            ),
+            "問題" to listOf(
+                CollocationEntry("ありません", "ありません"),
+                CollocationEntry("ない", "ない"),
+                CollocationEntry("ですか", "ですか")
+            ),
+            "連絡" to listOf(
+                CollocationEntry("します", "します"),
+                CollocationEntry("いたします", "いたします"),
+                CollocationEntry("お待ちしております", "おまちしております")
+            ),
+            "今日" to listOf(
+                CollocationEntry("は", "は"),
+                CollocationEntry("の", "の"),
+                CollocationEntry("中に", "ちゅうに"),
+                CollocationEntry("も", "も")
+            ),
+            "明日" to listOf(
+                CollocationEntry("は", "は"),
+                CollocationEntry("の", "の"),
+                CollocationEntry("までに", "までに"),
+                CollocationEntry("も", "も")
+            ),
+            "昨日" to listOf(
+                CollocationEntry("は", "は"),
+                CollocationEntry("の", "の"),
+                CollocationEntry("も", "も")
+            ),
+            "今" to listOf(
+                CollocationEntry("から", "から"),
+                CollocationEntry("は", "は"),
+                CollocationEntry("のところ", "のところ")
+            ),
+            "会議" to listOf(
+                CollocationEntry("の", "の"),
+                CollocationEntry("に", "に"),
+                CollocationEntry("は", "は"),
+                CollocationEntry("室", "しつ")
+            ),
+            "資料" to listOf(
+                CollocationEntry("を", "を"),
+                CollocationEntry("の", "の"),
+                CollocationEntry("作成", "さくせい"),
+                CollocationEntry("確認", "かくにん")
+            ),
+            "様" to listOf(
+                CollocationEntry("です", "です"),
+                CollocationEntry("でした", "でした"),
+                CollocationEntry("に", "に")
+            ),
+            "良い" to listOf(
+                CollocationEntry("天気", "てんき"),
+                CollocationEntry("一日を", "いちにちを"),
+                CollocationEntry("ですね", "ですね")
+            ),
+            "いただき" to listOf(
+                CollocationEntry("ありがとうございます", "ありがとうございます"),
+                CollocationEntry("ました", "ました")
+            ),
+            "させて" to listOf(
+                CollocationEntry("いただきます", "いただきます"),
+                CollocationEntry("いただきました", "いただきました")
+            ),
+            "電話" to listOf(
+                CollocationEntry("します", "します"),
+                CollocationEntry("いたします", "いたします"),
+                CollocationEntry("番号", "ばんごう")
+            ),
+            "伺い" to listOf(
+                CollocationEntry("ます", "ます"),
+                CollocationEntry("ました", "ました")
+            ),
+            "行き" to listOf(
+                CollocationEntry("ます", "ます"),
+                CollocationEntry("ました", "ました")
+            ),
+            "向かっ" to listOf(
+                CollocationEntry("ています", "ています"),
+                CollocationEntry("ております", "ております")
+            ),
+            "思っ" to listOf(
+                CollocationEntry("ています", "ています"),
+                CollocationEntry("ております", "ております")
+            ),
+            "知っ" to listOf(
+                CollocationEntry("ています", "ています"),
+                CollocationEntry("ております", "ております")
+            ),
+            "を" to listOf(
+                CollocationEntry("送信", "そうしん"),
+                CollocationEntry("進めます", "すすめます"),
+                CollocationEntry("お願いします", "おねがいします"),
+                CollocationEntry("確認", "かくにん"),
+                CollocationEntry("作成", "さくせい")
+            ),
+            "に" to listOf(
+                CollocationEntry("参加", "さんか"),
+                CollocationEntry("ついて", "ついて"),
+                CollocationEntry("なります", "なります"),
+                CollocationEntry("連絡", "れんらく"),
+                CollocationEntry("向かって", "むかって")
+            ),
+            "が" to listOf(
+                CollocationEntry("完了", "かんりょう"),
+                CollocationEntry("必要", "ひつよう"),
+                CollocationEntry("あります", "あります"),
+                CollocationEntry("できます", "できます")
+            ),
+            "は" to listOf(
+                CollocationEntry("ありますか", "ありますか"),
+                CollocationEntry("大丈夫", "だいじょうぶ"),
+                CollocationEntry("ありません", "ありません"),
+                CollocationEntry("いかが", "いかが")
+            ),
+            "の" to listOf(
+                CollocationEntry("会議", "かいぎ"),
+                CollocationEntry("件", "けん"),
+                CollocationEntry("予定", "よてい"),
+                CollocationEntry("連絡", "れんらく"),
+                CollocationEntry("内容", "ないよう")
+            )
         )
 
         // Frequent Japanese case particles and connection auxiliaries
@@ -122,6 +303,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
     // Access-ordered LinkedHashMap for LRU prefix keys (prevPhrase -> (nextPhrase -> count))
     private val bigramHistory = LinkedHashMap<String, LinkedHashMap<String, Int>>(256, 0.75f, true)
     private val bigramLastUsed = LinkedHashMap<String, LinkedHashMap<String, Long>>(256, 0.75f, true)
+    private val bigramReadings = HashMap<String, String>()
     private var totalBigramPairs = 0
     private val historyLoadLock = Any()
 
@@ -152,11 +334,16 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
      * Safe to call from any thread; asynchronous background serialization avoids any UI jitter.
      */
     @Synchronized
-    fun recordTransition(prevPhrase: String, currentPhrase: String) {
+    @JvmOverloads
+    fun recordTransition(prevPhrase: String, currentPhrase: String, currentReading: String = currentPhrase) {
         ensureHistoryLoaded()
         val prev = prevPhrase.trim()
         val curr = currentPhrase.trim()
         if (prev.isEmpty() || curr.isEmpty() || prev == curr) return
+
+        if (currentReading.isNotBlank() && currentReading != curr) {
+            bigramReadings[curr] = currentReading.trim()
+        }
 
         val nowMs = System.currentTimeMillis()
         val nextMap = bigramHistory.getOrPut(prev) { LinkedHashMap(8, 0.75f, true) }
@@ -242,10 +429,11 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 val tsMap = bigramLastUsed[cleanLast]
                 val sortedUserNext = userNextMap.entries.sortedByDescending { it.value }
                 for (entry in sortedUserNext) {
+                    val entryReading = bigramReadings[entry.key] ?: entry.key
                     addCandidate(
                         ConversionCandidate(
                             surface = entry.key,
-                            reading = entry.key,
+                            reading = entryReading,
                             isPrediction = true,
                             source = "history_bigram",
                             historyCount = entry.value,
@@ -260,11 +448,11 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         if (cleanLast.isNotEmpty()) {
             val canonicalList = CANONICAL_COLLOCATIONS[cleanLast]
             if (canonicalList != null) {
-                for (phrase in canonicalList) {
+                for (entry in canonicalList) {
                     addCandidate(
                         ConversionCandidate(
-                            surface = phrase,
-                            reading = phrase,
+                            surface = entry.surface,
+                            reading = entry.reading,
                             isPrediction = true,
                             source = "canonical_collocation"
                         )
@@ -381,6 +569,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
     fun clearHistory() {
         ensureHistoryLoaded()
         bigramHistory.clear()
+        bigramReadings.clear()
         totalBigramPairs = 0
         scheduleSaveHistory(immediate = true)
     }

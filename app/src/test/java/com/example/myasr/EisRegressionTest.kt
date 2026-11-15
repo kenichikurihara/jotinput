@@ -46,6 +46,7 @@ class EisRegressionTest {
 
         predictor = NextPhrasePredictor(null)
         engine = KanaKanjiEngine(null)
+        engine.predictor = predictor
 
         val tsvFile = listOf(
             File("app/src/test/resources/mozc/base_dictionary.tsv"),
@@ -117,7 +118,7 @@ class EisRegressionTest {
             }
 
             // 2. Check 1-char prefix query
-            val onePreds = engine.getBaseCandidates(oneQuery)
+            val onePreds = engine.getBaseCandidates(oneQuery, contextPrefix = prevWord)
             val oneRank = onePreds.take(3).indexOfFirst { it.surface == targetWord }
 
             if (oneRank >= 0) {
@@ -129,7 +130,7 @@ class EisRegressionTest {
             }
 
             // 3. Check 2-char prefix query
-            val twoPreds = engine.getBaseCandidates(twoQuery)
+            val twoPreds = engine.getBaseCandidates(twoQuery, contextPrefix = prevWord)
             val twoRank = twoPreds.take(3).indexOfFirst { it.surface == targetWord }
 
             if (twoRank >= 0) {
@@ -280,5 +281,29 @@ class EisRegressionTest {
                 surfaces.contains(expectedParticle)
             )
         }
+    }
+
+    @Test
+    fun testContextAwarePrefixPromotionPlacesCollocationsAtRank1() {
+        // Step 2: Verify context-aware prefix completion promotes collocations matching prefix to Rank 1
+        // 1. "資料を" + "そ" -> "送信" (reading: そうしん)
+        val candsSo = engine.getBaseCandidates("そ", contextPrefix = "資料を")
+        assertTrue("Base candidates for 'そ' with context '資料を' must not be empty", candsSo.isNotEmpty())
+        assertEquals("Collocation '送信' must be promoted to Rank 1 under context '資料を'", "送信", candsSo.first().surface)
+
+        // 2. "会議に" + "さ" -> "参加" (reading: さんか)
+        val candsSa = engine.getBaseCandidates("さ", contextPrefix = "会議に")
+        assertTrue("Base candidates for 'さ' with context '会議に' must not be empty", candsSa.isNotEmpty())
+        assertEquals("Collocation '参加' must be promoted to Rank 1 under context '会議に'", "参加", candsSa.first().surface)
+
+        // 3. "準備が" + "か" -> "完了" (reading: かんりょう)
+        val candsKa = engine.getBaseCandidates("か", contextPrefix = "準備が")
+        assertTrue("Base candidates for 'か' with context '準備が' must not be empty", candsKa.isNotEmpty())
+        assertEquals("Collocation '完了' must be promoted to Rank 1 under context '準備が'", "完了", candsKa.first().surface)
+
+        // 4. "良い" + "て" -> "天気" (reading: てんき)
+        val candsTe = engine.getBaseCandidates("て", contextPrefix = "良い")
+        assertTrue("Base candidates for 'て' with context '良い' must not be empty", candsTe.isNotEmpty())
+        assertEquals("Collocation '天気' must be promoted to Rank 1 under context '良い'", "天気", candsTe.first().surface)
     }
 }

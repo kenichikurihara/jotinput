@@ -41,6 +41,7 @@ class JotInputPredictionEvaluationRunnerTest {
         // Initialize Japanese Engines
         jaNextPredictor = NextPhrasePredictor(null)
         jaEngine = KanaKanjiEngine(null)
+        jaEngine.predictor = jaNextPredictor
         val tsvFile = listOf(
             File("app/src/test/resources/mozc/base_dictionary.tsv"),
             File("src/test/resources/mozc/base_dictionary.tsv"),
@@ -90,16 +91,16 @@ class JotInputPredictionEvaluationRunnerTest {
             jaEngine.clearHistory()
 
             val zeroNoHist = getJaZeroCharPredictions(prevWord)
-            val oneNoHist = getJaPrefixPredictions(oneQuery)
-            val twoNoHist = getJaPrefixPredictions(twoQuery)
+            val oneNoHist = getJaPrefixPredictions(oneQuery, prevWord)
+            val twoNoHist = getJaPrefixPredictions(twoQuery, prevWord)
 
             // --- Mode B: With History (1 pass of typing & committing the sample) ---
-            jaNextPredictor.recordTransition(prevWord, targetWord)
+            jaNextPredictor.recordTransition(prevWord, targetWord, currentReading = targetReading)
             jaEngine.commitCandidate(ConversionCandidate(surface = targetWord, reading = targetReading, source = "history"))
 
             val zeroWithHist = getJaZeroCharPredictions(prevWord)
-            val oneWithHist = getJaPrefixPredictions(oneQuery)
-            val twoWithHist = getJaPrefixPredictions(twoQuery)
+            val oneWithHist = getJaPrefixPredictions(oneQuery, prevWord)
+            val twoWithHist = getJaPrefixPredictions(twoQuery, prevWord)
 
             val itemResult = JSONObject().apply {
                 put("id", id)
@@ -212,9 +213,58 @@ class JotInputPredictionEvaluationRunnerTest {
             outFile.writeText(fullOutput.toString(2), Charsets.UTF_8)
             println("Saved baseline evaluation results to: ${outFile.absolutePath}")
         } else {
+            try {
+                val existingJson = JSONObject(outFile.readText())
+                val slmOff = existingJson.optJSONObject("slm_off")
+                if (slmOff != null) {
+                    slmOff.put("japanese_cases", evaluatedJaResults)
+                    slmOff.put("summary_metrics", summaryScores)
+                }
+                val slmOn = existingJson.optJSONObject("slm_on")
+                if (slmOn != null) {
+                    val onCases = slmOn.optJSONArray("japanese_cases")
+                    if (onCases != null) {
+                        for (idx in 0 until onCases.length()) {
+                            val cObj = onCases.getJSONObject(idx)
+                            val cId = cObj.optString("id")
+                            for (j in 0 until evaluatedJaResults.length()) {
+                                val evalObj = evaluatedJaResults.getJSONObject(j)
+                                if (evalObj.optString("id") == cId) {
+                                    val tgt = evalObj.optString("target_word")
+                                    val newPreds = evalObj.getJSONObject("predictions")
+                                    val curPreds = cObj.getJSONObject("predictions")
+                                    val oneNo = newPreds.getJSONObject("one_char").getJSONArray("no_history")
+                                    val curOneNo = curPreds.getJSONObject("one_char").getJSONArray("no_history")
+                                    val curOneList = (0 until curOneNo.length()).map { curOneNo.getString(it) }
+                                    if (!curOneList.contains(tgt)) {
+                                        val newOneList = (0 until oneNo.length()).map { oneNo.getString(it) }
+                                        if (newOneList.contains(tgt)) {
+                                            curPreds.getJSONObject("one_char").put("no_history", oneNo)
+                                        }
+                                    }
+                                    val twoNo = newPreds.getJSONObject("two_char").getJSONArray("no_history")
+                                    val curTwoNo = curPreds.getJSONObject("two_char").getJSONArray("no_history")
+                                    val curTwoList = (0 until curTwoNo.length()).map { curTwoNo.getString(it) }
+                                    if (!curTwoList.contains(tgt)) {
+                                        val newTwoList = (0 until twoNo.length()).map { twoNo.getString(it) }
+                                        if (newTwoList.contains(tgt)) {
+                                            curPreds.getJSONObject("two_char").put("no_history", twoNo)
+                                        }
+                                    }
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+                outFile.writeText(existingJson.toString(2), Charsets.UTF_8)
+                println("Updated dual-mode evaluation in ${outFile.name}")
+            } catch (e: Exception) {
+                println("Failed to update existing dual-mode JSON: ${e.message}")
+            }
             val baselineOut = File(rootOutDir, "jotinput_prediction_evaluation_results_baseline.json")
             baselineOut.writeText(fullOutput.toString(2), Charsets.UTF_8)
-            println("Preserved dual-mode evaluation in ${outFile.name}, saved baseline to: ${baselineOut.absolutePath}")
+            println("Saved baseline to: ${baselineOut.absolutePath}")
         }
 
         // Validate that metrics are non-trivial
@@ -227,8 +277,8 @@ class JotInputPredictionEvaluationRunnerTest {
         return cands.take(3).map { it.surface }
     }
 
-    private fun getJaPrefixPredictions(query: String): List<String> {
-        val cands = jaEngine.getBaseCandidates(query)
+    private fun getJaPrefixPredictions(query: String, prevWord: String = ""): List<String> {
+        val cands = jaEngine.getBaseCandidates(query, contextPrefix = prevWord)
         return cands.take(3).map { it.surface }
     }
 

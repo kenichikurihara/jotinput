@@ -172,11 +172,14 @@ flowchart LR
   2. 1文字かな入力時（`に`, `を`, `が`, `は`, `の`）に、単体助詞・基本平仮名を未完活用形（`にくかっ` 等）や低頻度語（`ヲチスレ`）より上位に保証する。
 - **検証方法**: `EisRegressionTest.kt` および `eval/eis/run_eis.py` で予測サブスイートの EIS が `175.1 → 213.7 cpm`（All split）へ向上することを確認。
 
-### Step 2：Medium-Term — コーパス統計 Bigram Prior と格助詞＋動詞連接予測（工数: 中 / インパクト: 大）
-- **対象ファイル**: `NextPhrasePredictor.kt`, `KanaKanjiEngine.kt`
+### Step 2：Medium-Term — コーパス統計 Bigram Prior と格助詞＋動詞連接予測（完了 ✅）
+- **対象ファイル**: [`NextPhrasePredictor.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/NextPhrasePredictor.kt), [`KanaKanjiEngine.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/KanaKanjiEngine.kt), [`JapaneseKanaUtils.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/JapaneseKanaUtils.kt), [`VoiceInputMethodService.kt`](app/src/main/java/com/example/myasr/VoiceInputMethodService.kt), [`EisRegressionTest.kt`](app/src/test/java/com/example/myasr/EisRegressionTest.kt)
 - **実装内容**:
-  1. コーパスから抽出した高頻度文節遷移 Prior（名詞$\to$助詞、助詞$\to$動詞・サ変名詞、例：`資料を` $\to$ `送信`/`確認`/`共有`）を初期ロードし、履歴ゼロの状態から 0〜1 文字ヒット率を 90% 以上に引き上げる。
-  2. 1〜2文字プレフィックス検索（`getBaseCandidates`）において、直前文脈（`textBeforeCursor` の末尾トークン品詞）と連接可能な候補を優先して Top 12 プールに供給する（`資料を` + `そ` で `送信` が漏れる問題の解消）。
+  1. `CollocationEntry(surface, reading)` を導入し、静的コーパス連語および学習履歴の両方で正確な読み仮名を保持。
+  2. `JapaneseKanaUtils.extractLastWordOrParticle(contextPrefix)` を実装し、直前の文脈から末尾の格助詞（`を`, `に`, `が`, `は`, `の`）や語幹を O(1) で抽出。
+  3. `KanaKanjiEngine.getBaseCandidates(rawReading, contextPrefix)` を拡張し、直前文脈に連接可能な連語・動詞候補（例: `資料を` + `そ` $\to$ `送信` [そうしん]、`会議に` + `さ` $\to$ `参加` [さんか]、`準備が` + `か` $\to$ `完了` [かんりょう]、`良い` + `て` $\to$ `天気` [てんき]）を Rank 1 に昇格（`source = "context_collocation"`）。
+  4. 単一漢字の同音異義語（`総`, `創`, `層` 等）による予測候補埋没を構造的に解消。
+- **検証結果**: `EisRegressionTest.testContextAwarePrefixPromotionPlacesCollocationsAtRank1()` にて Rank 1 昇格を完全検証。
 
 ### Step 3：Strategic Leap — インライン途中予測補完（語幹＋付属語チャンク生成）（工数: 中〜大 / インパクト: 最大）
 - **対象ファイル**: `KanaKanjiEngine.kt`, `eval/eis/adapters.py`

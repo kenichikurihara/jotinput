@@ -159,6 +159,7 @@ class VoiceInputMethodService : InputMethodService() {
 
         kanaKanjiEngine = KanaKanjiEngine.getInstance(this)
         nextPhrasePredictor = NextPhrasePredictor.getInstance(this)
+        kanaKanjiEngine.predictor = nextPhrasePredictor
 
         arbitrator.onVoiceAnchorSettled = { anchor, editedText ->
             handleVoiceAnchorSettled(anchor, editedText)
@@ -733,7 +734,7 @@ class VoiceInputMethodService : InputMethodService() {
                     kanaKanjiEngine.commitCandidate(candidate)
                 }
                 if (prevPhrase.isNotEmpty()) {
-                    nextPhrasePredictor.recordTransition(prevPhrase, committedSurface)
+                    nextPhrasePredictor.recordTransition(prevPhrase, committedSurface, currentReading = candidate.reading)
                 }
 
                 isCurrentCandidatesReranked = false
@@ -1103,7 +1104,7 @@ class VoiceInputMethodService : InputMethodService() {
         isCurrentCandidatesReranked = false
         updateDebugSlmBadge(null)
 
-        val baseCandidates = kanaKanjiEngine.getBaseCandidates(reading)
+        val baseCandidates = kanaKanjiEngine.getBaseCandidates(reading, contextPrefix = textBeforeCursor)
 
         val isRerankEnabled = KeyboardHeightManager.isSlmRerankEnabled(this)
         val isSlmReady = LlmReranker.getInstance(this).isReady()

@@ -82,6 +82,50 @@ object JapaneseKanaUtils {
     }
 
     /**
+     * Extracts the trailing particle or word from contextPrefix to use as a prediction trigger.
+     * For example:
+     * - "資料を" -> "を"
+     * - "会議に" -> "に"
+     * - "準備が" -> "が"
+     * - "よろしく" -> "よろしく"
+     * - "お疲れ様です。" -> "" (punctuation ends sentence context)
+     */
+    fun extractLastWordOrParticle(contextPrefix: String): String {
+        if (contextPrefix.isBlank()) return ""
+        val trimmed = contextPrefix.trimEnd()
+        if (trimmed.isEmpty()) return ""
+
+        val lastChar = trimmed.last()
+        if (lastChar in listOf('。', '、', '！', '？', '!', '?', '\n', '.', ',')) {
+            return ""
+        }
+
+        // 1. Check if trailing 2 characters match a known case particle
+        if (trimmed.length >= 2) {
+            val twoCharParticle = trimmed.takeLast(2)
+            if (twoCharParticle in listOf("ので", "から", "まで", "より")) {
+                return twoCharParticle
+            }
+        }
+        val oneChar = lastChar.toString()
+        if (isCommonParticle(oneChar)) {
+            return oneChar
+        }
+
+        // 2. Otherwise extract trailing chunk of Japanese word (up to 8 chars)
+        val sb = StringBuilder()
+        for (i in trimmed.length - 1 downTo 0) {
+            val ch = trimmed[i]
+            if (ch.isWhitespace() || ch in listOf('。', '、', '！', '？', '!', '?', '\n', '.', ',')) {
+                break
+            }
+            sb.append(ch)
+            if (sb.length >= 8) break
+        }
+        return sb.reverse().toString()
+    }
+
+    /**
      * Normalizes a user-inputted reading into canonical Hiragana.
      */
     fun normalizeReading(text: String): String {

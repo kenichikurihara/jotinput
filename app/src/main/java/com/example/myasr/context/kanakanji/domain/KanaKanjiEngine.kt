@@ -88,6 +88,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     @Volatile
     private var connectionMatrix: ConnectionMatrix? = null
 
+    var predictor: NextPhrasePredictor? = null
+
     data class MmapEntry(val sourceId: String, val dict: MmapDictionary)
     private val activeMmapDictionaries = java.util.concurrent.CopyOnWriteArrayList<MmapEntry>()
 
@@ -189,7 +191,10 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
         fun getInstance(context: Context): KanaKanjiEngine {
             return instance ?: synchronized(this) {
-                instance ?: KanaKanjiEngine(context.applicationContext).also { instance = it }
+                instance ?: KanaKanjiEngine(context.applicationContext).also {
+                    it.predictor = NextPhrasePredictor.getInstance(context.applicationContext)
+                    instance = it
+                }
             }
         }
     }
@@ -559,40 +564,63 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
      * Fast-path candidate retrieval (in-memory Trie + SQLite query cache).
      * Safe to run synchronously on the UI thread (< 1ms).
      */
-    fun getBaseCandidates(rawReading: String): List<ConversionCandidate> {
+    @JvmOverloads
+    fun getBaseCandidates(rawReading: String, contextPrefix: String = ""): List<ConversionCandidate> {
         if (rawReading.isBlank()) return emptyList()
         ensureHistoryLoaded()
         initializeIfNeeded()
 
         val normalized = JapaneseKanaUtils.normalizeReading(rawReading)
+        val contextKey = if (contextPrefix.isNotEmpty()) JapaneseKanaUtils.extractLastWordOrParticle(contextPrefix) else ""
+        val cacheKey = if (contextKey.isEmpty()) normalized else "$normalized|$contextKey"
 
         // Retrieve base candidates from queryCache or generate them
-        val cached = synchronized(queryCache) { queryCache[normalized] }
+        val cached = synchronized(queryCache) { queryCache[cacheKey] }
         if (cached != null) return cached
 
         val result = mutableListOf<ConversionCandidate>()
-            val seenSurfaces = HashSet<String>()
+        val seenSurfaces = HashSet<String>()
 
-            fun addCandidate(cand: ConversionCandidate) {
-                // All-hiragana candidates matching composing text exactly are excluded because
-                // pressing the commit/enter button directly commits the un-converted Hiragana composing text.
-                // Exceptions:
-                // 1. Common case particles (e.g. "に", "を", "が", "は", "の"): Single-char grammatical particles
-                //    must be preserved and selectable in the candidate strip.
-                // 2. Mistype flick typo corrections (source == "flick_correction").
-                // 3. Predictive candidates (isPrediction == true).
-                val isParticleExact = JapaneseKanaUtils.isCommonParticle(cand.surface) && cand.surface == normalized
-                val isRedundantHiragana = !isParticleExact &&
-                        JapaneseKanaUtils.isAllHiragana(cand.surface) &&
-                        !cand.isPrediction &&
-                        cand.source != "flick_correction" &&
-                        cand.surface == normalized
-                if (cand.surface.isNotBlank() &&
-                    !isRedundantHiragana &&
-                    seenSurfaces.add(cand.surface)) {
-                    result.add(cand)
+        fun addCandidate(cand: ConversionCandidate) {
+            // All-hiragana candidates matching composing text exactly are excluded because
+            // pressing the commit/enter button directly commits the un-converted Hiragana composing text.
+            // Exceptions:
+            // 1. Common case particles (e.g. "に", "を", "が", "は", "の"): Single-char grammatical particles
+            //    must be preserved and selectable in the candidate strip.
+            // 2. Mistype flick typo corrections (source == "flick_correction").
+            // 3. Predictive candidates (isPrediction == true).
+            val isParticleExact = JapaneseKanaUtils.isCommonParticle(cand.surface) && cand.surface == normalized
+            val isRedundantHiragana = !isParticleExact &&
+                    JapaneseKanaUtils.isAllHiragana(cand.surface) &&
+                    !cand.isPrediction &&
+                    cand.source != "flick_correction" &&
+                    cand.surface == normalized
+            if (cand.surface.isNotBlank() &&
+                !isRedundantHiragana &&
+                seenSurfaces.add(cand.surface)) {
+                result.add(cand)
+            }
+        }
+
+        // 0. Context-aware Collocation Prefix Completions (Promoted to Rank 1 for predictive typing)
+        if (contextKey.isNotEmpty()) {
+            val pred = predictor ?: (context?.let { NextPhrasePredictor.getInstance(it) })
+            if (pred != null) {
+                val nextPredictions = pred.predict(contextKey, textBeforeCursor = contextPrefix, suggestPeriod = false)
+                for (cand in nextPredictions) {
+                    val candReading = JapaneseKanaUtils.normalizeReading(cand.reading)
+                    if (candReading.startsWith(normalized) && cand.surface != normalized) {
+                        addCandidate(
+                            cand.copy(
+                                isPrediction = true,
+                                source = "context_collocation",
+                                priority = 5.0f
+                            )
+                        )
+                    }
                 }
             }
+        }
 
             // 1. User dictionary entries (Absolute priority)
             val matchingPaths = findMatchingTrieNodes(normalized)
@@ -820,7 +848,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     val oldestKey = queryCache.keys.firstOrNull()
                     if (oldestKey != null) queryCache.remove(oldestKey)
                 }
-                queryCache[normalized] = ranked
+                queryCache[cacheKey] = ranked
             }
             return ranked
     }
@@ -946,11 +974,19 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val nonUserCandidates = enriched.filter { it.source != "user" }
 
         val sortedNonUser = nonUserCandidates.sortedWith { a, b ->
-            val aIsFull = targetReading.isEmpty() || (a.reading == targetReading && !a.isPrediction && a.source != "viterbi_prefix")
-            val bIsFull = targetReading.isEmpty() || (b.reading == targetReading && !b.isPrediction && b.source != "viterbi_prefix")
-            val histA = if (aIsFull) a.historyCount else 0
-            val histB = if (bIsFull) b.historyCount else 0
-            histB.compareTo(histA)
+            val aIsColloc = a.source == "context_collocation"
+            val bIsColloc = b.source == "context_collocation"
+            if (aIsColloc != bIsColloc) {
+                if (aIsColloc) -1 else 1
+            } else if (aIsColloc && bIsColloc) {
+                b.historyCount.compareTo(a.historyCount)
+            } else {
+                val aIsFull = targetReading.isEmpty() || (a.reading == targetReading && !a.isPrediction && a.source != "viterbi_prefix")
+                val bIsFull = targetReading.isEmpty() || (b.reading == targetReading && !b.isPrediction && b.source != "viterbi_prefix")
+                val histA = if (aIsFull) a.historyCount else 0
+                val histB = if (bIsFull) b.historyCount else 0
+                histB.compareTo(histA)
+            }
         }
 
         return userCandidates + sortedNonUser
