@@ -1,0 +1,1306 @@
+{
+  "metadata": {
+    "evaluator": "JotInput All Ideas & Combinations Evaluator",
+    "timestamp": 1794720311,
+    "total_configs_evaluated": 12,
+    "best_combination": "7. Combo (Idea 2 + 3)"
+  },
+  "configurations": [
+    {
+      "name": "0. Baseline (SLM OFF)",
+      "overall": {
+        "target_hit_at_1": 0.6027777777777779,
+        "target_hit_at_3": 0.7166666666666667,
+        "ref_concordance_at_1": 0.6027777777777777,
+        "ref_concordance_at_3": 0.7666666666666666,
+        "mrr": 0.6527777777777777
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.5611111111111111,
+        "target_hit_at_3": 0.6888888888888889,
+        "mrr": 0.6157407407407406
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.6444444444444445,
+        "target_hit_at_3": 0.7444444444444445,
+        "mrr": 0.6898148148148148
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.43333333333333335,
+          "target_hit_at_3": 0.4666666666666667,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.5333333333333333,
+          "mrr": 0.45
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.7333333333333333,
+          "target_hit_at_3": 0.7333333333333333,
+          "ref_concordance_at_1": 0.6666666666666666,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.7333333333333333
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.7333333333333333,
+          "target_hit_at_3": 0.7333333333333333,
+          "ref_concordance_at_1": 0.7333333333333333,
+          "ref_concordance_at_3": 0.8333333333333334,
+          "mrr": 0.7333333333333333
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.23333333333333334,
+          "target_hit_at_3": 0.6,
+          "ref_concordance_at_1": 0.2,
+          "ref_concordance_at_3": 0.6333333333333333,
+          "mrr": 0.38888888888888895
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.23333333333333334,
+          "target_hit_at_3": 0.6,
+          "ref_concordance_at_1": 0.2,
+          "ref_concordance_at_3": 0.6333333333333333,
+          "mrr": 0.38888888888888895
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.0,
+          "target_hit_at_3": 0.0,
+          "ref_concordance_at_1": 0.0,
+          "ref_concordance_at_3": 0.0,
+          "mrr": 0.0
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.26666666666666666,
+          "target_hit_at_3": 0.6333333333333333,
+          "ref_concordance_at_1": 0.3333333333333333,
+          "ref_concordance_at_3": 0.9,
+          "mrr": 0.43333333333333335
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.6,
+          "target_hit_at_3": 0.8333333333333334,
+          "ref_concordance_at_1": 0.6333333333333333,
+          "ref_concordance_at_3": 0.9,
+          "mrr": 0.7055555555555556
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        }
+      }
+    },
+    {
+      "name": "1. Baseline (Current SLM ON)",
+      "overall": {
+        "target_hit_at_1": 0.5416666666666666,
+        "target_hit_at_3": 0.7250000000000001,
+        "ref_concordance_at_1": 0.5249999999999999,
+        "ref_concordance_at_3": 0.8083333333333333,
+        "mrr": 0.6208333333333332
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.5722222222222222,
+        "target_hit_at_3": 0.7388888888888889,
+        "mrr": 0.6444444444444444
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.5111111111111111,
+        "target_hit_at_3": 0.7111111111111111,
+        "mrr": 0.5972222222222221
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.26666666666666666,
+          "target_hit_at_3": 0.5666666666666667,
+          "ref_concordance_at_1": 0.23333333333333334,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.3944444444444445
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.6333333333333333,
+          "target_hit_at_3": 0.7666666666666667,
+          "ref_concordance_at_1": 0.6333333333333333,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.6944444444444445
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.5333333333333333,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.6055555555555555
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9333333333333333,
+          "ref_concordance_at_1": 0.8333333333333334,
+          "ref_concordance_at_3": 0.9333333333333333,
+          "mrr": 0.8833333333333333
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.5,
+          "target_hit_at_3": 0.6666666666666666,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.5722222222222222
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.6666666666666666,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.6333333333333333,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.7166666666666667
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.1,
+          "target_hit_at_3": 0.23333333333333334,
+          "ref_concordance_at_1": 0.1,
+          "ref_concordance_at_3": 0.4666666666666667,
+          "mrr": 0.16111111111111112
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.36666666666666664,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.36666666666666664,
+          "ref_concordance_at_3": 0.8333333333333334,
+          "mrr": 0.5000000000000001
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.4,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.3333333333333333,
+          "ref_concordance_at_3": 0.8666666666666667,
+          "mrr": 0.5333333333333333
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9,
+          "ref_concordance_at_1": 0.8333333333333334,
+          "ref_concordance_at_3": 0.9666666666666667,
+          "mrr": 0.861111111111111
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.5333333333333333,
+          "target_hit_at_3": 0.7666666666666667,
+          "ref_concordance_at_1": 0.5666666666666667,
+          "ref_concordance_at_3": 0.9,
+          "mrr": 0.638888888888889
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9666666666666667,
+          "ref_concordance_at_1": 0.8333333333333334,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.8888888888888888
+        }
+      }
+    },
+    {
+      "name": "2. +Idea 1 alone (Proposal Expansion)",
+      "overall": {
+        "target_hit_at_1": 0.4861111111111111,
+        "target_hit_at_3": 0.6555555555555554,
+        "ref_concordance_at_1": 0.47777777777777775,
+        "ref_concordance_at_3": 0.7444444444444445,
+        "mrr": 0.5592592592592591
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.5611111111111111,
+        "target_hit_at_3": 0.7333333333333333,
+        "mrr": 0.6333333333333332
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.4111111111111111,
+        "target_hit_at_3": 0.5777777777777777,
+        "mrr": 0.48518518518518505
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.26666666666666666,
+          "target_hit_at_3": 0.5666666666666667,
+          "ref_concordance_at_1": 0.23333333333333334,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.3944444444444445
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.6333333333333333,
+          "target_hit_at_3": 0.7666666666666667,
+          "ref_concordance_at_1": 0.6333333333333333,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.6944444444444445
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.5333333333333333,
+          "target_hit_at_3": 0.6666666666666666,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.5944444444444446
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.8,
+          "target_hit_at_3": 0.9333333333333333,
+          "ref_concordance_at_1": 0.8,
+          "ref_concordance_at_3": 0.9333333333333333,
+          "mrr": 0.8555555555555556
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.4666666666666667,
+          "target_hit_at_3": 0.6666666666666666,
+          "ref_concordance_at_1": 0.43333333333333335,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.5444444444444445
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.6666666666666666,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.6333333333333333,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.7166666666666667
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.06666666666666667,
+          "target_hit_at_3": 0.06666666666666667,
+          "ref_concordance_at_1": 0.03333333333333333,
+          "ref_concordance_at_3": 0.3333333333333333,
+          "mrr": 0.06666666666666667
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.26666666666666666,
+          "target_hit_at_3": 0.4666666666666667,
+          "ref_concordance_at_1": 0.26666666666666666,
+          "ref_concordance_at_3": 0.6,
+          "mrr": 0.3555555555555555
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.23333333333333334,
+          "target_hit_at_3": 0.5666666666666667,
+          "ref_concordance_at_1": 0.3,
+          "ref_concordance_at_3": 0.7333333333333333,
+          "mrr": 0.3777777777777778
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.6666666666666666,
+          "target_hit_at_3": 0.8333333333333334,
+          "ref_concordance_at_1": 0.6666666666666666,
+          "ref_concordance_at_3": 0.9,
+          "mrr": 0.7388888888888888
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.43333333333333335,
+          "target_hit_at_3": 0.6333333333333333,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.5277777777777778
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.8,
+          "target_hit_at_3": 0.9,
+          "ref_concordance_at_1": 0.8,
+          "ref_concordance_at_3": 0.9666666666666667,
+          "mrr": 0.8444444444444444
+        }
+      }
+    },
+    {
+      "name": "3. +Idea 2 alone (LengthNorm & StratumPromotion)",
+      "overall": {
+        "target_hit_at_1": 0.6277777777777778,
+        "target_hit_at_3": 0.7722222222222221,
+        "ref_concordance_at_1": 0.5916666666666667,
+        "ref_concordance_at_3": 0.8083333333333333,
+        "mrr": 0.6930555555555555
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.6777777777777778,
+        "target_hit_at_3": 0.7888888888888889,
+        "mrr": 0.7259259259259259
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.5777777777777777,
+        "target_hit_at_3": 0.7555555555555555,
+        "mrr": 0.6601851851851851
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.2,
+          "target_hit_at_3": 0.4666666666666667,
+          "ref_concordance_at_1": 0.13333333333333333,
+          "ref_concordance_at_3": 0.5,
+          "mrr": 0.31666666666666665
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.6,
+          "target_hit_at_3": 0.6666666666666666,
+          "ref_concordance_at_1": 0.6,
+          "ref_concordance_at_3": 0.6666666666666666,
+          "mrr": 0.6333333333333333
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.8,
+          "target_hit_at_3": 0.9,
+          "ref_concordance_at_1": 0.7,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.8444444444444446
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.6333333333333333,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.5666666666666667,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.7
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9,
+          "ref_concordance_at_1": 0.7666666666666667,
+          "ref_concordance_at_3": 0.8333333333333334,
+          "mrr": 0.8611111111111112
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.2,
+          "target_hit_at_3": 0.4,
+          "ref_concordance_at_1": 0.06666666666666667,
+          "ref_concordance_at_3": 0.5333333333333333,
+          "mrr": 0.2944444444444444
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.7333333333333333,
+          "target_hit_at_3": 0.9,
+          "ref_concordance_at_1": 0.7333333333333333,
+          "ref_concordance_at_3": 0.9333333333333333,
+          "mrr": 0.8111111111111111
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.26666666666666666,
+          "target_hit_at_3": 0.6333333333333333,
+          "ref_concordance_at_1": 0.23333333333333334,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.43333333333333335
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.9,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 0.9,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.9444444444444445
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.4,
+          "target_hit_at_3": 0.6,
+          "ref_concordance_at_1": 0.43333333333333335,
+          "ref_concordance_at_3": 0.8666666666666667,
+          "mrr": 0.49444444444444446
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.9666666666666667,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 0.9666666666666667,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.9833333333333333
+        }
+      }
+    },
+    {
+      "name": "4. +Idea 3 alone (Contextual Bigram Cache)",
+      "overall": {
+        "target_hit_at_1": 0.6444444444444444,
+        "target_hit_at_3": 0.775,
+        "ref_concordance_at_1": 0.6277777777777778,
+        "ref_concordance_at_3": 0.8444444444444444,
+        "mrr": 0.7027777777777777
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.6611111111111111,
+        "target_hit_at_3": 0.7833333333333333,
+        "mrr": 0.7138888888888889
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.6277777777777778,
+        "target_hit_at_3": 0.7666666666666667,
+        "mrr": 0.6916666666666665
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.26666666666666666,
+          "target_hit_at_3": 0.5666666666666667,
+          "ref_concordance_at_1": 0.23333333333333334,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.3944444444444445
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.9333333333333333,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 0.9333333333333333,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.9666666666666667
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.5333333333333333,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.6055555555555555
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.9666666666666667,
+          "target_hit_at_3": 0.9666666666666667,
+          "ref_concordance_at_1": 0.9666666666666667,
+          "ref_concordance_at_3": 0.9666666666666667,
+          "mrr": 0.9666666666666667
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.5,
+          "target_hit_at_3": 0.6666666666666666,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.5722222222222222
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.7666666666666667,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.7333333333333333,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.7777777777777779
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.1,
+          "target_hit_at_3": 0.23333333333333334,
+          "ref_concordance_at_1": 0.1,
+          "ref_concordance_at_3": 0.4666666666666667,
+          "mrr": 0.16111111111111112
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9,
+          "ref_concordance_at_1": 0.8333333333333334,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.8666666666666667
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.4,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.3333333333333333,
+          "ref_concordance_at_3": 0.8666666666666667,
+          "mrr": 0.5333333333333333
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.9666666666666667,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 0.9666666666666667,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.9833333333333333
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.5333333333333333,
+          "target_hit_at_3": 0.7666666666666667,
+          "ref_concordance_at_1": 0.5666666666666667,
+          "ref_concordance_at_3": 0.9,
+          "mrr": 0.638888888888889
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.9333333333333333,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 0.9333333333333333,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.9666666666666667
+        }
+      }
+    },
+    {
+      "name": "5. +Idea 4 alone (Lookahead Continuation Bonus)",
+      "overall": {
+        "target_hit_at_1": 0.5388888888888889,
+        "target_hit_at_3": 0.7250000000000001,
+        "ref_concordance_at_1": 0.5222222222222221,
+        "ref_concordance_at_3": 0.8083333333333333,
+        "mrr": 0.6194444444444444
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.5666666666666667,
+        "target_hit_at_3": 0.7388888888888889,
+        "mrr": 0.6416666666666666
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.5111111111111111,
+        "target_hit_at_3": 0.7111111111111111,
+        "mrr": 0.5972222222222221
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.26666666666666666,
+          "target_hit_at_3": 0.5666666666666667,
+          "ref_concordance_at_1": 0.23333333333333334,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.3944444444444445
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.6,
+          "target_hit_at_3": 0.7666666666666667,
+          "ref_concordance_at_1": 0.6,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.6777777777777778
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.5333333333333333,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.6055555555555555
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9333333333333333,
+          "ref_concordance_at_1": 0.8333333333333334,
+          "ref_concordance_at_3": 0.9333333333333333,
+          "mrr": 0.8833333333333333
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.5,
+          "target_hit_at_3": 0.6666666666666666,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.5722222222222222
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.6666666666666666,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.6333333333333333,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.7166666666666667
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.1,
+          "target_hit_at_3": 0.23333333333333334,
+          "ref_concordance_at_1": 0.1,
+          "ref_concordance_at_3": 0.4666666666666667,
+          "mrr": 0.16111111111111112
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.36666666666666664,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.36666666666666664,
+          "ref_concordance_at_3": 0.8333333333333334,
+          "mrr": 0.5000000000000001
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.4,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.3333333333333333,
+          "ref_concordance_at_3": 0.8666666666666667,
+          "mrr": 0.5333333333333333
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9,
+          "ref_concordance_at_1": 0.8333333333333334,
+          "ref_concordance_at_3": 0.9666666666666667,
+          "mrr": 0.861111111111111
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.5333333333333333,
+          "target_hit_at_3": 0.7666666666666667,
+          "ref_concordance_at_1": 0.5666666666666667,
+          "ref_concordance_at_3": 0.9,
+          "mrr": 0.638888888888889
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9666666666666667,
+          "ref_concordance_at_1": 0.8333333333333334,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.8888888888888888
+        }
+      }
+    },
+    {
+      "name": "6. +Idea 5 alone (Subword Space Canonicalization)",
+      "overall": {
+        "target_hit_at_1": 0.5611111111111111,
+        "target_hit_at_3": 0.7277777777777779,
+        "ref_concordance_at_1": 0.5527777777777778,
+        "ref_concordance_at_3": 0.7972222222222223,
+        "mrr": 0.6342592592592591
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.5722222222222222,
+        "target_hit_at_3": 0.7388888888888889,
+        "mrr": 0.6444444444444444
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.55,
+        "target_hit_at_3": 0.7166666666666667,
+        "mrr": 0.6240740740740739
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.26666666666666666,
+          "target_hit_at_3": 0.5666666666666667,
+          "ref_concordance_at_1": 0.23333333333333334,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.3944444444444445
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.6333333333333333,
+          "target_hit_at_3": 0.7666666666666667,
+          "ref_concordance_at_1": 0.6333333333333333,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.6944444444444445
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.5333333333333333,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.6055555555555555
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9333333333333333,
+          "ref_concordance_at_1": 0.8333333333333334,
+          "ref_concordance_at_3": 0.9333333333333333,
+          "mrr": 0.8833333333333333
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.5,
+          "target_hit_at_3": 0.6666666666666666,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.5722222222222222
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.6666666666666666,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.6333333333333333,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.7166666666666667
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.1,
+          "target_hit_at_3": 0.23333333333333334,
+          "ref_concordance_at_1": 0.13333333333333333,
+          "ref_concordance_at_3": 0.5333333333333333,
+          "mrr": 0.15555555555555556
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.4,
+          "target_hit_at_3": 0.6666666666666666,
+          "ref_concordance_at_1": 0.4,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.5166666666666667
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.4666666666666667,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.8333333333333334,
+          "mrr": 0.5722222222222222
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9666666666666667,
+          "ref_concordance_at_1": 0.8333333333333334,
+          "ref_concordance_at_3": 0.9666666666666667,
+          "mrr": 0.8944444444444444
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.6333333333333333,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.6666666666666666,
+          "ref_concordance_at_3": 0.9,
+          "mrr": 0.711111111111111
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.8666666666666667,
+          "target_hit_at_3": 0.9333333333333333,
+          "ref_concordance_at_1": 0.8666666666666667,
+          "ref_concordance_at_3": 0.9666666666666667,
+          "mrr": 0.8944444444444444
+        }
+      }
+    },
+    {
+      "name": "7. Combo (Idea 2 + 3)",
+      "overall": {
+        "target_hit_at_1": 0.6888888888888889,
+        "target_hit_at_3": 0.8055555555555556,
+        "ref_concordance_at_1": 0.6527777777777778,
+        "ref_concordance_at_3": 0.8388888888888889,
+        "mrr": 0.7412037037037036
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.7333333333333333,
+        "target_hit_at_3": 0.8388888888888889,
+        "mrr": 0.7787037037037037
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.6444444444444445,
+        "target_hit_at_3": 0.7722222222222223,
+        "mrr": 0.7037037037037036
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.2,
+          "target_hit_at_3": 0.4666666666666667,
+          "ref_concordance_at_1": 0.13333333333333333,
+          "ref_concordance_at_3": 0.5,
+          "mrr": 0.31666666666666665
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.9333333333333333,
+          "target_hit_at_3": 0.9666666666666667,
+          "ref_concordance_at_1": 0.9333333333333333,
+          "ref_concordance_at_3": 0.9666666666666667,
+          "mrr": 0.95
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.8,
+          "target_hit_at_3": 0.9,
+          "ref_concordance_at_1": 0.7,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.8444444444444446
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.6333333333333333,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.5666666666666667,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.7
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9,
+          "ref_concordance_at_1": 0.7666666666666667,
+          "ref_concordance_at_3": 0.8333333333333334,
+          "mrr": 0.8611111111111112
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.2,
+          "target_hit_at_3": 0.4,
+          "ref_concordance_at_1": 0.06666666666666667,
+          "ref_concordance_at_3": 0.5333333333333333,
+          "mrr": 0.2944444444444444
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.26666666666666666,
+          "target_hit_at_3": 0.6333333333333333,
+          "ref_concordance_at_1": 0.23333333333333334,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.43333333333333335
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.4,
+          "target_hit_at_3": 0.6,
+          "ref_concordance_at_1": 0.43333333333333335,
+          "ref_concordance_at_3": 0.8666666666666667,
+          "mrr": 0.49444444444444446
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        }
+      }
+    },
+    {
+      "name": "8. Combo (Idea 3 + 5)",
+      "overall": {
+        "target_hit_at_1": 0.6583333333333333,
+        "target_hit_at_3": 0.7805555555555556,
+        "ref_concordance_at_1": 0.6499999999999999,
+        "ref_concordance_at_3": 0.8416666666666667,
+        "mrr": 0.712037037037037
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.6611111111111111,
+        "target_hit_at_3": 0.7833333333333333,
+        "mrr": 0.7138888888888889
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.6555555555555556,
+        "target_hit_at_3": 0.7777777777777778,
+        "mrr": 0.710185185185185
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.26666666666666666,
+          "target_hit_at_3": 0.5666666666666667,
+          "ref_concordance_at_1": 0.23333333333333334,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.3944444444444445
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.9333333333333333,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 0.9333333333333333,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.9666666666666667
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.5333333333333333,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.6055555555555555
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.9666666666666667,
+          "target_hit_at_3": 0.9666666666666667,
+          "ref_concordance_at_1": 0.9666666666666667,
+          "ref_concordance_at_3": 0.9666666666666667,
+          "mrr": 0.9666666666666667
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.5,
+          "target_hit_at_3": 0.6666666666666666,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.5722222222222222
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.7666666666666667,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.7333333333333333,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.7777777777777779
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.1,
+          "target_hit_at_3": 0.23333333333333334,
+          "ref_concordance_at_1": 0.13333333333333333,
+          "ref_concordance_at_3": 0.5333333333333333,
+          "mrr": 0.15555555555555556
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.8666666666666667,
+          "target_hit_at_3": 0.9666666666666667,
+          "ref_concordance_at_1": 0.8666666666666667,
+          "ref_concordance_at_3": 0.9666666666666667,
+          "mrr": 0.9111111111111111
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.4666666666666667,
+          "target_hit_at_3": 0.7,
+          "ref_concordance_at_1": 0.4666666666666667,
+          "ref_concordance_at_3": 0.8333333333333334,
+          "mrr": 0.5722222222222222
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 0.9333333333333333,
+          "target_hit_at_3": 0.9666666666666667,
+          "ref_concordance_at_1": 0.9333333333333333,
+          "ref_concordance_at_3": 0.9666666666666667,
+          "mrr": 0.95
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.6333333333333333,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.6666666666666666,
+          "ref_concordance_at_3": 0.9,
+          "mrr": 0.711111111111111
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.9333333333333333,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 0.9333333333333333,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.9611111111111111
+        }
+      }
+    },
+    {
+      "name": "9. Combo (Idea 2 + 3 + 5)",
+      "overall": {
+        "target_hit_at_1": 0.6916666666666667,
+        "target_hit_at_3": 0.788888888888889,
+        "ref_concordance_at_1": 0.663888888888889,
+        "ref_concordance_at_3": 0.825,
+        "mrr": 0.7347222222222223
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.7333333333333333,
+        "target_hit_at_3": 0.8388888888888889,
+        "mrr": 0.7787037037037037
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.65,
+        "target_hit_at_3": 0.7388888888888889,
+        "mrr": 0.6907407407407408
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.2,
+          "target_hit_at_3": 0.4666666666666667,
+          "ref_concordance_at_1": 0.13333333333333333,
+          "ref_concordance_at_3": 0.5,
+          "mrr": 0.31666666666666665
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.9333333333333333,
+          "target_hit_at_3": 0.9666666666666667,
+          "ref_concordance_at_1": 0.9333333333333333,
+          "ref_concordance_at_3": 0.9666666666666667,
+          "mrr": 0.95
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.8,
+          "target_hit_at_3": 0.9,
+          "ref_concordance_at_1": 0.7,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.8444444444444446
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.6333333333333333,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.5666666666666667,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.7
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.9,
+          "ref_concordance_at_1": 0.7666666666666667,
+          "ref_concordance_at_3": 0.8333333333333334,
+          "mrr": 0.8611111111111112
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.16666666666666666,
+          "target_hit_at_3": 0.3333333333333333,
+          "ref_concordance_at_1": 0.13333333333333333,
+          "ref_concordance_at_3": 0.5333333333333333,
+          "mrr": 0.23888888888888887
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.36666666666666664,
+          "target_hit_at_3": 0.5666666666666667,
+          "ref_concordance_at_1": 0.3333333333333333,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.4666666666666667
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.36666666666666664,
+          "target_hit_at_3": 0.5333333333333333,
+          "ref_concordance_at_1": 0.4,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.4388888888888889
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        }
+      }
+    },
+    {
+      "name": "10. Combo (Idea 1 + 2 + 3 + 5)",
+      "overall": {
+        "target_hit_at_1": 0.6305555555555555,
+        "target_hit_at_3": 0.711111111111111,
+        "ref_concordance_at_1": 0.6083333333333334,
+        "ref_concordance_at_3": 0.7444444444444445,
+        "mrr": 0.6657407407407407
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.65,
+        "target_hit_at_3": 0.7555555555555555,
+        "mrr": 0.6972222222222222
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.6111111111111112,
+        "target_hit_at_3": 0.6666666666666666,
+        "mrr": 0.6342592592592592
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.13333333333333333,
+          "target_hit_at_3": 0.3,
+          "ref_concordance_at_1": 0.1,
+          "ref_concordance_at_3": 0.3,
+          "mrr": 0.20555555555555557
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.7333333333333333,
+          "target_hit_at_3": 0.9333333333333333,
+          "ref_concordance_at_1": 0.7333333333333333,
+          "ref_concordance_at_3": 0.9333333333333333,
+          "mrr": 0.8277777777777778
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.7,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.6,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.7388888888888889
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.5,
+          "target_hit_at_3": 0.6333333333333333,
+          "ref_concordance_at_1": 0.43333333333333335,
+          "ref_concordance_at_3": 0.6333333333333333,
+          "mrr": 0.5611111111111112
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.8666666666666667,
+          "ref_concordance_at_1": 0.7666666666666667,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.85
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.1,
+          "target_hit_at_3": 0.2,
+          "ref_concordance_at_1": 0.1,
+          "ref_concordance_at_3": 0.36666666666666664,
+          "mrr": 0.14444444444444446
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.9666666666666667,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 0.9666666666666667,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.9777777777777777
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.23333333333333334,
+          "target_hit_at_3": 0.3333333333333333,
+          "ref_concordance_at_1": 0.2,
+          "ref_concordance_at_3": 0.43333333333333335,
+          "mrr": 0.27777777777777773
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.36666666666666664,
+          "target_hit_at_3": 0.4666666666666667,
+          "ref_concordance_at_1": 0.4,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.4055555555555556
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        }
+      }
+    },
+    {
+      "name": "11. Full Ensemble (All 1+2+3+4+5)",
+      "overall": {
+        "target_hit_at_1": 0.6305555555555555,
+        "target_hit_at_3": 0.711111111111111,
+        "ref_concordance_at_1": 0.6083333333333334,
+        "ref_concordance_at_3": 0.7472222222222222,
+        "mrr": 0.6657407407407407
+      },
+      "japanese_summary": {
+        "target_hit_at_1": 0.65,
+        "target_hit_at_3": 0.7555555555555555,
+        "mrr": 0.6972222222222222
+      },
+      "english_summary": {
+        "target_hit_at_1": 0.6111111111111112,
+        "target_hit_at_3": 0.6666666666666666,
+        "mrr": 0.6342592592592592
+      },
+      "by_slot_japanese": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.13333333333333333,
+          "target_hit_at_3": 0.3,
+          "ref_concordance_at_1": 0.1,
+          "ref_concordance_at_3": 0.3333333333333333,
+          "mrr": 0.20555555555555557
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.7333333333333333,
+          "target_hit_at_3": 0.9333333333333333,
+          "ref_concordance_at_1": 0.7333333333333333,
+          "ref_concordance_at_3": 0.9333333333333333,
+          "mrr": 0.8277777777777778
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.7,
+          "target_hit_at_3": 0.8,
+          "ref_concordance_at_1": 0.6,
+          "ref_concordance_at_3": 0.7,
+          "mrr": 0.7388888888888889
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.5,
+          "target_hit_at_3": 0.6333333333333333,
+          "ref_concordance_at_1": 0.43333333333333335,
+          "ref_concordance_at_3": 0.6333333333333333,
+          "mrr": 0.5611111111111112
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 0.8333333333333334,
+          "target_hit_at_3": 0.8666666666666667,
+          "ref_concordance_at_1": 0.7666666666666667,
+          "ref_concordance_at_3": 0.8,
+          "mrr": 0.85
+        }
+      },
+      "by_slot_english": {
+        "zero_char_no_hist": {
+          "target_hit_at_1": 0.1,
+          "target_hit_at_3": 0.2,
+          "ref_concordance_at_1": 0.1,
+          "ref_concordance_at_3": 0.36666666666666664,
+          "mrr": 0.14444444444444446
+        },
+        "zero_char_with_hist": {
+          "target_hit_at_1": 0.9666666666666667,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 0.9666666666666667,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 0.9777777777777777
+        },
+        "one_char_no_hist": {
+          "target_hit_at_1": 0.23333333333333334,
+          "target_hit_at_3": 0.3333333333333333,
+          "ref_concordance_at_1": 0.2,
+          "ref_concordance_at_3": 0.43333333333333335,
+          "mrr": 0.27777777777777773
+        },
+        "one_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        },
+        "two_char_no_hist": {
+          "target_hit_at_1": 0.36666666666666664,
+          "target_hit_at_3": 0.4666666666666667,
+          "ref_concordance_at_1": 0.4,
+          "ref_concordance_at_3": 0.7666666666666667,
+          "mrr": 0.4055555555555556
+        },
+        "two_char_with_hist": {
+          "target_hit_at_1": 1.0,
+          "target_hit_at_3": 1.0,
+          "ref_concordance_at_1": 1.0,
+          "ref_concordance_at_3": 1.0,
+          "mrr": 1.0
+        }
+      }
+    }
+  ]
+}
