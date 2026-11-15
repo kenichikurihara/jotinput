@@ -3,6 +3,8 @@ package com.example.myasr
 import com.example.myasr.context.kanakanji.domain.ConversionCandidate
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
 import com.example.myasr.context.kanakanji.domain.NextPhrasePredictor
+import com.example.myasr.context.vocabulary.domain.DictionaryEntry
+import com.example.myasr.context.vocabulary.domain.Priority
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -199,7 +201,7 @@ class EisRegressionTest {
         // Custom dictionary term registration (CUJ-3)
         val customWord = "高輪ゲートウェイ"
         val customReading = "たかなわげーとうぇい"
-        engine.registerCanonicalVocabulary(customWord, customReading, "CUSTOM_NOUN", 1000)
+        engine.syncUserDictionary(listOf(DictionaryEntry(word = customWord, reading = customReading, priority = Priority.HIGH)))
 
         // User types prefix 'たかな' (3 keys)
         val candidates = engine.getBaseCandidates("たかな")
