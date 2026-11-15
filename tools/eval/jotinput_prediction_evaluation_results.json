@@ -1,7 +1,7 @@
 {
   "metadata": {
     "evaluator": "JotInput Dual-Mode Prediction Evaluator (SLM OFF vs ON)",
-    "timestamp": 1794718083,
+    "timestamp": 1794720894,
     "total_cases_evaluated": 60,
     "model": "qwen2.5-0.5b-instruct-q4_k_m.gguf"
   },
@@ -4360,113 +4360,113 @@
   "slm_on": {
     "summary_metrics": {
       "overall": {
-        "target_hit_at_1": 0.55,
-        "target_hit_at_3": 0.7333333333333334,
-        "ref_concordance_at_1": 0.5277777777777778,
-        "ref_concordance_at_3": 0.8083333333333333,
-        "mrr": 0.6282407407407407
+        "target_hit_at_1": 0.6888888888888889,
+        "target_hit_at_3": 0.8055555555555556,
+        "ref_concordance_at_1": 0.6527777777777778,
+        "ref_concordance_at_3": 0.8388888888888889,
+        "mrr": 0.7412037037037036
       },
       "japanese": {
         "total_queries": 180,
-        "target_hit_at_1": 0.5888888888888889,
-        "target_hit_at_3": 0.7555555555555555,
-        "ref_concordance_at_1": 0.55,
-        "ref_concordance_at_3": 0.7777777777777778,
-        "mrr": 0.6592592592592591,
+        "target_hit_at_1": 0.7333333333333333,
+        "target_hit_at_3": 0.8388888888888889,
+        "ref_concordance_at_1": 0.6833333333333333,
+        "ref_concordance_at_3": 0.8111111111111111,
+        "mrr": 0.7787037037037037,
         "by_slot": {
           "zero_char_no_hist": {
-            "target_hit_at_1": 0.26666666666666666,
-            "target_hit_at_3": 0.5666666666666667,
-            "ref_concordance_at_1": 0.23333333333333334,
-            "ref_concordance_at_3": 0.7,
-            "mrr": 0.3944444444444445
+            "target_hit_at_1": 0.2,
+            "target_hit_at_3": 0.4666666666666667,
+            "ref_concordance_at_1": 0.13333333333333333,
+            "ref_concordance_at_3": 0.5,
+            "mrr": 0.31666666666666665
           },
           "zero_char_with_hist": {
-            "target_hit_at_1": 0.6333333333333333,
-            "target_hit_at_3": 0.7666666666666667,
-            "ref_concordance_at_1": 0.6333333333333333,
-            "ref_concordance_at_3": 0.8,
-            "mrr": 0.6944444444444445
+            "target_hit_at_1": 0.9333333333333333,
+            "target_hit_at_3": 0.9666666666666667,
+            "ref_concordance_at_1": 0.9333333333333333,
+            "ref_concordance_at_3": 0.9666666666666667,
+            "mrr": 0.95
           },
           "one_char_no_hist": {
-            "target_hit_at_1": 0.5333333333333333,
-            "target_hit_at_3": 0.7666666666666667,
-            "ref_concordance_at_1": 0.4666666666666667,
-            "ref_concordance_at_3": 0.7666666666666667,
-            "mrr": 0.6333333333333333
+            "target_hit_at_1": 0.8,
+            "target_hit_at_3": 0.9,
+            "ref_concordance_at_1": 0.7,
+            "ref_concordance_at_3": 0.8,
+            "mrr": 0.8444444444444446
           },
           "one_char_with_hist": {
-            "target_hit_at_1": 0.8333333333333334,
-            "target_hit_at_3": 0.9333333333333333,
-            "ref_concordance_at_1": 0.8333333333333334,
-            "ref_concordance_at_3": 0.9333333333333333,
-            "mrr": 0.8777777777777778
+            "target_hit_at_1": 1.0,
+            "target_hit_at_3": 1.0,
+            "ref_concordance_at_1": 1.0,
+            "ref_concordance_at_3": 1.0,
+            "mrr": 1.0
           },
           "two_char_no_hist": {
-            "target_hit_at_1": 0.5666666666666667,
-            "target_hit_at_3": 0.6666666666666666,
-            "ref_concordance_at_1": 0.5,
-            "ref_concordance_at_3": 0.7,
-            "mrr": 0.6055555555555556
+            "target_hit_at_1": 0.6333333333333333,
+            "target_hit_at_3": 0.8,
+            "ref_concordance_at_1": 0.5666666666666667,
+            "ref_concordance_at_3": 0.7666666666666667,
+            "mrr": 0.7
           },
           "two_char_with_hist": {
-            "target_hit_at_1": 0.7,
-            "target_hit_at_3": 0.8333333333333334,
-            "ref_concordance_at_1": 0.6333333333333333,
-            "ref_concordance_at_3": 0.7666666666666667,
-            "mrr": 0.75
+            "target_hit_at_1": 0.8333333333333334,
+            "target_hit_at_3": 0.9,
+            "ref_concordance_at_1": 0.7666666666666667,
+            "ref_concordance_at_3": 0.8333333333333334,
+            "mrr": 0.8611111111111112
           }
         }
       },
       "english": {
         "total_queries": 180,
-        "target_hit_at_1": 0.5111111111111111,
-        "target_hit_at_3": 0.7111111111111111,
-        "ref_concordance_at_1": 0.5055555555555555,
-        "ref_concordance_at_3": 0.8388888888888889,
-        "mrr": 0.5972222222222221,
+        "target_hit_at_1": 0.6444444444444445,
+        "target_hit_at_3": 0.7722222222222223,
+        "ref_concordance_at_1": 0.6222222222222222,
+        "ref_concordance_at_3": 0.8666666666666667,
+        "mrr": 0.7037037037037036,
         "by_slot": {
           "zero_char_no_hist": {
-            "target_hit_at_1": 0.1,
-            "target_hit_at_3": 0.23333333333333334,
-            "ref_concordance_at_1": 0.1,
-            "ref_concordance_at_3": 0.4666666666666667,
-            "mrr": 0.16111111111111112
+            "target_hit_at_1": 0.2,
+            "target_hit_at_3": 0.4,
+            "ref_concordance_at_1": 0.06666666666666667,
+            "ref_concordance_at_3": 0.5333333333333333,
+            "mrr": 0.2944444444444444
           },
           "zero_char_with_hist": {
-            "target_hit_at_1": 0.36666666666666664,
-            "target_hit_at_3": 0.7,
-            "ref_concordance_at_1": 0.36666666666666664,
-            "ref_concordance_at_3": 0.8333333333333334,
-            "mrr": 0.5000000000000001
+            "target_hit_at_1": 1.0,
+            "target_hit_at_3": 1.0,
+            "ref_concordance_at_1": 1.0,
+            "ref_concordance_at_3": 1.0,
+            "mrr": 1.0
           },
           "one_char_no_hist": {
-            "target_hit_at_1": 0.4,
-            "target_hit_at_3": 0.7,
-            "ref_concordance_at_1": 0.3333333333333333,
-            "ref_concordance_at_3": 0.8666666666666667,
-            "mrr": 0.5333333333333333
+            "target_hit_at_1": 0.26666666666666666,
+            "target_hit_at_3": 0.6333333333333333,
+            "ref_concordance_at_1": 0.23333333333333334,
+            "ref_concordance_at_3": 0.8,
+            "mrr": 0.43333333333333335
           },
           "one_char_with_hist": {
-            "target_hit_at_1": 0.8333333333333334,
-            "target_hit_at_3": 0.9,
-            "ref_concordance_at_1": 0.8333333333333334,
-            "ref_concordance_at_3": 0.9666666666666667,
-            "mrr": 0.861111111111111
+            "target_hit_at_1": 1.0,
+            "target_hit_at_3": 1.0,
+            "ref_concordance_at_1": 1.0,
+            "ref_concordance_at_3": 1.0,
+            "mrr": 1.0
           },
           "two_char_no_hist": {
-            "target_hit_at_1": 0.5333333333333333,
-            "target_hit_at_3": 0.7666666666666667,
-            "ref_concordance_at_1": 0.5666666666666667,
-            "ref_concordance_at_3": 0.9,
-            "mrr": 0.638888888888889
+            "target_hit_at_1": 0.4,
+            "target_hit_at_3": 0.6,
+            "ref_concordance_at_1": 0.43333333333333335,
+            "ref_concordance_at_3": 0.8666666666666667,
+            "mrr": 0.49444444444444446
           },
           "two_char_with_hist": {
-            "target_hit_at_1": 0.8333333333333334,
-            "target_hit_at_3": 0.9666666666666667,
-            "ref_concordance_at_1": 0.8333333333333334,
+            "target_hit_at_1": 1.0,
+            "target_hit_at_3": 1.0,
+            "ref_concordance_at_1": 1.0,
             "ref_concordance_at_3": 1.0,
-            "mrr": 0.8888888888888888
+            "mrr": 1.0
           }
         }
       }
@@ -4481,13 +4481,13 @@
           "zero_char": {
             "no_history": [
               "お願い",
-              "お願いします",
-              "お願いいたします"
+              "お願いいたします",
+              "お願いします"
             ],
             "with_history": [
               "お願い",
-              "お願いします",
-              "お願いいたします"
+              "お願いいたします",
+              "お願いします"
             ],
             "ref_no_history": [
               "お願いします",
@@ -4505,12 +4505,12 @@
             "no_history": [
               "お願い",
               "お",
-              "御"
+              "終えりゃ"
             ],
             "with_history": [
               "お願い",
               "お",
-              "御"
+              "終えりゃ"
             ],
             "ref_no_history": [
               "お願いします",
@@ -4556,14 +4556,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "します",
-              "から",
-              "ございます"
+              "ございます",
+              "いたします",
+              "します"
             ],
             "with_history": [
               "します",
-              "から",
-              "ございます"
+              "ございます",
+              "いたします"
             ],
             "ref_no_history": [
               "します",
@@ -4579,8 +4579,8 @@
           "one_char": {
             "query": "し",
             "no_history": [
-              "し",
               "します",
+              "し",
               "子"
             ],
             "with_history": [
@@ -4603,13 +4603,13 @@
             "query": "しま",
             "no_history": [
               "します",
-              "しま",
-              "しまお"
+              "しまお",
+              "しま"
             ],
             "with_history": [
               "します",
-              "しま",
-              "しまお"
+              "しまお",
+              "しま"
             ],
             "ref_no_history": [
               "します",
@@ -4632,14 +4632,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
-              "ございます",
-              "ありがとうございます"
+              "ありがとうございます",
+              "お世話になっております",
+              "ございます"
             ],
             "with_history": [
               "お世話",
-              "から",
-              "ございます"
+              "ありがとうございます",
+              "お世話になっております"
             ],
             "ref_no_history": [
               "お世話になっております",
@@ -4655,14 +4655,14 @@
           "one_char": {
             "query": "お",
             "no_history": [
-              "お",
-              "御",
-              "おか"
+              "お世話",
+              "おか",
+              "終える"
             ],
             "with_history": [
               "お世話",
-              "お",
-              "御"
+              "おか",
+              "終える"
             ],
             "ref_no_history": [
               "お世話になっております",
@@ -4679,13 +4679,13 @@
             "query": "おせ",
             "no_history": [
               "お世話",
-              "おせ",
-              "御世話"
+              "御世話",
+              "おせん"
             ],
             "with_history": [
               "お世話",
-              "おせ",
-              "御世話"
+              "御世話",
+              "おせん"
             ],
             "ref_no_history": [
               "お世話になっております",
@@ -4710,12 +4710,12 @@
             "no_history": [
               "になっております",
               "になります",
-              "です"
+              "でしょうか"
             ],
             "with_history": [
+              "に",
               "になっております",
-              "になります",
-              "に"
+              "になります"
             ],
             "ref_no_history": [
               "になっております",
@@ -4731,14 +4731,14 @@
           "one_char": {
             "query": "に",
             "no_history": [
-              "に",
-              "2",
-              "煮"
+              "にくかっ",
+              "にくから",
+              "にくかれ"
             ],
             "with_history": [
               "に",
-              "2",
-              "煮"
+              "にくかっ",
+              "にくから"
             ],
             "ref_no_history": [
               "になっております",
@@ -4756,12 +4756,12 @@
             "no_history": [
               "に慣れて",
               "担い",
-              "担え"
+              "担えれ"
             ],
             "with_history": [
               "に慣れて",
               "担い",
-              "担え"
+              "担えれ"
             ],
             "ref_no_history": [
               "になっております",
@@ -4784,14 +4784,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
-              "中",
-              "すること"
+              "すること",
+              "しました",
+              "ございます"
             ],
             "with_history": [
               "しました",
-              "から",
-              "中"
+              "すること",
+              "ございます"
             ],
             "ref_no_history": [
               "しました",
@@ -4807,9 +4807,9 @@
           "one_char": {
             "query": "し",
             "no_history": [
+              "しました",
               "子",
-              "し",
-              "市"
+              "し"
             ],
             "with_history": [
               "しました",
@@ -4936,14 +4936,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
               "ございます",
+              "ありがとう",
               "すること"
             ],
             "with_history": [
-              "から",
               "です",
-              "ございます"
+              "ございます",
+              "ありがとう"
             ],
             "ref_no_history": [
               "です",
@@ -4959,13 +4959,13 @@
           "one_char": {
             "query": "で",
             "no_history": [
-              "出",
+              "できる",
               "でき",
-              "できる"
+              "できゃ"
             ],
             "with_history": [
               "です",
-              "出",
+              "できる",
               "でき"
             ],
             "ref_no_history": [
@@ -4982,14 +4982,14 @@
           "two_char": {
             "query": "です",
             "no_history": [
-              "ですが",
               "ですから",
+              "ですが",
               "です"
             ],
             "with_history": [
               "です",
-              "ですが",
-              "ですから"
+              "ですから",
+              "ですが"
             ],
             "ref_no_history": [
               "です",
@@ -5012,14 +5012,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
               "ございました",
-              "ました"
+              "ございます",
+              "すること"
             ],
             "with_history": [
               "ございます",
               "ございました",
-              "ました"
+              "すること"
             ],
             "ref_no_history": [
               "ございます",
@@ -5035,14 +5035,14 @@
           "one_char": {
             "query": "ご",
             "no_history": [
-              "御",
               "ございます",
-              "5"
+              "御",
+              "ごとき"
             ],
             "with_history": [
               "ございます",
               "御",
-              "5"
+              "ごとき"
             ],
             "ref_no_history": [
               "ございます",
@@ -5112,13 +5112,13 @@
             "query": "あ",
             "no_history": [
               "ありません",
-              "あ",
-              "あい"
+              "あい",
+              "合い"
             ],
             "with_history": [
               "ありません",
-              "あ",
-              "あい"
+              "あい",
+              "合い"
             ],
             "ref_no_history": [
               "ありません",
@@ -5136,12 +5136,12 @@
             "no_history": [
               "ありません",
               "あり",
-              "アリ"
+              "ありがとうございます"
             ],
             "with_history": [
               "ありません",
               "あり",
-              "アリ"
+              "ありがとうございます"
             ],
             "ref_no_history": [
               "ありません",
@@ -5164,14 +5164,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "も",
-              "は",
-              "の"
+              "ございます",
+              "しました",
+              "ありがとう"
             ],
             "with_history": [
               "は",
-              "も",
-              "の"
+              "ございます",
+              "しました"
             ],
             "ref_no_history": [
               "は",
@@ -5187,14 +5187,14 @@
           "one_char": {
             "query": "は",
             "no_history": [
-              "は",
-              "波",
-              "派"
+              "はじめ",
+              "はじめよう",
+              "は"
             ],
             "with_history": [
               "は",
-              "波",
-              "派"
+              "はじめ",
+              "はじめよう"
             ],
             "ref_no_history": [
               "は",
@@ -5210,14 +5210,14 @@
           "two_char": {
             "query": "はい",
             "no_history": [
+              "ハイ",
               "海",
-              "杯",
-              "ハイ"
+              "はい"
             ],
             "with_history": [
+              "ハイ",
               "海",
-              "杯",
-              "ハイ"
+              "はい"
             ],
             "ref_no_history": [
               "はい",
@@ -5240,14 +5240,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
+              "ございます",
               "しました",
-              "ございます"
+              "すること"
             ],
             "with_history": [
-              "から",
-              "しました",
-              "ございます"
+              "天気",
+              "ございます",
+              "しました"
             ],
             "ref_no_history": [
               "天気",
@@ -5264,13 +5264,13 @@
             "query": "て",
             "no_history": [
               "抵抗",
-              "手",
-              "天気"
+              "天気",
+              "ていう"
             ],
             "with_history": [
               "天気",
               "抵抗",
-              "手"
+              "ていう"
             ],
             "ref_no_history": [
               "天気",
@@ -5286,14 +5286,14 @@
           "two_char": {
             "query": "てん",
             "no_history": [
-              "店",
-              "点",
-              "展"
+              "てんじゃん",
+              "テン",
+              "天気"
             ],
             "with_history": [
               "天気",
-              "店",
-              "点"
+              "てんじゃん",
+              "テン"
             ],
             "ref_no_history": [
               "天気",
@@ -5316,14 +5316,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "も",
-              "から",
-              "の"
+              "ございます",
+              "ありがとう",
+              "しました"
             ],
             "with_history": [
               "の",
-              "も",
-              "から"
+              "ございます",
+              "ありがとう"
             ],
             "ref_no_history": [
               "の",
@@ -5339,14 +5339,14 @@
           "one_char": {
             "query": "の",
             "no_history": [
+              "のけん",
               "の",
-              "之",
-              "ノ"
+              "のう"
             ],
             "with_history": [
               "の",
-              "之",
-              "ノ"
+              "のけん",
+              "のう"
             ],
             "ref_no_history": [
               "の",
@@ -5363,13 +5363,13 @@
             "query": "のち",
             "no_history": [
               "後に",
-              "後",
-              "のち"
+              "のち",
+              "後ほど"
             ],
             "with_history": [
               "後に",
-              "後",
-              "のち"
+              "のち",
+              "後ほど"
             ],
             "ref_no_history": [
               "のち",
@@ -5392,12 +5392,12 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
               "ございます",
-              "すること"
+              "すること",
+              "しました"
             ],
             "with_history": [
-              "から",
+              "会議",
               "ございます",
               "すること"
             ],
@@ -5415,13 +5415,13 @@
           "one_char": {
             "query": "か",
             "no_history": [
+              "会議",
               "家",
-              "可",
-              "夏"
+              "可"
             ],
             "with_history": [
-              "家",
               "会議",
+              "家",
               "可"
             ],
             "ref_no_history": [
@@ -5438,14 +5438,14 @@
           "two_char": {
             "query": "かい",
             "no_history": [
-              "回",
-              "海",
-              "会"
+              "買い",
+              "会議",
+              "かい"
             ],
             "with_history": [
-              "回",
               "会議",
-              "海"
+              "買い",
+              "かい"
             ],
             "ref_no_history": [
               "会議",
@@ -5468,14 +5468,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "に",
-              "から",
-              "について"
+              "について",
+              "いたします",
+              "から"
             ],
             "with_history": [
               "に",
-              "から",
-              "について"
+              "について",
+              "いたします"
             ],
             "ref_no_history": [
               "の",
@@ -5492,13 +5492,13 @@
             "query": "に",
             "no_history": [
               "に",
-              "2",
-              "二"
+              "にくかっ",
+              "にくから"
             ],
             "with_history": [
               "に",
-              "2",
-              "二"
+              "にくかっ",
+              "にくから"
             ],
             "ref_no_history": [
               "について",
@@ -5544,13 +5544,13 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
+              "ございます",
               "すること",
-              "ます"
+              "ありがとう"
             ],
             "with_history": [
               "参加",
-              "から",
+              "ございます",
               "すること"
             ],
             "ref_no_history": [
@@ -5567,14 +5567,14 @@
           "one_char": {
             "query": "さ",
             "no_history": [
-              "再",
-              "さ",
-              "差"
+              "さえ",
+              "さかい",
+              "参加"
             ],
             "with_history": [
               "参加",
-              "再",
-              "さ"
+              "さえ",
+              "さかい"
             ],
             "ref_no_history": [
               "参加",
@@ -5590,14 +5590,14 @@
           "two_char": {
             "query": "さん",
             "no_history": [
-              "酸",
-              "3",
-              "さん"
+              "さん",
+              "3時半",
+              "酸"
             ],
             "with_history": [
-              "酸",
-              "3",
-              "参加"
+              "参加",
+              "さん",
+              "3時半"
             ],
             "ref_no_history": [
               "参加",
@@ -5620,13 +5620,13 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
-              "を",
-              "しました"
+              "ございます",
+              "しました",
+              "すること"
             ],
             "with_history": [
               "を",
-              "から",
+              "ございます",
               "しました"
             ],
             "ref_no_history": [
@@ -5643,14 +5643,14 @@
           "one_char": {
             "query": "を",
             "no_history": [
+              "ヲチスレ",
               "を",
-              "をも",
-              "ヲ"
+              "をも"
             ],
             "with_history": [
               "を",
-              "をも",
-              "ヲ"
+              "ヲチスレ",
+              "をも"
             ],
             "ref_no_history": [
               "を",
@@ -5688,14 +5688,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
-              "ます",
-              "ました"
+              "ございます",
+              "すること",
+              "でしょうか"
             ],
             "with_history": [
-              "から",
-              "ます",
-              "ました"
+              "ございます",
+              "送信",
+              "すること"
             ],
             "ref_no_history": [
               "ご確認",
@@ -5711,14 +5711,14 @@
           "one_char": {
             "query": "そ",
             "no_history": [
-              "粗",
-              "ソ",
-              "そ"
+              "そこねる",
+              "そこね",
+              "そう"
             ],
             "with_history": [
-              "粗",
-              "ソ",
-              "そ"
+              "送信",
+              "そこねる",
+              "そこね"
             ],
             "ref_no_history": [
               "送信",
@@ -5734,14 +5734,14 @@
           "two_char": {
             "query": "そう",
             "no_history": [
-              "走",
-              "総",
-              "双"
+              "そう",
+              "沿う",
+              "走"
             ],
             "with_history": [
-              "走",
-              "総",
-              "送信"
+              "送信",
+              "そう",
+              "沿う"
             ],
             "ref_no_history": [
               "送信",
@@ -5765,13 +5765,13 @@
           "zero_char": {
             "no_history": [
               "ございます",
-              "案内",
-              "から"
+              "しました",
+              "すること"
             ],
             "with_history": [
+              "検討",
               "ございます",
-              "案内",
-              "検討"
+              "しました"
             ],
             "ref_no_history": [
               "連絡",
@@ -5787,14 +5787,14 @@
           "one_char": {
             "query": "け",
             "no_history": [
-              "家",
-              "刑",
-              "検討"
+              "けれども",
+              "けれど",
+              "けども"
             ],
             "with_history": [
               "検討",
-              "家",
-              "刑"
+              "けれども",
+              "けれど"
             ],
             "ref_no_history": [
               "検討",
@@ -5810,14 +5810,14 @@
           "two_char": {
             "query": "けん",
             "no_history": [
-              "県",
-              "兼",
-              "件"
+              "検討",
+              "ケン",
+              "県"
             ],
             "with_history": [
               "検討",
-              "県",
-              "兼"
+              "ケン",
+              "県"
             ],
             "ref_no_history": [
               "検討",
@@ -5840,14 +5840,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "して",
-              "から",
-              "しました"
+              "しました",
+              "いたします",
+              "について"
             ],
             "with_history": [
-              "して",
-              "から",
-              "しました"
+              "ください",
+              "しました",
+              "いたします"
             ],
             "ref_no_history": [
               "のほどよろしくお願いいたします",
@@ -5863,14 +5863,14 @@
           "one_char": {
             "query": "く",
             "no_history": [
-              "区",
               "ください",
-              "く"
+              "区",
+              "くさい"
             ],
             "with_history": [
               "ください",
               "区",
-              "く"
+              "くさい"
             ],
             "ref_no_history": [
               "ください",
@@ -5887,13 +5887,13 @@
             "query": "くだ",
             "no_history": [
               "ください",
-              "下さい",
-              "くださる"
+              "くださる",
+              "下さい"
             ],
             "with_history": [
               "ください",
-              "下さい",
-              "くださる"
+              "くださる",
+              "下さい"
             ],
             "ref_no_history": [
               "ください",
@@ -5916,13 +5916,13 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
               "ありません",
+              "ございます",
               "しました"
             ],
             "with_history": [
               "ありません",
-              "から",
+              "ございます",
               "しました"
             ],
             "ref_no_history": [
@@ -5940,13 +5940,13 @@
             "query": "あ",
             "no_history": [
               "ありません",
-              "あ",
-              "上げ"
+              "上げ",
+              "あげ"
             ],
             "with_history": [
               "ありません",
-              "あ",
-              "上げ"
+              "上げ",
+              "あげ"
             ],
             "ref_no_history": [
               "ありません",
@@ -5962,14 +5962,14 @@
           "two_char": {
             "query": "あり",
             "no_history": [
-              "ありません",
               "ありがとうございます",
-              "あり"
+              "ありがとうございました",
+              "ありません"
             ],
             "with_history": [
               "ありません",
               "ありがとうございます",
-              "あり"
+              "ありがとうございました"
             ],
             "ref_no_history": [
               "ありません",
@@ -5992,14 +5992,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
+              "ございます",
               "すること",
-              "から",
               "しました"
             ],
             "with_history": [
               "しました",
-              "すること",
-              "から"
+              "ございます",
+              "すること"
             ],
             "ref_no_history": [
               "しました",
@@ -6015,13 +6015,13 @@
           "one_char": {
             "query": "し",
             "no_history": [
+              "しました",
               "子",
-              "市",
-              "死"
+              "市"
             ],
             "with_history": [
-              "子",
               "しました",
+              "子",
               "市"
             ],
             "ref_no_history": [
@@ -6039,13 +6039,13 @@
             "query": "しま",
             "no_history": [
               "しました",
-              "しま",
-              "嶋"
+              "しまい",
+              "しまう"
             ],
             "with_history": [
               "しました",
-              "しま",
-              "嶋"
+              "しまい",
+              "しまう"
             ],
             "ref_no_history": [
               "しました",
@@ -6069,13 +6069,13 @@
           "zero_char": {
             "no_history": [
               "しました",
-              "して",
-              "から"
+              "いたしました",
+              "ございます"
             ],
             "with_history": [
+              "いたしました",
               "しました",
-              "して",
-              "から"
+              "ございます"
             ],
             "ref_no_history": [
               "いたしました",
@@ -6091,14 +6091,14 @@
           "one_char": {
             "query": "い",
             "no_history": [
-              "委",
-              "伊",
-              "李"
+              "いたしました",
+              "以外",
+              "委"
             ],
             "with_history": [
-              "委",
-              "伊",
-              "李"
+              "いたしました",
+              "以外",
+              "委"
             ],
             "ref_no_history": [
               "いたしました",
@@ -6114,14 +6114,14 @@
           "two_char": {
             "query": "いた",
             "no_history": [
+              "いたしました",
               "甚",
-              "痛",
-              "板"
+              "痛"
             ],
             "with_history": [
+              "いたしました",
               "甚",
-              "痛",
-              "板"
+              "痛"
             ],
             "ref_no_history": [
               "いたしました",
@@ -6145,13 +6145,13 @@
           "zero_char": {
             "no_history": [
               "しました",
-              "して",
+              "いたしました",
               "いたします"
             ],
             "with_history": [
-              "しました",
               "いたしました",
-              "して"
+              "しました",
+              "いたします"
             ],
             "ref_no_history": [
               "いたしました",
@@ -6168,13 +6168,13 @@
             "query": "い",
             "no_history": [
               "いたしました",
-              "い",
-              "イイ"
+              "イイ",
+              "いか"
             ],
             "with_history": [
               "いたしました",
-              "い",
-              "イイ"
+              "イイ",
+              "いか"
             ],
             "ref_no_history": [
               "いたしました",
@@ -6220,13 +6220,13 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
-              "します",
-              "しました"
+              "ございます",
+              "しました",
+              "ください"
             ],
             "with_history": [
               "します",
-              "から",
+              "ございます",
               "しました"
             ],
             "ref_no_history": [
@@ -6243,9 +6243,9 @@
           "one_char": {
             "query": "し",
             "no_history": [
+              "します",
               "子",
-              "市",
-              "し"
+              "市"
             ],
             "with_history": [
               "します",
@@ -6267,13 +6267,13 @@
             "query": "しま",
             "no_history": [
               "します",
-              "しま",
-              "嶋"
+              "しまお",
+              "しまい"
             ],
             "with_history": [
               "します",
-              "しま",
-              "嶋"
+              "しまお",
+              "しまい"
             ],
             "ref_no_history": [
               "します",
@@ -6296,14 +6296,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "中",
               "内容",
-              "を"
+              "いたします",
+              "中"
             ],
             "with_history": [
               "を",
-              "中",
-              "内容"
+              "内容",
+              "いたします"
             ],
             "ref_no_history": [
               "中",
@@ -6320,13 +6320,13 @@
             "query": "を",
             "no_history": [
               "を",
-              "ヲ",
-              "をも"
+              "をも",
+              "ヲチスレ"
             ],
             "with_history": [
               "を",
-              "ヲ",
-              "をも"
+              "をも",
+              "ヲチスレ"
             ],
             "ref_no_history": [
               "を進めます",
@@ -6364,14 +6364,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
-              "ます",
-              "ました"
+              "ございます",
+              "すること",
+              "でしょうか"
             ],
             "with_history": [
-              "から",
-              "ます",
-              "ました"
+              "進めます",
+              "ございます",
+              "すること"
             ],
             "ref_no_history": [
               "進めます",
@@ -6387,14 +6387,14 @@
           "one_char": {
             "query": "す",
             "no_history": [
+              "進めます",
               "すぐ",
-              "す",
-              "すぎ"
+              "すぎる"
             ],
             "with_history": [
+              "進めます",
               "すぐ",
-              "す",
-              "進めます"
+              "すぎる"
             ],
             "ref_no_history": [
               "進めます",
@@ -6410,13 +6410,13 @@
           "two_char": {
             "query": "すす",
             "no_history": [
-              "進め",
               "進めます",
+              "進めよう",
               "進める"
             ],
             "with_history": [
               "進めます",
-              "進め",
+              "進めよう",
               "進める"
             ],
             "ref_no_history": [
@@ -6440,14 +6440,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
               "ございます",
-              "が"
+              "すること",
+              "しました"
             ],
             "with_history": [
-              "から",
-              "が",
-              "ございます"
+              "ございます",
+              "すること",
+              "しました"
             ],
             "ref_no_history": [
               "中",
@@ -6463,14 +6463,14 @@
           "one_char": {
             "query": "が",
             "no_history": [
-              "が",
-              "画",
-              "がかり"
+              "がかり",
+              "がかん",
+              "がから"
             ],
             "with_history": [
               "が",
-              "画",
-              "がかり"
+              "がかり",
+              "がかん"
             ],
             "ref_no_history": [
               "完了しました",
@@ -6508,13 +6508,13 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
-              "完了",
-              "すること"
+              "ございます",
+              "すること",
+              "ありがとう"
             ],
             "with_history": [
               "完了",
-              "から",
+              "ございます",
               "すること"
             ],
             "ref_no_history": [
@@ -6531,8 +6531,8 @@
           "one_char": {
             "query": "か",
             "no_history": [
-              "家",
               "完了",
+              "家",
               "可"
             ],
             "with_history": [
@@ -6554,8 +6554,8 @@
           "two_char": {
             "query": "かん",
             "no_history": [
-              "感",
               "完了",
+              "感",
               "韓"
             ],
             "with_history": [
@@ -6584,14 +6584,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "は",
               "について",
-              "です"
+              "お願いします",
+              "は"
             ],
             "with_history": [
               "は",
               "について",
-              "です"
+              "お願いします"
             ],
             "ref_no_history": [
               "は",
@@ -6608,13 +6608,13 @@
             "query": "は",
             "no_history": [
               "は",
-              "葉",
-              "派"
+              "はじめよう",
+              "はじめりゃ"
             ],
             "with_history": [
               "は",
-              "葉",
-              "派"
+              "はじめよう",
+              "はじめりゃ"
             ],
             "ref_no_history": [
               "ありますか",
@@ -6660,13 +6660,13 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "から",
-              "ました",
-              "しました"
+              "ございます",
+              "しました",
+              "すること"
             ],
             "with_history": [
-              "から",
-              "ました",
+              "ありますか",
+              "ございます",
               "しました"
             ],
             "ref_no_history": [
@@ -6683,14 +6683,14 @@
           "one_char": {
             "query": "あ",
             "no_history": [
-              "あ",
+              "ありますか",
               "あい",
               "上げ"
             ],
             "with_history": [
               "ありますか",
-              "あ",
-              "あい"
+              "あい",
+              "上げ"
             ],
             "ref_no_history": [
               "ありますか",
@@ -6706,13 +6706,13 @@
           "two_char": {
             "query": "あり",
             "no_history": [
-              "ありません",
+              "ありがとうございました",
               "ありがとうございます",
-              "ありがとうございました"
+              "ありません"
             ],
             "with_history": [
               "ありますか",
-              "ありません",
+              "ありがとうございました",
               "ありがとうございます"
             ],
             "ref_no_history": [
@@ -6738,13 +6738,13 @@
           "zero_char": {
             "no_history": [
               "them",
-              "on",
+              "about",
               "all"
             ],
             "with_history": [
-              "them",
               "you",
-              "on"
+              "them",
+              "about"
             ],
             "ref_no_history": [
               "you",
@@ -6760,14 +6760,14 @@
           "one_char": {
             "query": "y",
             "no_history": [
-              "you",
               "young",
-              "year"
+              "youngest",
+              "yellow"
             ],
             "with_history": [
               "you",
               "young",
-              "year"
+              "youngest"
             ],
             "ref_no_history": [
               "you",
@@ -6783,14 +6783,14 @@
           "two_char": {
             "query": "yo",
             "no_history": [
-              "you",
               "young",
-              "your"
+              "youngest",
+              "Yorkshire"
             ],
             "with_history": [
               "you",
               "young",
-              "your"
+              "youngest"
             ],
             "ref_no_history": [
               "you",
@@ -6812,14 +6812,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "in",
-              "all",
-              "to"
+              "about",
+              "will",
+              "them"
             ],
             "with_history": [
-              "in",
-              "all",
-              "very"
+              "very",
+              "about",
+              "will"
             ],
             "ref_no_history": [
               "are",
@@ -6835,14 +6835,14 @@
           "one_char": {
             "query": "v",
             "no_history": [
+              "version",
               "voice",
-              "view",
-              "version"
+              "versions"
             ],
             "with_history": [
               "very",
-              "voice",
-              "view"
+              "version",
+              "voice"
             ],
             "ref_no_history": [
               "very",
@@ -6858,14 +6858,14 @@
           "two_char": {
             "query": "ve",
             "no_history": [
-              "verse",
-              "venue",
-              "vector"
+              "version",
+              "vector",
+              "verse"
             ],
             "with_history": [
               "very",
-              "verse",
-              "venue"
+              "version",
+              "vector"
             ],
             "ref_no_history": [
               "very",
@@ -6887,14 +6887,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "a",
+              "about",
               "much",
-              "all"
+              "very"
             ],
             "with_history": [
               "much",
-              "a",
-              "all"
+              "about",
+              "very"
             ],
             "ref_no_history": [
               "much",
@@ -6911,13 +6911,13 @@
             "query": "m",
             "no_history": [
               "music",
-              "much",
-              "more"
+              "members",
+              "much"
             ],
             "with_history": [
               "much",
               "music",
-              "more"
+              "members"
             ],
             "ref_no_history": [
               "much",
@@ -6934,13 +6934,13 @@
             "query": "mu",
             "no_history": [
               "music",
-              "much",
-              "multi"
+              "multiple",
+              "musician"
             ],
             "with_history": [
               "much",
               "music",
-              "multi"
+              "multiple"
             ],
             "ref_no_history": [
               "much",
@@ -6963,13 +6963,13 @@
           "zero_char": {
             "no_history": [
               "let",
-              "all",
-              "for"
+              "about",
+              "all"
             ],
             "with_history": [
               "let",
-              "all",
-              "for"
+              "about",
+              "all"
             ],
             "ref_no_history": [
               "find",
@@ -6987,12 +6987,12 @@
             "no_history": [
               "let",
               "local",
-              "led"
+              "large"
             ],
             "with_history": [
               "let",
               "local",
-              "led"
+              "large"
             ],
             "ref_no_history": [
               "let",
@@ -7008,9 +7008,9 @@
           "two_char": {
             "query": "le",
             "no_history": [
-              "let",
               "level",
-              "let's"
+              "let's",
+              "length"
             ],
             "with_history": [
               "let",
@@ -7037,13 +7037,13 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "in",
+              "about",
               "all",
-              "to"
+              "them"
             ],
             "with_history": [
               "me",
-              "in",
+              "about",
               "all"
             ],
             "ref_no_history": [
@@ -7061,13 +7061,13 @@
             "query": "m",
             "no_history": [
               "members",
-              "main",
-              "my"
+              "member",
+              "music"
             ],
             "with_history": [
               "me",
               "members",
-              "main"
+              "member"
             ],
             "ref_no_history": [
               "me",
@@ -7084,13 +7084,13 @@
             "query": "me",
             "no_history": [
               "members",
-              "media",
-              "metal"
+              "meeting",
+              "member"
             ],
             "with_history": [
               "me",
               "members",
-              "media"
+              "meeting"
             ],
             "ref_no_history": [
               "me",
@@ -7112,14 +7112,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "a",
-              "on",
-              "in"
+              "about",
+              "this",
+              "them"
             ],
             "with_history": [
-              "a",
-              "on",
-              "in"
+              "know",
+              "about",
+              "this"
             ],
             "ref_no_history": [
               "know",
@@ -7135,14 +7135,14 @@
           "one_char": {
             "query": "k",
             "no_history": [
-              "kill",
-              "king",
-              "King"
+              "keeping",
+              "knowledge",
+              "kill"
             ],
             "with_history": [
-              "kill",
-              "king",
-              "King"
+              "know",
+              "keeping",
+              "knowledge"
             ],
             "ref_no_history": [
               "know",
@@ -7158,14 +7158,14 @@
           "two_char": {
             "query": "kn",
             "no_history": [
+              "knowledge",
               "Knight",
-              "knight",
-              "know"
+              "knight"
             ],
             "with_history": [
               "know",
-              "Knight",
-              "knight"
+              "knowledge",
+              "Knight"
             ],
             "ref_no_history": [
               "know",
@@ -7187,14 +7187,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "to",
               "much",
-              "do"
+              "will",
+              "to"
             ],
             "with_history": [
-              "to",
+              "are",
               "much",
-              "do"
+              "will"
             ],
             "ref_no_history": [
               "are",
@@ -7210,14 +7210,14 @@
           "one_char": {
             "query": "a",
             "no_history": [
-              "age",
-              "an",
-              "a"
+              "against",
+              "about",
+              "around"
             ],
             "with_history": [
-              "age",
-              "an",
-              "a"
+              "are",
+              "against",
+              "about"
             ],
             "ref_no_history": [
               "are",
@@ -7233,14 +7233,14 @@
           "two_char": {
             "query": "ar",
             "no_history": [
+              "architecture",
               "arts",
-              "art",
-              "architecture"
+              "article"
             ],
             "with_history": [
-              "arts",
-              "art",
-              "are"
+              "are",
+              "architecture",
+              "arts"
             ],
             "ref_no_history": [
               "are",
@@ -7262,14 +7262,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "in",
-              "all",
-              "about"
+              "about",
+              "very",
+              "all"
             ],
             "with_history": [
-              "in",
-              "all",
-              "about"
+              "you",
+              "about",
+              "very"
             ],
             "ref_no_history": [
               "you",
@@ -7285,14 +7285,14 @@
           "one_char": {
             "query": "y",
             "no_history": [
-              "yes",
-              "young",
-              "yellow"
+              "youngest",
+              "yellow",
+              "young"
             ],
             "with_history": [
               "you",
-              "yes",
-              "young"
+              "youngest",
+              "yellow"
             ],
             "ref_no_history": [
               "you",
@@ -7308,14 +7308,14 @@
           "two_char": {
             "query": "yo",
             "no_history": [
+              "youngest",
               "Young",
-              "young",
-              "you"
+              "young"
             ],
             "with_history": [
               "you",
-              "Young",
-              "young"
+              "youngest",
+              "Young"
             ],
             "ref_no_history": [
               "you",
@@ -7337,14 +7337,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "in",
-              "all",
-              "to"
+              "about",
+              "will",
+              "them"
             ],
             "with_history": [
-              "in",
-              "all",
-              "to"
+              "doing",
+              "about",
+              "will"
             ],
             "ref_no_history": [
               "doing",
@@ -7360,14 +7360,14 @@
           "one_char": {
             "query": "d",
             "no_history": [
-              "day",
-              "days",
+              "development",
+              "district",
               "don't"
             ],
             "with_history": [
-              "day",
-              "days",
-              "don't"
+              "doing",
+              "development",
+              "district"
             ],
             "ref_no_history": [
               "doing",
@@ -7383,14 +7383,14 @@
           "two_char": {
             "query": "do",
             "no_history": [
+              "documentary",
               "dog",
-              "don't",
-              "door"
+              "dominated"
             ],
             "with_history": [
-              "dog",
-              "don't",
-              "door"
+              "doing",
+              "documentary",
+              "dog"
             ],
             "ref_no_history": [
               "doing",
@@ -7412,14 +7412,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "to",
               "will",
-              "in"
+              "very",
+              "have"
             ],
             "with_history": [
               "will",
-              "to",
-              "in"
+              "very",
+              "have"
             ],
             "ref_no_history": [
               "have",
@@ -7435,14 +7435,14 @@
           "one_char": {
             "query": "w",
             "no_history": [
+              "would",
               "will",
-              "work",
-              "would"
+              "work"
             ],
             "with_history": [
               "will",
-              "work",
-              "would"
+              "would",
+              "work"
             ],
             "ref_no_history": [
               "will",
@@ -7458,14 +7458,14 @@
           "two_char": {
             "query": "wi",
             "no_history": [
-              "will",
               "William",
-              "wing"
+              "will",
+              "winter"
             ],
             "with_history": [
               "will",
               "William",
-              "wing"
+              "winter"
             ],
             "ref_no_history": [
               "will",
@@ -7487,14 +7487,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "all",
-              "out",
-              "on"
+              "about",
+              "will",
+              "all"
             ],
             "with_history": [
               "be",
-              "all",
-              "out"
+              "about",
+              "will"
             ],
             "ref_no_history": [
               "be",
@@ -7511,13 +7511,13 @@
             "query": "b",
             "no_history": [
               "back",
-              "by",
-              "be"
+              "before",
+              "because"
             ],
             "with_history": [
               "be",
               "back",
-              "by"
+              "before"
             ],
             "ref_no_history": [
               "be",
@@ -7533,14 +7533,14 @@
           "two_char": {
             "query": "be",
             "no_history": [
-              "be",
               "better",
-              "been"
+              "becoming",
+              "become"
             ],
             "with_history": [
               "be",
               "better",
-              "been"
+              "becoming"
             ],
             "ref_no_history": [
               "be",
@@ -7562,14 +7562,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "on",
-              "in",
-              "a"
+              "about",
+              "very",
+              "this"
             ],
             "with_history": [
-              "on",
-              "in",
-              "a"
+              "there",
+              "about",
+              "very"
             ],
             "ref_no_history": [
               "able",
@@ -7585,14 +7585,14 @@
           "one_char": {
             "query": "t",
             "no_history": [
-              "this",
-              "then",
-              "them"
+              "through",
+              "their",
+              "this"
             ],
             "with_history": [
               "there",
-              "this",
-              "then"
+              "through",
+              "their"
             ],
             "ref_no_history": [
               "the",
@@ -7608,14 +7608,14 @@
           "two_char": {
             "query": "th",
             "no_history": [
-              "this",
-              "then",
-              "them"
+              "through",
+              "their",
+              "this"
             ],
             "with_history": [
               "there",
-              "this",
-              "then"
+              "through",
+              "their"
             ],
             "ref_no_history": [
               "the",
@@ -7637,14 +7637,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "in",
+              "about",
               "for",
-              "a"
+              "all"
             ],
             "with_history": [
-              "in",
-              "for",
-              "a"
+              "soon",
+              "about",
+              "for"
             ],
             "ref_no_history": [
               "is",
@@ -7660,14 +7660,14 @@
           "one_char": {
             "query": "s",
             "no_history": [
-              "still",
-              "set",
-              "small"
+              "several",
+              "second",
+              "system"
             ],
             "with_history": [
-              "still",
-              "set",
-              "small"
+              "soon",
+              "several",
+              "second"
             ],
             "ref_no_history": [
               "so",
@@ -7683,14 +7683,14 @@
           "two_char": {
             "query": "so",
             "no_history": [
+              "sometimes",
               "son",
-              "source",
-              "songs"
+              "source"
             ],
             "with_history": [
-              "son",
               "soon",
-              "source"
+              "sometimes",
+              "son"
             ],
             "ref_no_history": [
               "so",
@@ -7712,14 +7712,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "in",
-              "for",
-              "all"
+              "forward",
+              "about",
+              "for"
             ],
             "with_history": [
-              "in",
-              "for",
-              "all"
+              "forward",
+              "about",
+              "for"
             ],
             "ref_no_history": [
               "forward",
@@ -7735,13 +7735,13 @@
           "one_char": {
             "query": "f",
             "no_history": [
-              "for",
-              "form",
-              "father"
+              "forward",
+              "father",
+              "form"
             ],
             "with_history": [
               "forward",
-              "for",
+              "father",
               "form"
             ],
             "ref_no_history": [
@@ -7758,14 +7758,14 @@
           "two_char": {
             "query": "fo",
             "no_history": [
-              "for",
-              "form",
-              "food"
+              "forward",
+              "forces",
+              "football"
             ],
             "with_history": [
               "forward",
-              "for",
-              "form"
+              "forces",
+              "football"
             ],
             "ref_no_history": [
               "forward",
@@ -7787,14 +7787,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "all",
               "about",
-              "for"
+              "them",
+              "this"
             ],
             "with_history": [
               "to",
-              "all",
-              "about"
+              "about",
+              "them"
             ],
             "ref_no_history": [
               "to",
@@ -7810,14 +7810,14 @@
           "one_char": {
             "query": "t",
             "no_history": [
-              "then",
-              "to",
-              "time"
+              "through",
+              "their",
+              "these"
             ],
             "with_history": [
               "to",
-              "then",
-              "time"
+              "through",
+              "their"
             ],
             "ref_no_history": [
               "to",
@@ -7833,14 +7833,14 @@
           "two_char": {
             "query": "to",
             "no_history": [
+              "tournament",
               "total",
-              "to",
-              "today"
+              "towards"
             ],
             "with_history": [
               "to",
-              "total",
-              "today"
+              "tournament",
+              "total"
             ],
             "ref_no_history": [
               "to",
@@ -7862,14 +7862,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
+              "about",
               "them",
-              "all",
               "this"
             ],
             "with_history": [
-              "them",
-              "all",
-              "this"
+              "seeing",
+              "about",
+              "them"
             ],
             "ref_no_history": [
               "the",
@@ -7885,14 +7885,14 @@
           "one_char": {
             "query": "s",
             "no_history": [
-              "state",
               "system",
-              "small"
+              "state",
+              "series"
             ],
             "with_history": [
-              "state",
               "seeing",
-              "system"
+              "system",
+              "state"
             ],
             "ref_no_history": [
               "see",
@@ -7908,14 +7908,14 @@
           "two_char": {
             "query": "se",
             "no_history": [
-              "services",
               "September",
+              "services",
               "section"
             ],
             "with_history": [
-              "services",
+              "seeing",
               "September",
-              "seeing"
+              "services"
             ],
             "ref_no_history": [
               "see",
@@ -7937,14 +7937,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "a",
-              "all",
-              "you"
+              "about",
+              "this",
+              "them"
             ],
             "with_history": [
-              "a",
-              "all",
-              "you"
+              "about",
+              "this",
+              "them"
             ],
             "ref_no_history": [
               "a",
@@ -7960,14 +7960,14 @@
           "one_char": {
             "query": "a",
             "no_history": [
-              "age",
-              "an",
-              "any"
+              "around",
+              "against",
+              "about"
             ],
             "with_history": [
-              "a",
-              "age",
-              "an"
+              "around",
+              "against",
+              "about"
             ],
             "ref_no_history": [
               "a",
@@ -7983,14 +7983,14 @@
           "two_char": {
             "query": "an",
             "no_history": [
-              "an",
-              "any",
-              "anything"
+              "anything",
+              "animals",
+              "anniversary"
             ],
             "with_history": [
-              "an",
-              "any",
-              "anything"
+              "anything",
+              "animals",
+              "anniversary"
             ],
             "ref_no_history": [
               "an",
@@ -8013,13 +8013,13 @@
           "zero_char": {
             "no_history": [
               "very",
-              "and",
-              "it"
+              "great",
+              "this"
             ],
             "with_history": [
+              "great",
               "very",
-              "and",
-              "great"
+              "this"
             ],
             "ref_no_history": [
               "great",
@@ -8035,14 +8035,14 @@
           "one_char": {
             "query": "g",
             "no_history": [
-              "group",
-              "groups",
-              "general"
+              "government",
+              "general",
+              "group"
             ],
             "with_history": [
               "great",
-              "group",
-              "groups"
+              "government",
+              "general"
             ],
             "ref_no_history": [
               "great",
@@ -8058,14 +8058,14 @@
           "two_char": {
             "query": "gr",
             "no_history": [
-              "group",
-              "groups",
+              "graduated",
+              "graduate",
               "greater"
             ],
             "with_history": [
               "great",
-              "group",
-              "groups"
+              "graduated",
+              "graduate"
             ],
             "ref_no_history": [
               "great",
@@ -8087,14 +8087,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "a",
               "about",
+              "will",
               "for"
             ],
             "with_history": [
               "day",
-              "a",
-              "about"
+              "about",
+              "will"
             ],
             "ref_no_history": [
               "day",
@@ -8110,13 +8110,13 @@
           "one_char": {
             "query": "d",
             "no_history": [
-              "day",
-              "days",
-              "district"
+              "development",
+              "district",
+              "different"
             ],
             "with_history": [
               "day",
-              "days",
+              "development",
               "district"
             ],
             "ref_no_history": [
@@ -8134,13 +8134,13 @@
             "query": "da",
             "no_history": [
               "data",
-              "day",
-              "days"
+              "daughter",
+              "dangerous"
             ],
             "with_history": [
               "day",
               "data",
-              "days"
+              "daughter"
             ],
             "ref_no_history": [
               "day",
@@ -8162,14 +8162,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "all",
-              "out",
-              "in"
+              "about",
+              "them",
+              "all"
             ],
             "with_history": [
-              "all",
-              "out",
-              "the"
+              "the",
+              "about",
+              "them"
             ],
             "ref_no_history": [
               "the",
@@ -8185,13 +8185,13 @@
           "one_char": {
             "query": "t",
             "no_history": [
-              "them",
+              "through",
               "their",
-              "time"
+              "them"
             ],
             "with_history": [
               "the",
-              "them",
+              "through",
               "their"
             ],
             "ref_no_history": [
@@ -8208,13 +8208,13 @@
           "two_char": {
             "query": "th",
             "no_history": [
-              "them",
+              "through",
               "their",
-              "this"
+              "them"
             ],
             "with_history": [
               "the",
-              "them",
+              "through",
               "their"
             ],
             "ref_no_history": [
@@ -8237,14 +8237,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "a",
-              "all",
-              "it"
+              "details",
+              "about",
+              "very"
             ],
             "with_history": [
-              "a",
               "details",
-              "all"
+              "about",
+              "very"
             ],
             "ref_no_history": [
               "same",
@@ -8260,14 +8260,14 @@
           "one_char": {
             "query": "d",
             "no_history": [
-              "day",
-              "days",
-              "district"
+              "development",
+              "district",
+              "different"
             ],
             "with_history": [
               "details",
-              "day",
-              "days"
+              "development",
+              "district"
             ],
             "ref_no_history": [
               "data",
@@ -8283,14 +8283,14 @@
           "two_char": {
             "query": "de",
             "no_history": [
-              "details",
-              "density",
-              "degree"
+              "development",
+              "decision",
+              "December"
             ],
             "with_history": [
               "details",
-              "density",
-              "degree"
+              "development",
+              "decision"
             ],
             "ref_no_history": [
               "details",
@@ -8312,13 +8312,13 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "a",
+              "about",
               "for",
-              "about"
+              "them"
             ],
             "with_history": [
               "you",
-              "a",
+              "about",
               "for"
             ],
             "ref_no_history": [
@@ -8335,14 +8335,14 @@
           "one_char": {
             "query": "y",
             "no_history": [
-              "you",
+              "yellow",
               "young",
-              "yards"
+              "youngest"
             ],
             "with_history": [
               "you",
-              "young",
-              "yards"
+              "yellow",
+              "young"
             ],
             "ref_no_history": [
               "you",
@@ -8358,14 +8358,14 @@
           "two_char": {
             "query": "yo",
             "no_history": [
-              "you",
+              "Yorkshire",
               "young",
-              "Young"
+              "youngest"
             ],
             "with_history": [
               "you",
-              "young",
-              "Young"
+              "Yorkshire",
+              "young"
             ],
             "ref_no_history": [
               "you",
@@ -8387,14 +8387,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "in",
-              "all",
-              "about"
+              "about",
+              "very",
+              "all"
             ],
             "with_history": [
-              "in",
-              "all",
-              "well"
+              "well",
+              "about",
+              "very"
             ],
             "ref_no_history": [
               "doing",
@@ -8411,13 +8411,13 @@
             "query": "w",
             "no_history": [
               "work",
-              "we",
+              "while",
               "well"
             ],
             "with_history": [
               "well",
               "work",
-              "we"
+              "while"
             ],
             "ref_no_history": [
               "well",
@@ -8434,13 +8434,13 @@
             "query": "we",
             "no_history": [
               "West",
-              "west",
-              "web"
+              "weather",
+              "western"
             ],
             "with_history": [
               "well",
               "West",
-              "west"
+              "weather"
             ],
             "ref_no_history": [
               "well",
@@ -8462,14 +8462,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "in",
               "them",
-              "out"
+              "about",
+              "here"
             ],
             "with_history": [
               "me",
-              "in",
-              "them"
+              "them",
+              "about"
             ],
             "ref_no_history": [
               "me",
@@ -8486,13 +8486,13 @@
             "query": "m",
             "no_history": [
               "music",
-              "more",
-              "me"
+              "members",
+              "member"
             ],
             "with_history": [
               "me",
               "music",
-              "more"
+              "members"
             ],
             "ref_no_history": [
               "me",
@@ -8508,14 +8508,14 @@
           "two_char": {
             "query": "me",
             "no_history": [
-              "media",
-              "men",
-              "meeting"
+              "meeting",
+              "members",
+              "media"
             ],
             "with_history": [
               "me",
-              "media",
-              "men"
+              "meeting",
+              "members"
             ],
             "ref_no_history": [
               "me",
@@ -8537,14 +8537,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
+              "about",
               "all",
-              "for",
-              "now"
+              "here"
             ],
             "with_history": [
-              "all",
               "this",
-              "for"
+              "about",
+              "all"
             ],
             "ref_no_history": [
               "the",
@@ -8560,14 +8560,14 @@
           "one_char": {
             "query": "t",
             "no_history": [
-              "this",
+              "through",
               "their",
-              "to"
+              "this"
             ],
             "with_history": [
               "this",
-              "their",
-              "to"
+              "through",
+              "their"
             ],
             "ref_no_history": [
               "the",
@@ -8583,14 +8583,14 @@
           "two_char": {
             "query": "th",
             "no_history": [
-              "this",
+              "through",
               "their",
-              "them"
+              "third"
             ],
             "with_history": [
               "this",
-              "their",
-              "them"
+              "through",
+              "their"
             ],
             "ref_no_history": [
               "this",
@@ -8613,13 +8613,13 @@
           "zero_char": {
             "no_history": [
               "here",
-              "all",
-              "in"
+              "about",
+              "this"
             ],
             "with_history": [
+              "you",
               "here",
-              "all",
-              "in"
+              "about"
             ],
             "ref_no_history": [
               "you",
@@ -8635,14 +8635,14 @@
           "one_char": {
             "query": "y",
             "no_history": [
-              "yes",
-              "your",
+              "yellow",
+              "youngest",
               "yards"
             ],
             "with_history": [
               "you",
-              "yes",
-              "your"
+              "yellow",
+              "youngest"
             ],
             "ref_no_history": [
               "you",
@@ -8658,14 +8658,14 @@
           "two_char": {
             "query": "yo",
             "no_history": [
-              "your",
-              "you",
-              "young"
+              "yourself",
+              "YouTube",
+              "Yorkshire"
             ],
             "with_history": [
               "you",
-              "your",
-              "young"
+              "yourself",
+              "YouTube"
             ],
             "ref_no_history": [
               "you",
@@ -8687,14 +8687,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "in",
-              "all",
-              "to"
+              "tomorrow",
+              "about",
+              "will"
             ],
             "with_history": [
-              "in",
-              "all",
-              "to"
+              "tomorrow",
+              "about",
+              "will"
             ],
             "ref_no_history": [
               "soon",
@@ -8710,14 +8710,14 @@
           "one_char": {
             "query": "t",
             "no_history": [
-              "to",
-              "then",
-              "them"
+              "tomorrow",
+              "through",
+              "their"
             ],
             "with_history": [
               "tomorrow",
-              "to",
-              "then"
+              "through",
+              "their"
             ],
             "ref_no_history": [
               "there",
@@ -8733,14 +8733,14 @@
           "two_char": {
             "query": "to",
             "no_history": [
+              "tomorrow",
               "total",
-              "to",
-              "top"
+              "together"
             ],
             "with_history": [
-              "total",
               "tomorrow",
-              "to"
+              "total",
+              "together"
             ],
             "ref_no_history": [
               "tomorrow",
@@ -8763,13 +8763,13 @@
           "zero_char": {
             "no_history": [
               "will",
-              "the",
-              "and"
+              "there",
+              "morning"
             ],
             "with_history": [
+              "morning",
               "will",
-              "the",
-              "and"
+              "there"
             ],
             "ref_no_history": [
               "morning",
@@ -8785,14 +8785,14 @@
           "one_char": {
             "query": "m",
             "no_history": [
-              "my",
               "morning",
-              "may"
+              "music",
+              "members"
             ],
             "with_history": [
               "morning",
-              "my",
-              "may"
+              "music",
+              "members"
             ],
             "ref_no_history": [
               "morning",
@@ -8809,13 +8809,13 @@
             "query": "mo",
             "no_history": [
               "morning",
-              "more",
-              "most"
+              "months",
+              "movement"
             ],
             "with_history": [
               "morning",
-              "more",
-              "most"
+              "months",
+              "movement"
             ],
             "ref_no_history": [
               "morning",
@@ -8837,14 +8837,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
+              "about",
               "for",
-              "all",
-              "about"
+              "this"
             ],
             "with_history": [
               "for",
-              "all",
-              "about"
+              "about",
+              "this"
             ],
             "ref_no_history": [
               "for",
@@ -8860,14 +8860,14 @@
           "one_char": {
             "query": "f",
             "no_history": [
-              "for",
+              "following",
               "form",
-              "final"
+              "father"
             ],
             "with_history": [
               "for",
-              "form",
-              "final"
+              "following",
+              "form"
             ],
             "ref_no_history": [
               "for",
@@ -8883,14 +8883,14 @@
           "two_char": {
             "query": "fo",
             "no_history": [
-              "for",
-              "form",
-              "food"
+              "football",
+              "forces",
+              "following"
             ],
             "with_history": [
               "for",
-              "form",
-              "food"
+              "football",
+              "forces"
             ],
             "ref_no_history": [
               "for",
@@ -8912,14 +8912,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "a",
-              "all",
-              "it"
+              "about",
+              "delay",
+              "very"
             ],
             "with_history": [
-              "a",
-              "all",
-              "delay"
+              "delay",
+              "about",
+              "very"
             ],
             "ref_no_history": [
               "first",
@@ -8935,14 +8935,14 @@
           "one_char": {
             "query": "d",
             "no_history": [
-              "day",
-              "days",
-              "district"
+              "development",
+              "district",
+              "different"
             ],
             "with_history": [
               "delay",
-              "day",
-              "days"
+              "development",
+              "district"
             ],
             "ref_no_history": [
               "delay",
@@ -8958,14 +8958,14 @@
           "two_char": {
             "query": "de",
             "no_history": [
-              "density",
-              "delay",
-              "degree"
+              "development",
+              "decision",
+              "December"
             ],
             "with_history": [
               "delay",
-              "density",
-              "degree"
+              "development",
+              "decision"
             ],
             "ref_no_history": [
               "delay",

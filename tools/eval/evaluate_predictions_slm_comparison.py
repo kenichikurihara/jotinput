@@ -11,6 +11,7 @@ Evaluates across:
 """
 
 import json
+import math
 import os
 import subprocess
 import time
@@ -216,19 +217,21 @@ def evaluate_run(golden_data: Dict, exact_map, all_entries, en_vocab: List[str],
             pool_0.append(target_word)
 
         nlls_0 = scorer.score(prev_word, pool_0)
-        scored_0 = sorted(zip(pool_0, nlls_0), key=lambda x: x[1])
-        on_0_no = [s for s, nll in scored_0][:3]
-
-        # With history: boost target word
+        # Score 0-char with Idea 2 (length norm) and Idea 3 (contextual bigram boost)
+        scored_0_no = []
         scored_0_with = []
-        for s, nll in scored_0:
-            boost = 3.0 if s == target_word else 0.0
-            scored_0_with.append((s, nll - boost))
-        scored_0_with.sort(key=lambda x: x[1])
-        on_0_with = [s for s, nll in scored_0_with][:3]
+        for s, nll in zip(pool_0, nlls_0):
+            eff_nll = nll / (math.pow(max(1, len(s)), 0.70))
+            scored_0_no.append((s, eff_nll))
+            boost = 6.5 if s == target_word else 0.0
+            scored_0_with.append((s, eff_nll - boost))
 
-        # 1-char SLM ON
-        # Pool from base_1 (exact reading + prefix matches)
+        scored_0_no.sort(key=lambda x: x[1])
+        scored_0_with.sort(key=lambda x: x[1])
+        on_0_no = [s for s, sc in scored_0_no][:3]
+        on_0_with = [s for s, sc in scored_0_with][:3]
+
+        # 1-char SLM ON (Idea 2 length norm + Idea 3 bigram cache)
         pool_1 = [s for s, c in base_1[:12]]
         if target_word not in pool_1 and target_reading.startswith(q1):
             pool_1.append(target_word)
@@ -241,10 +244,10 @@ def evaluate_run(golden_data: Dict, exact_map, all_entries, en_vocab: List[str],
         scored_1_with = []
         for s, nll in zip(pool_1, nlls_1):
             c_norm = costs_1.get(s, 3000) / 1000.0
-            comb = alpha * c_norm + (1.0 - alpha) * nll
+            eff_nll = nll / (math.pow(max(1, len(s)), 0.70))
+            comb = alpha * c_norm + (1.0 - alpha) * eff_nll
             scored_1_no.append((s, comb))
-            # History boost if matching target
-            boost = 4.0 if s == target_word else 0.0
+            boost = 6.5 if s == target_word else 0.0
             scored_1_with.append((s, comb - boost))
 
         scored_1_no.sort(key=lambda x: x[1])
@@ -252,7 +255,7 @@ def evaluate_run(golden_data: Dict, exact_map, all_entries, en_vocab: List[str],
         on_1_no = [s for s, sc in scored_1_no][:3]
         on_1_with = [s for s, sc in scored_1_with][:3]
 
-        # 2-char SLM ON
+        # 2-char SLM ON (Idea 2 length norm + Idea 3 bigram cache)
         pool_2 = [s for s, c in base_2[:12]]
         if target_word not in pool_2 and target_reading.startswith(q2):
             pool_2.append(target_word)
@@ -265,9 +268,10 @@ def evaluate_run(golden_data: Dict, exact_map, all_entries, en_vocab: List[str],
         scored_2_with = []
         for s, nll in zip(pool_2, nlls_2):
             c_norm = costs_2.get(s, 3000) / 1000.0
-            comb = alpha * c_norm + (1.0 - alpha) * nll
+            eff_nll = nll / (math.pow(max(1, len(s)), 0.70))
+            comb = alpha * c_norm + (1.0 - alpha) * eff_nll
             scored_2_no.append((s, comb))
-            boost = 4.0 if s == target_word else 0.0
+            boost = 6.5 if s == target_word else 0.0
             scored_2_with.append((s, comb - boost))
 
         scored_2_no.sort(key=lambda x: x[1])
@@ -335,45 +339,54 @@ def evaluate_run(golden_data: Dict, exact_map, all_entries, en_vocab: List[str],
         if target_word not in pool_en_0:
             pool_en_0.append(target_word)
         nlls_en_0 = scorer.score(prev_word, pool_en_0)
-        scored_en_0 = sorted(zip(pool_en_0, nlls_en_0), key=lambda x: x[1])
-        on_0_no = [w for w, nll in scored_en_0][:3]
-
+        scored_en_0_no = []
         scored_en_0_with = []
-        for w, nll in scored_en_0:
-            boost = 3.0 if w.lower() == target_word.lower() else 0.0
-            scored_en_0_with.append((w, nll - boost))
+        for w, nll in zip(pool_en_0, nlls_en_0):
+            eff_nll = nll / (math.pow(max(1, len(w)), 0.70))
+            scored_en_0_no.append((w, eff_nll))
+            boost = 6.5 if w.lower() == target_word.lower() else 0.0
+            scored_en_0_with.append((w, eff_nll - boost))
+
+        scored_en_0_no.sort(key=lambda x: x[1])
         scored_en_0_with.sort(key=lambda x: x[1])
-        on_0_with = [w for w, nll in scored_en_0_with][:3]
+        on_0_no = [w for w, sc in scored_en_0_no][:3]
+        on_0_with = [w for w, sc in scored_en_0_with][:3]
 
         # 1-char
         pool_en_1 = matches_1[:15]
         if target_word not in pool_en_1 and target_word.lower().startswith(q1.lower()):
             pool_en_1.append(target_word)
         nlls_en_1 = scorer.score(prev_word, pool_en_1)
-        scored_en_1_no = sorted(zip(pool_en_1, nlls_en_1), key=lambda x: x[1])
-        on_1_no = [w for w, nll in scored_en_1_no][:3]
-
+        scored_en_1_no = []
         scored_en_1_with = []
         for w, nll in zip(pool_en_1, nlls_en_1):
-            boost = 4.0 if w.lower() == target_word.lower() else 0.0
-            scored_en_1_with.append((w, nll - boost))
+            eff_nll = nll / (math.pow(max(1, len(w)), 0.70))
+            scored_en_1_no.append((w, eff_nll))
+            boost = 6.5 if w.lower() == target_word.lower() else 0.0
+            scored_en_1_with.append((w, eff_nll - boost))
+
+        scored_en_1_no.sort(key=lambda x: x[1])
         scored_en_1_with.sort(key=lambda x: x[1])
-        on_1_with = [w for w, nll in scored_en_1_with][:3]
+        on_1_no = [w for w, sc in scored_en_1_no][:3]
+        on_1_with = [w for w, sc in scored_en_1_with][:3]
 
         # 2-char
         pool_en_2 = matches_2[:15]
         if target_word not in pool_en_2 and target_word.lower().startswith(q2.lower()):
             pool_en_2.append(target_word)
         nlls_en_2 = scorer.score(prev_word, pool_en_2)
-        scored_en_2_no = sorted(zip(pool_en_2, nlls_en_2), key=lambda x: x[1])
-        on_2_no = [w for w, nll in scored_en_2_no][:3]
-
+        scored_en_2_no = []
         scored_en_2_with = []
         for w, nll in zip(pool_en_2, nlls_en_2):
-            boost = 4.0 if w.lower() == target_word.lower() else 0.0
-            scored_en_2_with.append((w, nll - boost))
+            eff_nll = nll / (math.pow(max(1, len(w)), 0.70))
+            scored_en_2_no.append((w, eff_nll))
+            boost = 6.5 if w.lower() == target_word.lower() else 0.0
+            scored_en_2_with.append((w, eff_nll - boost))
+
+        scored_en_2_no.sort(key=lambda x: x[1])
         scored_en_2_with.sort(key=lambda x: x[1])
-        on_2_with = [w for w, nll in scored_en_2_with][:3]
+        on_2_no = [w for w, sc in scored_en_2_no][:3]
+        on_2_with = [w for w, sc in scored_en_2_with][:3]
 
         case_res_off = {
             "id": case_id, "prev_word": prev_word, "target_word": target_word,

@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.math.pow
 
 /**
  * High-performance on-device SLM candidate re-ranking engine using llama.cpp and Qwen2.5-0.5B.
@@ -205,8 +206,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     rawBaseNll = if (waiveExt) rawNll else rawNll + lambdaExt * maxOf(1, deltaExt)
                 }
 
-                // Hybrid-6b History x SLM Fusion (Time-Decay + Coherence Gate + Gated Soft-Clamping + c=1 Damping)
-                val effectiveNll: Float = if (!isExactUser && candidate.historyCount > 0 && !isChimeraFull[index]) {
+                // Hybrid-6b History x SLM Fusion (Contextual Bigram Cache + Time-Decay + Coherence Gate + Gated Soft-Clamping + c=1 Damping)
+                val isBigram = candidate.source == "history_bigram"
+                val effectiveNll: Float = if (!isExactUser && (candidate.historyCount > 0 || isBigram) && !isChimeraFull[index]) {
                     val deltaNll = rawNll - bestPoolNll
                     val thetaGate = 4.6f + (if (deltaExt > 0) 0.25f * deltaExt else 0.0f)
                     val gate = 1.0f / (1.0f + kotlin.math.exp(((deltaNll - thetaGate) / 0.6f).coerceIn(-20.0f, 20.0f)))
@@ -219,17 +221,18 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     val shortDecay = kotlin.math.exp((-hoursElapsed / 1.0f).coerceIn(-50.0f, 0.0f))
                     val longDecay = kotlin.math.exp((-hoursElapsed / 336.0f).coerceIn(-50.0f, 0.0f))
 
-                    val clampedBase = if (candidate.historyCount >= 2) {
-                        val eta = gate * minOf(0.70f, (candidate.historyCount - 1) / 5.0f) * longDecay
+                    val clampedBase = if (candidate.historyCount >= 2 || isBigram) {
+                        val eta = gate * (if (isBigram) 0.90f else minOf(0.70f, (candidate.historyCount - 1) / 5.0f)) * longDecay
                         eta * minOf(sysBestNll, rawBaseNll) + (1.0f - eta) * rawBaseNll
                     } else {
                         rawBaseNll
                     }
 
+                    val bigramBoost = if (isBigram) 6.0f * longDecay else 0.0f
                     val shortTerm = if (candidate.lastUsedAtMs > 0L) 2.2f * shortDecay else 0.0f
                     val longTerm = 1.8f * minOf(kotlin.math.ln(1.0f + candidate.historyCount.toFloat()), 3.0f) * longDecay
-                    val c1Damp = if (candidate.historyCount == 1) 0.30f else 1.0f
-                    clampedBase - gate * (shortTerm + longTerm) * c1Damp
+                    val c1Damp = if (candidate.historyCount == 1 && !isBigram) 0.30f else 1.0f
+                    clampedBase - gate * (bigramBoost + shortTerm + longTerm) * c1Damp
                 } else {
                     rawBaseNll
                 }
@@ -352,7 +355,10 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             // 9. Extensions / Predictions ranked by base score
             val rankedExtIndices = extIndices.sortedBy { baseScores[it] }
             val rankedExt = rankedExtIndices.map { topPool[it] }
-            val topHistPredIdx = rankedExtIndices.firstOrNull { topPool[it].historyCount >= 2 }
+            val topHistPredIdx = rankedExtIndices.firstOrNull {
+                topPool[it].historyCount >= 2 || topPool[it].source == "history_bigram"
+            }
+            val bestExtIdx = rankedExtIndices.firstOrNull()
 
             // 10. Adaptive Stratified Interleaving Schedule
             val maxBranch = prefixIndices.map { topPool[it].suffixBranchingFactor }.maxOrNull() ?: 1.0f
@@ -372,18 +378,27 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             for (idx in exactUserIndices) {
                 addCandidate(topPool[idx])
             }
-            // Stratum 1: Top full candidates + History Prefix Prediction Promotion (Slot-2 / Conditional Top-1)
+            // Stratum 1: Top full candidates + Prediction / History Promotion (Slot-2 / Conditional Top-1)
             var fullIdx = 0
             var partialIdx = 0
-            if (topHistPredIdx != null && rankedFull.isNotEmpty() && n > 0) {
+            val candidateToPromote = topHistPredIdx ?: bestExtIdx?.takeIf { extIdx ->
+                if (rankedFull.isNotEmpty()) {
+                    val topFullIdx = topPool.indexOf(rankedFull[0])
+                    topFullIdx >= 0 && baseScores[extIdx] < baseScores[topFullIdx] - 0.50f
+                } else {
+                    true
+                }
+            }
+
+            if (candidateToPromote != null && rankedFull.isNotEmpty() && n > 0) {
                 val topFullIdx = topPool.indexOf(rankedFull[0])
-                val canPromoteTop1 = n >= 2 && topFullIdx >= 0 && baseScores[topHistPredIdx] < baseScores[topFullIdx] - 0.50f
+                val canPromoteTop1 = n >= 2 && topFullIdx >= 0 && baseScores[candidateToPromote] < baseScores[topFullIdx] - 0.50f
                 if (canPromoteTop1) {
-                    addCandidate(topPool[topHistPredIdx])
+                    addCandidate(topPool[candidateToPromote])
                     addCandidate(rankedFull[fullIdx++])
                 } else {
                     addCandidate(rankedFull[fullIdx++])
-                    addCandidate(topPool[topHistPredIdx])
+                    addCandidate(topPool[candidateToPromote])
                 }
             }
             while (fullIdx < minOf(topFullQuota, rankedFull.size)) {
