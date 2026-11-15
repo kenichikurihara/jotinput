@@ -69,6 +69,19 @@ object JapaneseKanaUtils {
     }
 
     /**
+     * Standard Japanese case particles and functional connection particles.
+     * When entered as 1-character composing text, these are legitimate grammatical words
+     * and must be preserved in candidate suggestions rather than discarded as redundant composing hiragana.
+     */
+    val COMMON_CASE_PARTICLES: Set<String> = setOf(
+        "は", "が", "を", "に", "で", "の", "と", "も", "へ", "から", "まで", "より", "ので"
+    )
+
+    fun isCommonParticle(text: String): Boolean {
+        return COMMON_CASE_PARTICLES.contains(text.trim())
+    }
+
+    /**
      * Normalizes a user-inputted reading into canonical Hiragana.
      */
     fun normalizeReading(text: String): String {

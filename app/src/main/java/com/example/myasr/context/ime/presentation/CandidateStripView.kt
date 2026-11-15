@@ -91,6 +91,7 @@ class CandidateStripView @JvmOverloads constructor(
             for (cand in candidates) {
                 val trimmedSurface = cand.surface.trim { it.isWhitespace() || it == '\u3000' }
                 val shouldDisplay = cand.isPrediction ||
+                    JapaneseKanaUtils.isCommonParticle(cand.surface) ||
                     cand.reading != cand.surface ||
                     !JapaneseKanaUtils.isAllHiragana(cand.surface)
                 if (trimmedSurface.isNotEmpty() && shouldDisplay && seenSurfaces.add(trimmedSurface)) {

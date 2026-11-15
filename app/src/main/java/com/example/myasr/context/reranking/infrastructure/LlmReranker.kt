@@ -634,7 +634,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
         try {
             val nonHiraganaCandidates = candidates.filter {
-                val isRedundantHiragana = JapaneseKanaUtils.isAllHiragana(it.surface) && it.surface == it.reading
+                val isParticleExact = JapaneseKanaUtils.isCommonParticle(it.surface) && it.surface == it.reading
+                val isRedundantHiragana = !isParticleExact && !it.isPrediction && JapaneseKanaUtils.isAllHiragana(it.surface) && it.surface == it.reading
                 !isRedundantHiragana
             }
             if (nonHiraganaCandidates.size <= 1) {
@@ -778,7 +779,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
         try {
             // All-hiragana candidates matching their reading exactly are excluded from conversion ranking
             val nonHiraganaCandidates = candidates.filter {
-                val isRedundantHiragana = JapaneseKanaUtils.isAllHiragana(it.surface) && it.surface == it.reading
+                val isParticleExact = JapaneseKanaUtils.isCommonParticle(it.surface) && it.surface == it.reading
+                val isRedundantHiragana = !isParticleExact && !it.isPrediction && JapaneseKanaUtils.isAllHiragana(it.surface) && it.surface == it.reading
                 !isRedundantHiragana
             }
             if (nonHiraganaCandidates.size <= 1) {

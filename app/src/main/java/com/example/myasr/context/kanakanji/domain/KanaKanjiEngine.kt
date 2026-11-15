@@ -576,10 +576,17 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             fun addCandidate(cand: ConversionCandidate) {
                 // All-hiragana candidates matching composing text exactly are excluded because
                 // pressing the commit/enter button directly commits the un-converted Hiragana composing text.
-                // However, hiragana candidates resulting from flick typo corrections (source == "flick_correction" or typo paths)
-                // provide immense utility to the user when mistyping and are preserved.
-                val isRedundantHiragana = JapaneseKanaUtils.isAllHiragana(cand.surface) &&
-                        (cand.source != "flick_correction" && !cand.isPrediction || cand.surface == normalized)
+                // Exceptions:
+                // 1. Common case particles (e.g. "に", "を", "が", "は", "の"): Single-char grammatical particles
+                //    must be preserved and selectable in the candidate strip.
+                // 2. Mistype flick typo corrections (source == "flick_correction").
+                // 3. Predictive candidates (isPrediction == true).
+                val isParticleExact = JapaneseKanaUtils.isCommonParticle(cand.surface) && cand.surface == normalized
+                val isRedundantHiragana = !isParticleExact &&
+                        JapaneseKanaUtils.isAllHiragana(cand.surface) &&
+                        !cand.isPrediction &&
+                        cand.source != "flick_correction" &&
+                        cand.surface == normalized
                 if (cand.surface.isNotBlank() &&
                     !isRedundantHiragana &&
                     seenSurfaces.add(cand.surface)) {
@@ -830,7 +837,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     ): LlmReranker.FastRerankResult? {
         val firstReading = baseCandidates.firstOrNull()?.reading
         val filtered = baseCandidates.filter {
-            val isRedundantHiragana = JapaneseKanaUtils.isAllHiragana(it.surface) && (firstReading != null && it.surface == firstReading)
+            val isParticleExact = JapaneseKanaUtils.isCommonParticle(it.surface) && (firstReading != null && it.surface == firstReading)
+            val isRedundantHiragana = !isParticleExact && !it.isPrediction && JapaneseKanaUtils.isAllHiragana(it.surface) && (firstReading != null && it.surface == firstReading)
             !isRedundantHiragana
         }
         if (filtered.size <= 1) {
@@ -880,7 +888,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     ): Pair<List<ConversionCandidate>, Boolean> {
         val firstReading = baseCandidates.firstOrNull()?.reading
         val filtered = baseCandidates.filter {
-            val isRedundantHiragana = JapaneseKanaUtils.isAllHiragana(it.surface) && (firstReading != null && it.surface == firstReading)
+            val isParticleExact = JapaneseKanaUtils.isCommonParticle(it.surface) && (firstReading != null && it.surface == firstReading)
+            val isRedundantHiragana = !isParticleExact && !it.isPrediction && JapaneseKanaUtils.isAllHiragana(it.surface) && (firstReading != null && it.surface == firstReading)
             !isRedundantHiragana
         }
         if (filtered.size <= 1) {

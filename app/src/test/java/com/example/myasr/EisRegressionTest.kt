@@ -251,4 +251,34 @@ class EisRegressionTest {
 
         assertEquals("Harmonic mean must strictly equal total chars / total time", expectedEis, globalEis, 0.0001)
     }
+
+    @Test
+    fun testPosAwareParticleProtectionAndZeroQueryPredictions() {
+        // Step 1: Verify 1-character case particles are preserved at Rank 1 in getBaseCandidates
+        val testParticles = listOf("に", "を", "が", "は", "の", "で", "と", "も")
+        for (p in testParticles) {
+            val cands = engine.getBaseCandidates(p)
+            assertTrue("Base candidates for particle '$p' must not be empty", cands.isNotEmpty())
+            assertEquals("Particle '$p' must be ranked #1 in candidate list", p, cands.first().surface)
+        }
+
+        // Verify POS-aware 0-char prediction for case particles after nouns
+        val nounParticlePairs = listOf(
+            Pair("資料", "を"),
+            Pair("会議", "に"),
+            Pair("準備", "が"),
+            Pair("今日", "は"),
+            Pair("明日", "の"),
+            Pair("作業", "を"),
+            Pair("質問", "は")
+        )
+        for ((noun, expectedParticle) in nounParticlePairs) {
+            val preds = predictor.predict(noun, textBeforeCursor = noun, suggestPeriod = false)
+            val surfaces = preds.take(3).map { it.surface }
+            assertTrue(
+                "Expected particle '$expectedParticle' in top-3 suggestions for noun '$noun', was: $surfaces",
+                surfaces.contains(expectedParticle)
+            )
+        }
+    }
 }

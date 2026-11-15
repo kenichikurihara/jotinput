@@ -130,7 +130,7 @@
             "no_history": [
               "お願いします",
               "お願いいたします",
-              "どうぞ"
+              "お願い"
             ],
             "with_history": [
               "お願い",
@@ -281,6 +281,7 @@
           "zero_char": {
             "no_history": [
               "お世話になっております",
+              "お世話",
               "ありがとうございます"
             ],
             "with_history": [
@@ -356,7 +357,8 @@
           "zero_char": {
             "no_history": [
               "になっております",
-              "になります"
+              "になります",
+              "に"
             ],
             "with_history": [
               "に",
@@ -506,6 +508,7 @@
         "predictions": {
           "zero_char": {
             "no_history": [
+              "様",
               "様です",
               "様でした"
             ],
@@ -580,9 +583,15 @@
         "target_reading": "です",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "です",
+              "でした",
+              "に"
+            ],
             "with_history": [
-              "です"
+              "です",
+              "でした",
+              "に"
             ],
             "ref_no_history": [
               "です",
@@ -876,9 +885,15 @@
         "target_reading": "てんき",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "天気",
+              "一日を",
+              "ですね"
+            ],
             "with_history": [
-              "天気"
+              "天気",
+              "一日を",
+              "ですね"
             ],
             "ref_no_history": [
               "天気",
@@ -1022,9 +1037,15 @@
         "target_reading": "かいぎ",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "会議",
+              "件",
+              "予定"
+            ],
             "with_history": [
-              "会議"
+              "会議",
+              "件",
+              "予定"
             ],
             "ref_no_history": [
               "件",
@@ -1092,9 +1113,15 @@
         "target_reading": "に",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "の",
+              "に",
+              "は"
+            ],
             "with_history": [
-              "に"
+              "に",
+              "の",
+              "は"
             ],
             "ref_no_history": [
               "の",
@@ -1162,9 +1189,15 @@
         "target_reading": "さんか",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "参加",
+              "ついて",
+              "なります"
+            ],
             "with_history": [
-              "参加"
+              "参加",
+              "ついて",
+              "なります"
             ],
             "ref_no_history": [
               "関して",
@@ -1232,9 +1265,15 @@
         "target_reading": "を",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "を",
+              "の",
+              "作成"
+            ],
             "with_history": [
-              "を"
+              "を",
+              "の",
+              "作成"
             ],
             "ref_no_history": [
               "を",
@@ -1294,9 +1333,15 @@
         "target_reading": "そうしん",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "送信",
+              "進めます",
+              "お願いします"
+            ],
             "with_history": [
-              "送信"
+              "送信",
+              "進めます",
+              "お願いします"
             ],
             "ref_no_history": [
               "ご確認",
@@ -1365,9 +1410,9 @@
         "predictions": {
           "zero_char": {
             "no_history": [
+              "検討",
               "連絡",
-              "確認",
-              "案内"
+              "確認"
             ],
             "with_history": [
               "検討",
@@ -1440,9 +1485,15 @@
         "target_reading": "ください",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "ください",
+              "します",
+              "いたします"
+            ],
             "with_history": [
-              "ください"
+              "ください",
+              "します",
+              "いたします"
             ],
             "ref_no_history": [
               "のほどよろしくお願いいたします",
@@ -1810,9 +1861,15 @@
         "target_reading": "します",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "します",
+              "いたします",
+              "番号"
+            ],
             "with_history": [
-              "します"
+              "します",
+              "いたします",
+              "番号"
             ],
             "ref_no_history": [
               "します",
@@ -1881,9 +1938,9 @@
         "predictions": {
           "zero_char": {
             "no_history": [
+              "を",
               "中",
-              "完了",
-              "内容"
+              "完了"
             ],
             "with_history": [
               "を",
@@ -1948,9 +2005,15 @@
         "target_reading": "すすめます",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "送信",
+              "進めます",
+              "お願いします"
+            ],
             "with_history": [
-              "進めます"
+              "進めます",
+              "送信",
+              "お願いします"
             ],
             "ref_no_history": [
               "進めます",
@@ -2018,9 +2081,15 @@
         "target_reading": "が",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "が",
+              "を",
+              "中"
+            ],
             "with_history": [
-              "が"
+              "が",
+              "を",
+              "中"
             ],
             "ref_no_history": [
               "中",
@@ -2080,9 +2149,15 @@
         "target_reading": "かんりょう",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "完了",
+              "必要",
+              "あります"
+            ],
             "with_history": [
-              "完了"
+              "完了",
+              "必要",
+              "あります"
             ],
             "ref_no_history": [
               "完了",
@@ -2150,9 +2225,15 @@
         "target_reading": "は",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "は",
+              "が",
+              "を"
+            ],
             "with_history": [
-              "は"
+              "は",
+              "が",
+              "を"
             ],
             "ref_no_history": [
               "は",
@@ -2220,9 +2301,15 @@
         "target_reading": "ありますか",
         "predictions": {
           "zero_char": {
-            "no_history": [],
+            "no_history": [
+              "ありますか",
+              "大丈夫",
+              "ありません"
+            ],
             "with_history": [
-              "ありますか"
+              "ありますか",
+              "大丈夫",
+              "ありません"
             ],
             "ref_no_history": [
               "ありますか",
@@ -4480,14 +4567,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "お願い",
+              "お願いします",
               "お願いいたします",
-              "お願いします"
+              "お願い"
             ],
             "with_history": [
               "お願い",
-              "お願いいたします",
-              "お願いします"
+              "お願いします",
+              "お願いいたします"
             ],
             "ref_no_history": [
               "お願いします",
@@ -4556,14 +4643,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
+              "します",
               "いたします",
-              "します"
+              "申し上げます"
             ],
             "with_history": [
               "します",
-              "ございます",
-              "いたします"
+              "いたします",
+              "申し上げます"
             ],
             "ref_no_history": [
               "します",
@@ -4632,14 +4719,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ありがとうございます",
               "お世話になっております",
-              "ございます"
+              "お世話",
+              "ありがとうございます"
             ],
             "with_history": [
               "お世話",
-              "ありがとうございます",
-              "お世話になっております"
+              "お世話になっております",
+              "ありがとうございます"
             ],
             "ref_no_history": [
               "お世話になっております",
@@ -4710,7 +4797,7 @@
             "no_history": [
               "になっております",
               "になります",
-              "でしょうか"
+              "に"
             ],
             "with_history": [
               "に",
@@ -4731,9 +4818,9 @@
           "one_char": {
             "query": "に",
             "no_history": [
+              "に",
               "にくかっ",
-              "にくから",
-              "にくかれ"
+              "にくから"
             ],
             "with_history": [
               "に",
@@ -4784,14 +4871,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "すること",
               "しました",
-              "ございます"
+              "いたします",
+              "お願いします"
             ],
             "with_history": [
               "しました",
-              "すること",
-              "ございます"
+              "いたします",
+              "お願いします"
             ],
             "ref_no_history": [
               "しました",
@@ -4936,14 +5023,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "ありがとう",
-              "すること"
+              "です",
+              "でした",
+              "に"
             ],
             "with_history": [
               "です",
-              "ございます",
-              "ありがとう"
+              "でした",
+              "に"
             ],
             "ref_no_history": [
               "です",
@@ -5012,14 +5099,12 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございました",
               "ございます",
-              "すること"
+              "ございました"
             ],
             "with_history": [
               "ございます",
-              "ございました",
-              "すること"
+              "ございました"
             ],
             "ref_no_history": [
               "ございます",
@@ -5089,13 +5174,13 @@
           "zero_char": {
             "no_history": [
               "ありません",
-              "ない",
-              "ございません"
+              "ございません",
+              "ない"
             ],
             "with_history": [
               "ありません",
-              "ない",
-              "ございません"
+              "ございません",
+              "ない"
             ],
             "ref_no_history": [
               "ございません",
@@ -5164,14 +5249,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "しました",
-              "ありがとう"
+              "は",
+              "の",
+              "中に"
             ],
             "with_history": [
               "は",
-              "ございます",
-              "しました"
+              "の",
+              "中に"
             ],
             "ref_no_history": [
               "は",
@@ -5187,9 +5272,9 @@
           "one_char": {
             "query": "は",
             "no_history": [
+              "は",
               "はじめ",
-              "はじめよう",
-              "は"
+              "はじめよう"
             ],
             "with_history": [
               "は",
@@ -5240,14 +5325,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "しました",
-              "すること"
+              "天気",
+              "一日を",
+              "ですね"
             ],
             "with_history": [
               "天気",
-              "ございます",
-              "しました"
+              "一日を",
+              "ですね"
             ],
             "ref_no_history": [
               "天気",
@@ -5316,14 +5401,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "ありがとう",
-              "しました"
+              "は",
+              "の",
+              "までに"
             ],
             "with_history": [
               "の",
-              "ございます",
-              "ありがとう"
+              "は",
+              "までに"
             ],
             "ref_no_history": [
               "の",
@@ -5339,8 +5424,8 @@
           "one_char": {
             "query": "の",
             "no_history": [
-              "のけん",
               "の",
+              "のけん",
               "のう"
             ],
             "with_history": [
@@ -5392,14 +5477,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "すること",
-              "しました"
+              "会議",
+              "件",
+              "予定"
             ],
             "with_history": [
               "会議",
-              "ございます",
-              "すること"
+              "件",
+              "予定"
             ],
             "ref_no_history": [
               "件",
@@ -5468,14 +5553,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "について",
-              "いたします",
-              "から"
+              "の",
+              "に",
+              "は"
             ],
             "with_history": [
               "に",
-              "について",
-              "いたします"
+              "の",
+              "は"
             ],
             "ref_no_history": [
               "の",
@@ -5544,14 +5629,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "すること",
-              "ありがとう"
+              "参加",
+              "ついて",
+              "なります"
             ],
             "with_history": [
               "参加",
-              "ございます",
-              "すること"
+              "ついて",
+              "なります"
             ],
             "ref_no_history": [
               "関して",
@@ -5620,14 +5705,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "しました",
-              "すること"
+              "を",
+              "の",
+              "作成"
             ],
             "with_history": [
               "を",
-              "ございます",
-              "しました"
+              "の",
+              "作成"
             ],
             "ref_no_history": [
               "を",
@@ -5643,8 +5728,8 @@
           "one_char": {
             "query": "を",
             "no_history": [
-              "ヲチスレ",
               "を",
+              "ヲチスレ",
               "をも"
             ],
             "with_history": [
@@ -5688,14 +5773,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "すること",
-              "でしょうか"
+              "送信",
+              "進めます",
+              "お願いします"
             ],
             "with_history": [
-              "ございます",
               "送信",
-              "すること"
+              "進めます",
+              "お願いします"
             ],
             "ref_no_history": [
               "ご確認",
@@ -5764,14 +5849,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "しました",
-              "すること"
+              "検討",
+              "連絡",
+              "確認"
             ],
             "with_history": [
               "検討",
-              "ございます",
-              "しました"
+              "連絡",
+              "確認"
             ],
             "ref_no_history": [
               "連絡",
@@ -5840,13 +5925,13 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "しました",
-              "いたします",
-              "について"
+              "ください",
+              "します",
+              "いたします"
             ],
             "with_history": [
               "ください",
-              "しました",
+              "します",
               "いたします"
             ],
             "ref_no_history": [
@@ -5917,13 +6002,13 @@
           "zero_char": {
             "no_history": [
               "ありません",
-              "ございます",
-              "しました"
+              "ない",
+              "ですか"
             ],
             "with_history": [
               "ありません",
-              "ございます",
-              "しました"
+              "ない",
+              "ですか"
             ],
             "ref_no_history": [
               "ありません",
@@ -5992,14 +6077,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "すること",
-              "しました"
+              "しました",
+              "いたしました",
+              "です"
             ],
             "with_history": [
               "しました",
-              "ございます",
-              "すること"
+              "いたしました",
+              "です"
             ],
             "ref_no_history": [
               "しました",
@@ -6068,14 +6153,12 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "しました",
               "いたしました",
-              "ございます"
+              "しました"
             ],
             "with_history": [
               "いたしました",
-              "しました",
-              "ございます"
+              "しました"
             ],
             "ref_no_history": [
               "いたしました",
@@ -6144,14 +6227,12 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "しました",
               "いたしました",
-              "いたします"
+              "しました"
             ],
             "with_history": [
               "いたしました",
-              "しました",
-              "いたします"
+              "しました"
             ],
             "ref_no_history": [
               "いたしました",
@@ -6220,14 +6301,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "しました",
-              "ください"
+              "します",
+              "いたします",
+              "番号"
             ],
             "with_history": [
               "します",
-              "ございます",
-              "しました"
+              "いたします",
+              "番号"
             ],
             "ref_no_history": [
               "します",
@@ -6296,14 +6377,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "内容",
-              "いたします",
-              "中"
+              "を",
+              "中",
+              "完了"
             ],
             "with_history": [
               "を",
-              "内容",
-              "いたします"
+              "中",
+              "完了"
             ],
             "ref_no_history": [
               "中",
@@ -6364,14 +6445,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "すること",
-              "でしょうか"
+              "送信",
+              "進めます",
+              "お願いします"
             ],
             "with_history": [
               "進めます",
-              "ございます",
-              "すること"
+              "送信",
+              "お願いします"
             ],
             "ref_no_history": [
               "進めます",
@@ -6440,14 +6521,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "すること",
-              "しました"
+              "が",
+              "を",
+              "中"
             ],
             "with_history": [
-              "ございます",
-              "すること",
-              "しました"
+              "が",
+              "を",
+              "中"
             ],
             "ref_no_history": [
               "中",
@@ -6463,9 +6544,9 @@
           "one_char": {
             "query": "が",
             "no_history": [
+              "が",
               "がかり",
-              "がかん",
-              "がから"
+              "がかん"
             ],
             "with_history": [
               "が",
@@ -6508,14 +6589,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "すること",
-              "ありがとう"
+              "完了",
+              "必要",
+              "あります"
             ],
             "with_history": [
               "完了",
-              "ございます",
-              "すること"
+              "必要",
+              "あります"
             ],
             "ref_no_history": [
               "完了",
@@ -6584,14 +6665,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "について",
-              "お願いします",
-              "は"
+              "は",
+              "が",
+              "を"
             ],
             "with_history": [
               "は",
-              "について",
-              "お願いします"
+              "が",
+              "を"
             ],
             "ref_no_history": [
               "は",
@@ -6660,14 +6741,14 @@
         "predictions": {
           "zero_char": {
             "no_history": [
-              "ございます",
-              "しました",
-              "すること"
+              "ありますか",
+              "大丈夫",
+              "ありません"
             ],
             "with_history": [
               "ありますか",
-              "ございます",
-              "しました"
+              "大丈夫",
+              "ありません"
             ],
             "ref_no_history": [
               "ありますか",

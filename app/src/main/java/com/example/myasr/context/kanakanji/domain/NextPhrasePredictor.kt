@@ -48,22 +48,25 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             }
         }
 
-        // Static canonical collocations for standard Japanese expressions
+        // Static canonical collocations for standard Japanese expressions and POS-aware transitions
         private val CANONICAL_COLLOCATIONS = mapOf(
-            "よろしく" to listOf("お願いします", "お願いいたします", "どうぞ"),
+            "よろしく" to listOf("お願いします", "お願いいたします", "お願い", "どうぞ"),
             "お願い" to listOf("します", "いたします", "申し上げます"),
             "ありがとう" to listOf("ございます", "ございました"),
             "お疲れ様" to listOf("です", "でした"),
-            "お疲れ" to listOf("様です", "様でした"),
-            "ご" to listOf("連絡", "確認", "案内", "検討"),
+            "お疲れ" to listOf("様", "様です", "様でした"),
+            "ご" to listOf("検討", "連絡", "確認", "案内"),
             "確認" to listOf("しました", "いたします", "お願いします", "中"),
-            "作業" to listOf("中", "完了", "内容", "を進めます"),
+            "作業" to listOf("を", "中", "完了", "内容", "を進めます"),
+            "準備" to listOf("が", "を", "中", "完了"),
+            "質問" to listOf("は", "が", "を", "ありません"),
             "了解" to listOf("しました", "いたしました", "です"),
             "承知" to listOf("いたしました", "しました"),
-            "いつも" to listOf("お世話になっております", "ありがとうございます"),
-            "お世話" to listOf("になっております", "になります"),
+            "いつも" to listOf("お世話になっております", "お世話", "ありがとうございます"),
+            "お世話" to listOf("になっております", "になります", "に"),
             "お待たせ" to listOf("いたしました", "しました"),
             "ご検討" to listOf("のほどよろしくお願いいたします", "ください"),
+            "検討" to listOf("ください", "します", "いたします", "中"),
             "申し訳" to listOf("ありません", "ございません", "ない"),
             "大丈夫" to listOf("です", "ですか", "でしょうか"),
             "問題" to listOf("ありません", "ない", "ですか"),
@@ -74,6 +77,8 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             "今" to listOf("から", "は", "のところ"),
             "会議" to listOf("の", "に", "は", "室"),
             "資料" to listOf("を", "の", "作成", "確認"),
+            "様" to listOf("です", "でした", "に"),
+            "良い" to listOf("天気", "一日を", "ですね"),
             "いただき" to listOf("ありがとうございます", "ました"),
             "させて" to listOf("いただきます", "いただきました"),
             "電話" to listOf("します", "いたします", "番号"),
@@ -81,7 +86,12 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             "行き" to listOf("ます", "ました"),
             "向かっ" to listOf("ています", "ております"),
             "思っ" to listOf("ています", "ております"),
-            "知っ" to listOf("ています", "ております")
+            "知っ" to listOf("ています", "ております"),
+            "を" to listOf("送信", "進めます", "お願いします", "確認", "作成"),
+            "に" to listOf("参加", "ついて", "なります", "連絡", "向かって"),
+            "が" to listOf("完了", "必要", "あります", "できます"),
+            "は" to listOf("ありますか", "大丈夫", "ありません", "いかが"),
+            "の" to listOf("会議", "件", "予定", "連絡", "内容")
         )
 
         // Frequent Japanese case particles and connection auxiliaries
