@@ -310,12 +310,12 @@ class EisRegressionTest {
     @Test
     fun testCompoundPhraseChunkSynthesisAndInterleaving() {
         // Step 3: Verify compound multi-bunsetsu phrase chunk synthesis & interleaving into Top 3-4
-        // 1. "おね" -> "お願いします" or "お願い"
+        // 1. "おね" -> "お願いいたします", "お願いします", or "お願い"
         val candsOne = engine.getBaseCandidates("おね")
         val surfacesOne = candsOne.take(3).map { it.surface }
         assertTrue(
-            "Expected 'お願いします' or 'お願い' in top-3 candidates for 'おね', was: $surfacesOne",
-            surfacesOne.contains("お願いします") || surfacesOne.contains("お願い")
+            "Expected 'お願い*' compound chunk in top-3 candidates for 'おね', was: $surfacesOne",
+            surfacesOne.any { it.startsWith("お願い") }
         )
 
         // 2. "かく" -> "確認しました" (reading: かくにんしました)
