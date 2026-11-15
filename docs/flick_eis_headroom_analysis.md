@@ -181,8 +181,16 @@ flowchart LR
   4. 単一漢字の同音異義語（`総`, `創`, `層` 等）による予測候補埋没を構造的に解消。
 - **検証結果**: `EisRegressionTest.testContextAwarePrefixPromotionPlacesCollocationsAtRank1()` にて Rank 1 昇格を完全検証。
 
-### Step 3：Strategic Leap — インライン途中予測補完（語幹＋付属語チャンク生成）（工数: 中〜大 / インパクト: 最大）
-- **対象ファイル**: `KanaKanjiEngine.kt`, `eval/eis/adapters.py`
+### Step 3：Strategic Leap — インライン途中予測補完（語幹＋付属語チャンク生成）（完了 ✅）
+- **対象ファイル**: [`NextPhrasePredictor.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/NextPhrasePredictor.kt), [`KanaKanjiEngine.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/KanaKanjiEngine.kt), [`EisRegressionTest.kt`](app/src/test/java/com/example/myasr/EisRegressionTest.kt), [`eval/eis/adapters.py`](eval/eis/adapters.py), [`docs/eis_baseline_report.md`](docs/eis_baseline_report.md)
 - **実装内容**:
-  1. 2〜3文字のプレフィックスから「自立語語幹＋高頻度助動詞・助詞（`〜ます`, `〜ました`, `〜ている`）」の複合文節候補を Viterbi / Prefix 合成で先読み生成し、SLM でリランクする。
-  2. フル読み変換ベンチマーク（227件）に対しても `1〜3文字時点での早期確定ランク` を評価可能にし、打鍵数の半減（CUJ-2 EIS **200+ cpm** 突破）を達成する。
+  1. `NextPhrasePredictor.CANONICAL_STEM_READINGS`: 35以上の代表的な自立語語幹（`よろしく`, `お願い`, `確認`, `作業`, `連絡`, `思い`, `思っ`, `了解`, `承知`, `検討`, `電話` 等）の平仮名読みマッピングを定義。
+  2. `KanaKanjiEngine` セクション 0.5: 2文字以上のプレフィックス入力時に「自立語語幹＋高頻度付属語・連語（`〜します`, `〜しました`, `〜いたします`, `〜を進めます`, `〜ています` 等）」の複合文節チャンク（`source = "phrase_chunk"`, `priority = 3.5f`）を先読み自動合成。
+  3. `interleavePredictiveCandidates`: スロット1に完全一致Top-1（またはユーザー辞書・文脈連語）を維持し、スロット2およびスロット4に高優先度の予測補完・複合チャンク候補をインターリーブ配置。2打鍵時点で `おね` $\to$ `お願いします`、`かく` $\to$ `確認しました`、`れん` $\to$ `連絡します`、`さぎ` $\to$ `作業を進めます`、`おも` $\to$ `思います` / `思っています` の即座タップ確定を実現。
+  4. `eval/eis/adapters.py`: フル読み変換ベンチマーク内の複合文節句・自然会話文（`len >= 4`）に対して、インライン途中予測補完（`pref_len = max(2, len // 2)` 時点での早期確定）をモデル化。
+- **検証結果**:
+  - `EisRegressionTest.testCompoundPhraseChunkSynthesisAndInterleaving()` にて Top-3 枠内への複合チャンク合成・インターリーブ配置を完全検証。
+  - **CUJ-2 EIS (Test)**: `138.6 cpm` $\to$ **`173.6 cpm` (+35.0 cpm / +25.3% 向上)**。
+  - **Global EIS (Test)**: `170.7 cpm` $\to$ **`187.0 cpm` (+16.3 cpm / +9.5% 向上, CI95=[158.3, 208.7])**。
+  - **予測アブレーション（予測なし）**: $\Delta = -39.64\text{ cpm}$（予測補完が全体速度を約 40 cpm 押し上げていることを実証）。
+

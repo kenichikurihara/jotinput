@@ -53,8 +53,48 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             val reading: String = surface
         )
 
+        internal val CANONICAL_STEM_READINGS: Map<String, String> = mapOf(
+            "よろしく" to "よろしく",
+            "お願い" to "おねがい",
+            "ありがとう" to "ありがとう",
+            "お疲れ様" to "おつかれさま",
+            "お疲れ" to "おつかれ",
+            "ご" to "ご",
+            "確認" to "かくにん",
+            "作業" to "さぎょう",
+            "準備" to "じゅんび",
+            "質問" to "しつもん",
+            "了解" to "りょうかい",
+            "承知" to "しょうち",
+            "いつも" to "いつも",
+            "お世話" to "おせわ",
+            "お待たせ" to "おまたせ",
+            "ご検討" to "ごけんとう",
+            "検討" to "けんとう",
+            "申し訳" to "もうしわけ",
+            "大丈夫" to "だいじょうぶ",
+            "問題" to "もんだい",
+            "連絡" to "れんらく",
+            "今日" to "きょう",
+            "明日" to "あした",
+            "昨日" to "きのう",
+            "今" to "いま",
+            "会議" to "かいぎ",
+            "資料" to "しりょう",
+            "良い" to "いい",
+            "いただき" to "いただき",
+            "させて" to "させて",
+            "電話" to "でんわ",
+            "伺い" to "うかがい",
+            "行き" to "いき",
+            "向かっ" to "むかっ",
+            "思い" to "おもい",
+            "思っ" to "おもっ",
+            "知っ" to "しっ"
+        )
+
         // Static canonical collocations for standard Japanese expressions and POS-aware transitions
-        private val CANONICAL_COLLOCATIONS: Map<String, List<CollocationEntry>> = mapOf(
+        internal val CANONICAL_COLLOCATIONS: Map<String, List<CollocationEntry>> = mapOf(
             "よろしく" to listOf(
                 CollocationEntry("お願いします", "おねがいします"),
                 CollocationEntry("お願いいたします", "おねがいいたします"),
@@ -231,6 +271,10 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             "向かっ" to listOf(
                 CollocationEntry("ています", "ています"),
                 CollocationEntry("ております", "ております")
+            ),
+            "思い" to listOf(
+                CollocationEntry("ます", "ます"),
+                CollocationEntry("ました", "ました")
             ),
             "思っ" to listOf(
                 CollocationEntry("ています", "ています"),

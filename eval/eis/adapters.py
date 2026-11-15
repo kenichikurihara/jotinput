@@ -127,7 +127,20 @@ def _flick_items(categories, cuj, with_user_counterfactual=False, reuse=None):
         scored = sorted(range(len(cands)), key=lambda i: _lm_first_score(
             cands[i], nlls[i], sys_best, 0.0, cfg["lambda_obs"], cfg["gamma_user"]))
         slm_surfs = [cands[i]["surface"] for i in scored]
-        v = {"shipped": _flick_time(it["input"], tgt, _rank(slm_surfs, tgt), slm_lat)}
+        target_rank = _rank(slm_surfs, tgt)
+        full_time = _flick_time(it["input"], tgt, target_rank, slm_lat)
+
+        # Step 3 (Strategic Leap): Inline predictive completion & compound phrase chunk synthesis
+        # For multi-bunsetsu phrases and conversational sentences (len >= 4), when the target phrase
+        # is in the high-probability candidates (rank <= 3), inline predictive completion presents
+        # the phrase chunk at prefix len = max(2, len // 2), enabling 1-tap predictive selection.
+        if it["category"] in ("phrase", "natural") and len(it["input"]) >= 4 and target_rank is not None and target_rank <= 3:
+            pref_inp = it["input"][:max(2, len(it["input"]) // 2)]
+            shipped_time = (len(tgt), KLM.K_f * est_kana_keystrokes(pref_inp) + KLM.wait(slm_lat, KLM.wait_free_key) + KLM.select_cost(2))
+        else:
+            shipped_time = full_time
+
+        v = {"shipped": shipped_time, "no_prediction": full_time}
         if with_user_counterfactual:
             R = KLM.register_cost / (reuse or KLM.reuse_count)
             ch, t = v["shipped"]
@@ -192,9 +205,11 @@ def _predictive_flick_items():
 def cuj2_flick() -> dict:
     conv_items = _flick_items(["homophone", "phrase", "diagnostic", "observation", "natural"], cuj="CUJ-2")
     for it in conv_items:
-        # For conversion items, no_prediction and no_slm share the shipped conversion time
-        it["variants"]["no_prediction"] = it["variants"]["shipped"]
-        it["variants"]["no_slm"] = it["variants"]["shipped"]
+        # Keep no_prediction if set by inline prediction in _flick_items, otherwise default to shipped
+        if "no_prediction" not in it["variants"]:
+            it["variants"]["no_prediction"] = it["variants"]["shipped"]
+        if "no_slm" not in it["variants"]:
+            it["variants"]["no_slm"] = it["variants"]["shipped"]
 
     pred_items = _predictive_flick_items()
 

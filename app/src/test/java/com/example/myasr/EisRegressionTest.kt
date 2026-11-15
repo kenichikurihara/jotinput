@@ -306,4 +306,37 @@ class EisRegressionTest {
         assertTrue("Base candidates for 'て' with context '良い' must not be empty", candsTe.isNotEmpty())
         assertEquals("Collocation '天気' must be promoted to Rank 1 under context '良い'", "天気", candsTe.first().surface)
     }
+
+    @Test
+    fun testCompoundPhraseChunkSynthesisAndInterleaving() {
+        // Step 3: Verify compound multi-bunsetsu phrase chunk synthesis & interleaving into Top 3-4
+        // 1. "おね" -> "お願いします" (reading: おねがいします)
+        val candsOne = engine.getBaseCandidates("おね")
+        val surfacesOne = candsOne.take(3).map { it.surface }
+        assertTrue("Expected 'お願いします' in top-3 candidates for 'おね', was: $surfacesOne", surfacesOne.contains("お願いします"))
+
+        // 2. "かく" -> "確認しました" (reading: かくにんしました)
+        val candsKaku = engine.getBaseCandidates("かく")
+        val surfacesKaku = candsKaku.take(3).map { it.surface }
+        assertTrue("Expected '確認しました' in top-3 candidates for 'かく', was: $surfacesKaku", surfacesKaku.contains("確認しました"))
+
+        // 3. "れん" -> "連絡します" (reading: れんらくします)
+        val candsRen = engine.getBaseCandidates("れん")
+        val surfacesRen = candsRen.take(3).map { it.surface }
+        assertTrue("Expected '連絡します' in top-3 candidates for 'れん', was: $surfacesRen", surfacesRen.contains("連絡します"))
+
+        // 4. "さぎ" -> "作業を進めます" (reading: さぎょうをすすめます)
+        val candsSagi = engine.getBaseCandidates("さぎ")
+        val surfacesSagi = candsSagi.take(3).map { it.surface }
+        assertTrue("Expected '作業を進めます' in top-3 candidates for 'さぎ', was: $surfacesSagi", surfacesSagi.contains("作業を進めます"))
+
+        // 5. "おも" -> "思います" or "思っています"
+        val candsOmo = engine.getBaseCandidates("おも")
+        val surfacesOmo = candsOmo.take(3).map { it.surface }
+        assertTrue(
+            "Expected '思います' or '思っています' in top-3 candidates for 'おも', was: $surfacesOmo",
+            surfacesOmo.contains("思います") || surfacesOmo.contains("思っています")
+        )
+    }
 }
+

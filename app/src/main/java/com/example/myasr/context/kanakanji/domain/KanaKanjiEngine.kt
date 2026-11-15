@@ -622,6 +622,28 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             }
         }
 
+        // 0.5 Compound Multi-Bunsetsu Chunk Prediction (Step 3: Strategic Leap)
+        if (normalized.length >= 2) {
+            for ((stemSurface, stemReading) in NextPhrasePredictor.CANONICAL_STEM_READINGS) {
+                val continuations = NextPhrasePredictor.CANONICAL_COLLOCATIONS[stemSurface] ?: continue
+                for (entry in continuations) {
+                    val fullSurface = stemSurface + entry.surface
+                    val fullReading = stemReading + entry.reading
+                    if (fullReading.startsWith(normalized) && fullSurface != normalized) {
+                        addCandidate(
+                            ConversionCandidate(
+                                surface = fullSurface,
+                                reading = fullReading,
+                                isPrediction = true,
+                                source = "phrase_chunk",
+                                priority = 3.5f
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
             // 1. User dictionary entries (Absolute priority)
             val matchingPaths = findMatchingTrieNodes(normalized)
             val exactPath = matchingPaths.firstOrNull { it.voicingDistance == 0 && it.typoCostPenalty == 0 }
@@ -843,14 +865,80 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
             // Sort non-user exact matches by selection history
             val ranked = prioritizeByHistory(result, targetReading = normalized)
+            val finalCandidates = interleavePredictiveCandidates(ranked, normalized)
             synchronized(queryCache) {
                 if (queryCache.size >= 300) {
                     val oldestKey = queryCache.keys.firstOrNull()
                     if (oldestKey != null) queryCache.remove(oldestKey)
                 }
-                queryCache[cacheKey] = ranked
+                queryCache[cacheKey] = finalCandidates
             }
-            return ranked
+            return finalCandidates
+    }
+
+    private fun interleavePredictiveCandidates(
+        candidates: List<ConversionCandidate>,
+        normalized: String
+    ): List<ConversionCandidate> {
+        if (normalized.length < 2 || candidates.size <= 2) {
+            return candidates
+        }
+
+        val userCands = candidates.filter { it.source == "user" }
+        val collocCands = candidates.filter { it.source == "context_collocation" }
+        val rest = candidates.filter { it.source != "user" && it.source != "context_collocation" }
+
+        val exactCands = rest.filter { !it.isPrediction && it.source != "viterbi_prefix" }
+        val predCands = rest.filter { it.isPrediction || it.source == "viterbi_prefix" }
+
+        if (predCands.isEmpty()) {
+            return candidates
+        }
+
+        val interleaved = mutableListOf<ConversionCandidate>()
+        val seen = HashSet<String>()
+
+        fun add(c: ConversionCandidate) {
+            if (seen.add(c.surface)) interleaved.add(c)
+        }
+
+        for (c in userCands) add(c)
+        for (c in collocCands) add(c)
+
+        var exactIdx = 0
+        var predIdx = 0
+
+        // Slot 1 (if no colloc/user): First exact candidate
+        if (interleaved.isEmpty() && exactIdx < exactCands.size) {
+            add(exactCands[exactIdx++])
+        }
+
+        // Slot 2: Top predictive candidate / phrase chunk
+        if (predIdx < predCands.size) {
+            add(predCands[predIdx++])
+        }
+
+        // Slot 3: Second exact candidate
+        if (exactIdx < exactCands.size) {
+            add(exactCands[exactIdx++])
+        }
+
+        // Slot 4: Second predictive candidate
+        if (predIdx < predCands.size) {
+            add(predCands[predIdx++])
+        }
+
+        // Rest of exact candidates
+        while (exactIdx < exactCands.size) {
+            add(exactCands[exactIdx++])
+        }
+
+        // Rest of predictive candidates
+        while (predIdx < predCands.size) {
+            add(predCands[predIdx++])
+        }
+
+        return interleaved
     }
 
     /**
