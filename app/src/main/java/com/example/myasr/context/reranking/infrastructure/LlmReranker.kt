@@ -109,6 +109,12 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             val kappaCommit = 1.50f
             val lambdaExt = 1.20f
 
+            // ScoringProfile constants for Risk-Adjusted Expected EIS Utility
+            val keyCostSec = if (isEnglishPool) 0.30f else 0.40f
+            val riskWeight = if (isEnglishPool) 0.45f else 0.25f
+            val extGainWeight = if (isEnglishPool) 0.85f else 1.00f
+            val slot1MarginSec = if (isEnglishPool) 0.25f else 0.15f
+
             // 3. Compute consumed lengths M_i and span deltas
             val mLengths = IntArray(topPool.size) { i ->
                 val cand = topPool[i]
@@ -201,9 +207,16 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                         rawBaseNll = baseCompNll + kappaCommit
                     }
                 } else {
-                    // (c) Uninputted prefix extension cost (waive extension penalty for user history >= 2 or history_bigram)
+                    // (c) Extension / prediction candidate
                     val waiveExt = candidate.historyCount >= 2 || candidate.source == "history_bigram"
-                    rawBaseNll = if (waiveExt) rawNll else rawNll + lambdaExt * maxOf(1, deltaExt)
+                    if (isEnglishPool) {
+                        rawBaseNll = if (waiveExt) rawNll else rawNll + lambdaExt * maxOf(1, deltaExt)
+                    } else {
+                        // B1: Length-normalized surprisal for Japanese predictive candidates
+                        val tokens = maxOf(1, (mLengths[index] + 1) / 2)
+                        val normNll = rawNll / tokens.toFloat().pow(0.85f)
+                        rawBaseNll = if (waiveExt) minOf(normNll, rawNll) else normNll
+                    }
                 }
 
                 // Hybrid-6b History x SLM Fusion (Contextual Bigram Cache + Time-Decay + Coherence Gate + Gated Soft-Clamping + c=1 Damping)
@@ -247,6 +260,39 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
 
                 baseScores[index] = (1.0f - weightAlpha) * (effectiveNll + effectiveObs + hysteresisBonus) + weightAlpha * rankCost
+            }
+
+            // Compute Softmax Probabilities and Expected EIS Utility for all candidates (B1)
+            val logPostScores = FloatArray(topPool.size) { i ->
+                val cand = topPool[i]
+                val isExactUser = (cand.source == "user" || cand.source == "user_english") && cand.obsPenalty == 0.0f
+                if (isExactUser) 10.0f else -(baseScores[i])
+            }
+            val maxLogPost = logPostScores.maxOrNull() ?: 0.0f
+            var sumExp = 0.0
+            val expScores = DoubleArray(topPool.size) { i ->
+                val e = kotlin.math.exp(((logPostScores[i] - maxLogPost) / 2.0f).coerceIn(-30.0f, 30.0f).toDouble())
+                sumExp += e
+                e
+            }
+            val utilities = FloatArray(topPool.size) { i ->
+                val cand = topPool[i]
+                val isExactUser = (cand.source == "user" || cand.source == "user_english") && cand.obsPenalty == 0.0f
+                if (isExactUser) {
+                    10.0f - (i * 0.01f)
+                } else {
+                    val p = if (sumExp > 0.0) (expScores[i] / sumExp).toFloat() else (1.0f / topPool.size)
+                    val deltaUnc = unconsumedDeltas[i]
+                    val deltaExt = extDeltas[i]
+                    val gBase = if (deltaUnc == 0) {
+                        keyCostSec * minOf(n, mLengths[i])
+                    } else {
+                        keyCostSec * mLengths[i] - 0.60f * deltaUnc
+                    }
+                    val gExt = extGainWeight * keyCostSec * deltaExt
+                    val lErr = 1.50f + 0.20f * cand.surface.length + keyCostSec * mLengths[i]
+                    p * (gBase + gExt) - (1.0f - p) * riskWeight * lErr
+                }
             }
 
             // 6. Strata Partitioning
@@ -352,8 +398,16 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             }
 
-            // 9. Extensions / Predictions ranked by base score
-            val rankedExtIndices = extIndices.sortedBy { baseScores[it] }
+            // 9. Extensions / Predictions ranked by Expected EIS Utility (B1)
+            val rankedExtIndices = extIndices.sortedWith { a, b ->
+                val uA = utilities[a]
+                val uB = utilities[b]
+                if (kotlin.math.abs(uA - uB) > 0.05f) {
+                    uB.compareTo(uA) // higher utility first
+                } else {
+                    baseScores[a].compareTo(baseScores[b])
+                }
+            }
             val rankedExt = rankedExtIndices.map { topPool[it] }
             val topHistPredIdx = rankedExtIndices.firstOrNull {
                 topPool[it].historyCount >= 2 || topPool[it].source == "history_bigram"
@@ -384,7 +438,10 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             val candidateToPromote = topHistPredIdx ?: bestExtIdx?.takeIf { extIdx ->
                 if (rankedFull.isNotEmpty()) {
                     val topFullIdx = topPool.indexOf(rankedFull[0])
-                    topFullIdx >= 0 && baseScores[extIdx] < baseScores[topFullIdx] - 0.50f
+                    topFullIdx >= 0 && (
+                        utilities[extIdx] > utilities[topFullIdx] - 0.10f ||
+                        baseScores[extIdx] < baseScores[topFullIdx] - 0.50f
+                    )
                 } else {
                     true
                 }
@@ -392,7 +449,11 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
             if (candidateToPromote != null && rankedFull.isNotEmpty() && n > 0) {
                 val topFullIdx = topPool.indexOf(rankedFull[0])
-                val canPromoteTop1 = n >= 2 && topFullIdx >= 0 && baseScores[candidateToPromote] < baseScores[topFullIdx] - 0.50f
+                val canPromoteTop1 = !isEnglishPool && n in 1..4 && topFullIdx >= 0 && (
+                    utilities[candidateToPromote] > utilities[topFullIdx] + slot1MarginSec ||
+                    topPool[candidateToPromote].priority >= 3.5f ||
+                    baseScores[candidateToPromote] < baseScores[topFullIdx] - 0.50f
+                )
                 if (canPromoteTop1) {
                     addCandidate(topPool[candidateToPromote])
                     addCandidate(rankedFull[fullIdx++])
@@ -404,6 +465,12 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             while (fullIdx < minOf(topFullQuota, rankedFull.size)) {
                 addCandidate(rankedFull[fullIdx++])
             }
+            // Interleave remaining high-utility prediction candidate into Stratum 2/3 (B1: Eliminates Stratum 6 burial)
+            val remainingExt = rankedExt.filter { it.surface != topPool.getOrNull(candidateToPromote ?: -1)?.surface }
+            var remExtIdx = 0
+            if (remExtIdx < remainingExt.size && !isEnglishPool && (remainingExt[remExtIdx].priority >= 3.0f || utilities[topPool.indexOf(remainingExt[remExtIdx])] > 0.0f)) {
+                addCandidate(remainingExt[remExtIdx++])
+            }
             // Stratum 2: Mid partial candidates
             while (partialIdx < minOf(midPartialQuota, rankedPartial.size)) {
                 addCandidate(rankedPartial[partialIdx++])
@@ -413,6 +480,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             while (fullIdx < nextFullLimit) {
                 addCandidate(rankedFull[fullIdx++])
             }
+            if (remExtIdx < remainingExt.size && !isEnglishPool) {
+                addCandidate(remainingExt[remExtIdx++])
+            }
             // Stratum 4: Remaining partial candidates
             while (partialIdx < rankedPartial.size) {
                 addCandidate(rankedPartial[partialIdx++])
@@ -421,9 +491,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             while (fullIdx < rankedFull.size) {
                 addCandidate(rankedFull[fullIdx++])
             }
-            // Stratum 6: Extension / prediction candidates
-            for (ext in rankedExt) {
-                addCandidate(ext)
+            // Remaining extension / prediction candidates
+            while (remExtIdx < remainingExt.size) {
+                addCandidate(remainingExt[remExtIdx++])
             }
 
             return result

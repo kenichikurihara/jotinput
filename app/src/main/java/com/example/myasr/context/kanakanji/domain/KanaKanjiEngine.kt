@@ -66,6 +66,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     private class TrieNode {
         val children = HashMap<Char, TrieNode>()
         val words = ArrayList<WordEntry>()
+        var minCostInSubtree: Int = Int.MAX_VALUE
     }
 
     private val root = TrieNode()
@@ -447,6 +448,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         isInitialized = false
         root.children.clear()
         root.words.clear()
+        root.minCostInSubtree = Int.MAX_VALUE
         reloadMmapDictionaries()
         clearMemoryCache()
         initializeIfNeeded()
@@ -516,8 +518,10 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         priority: Float = 0.0f
     ) {
         var node = root
+        if (cost < node.minCostInSubtree) node.minCostInSubtree = cost
         for (ch in reading) {
             node = node.children.getOrPut(ch) { TrieNode() }
+            if (cost < node.minCostInSubtree) node.minCostInSubtree = cost
         }
         val existingIndex = node.words.indexOfFirst {
             it.surface == surface && (lid == 0 || it.lid == 0 || it.lid == lid) && (rid == 0 || it.rid == 0 || it.rid == rid)
@@ -809,12 +813,12 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
 
-            // 5. Predictive prefix matches from in-memory Trie (scans breadth up to 80, takes top 40 by cost)
+            // 5. Predictive prefix matches from in-memory Trie (scans cost-priority subtree up to 160, takes top 50 by cost)
             if (exactNode != null) {
                 val prefixWords = mutableListOf<Pair<String, WordEntry>>()
-                collectPrefixWords(exactNode, normalized, prefixWords, maxCount = 80)
+                collectPrefixWords(exactNode, normalized, prefixWords, maxCount = 160)
                 prefixWords.sortBy { it.second.cost }
-                for ((reading, entry) in prefixWords.take(40)) {
+                for ((reading, entry) in prefixWords.take(50)) {
                     addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source))
                 }
             }
@@ -1144,20 +1148,30 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return currentPaths
     }
 
+    private class PrefixQueueItem(
+        val reading: String,
+        val node: TrieNode,
+        val minCost: Int
+    ) : Comparable<PrefixQueueItem> {
+        override fun compareTo(other: PrefixQueueItem): Int = this.minCost.compareTo(other.minCost)
+    }
+
     private fun collectPrefixWords(
         startNode: TrieNode,
         baseReading: String,
         outList: MutableList<Pair<String, WordEntry>>,
         maxCount: Int
     ) {
-        val queue = ArrayDeque<Pair<String, TrieNode>>()
-        queue.add(Pair(baseReading, startNode))
+        val queue = java.util.PriorityQueue<PrefixQueueItem>()
+        queue.add(PrefixQueueItem(baseReading, startNode, startNode.minCostInSubtree))
 
         while (queue.isNotEmpty() && outList.size < maxCount) {
-            val (currentReading, currentNode) = queue.removeFirst()
+            val item = queue.poll() ?: break
+            val currentReading = item.reading
+            val currentNode = item.node
 
             if (currentNode !== startNode) {
-                val countToAdd = minOf(2, currentNode.words.size)
+                val countToAdd = minOf(6, currentNode.words.size)
                 for (i in 0 until countToAdd) {
                     outList.add(Pair(currentReading, currentNode.words[i]))
                     if (outList.size >= maxCount) return
@@ -1165,7 +1179,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             }
 
             for ((ch, childNode) in currentNode.children) {
-                queue.add(Pair(currentReading + ch, childNode))
+                queue.add(PrefixQueueItem(currentReading + ch, childNode, childNode.minCostInSubtree))
             }
         }
     }
