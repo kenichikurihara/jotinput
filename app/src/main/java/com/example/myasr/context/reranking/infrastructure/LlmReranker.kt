@@ -69,6 +69,17 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             }
         }
 
+        enum class ScoringProfile(
+            val keyCostSec: Float,
+            val riskWeight: Float,
+            val extGainWeight: Float,
+            val slot1MarginSec: Float
+        ) {
+            JA_FLICK(keyCostSec = 0.40f, riskWeight = 0.25f, extGainWeight = 1.00f, slot1MarginSec = 0.15f),
+            JA_ZERO_QUERY(keyCostSec = 0.40f, riskWeight = 0.30f, extGainWeight = 1.00f, slot1MarginSec = 0.00f),
+            EN_QWERTY(keyCostSec = 0.30f, riskWeight = 0.45f, extGainWeight = 0.85f, slot1MarginSec = 0.25f)
+        }
+
         /**
          * Unified Span-Aware Bayesian Scoring & Subsumption Dominance Engine.
          * Evaluates candidates across full/partial/predictive spans with principled unconsumed penalties
@@ -109,11 +120,16 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             val kappaCommit = 1.50f
             val lambdaExt = 1.20f
 
-            // ScoringProfile constants for Risk-Adjusted Expected EIS Utility
-            val keyCostSec = if (isEnglishPool) 0.30f else 0.40f
-            val riskWeight = if (isEnglishPool) 0.45f else 0.25f
-            val extGainWeight = if (isEnglishPool) 0.85f else 1.00f
-            val slot1MarginSec = if (isEnglishPool) 0.25f else 0.15f
+            // ScoringProfile for Risk-Adjusted Expected EIS Utility (Section 3.3)
+            val profile = when {
+                isEnglishPool -> ScoringProfile.EN_QWERTY
+                n == 0 -> ScoringProfile.JA_ZERO_QUERY
+                else -> ScoringProfile.JA_FLICK
+            }
+            val keyCostSec = profile.keyCostSec
+            val riskWeight = profile.riskWeight
+            val extGainWeight = profile.extGainWeight
+            val slot1MarginSec = profile.slot1MarginSec
 
             // 3. Compute consumed lengths M_i and span deltas
             val mLengths = IntArray(topPool.size) { i ->
@@ -730,14 +746,19 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             }
             val topPool = mutableListOf<ConversionCandidate>()
             val topPoolSurfaces = HashSet<String>()
-            for (c in fullCands.take(6)) {
+            for (c in nonHiraganaCandidates.filter { it.historyCount >= 2 }.sortedByDescending { it.historyCount }.take(4)) {
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
-            for (c in prefixCands.take(6)) {
+            for (c in fullCands.take(8)) {
+                if (topPool.size >= 16) break
+                if (topPoolSurfaces.add(c.surface)) topPool.add(c)
+            }
+            for (c in prefixCands.take(8)) {
+                if (topPool.size >= 16) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
             for (c in nonHiraganaCandidates) {
-                if (topPool.size >= 12) break
+                if (topPool.size >= 16) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
             val restPool = nonHiraganaCandidates.filter { cand -> topPool.none { it.surface == cand.surface } }
@@ -879,16 +900,16 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             for (c in nonHiraganaCandidates.filter { it.historyCount >= 2 }.sortedByDescending { it.historyCount }.take(4)) {
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
-            for (c in fullCands.take(6)) {
-                if (topPool.size >= 12) break
+            for (c in fullCands.take(8)) {
+                if (topPool.size >= 16) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
-            for (c in prefixCands.take(6)) {
-                if (topPool.size >= 12) break
+            for (c in prefixCands.take(8)) {
+                if (topPool.size >= 16) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
             for (c in nonHiraganaCandidates) {
-                if (topPool.size >= 12) break
+                if (topPool.size >= 16) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
             val restPool = nonHiraganaCandidates.filter { cand -> topPool.none { it.surface == cand.surface } }

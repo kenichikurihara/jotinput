@@ -12,7 +12,7 @@ open util/boolean
 // --- Part 1: TapSafeCandidateOrdering (BC-2) ---
 
 abstract sig TapSafeRule {}
-one sig TapSafeR1, TapSafeR2, TapSafeR3, TapSafeDefault extends TapSafeRule {}
+one sig TapSafeR1, TapSafeR2, TapSafeR3, TapSafeR4, TapSafeDefault extends TapSafeRule {}
 
 sig TapSafeInput {
     hasInitialTop1: one Bool,
@@ -20,7 +20,8 @@ sig TapSafeInput {
     withinSafeWindow: one Bool,
     userTouching: one Bool,
     preservedPartial: one Bool,
-    newTopFull: one Bool
+    newTopFull: one Bool,
+    highUtilityPrediction: one Bool
 }
 
 pred tapSafeR1Matches[i: TapSafeInput] {
@@ -38,10 +39,18 @@ pred tapSafeR3Matches[i: TapSafeInput] {
     i.preservedPartial = True and i.newTopFull = True
 }
 
+pred tapSafeR4Matches[i: TapSafeInput] {
+    not tapSafeR1Matches[i] and
+    not tapSafeR2Matches[i] and
+    not tapSafeR3Matches[i] and
+    i.userTouching = False and i.highUtilityPrediction = True
+}
+
 fun evalTapSafeRule[i: TapSafeInput]: one TapSafeRule {
     tapSafeR1Matches[i] => TapSafeR1 else
     tapSafeR2Matches[i] => TapSafeR2 else
     tapSafeR3Matches[i] => TapSafeR3 else
+    tapSafeR4Matches[i] => TapSafeR4 else
     TapSafeDefault
 }
 
@@ -70,6 +79,20 @@ assert NeverPinsWithinWindowUnlessTouching {
 assert NeverPinsPartialOverFullSpan {
     all i: TapSafeInput |
         (i.preservedPartial = True and i.newTopFull = True) implies isPinnedTop1[i] = False
+}
+
+// Assertion 4b: Never pins when high-utility prediction promotes and user is not touching
+assert NeverPinsHighUtilityPredictionWhenNotTouching {
+    all i: TapSafeInput |
+        (i.userTouching = False and i.highUtilityPrediction = True) implies isPinnedTop1[i] = False
+}
+
+// Assertion 4c: Always pins high-utility prediction after window if user IS touching strip (and not partial->full)
+assert PinsPredictionWhenUserTouchingAfterWindow {
+    all i: TapSafeInput |
+        (i.hasInitialTop1 = True and i.top1Unchanged = False and
+         i.withinSafeWindow = False and i.userTouching = True and
+         not (i.preservedPartial = True and i.newTopFull = True)) implies isPinnedTop1[i] = True
 }
 
 // --- Part 2: ClipboardSuggestionEligibility (BC-8) ---
@@ -108,6 +131,10 @@ pred canPinTop1Safely {
     some i: TapSafeInput | isPinnedTop1[i] = True
 }
 
+pred canPromoteHighUtilityPrediction {
+    some i: TapSafeInput | evalTapSafeRule[i] = TapSafeR4
+}
+
 pred canShowClipboardSuggestion {
     some c: ClipboardInput | evalClipboardEligible[c] = True
 }
@@ -116,6 +143,9 @@ check TapSafeTableIsTotal for 4
 check NeverPinsWhenTop1UnchangedOrAbsent for 4
 check NeverPinsWithinWindowUnlessTouching for 4
 check NeverPinsPartialOverFullSpan for 4
+check NeverPinsHighUtilityPredictionWhenNotTouching for 4
+check PinsPredictionWhenUserTouchingAfterWindow for 4
 check ClipboardNeverIntrudesDuringActiveInput for 4
 run canPinTop1Safely for 3
+run canPromoteHighUtilityPrediction for 3
 run canShowClipboardSuggestion for 3

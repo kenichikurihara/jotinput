@@ -143,6 +143,24 @@ object CandidateRerankJudgement {
                 )
             }
         }
+        rule(id = "TAP_SAFE_R4", description = "Allow high-utility prediction to promote over short prefix when not touching") {
+            `when` { input ->
+                val newTop = input.rerankedCandidates.firstOrNull()
+                val isHighUtilityPredictionPromotion = newTop != null &&
+                    newTop.isPrediction &&
+                    input.reading.length in 2..4 &&
+                    newTop.reading.length > input.reading.length &&
+                    (newTop.priority >= 3.5f || newTop.historyCount >= 2 || newTop.source == "history_bigram")
+                !input.isUserTouchingStrip && isHighUtilityPredictionPromotion
+            }
+            then { input ->
+                TapSafeOrderingDecision(
+                    finalCandidates = input.rerankedCandidates,
+                    pinnedInitialTop1 = false,
+                    reason = "promote_high_utility_prediction"
+                )
+            }
+        }
         default(id = "TAP_SAFE_DEFAULT", description = "Pin initial Top-1 for tap safety") { input ->
             val currentTop1 = input.initialRenderedTop1!!
             val pinnedTop = input.rerankedCandidates.find { it.surface == currentTop1 }

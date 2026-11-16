@@ -30,6 +30,7 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`NeverPinsWhenTop1UnchangedOrAbsent`**: 初期 Top-1 不在または同値時にピン留めしないこと。
 - **`NeverPinsWithinWindowUnlessTouching`**: 100ms ウィンドウ内（非タッチ時）はピン留めしないこと。
 - **`NeverPinsPartialOverFullSpan`**: 部分一致プレフィックスより完全スパン候補を優先すること。
+- **`NeverPinsHighUtilityPredictionWhenNotTouching` / `PinsPredictionWhenUserTouchingAfterWindow`**: 非タッチ時は高効用予測候補（`TAP_SAFE_R4`）の Slot 1 昇格を許可し、タッチ中は 100ms ウィンドウ経過後の予測昇格を確実にピン留め阻止すること。
 - **`ClipboardNeverIntrudesDuringActiveInput`**: 入力中・音声アクティブ時にクリップボード提案が割り込まないこと。
 
 ### 3.3 [`custom_dictionary_ui.als`](app/src/test/resources/alloy/custom_dictionary_ui.als)

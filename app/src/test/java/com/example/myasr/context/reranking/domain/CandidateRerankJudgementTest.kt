@@ -178,4 +178,51 @@ class CandidateRerankJudgementTest {
         assertEquals("RERANK_EXEC_DEFAULT", normalTrace.selectedRuleId)
         assertTrue(normalTrace.usedDefaultFallback)
     }
+
+    @Test
+    fun `tapSafeOrdering allows high-utility prediction promotion after 100ms when not touching but pins when touching`() {
+        val base = listOf(
+            ConversionCandidate(surface = "詐欺", reading = "さぎ", source = "dict")
+        )
+        val reranked = listOf(
+            ConversionCandidate(
+                surface = "作業を進めます",
+                reading = "さぎょうをすすめます",
+                isPrediction = true,
+                source = "phrase_chunk",
+                priority = 3.5f
+            ),
+            ConversionCandidate(surface = "詐欺", reading = "さぎ", source = "dict")
+        )
+
+        // Not touching strip after 150ms -> TAP_SAFE_R4 allows promotion
+        val notTouchingTrace = CandidateRerankJudgement.judgeTapSafeOrderingWithTrace(
+            CandidateRerankJudgement.TapSafeOrderingInput(
+                baseCandidates = base,
+                rerankedCandidates = reranked,
+                initialRenderedTop1 = "詐欺",
+                reading = "さぎ",
+                elapsedFromFirstRenderMs = 150L,
+                isUserTouchingStrip = false
+            )
+        )
+        assertEquals("TAP_SAFE_R4", notTouchingTrace.selectedRuleId)
+        assertFalse(notTouchingTrace.result.pinnedInitialTop1)
+        assertEquals("作業を進めます", notTouchingTrace.result.finalCandidates.first().surface)
+
+        // Touching strip after 150ms -> TAP_SAFE_DEFAULT pins initial Top-1 for tap safety
+        val touchingTrace = CandidateRerankJudgement.judgeTapSafeOrderingWithTrace(
+            CandidateRerankJudgement.TapSafeOrderingInput(
+                baseCandidates = base,
+                rerankedCandidates = reranked,
+                initialRenderedTop1 = "詐欺",
+                reading = "さぎ",
+                elapsedFromFirstRenderMs = 150L,
+                isUserTouchingStrip = true
+            )
+        )
+        assertEquals("TAP_SAFE_DEFAULT", touchingTrace.selectedRuleId)
+        assertTrue(touchingTrace.result.pinnedInitialTop1)
+        assertEquals("詐欺", touchingTrace.result.finalCandidates.first().surface)
+    }
 }

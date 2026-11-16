@@ -1,6 +1,6 @@
 # 効用スコア（Utility Score）導入による予測変換最適化 デザインドキュメント＆総合評価プラン
 
-- **ステータス**: **設計・評価計画フェーズ（実装前レビュー用）**
+- **ステータス**: **Phase 1 (B1 + B2 + B5 + DMN/Alloy) 実装・検証完了 / Phase 2 準備中**
 - **上位仕様**: [JotInput トップレベル PRD (`docs/prd_top_level.md`)](prd_top_level.md)
 - **関連ドキュメント**:
   - [EIS-v1 ベースラインレポート (`docs/eis_baseline_report.md`)](eis_baseline_report.md)
@@ -181,31 +181,38 @@ flowchart TD
 
 ---
 
-## 7. 実装・検証進捗 (Phase 1 完了実績)
+## 7. 実装・検証進捗 (Phase 1 完了・設計整合性レビュー実績)
 
-### 7.1 実装内容
-- **B1 (Expected EIS Utility Scoring & Stratum 6 De-isolation)**:
-  - `LlmReranker.kt` において、`ScoringProfile`（`JA_FLICK`, `JA_ZERO_QUERY`, `EN_QWERTY`）に基づき、日本語予測候補に対してトークン長正規化対数事後スコア $\bar{\mathcal{L}}_{\text{norm}} = \text{rawNll} / \text{tokens}^{0.85}$ から Softmax 事後確率 $P_i$ を算出し、リスク調整済み期待効用 $U_i$ を導出。
-  - Stratum 6（最下位隔離）を撤廃し、高効用予測候補を Stratum 2/3 の可視スロットへ自然にインターリーブ。
-  - 英語 QWERTY (`EN_QWERTY`) では `canPromoteTop1 = false` および `extGainWeight = 0.0` により `raw` 単語の保護を完全維持。
-- **B2 (BFS Subtree Top-K Trie Prefix Search & Homophone Expansion)**:
-  - `KanaKanjiEngine.kt` において、`TrieNode` に `minCostInSubtree` を追跡させ、`collectPrefixWords` で階層探索（BFS）を維持しながら各階層の子ノード展開を `minCostInSubtree` 昇順で優先キューイング。
-  - 同音異義語キャップを `minOf(2)` から `minOf(3)` へ安全に緩和し、浅い階層の多様性と深い語彙の選別を両立。
-  - `addCandidate` において、同一表記の候補がより高い優先度（Step 5.5 `phrase_chunk`, priority 3.5f 等）で再訪された場合に属性を安全にアップグレード。
-- **B5 (Syntactic & High-Utility Slot 1 Promotion)**:
-  - `n in 2..4` かつ SLM 文脈コヒーレンスを満たす高効用予測候補（$U_{\text{pred}} > U_{\text{exact}} + \delta_{\text{slot1}}$ または priority $\ge 3.5\text{f}$）についてのみ Slot 1 昇格を許可し、1文字入力時（`n=1`）および不適合文脈での誤昇格を厳格に抑止。
+### 7.1 設計ドキュメントとの突合レビューおよび実装内容
+デザインドキュメント（セクション 2〜6）と Phase 1 実装を厳密に突合レビューし、以下の全項目を漏れなく実装・同期しました：
+
+1. **B1: リスク調整済み・期待効用スコア $U$ & `ScoringProfile` & `topPool` 拡張 (`LlmReranker.kt`)**:
+   - **明示的 `ScoringProfile` Enum 定義**: セクション 3.3 の表と 100% 一致する定数を持つ `ScoringProfile`（`JA_FLICK`: $K=0.40, \gamma_{\text{risk}}=0.25, \eta_{\text{ext}}=1.00, \delta_{\text{slot1}}=0.15$、`JA_ZERO_QUERY`: $K=0.40, \gamma_{\text{risk}}=0.30, \eta_{\text{ext}}=1.00, \delta_{\text{slot1}}=0.00$、`EN_QWERTY`: $K=0.30, \gamma_{\text{risk}}=0.45, \eta_{\text{ext}}=0.85, \delta_{\text{slot1}}=0.25$）を定義・適用。
+   - **事後確率 $P_i$ と期待効用 $U_i$**: 日本語予測候補に対してトークン長正規化対数事後スコア $\bar{\mathcal{L}}_{\text{norm}} = \text{rawNll} / \text{tokens}^{0.85}$ から Softmax 事後確率 $P_i$ を算出し、リスク調整済み期待効用 $U_i$ を導出。
+   - **`topPool` バッチ枠拡張 (12件 $\to$ 16件)**: セクション 4.1 (1) に従い、`tryFastRerankWithStatus` および `rerankWithStatus` の候補プール上限を `fullCands.take(8) + prefixCands.take(8)`（最大 16 件）に拡張し、同音異義語や予測候補が SLM 採点前に溢れるのを防止。
+   - **Stratum 6（最下位隔離）の撤廃**: 高効用予測候補を Stratum 2/3 の可視スロットへ自然にインターリーブ。英語 QWERTY (`EN_QWERTY`) では `canPromoteTop1 = false` により `raw` 単語の保護を完全維持。
+
+2. **B2: BFS Subtree Top-K Trie 探索 & Mozc 連接コスト一次選別 (`KanaKanjiEngine.kt`)**:
+   - **`minCostInSubtree` 優先探索**: `TrieNode` に `minCostInSubtree` を追跡させ、`collectPrefixWords` で階層探索（BFS）を維持しながら各階層の子ノード展開を `minCostInSubtree` 昇順で優先キューイング。同音異義語キャップを `minOf(2)` から `minOf(3)` へ緩和。
+   - **Mozc 連接コスト (`connectionMatrix`) による一次選別**: セクション 2 (#5) および 4.1 (1) に従い、`surfaceToRidMap` で直前文脈語 (`contextKey`) の右文脈 ID (`contextRid`) を解決し、`otherExact` および `prefixWords` の一次ソートに `entry.cost + connectionMatrix.getTransitionCost(contextRid, entry.lid)` を適用（`getCandidates` から `getBaseCandidates` へも `contextPrefix` を伝播）。
+   - **優先度アップグレード**: `addCandidate` において、同一表記の候補がより高い優先度（Step 5.5 `phrase_chunk`, priority 3.5f 等）で再訪された場合に属性を安全にアップグレード。
+
+3. **B5 & DMN / Alloy 形式検証同期 (`CandidateRerankJudgement.kt`, `dmn_decision_safety.als`)**:
+   - **Slot 1 昇格ゲート (`LlmReranker.kt`)**: `n in 2..4` かつ SLM 文脈コヒーレンスを満たす高効用予測候補（$U_{\text{pred}} > U_{\text{exact}} + \delta_{\text{slot1}}$ または priority $\ge 3.5\text{f}$）についてのみ Slot 1 昇格を許可し、1文字入力時（`n=1`）および不適合文脈での誤昇格を厳格に抑止。
+   - **DMN `TAP_SAFE_R4` ルール追加 (`CandidateRerankJudgement.kt`)**: セクション 4.1 (3) および 6.3 (2) に従い、`tapSafeOrderingDecisionTable` に `TAP_SAFE_R4`（ユーザーが候補バーに触れておらず `!isUserTouchingStrip`、かつ高効用予測候補 `isHighUtilityPredictionPromotion` が Top-1 に昇格した場合は 100ms 経過後でもピン留めせず昇格を許可）を追加。
+   - **Alloy 6 形式検証同期 (`dmn_decision_safety.als`, `alloy_formal_verification.md`)**: `TapSafeR4` と `highUtilityPrediction` をモデル化し、`NeverPinsHighUtilityPredictionWhenNotTouching`（非タッチ時は高効用予測を阻害しない）および `PinsPredictionWhenUserTouchingAfterWindow`（タッチ中は必ずピン留め保護する）の不変条件を追加検証。
 
 ### 7.2 検証結果 (CI/CD All-Green & EIS Benchmark)
-1. **GitHub Actions CI/CD (`run 43980221488`)**:
-   - 全単体テスト・アーキテクチャテスト **100% Pass** (`BUILD SUCCESSFUL in 4m 24s`):
+1. **GitHub Actions CI/CD (`Android CI`)**:
+   - 全単体テスト・アーキテクチャテスト **100% Pass**:
      - `JapanesePunctuationEvaluationTest` (67+ tests pass)
      - `KanaKanjiEngineVoicingTest` pass
      - `HistorySlmRerankEvaluationTest` pass
      - `SpanAwareBayesianRerankingEvaluationTest` pass
+     - `CandidateRerankJudgementTest` (`TAP_SAFE_R4` トレース検証含む) pass
      - `EisRegressionTest` pass
-     - `AlloyVerificationTest` pass
+     - `AlloyVerificationTest` (`dmn_decision_safety.als` 新規アサーション含む) pass
      - `DddArchitectureKonsistTest` pass
-     - `Assemble Debug APK` & Artifact upload 完了
 2. **EIS-Bench v1 総合評価**:
    - `EIS = 187.0 chars/min` (CUJ-1: 204.4, CUJ-2: 173.6, CUJ-3: 139.0, CUJ-4: 337.7 cpm)。英語 QWERTY および音声入力の非回帰（100% 互換性維持）を確認。
 3. **100-Case Flick Waterfall Benchmark**:

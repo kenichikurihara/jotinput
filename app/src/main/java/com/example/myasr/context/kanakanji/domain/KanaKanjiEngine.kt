@@ -70,6 +70,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     private val root = TrieNode()
+    private val surfaceToRidMap = HashMap<String, Int>(16384)
     // In-memory access-ordered LinkedHashMap to guarantee consistent JVM/Android LRU behavior and null-safety
     private val historyMap = LinkedHashMap<String, Int>(256, 0.75f, true)
     private val historyLastUsedMap = LinkedHashMap<String, Long>(256, 0.75f, true)
@@ -449,6 +450,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         root.children.clear()
         root.words.clear()
         root.minCostInSubtree = Int.MAX_VALUE
+        surfaceToRidMap.clear()
         reloadMmapDictionaries()
         clearMemoryCache()
         initializeIfNeeded()
@@ -517,6 +519,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         rid: Int = 0,
         priority: Float = 0.0f
     ) {
+        if (rid > 0 && !surfaceToRidMap.containsKey(surface)) {
+            surfaceToRidMap[surface] = rid
+        }
         var node = root
         if (cost < node.minCostInSubtree) node.minCostInSubtree = cost
         for (ch in reading) {
@@ -556,7 +561,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
      * Generates a ranked list of candidates for a given kana reading and optional context prefix.
      */
     fun getCandidates(rawReading: String, contextPrefix: String = ""): List<ConversionCandidate> {
-        val baseCandidates = getBaseCandidates(rawReading)
+        val baseCandidates = getBaseCandidates(rawReading, contextPrefix)
         val ctx = context
         if (ctx != null && !KeyboardHeightManager.isSlmRerankEnabled(ctx)) {
             return baseCandidates
@@ -671,13 +676,18 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 addCandidate(ConversionCandidate(surface = tok.surface, reading = normalized, isPrediction = false, source = tok.source))
             }
 
+            val contextRid = if (contextKey.isNotEmpty()) surfaceToRidMap[contextKey] ?: 0 else 0
+            val matrix = connectionMatrix
+
             val otherExact = exactTrieWords.filter { it.source != "user" }.sortedWith { a, b ->
                 val histA = synchronized(historyLock) { historyMap["${normalized}:${a.surface}"] ?: 0 }
                 val histB = synchronized(historyLock) { historyMap["${normalized}:${b.surface}"] ?: 0 }
                 if (histA != histB) {
                     histB.compareTo(histA)
                 } else {
-                    a.cost.compareTo(b.cost)
+                    val connA = if (matrix != null && contextRid > 0 && a.lid > 0) matrix.getTransitionCost(contextRid, a.lid) else 0
+                    val connB = if (matrix != null && contextRid > 0 && b.lid > 0) matrix.getTransitionCost(contextRid, b.lid) else 0
+                    (a.cost + connA).compareTo(b.cost + connB)
                 }
             }
             for (w in otherExact) {
@@ -807,7 +817,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
                 // If the typo-corrected reading represents a valid word in the lexicon,
                 // offer the corrected Hiragana surface itself (e.g. "わたさ" -> "わたし")
-                for ((flickReading, penalty) in validFlickReadings.take(3)) {
+                for ((flickReading, _) in validFlickReadings.take(3)) {
                     addCandidate(
                         ConversionCandidate(
                             surface = flickReading,
@@ -819,11 +829,14 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
 
-            // 5. Predictive prefix matches from in-memory Trie (scans cost-priority subtree up to 80, takes top 40 by cost)
+            // 5. Predictive prefix matches from in-memory Trie (scans cost-priority subtree up to 80, takes top 40 by cost + Mozc connection cost)
             if (exactNode != null) {
                 val prefixWords = mutableListOf<Pair<String, WordEntry>>()
                 collectPrefixWords(exactNode, normalized, prefixWords, maxCount = 80)
-                prefixWords.sortBy { it.second.cost }
+                prefixWords.sortBy { (_, entry) ->
+                    val connCost = if (matrix != null && contextRid > 0 && entry.lid > 0) matrix.getTransitionCost(contextRid, entry.lid) else 0
+                    entry.cost + connCost
+                }
                 for ((reading, entry) in prefixWords.take(40)) {
                     addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source))
                 }
