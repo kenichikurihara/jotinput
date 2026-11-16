@@ -207,16 +207,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                         rawBaseNll = baseCompNll + kappaCommit
                     }
                 } else {
-                    // (c) Extension / prediction candidate
+                    // (c) Uninputted prefix extension cost (waive extension penalty for user history >= 2 or history_bigram)
                     val waiveExt = candidate.historyCount >= 2 || candidate.source == "history_bigram"
-                    if (isEnglishPool) {
-                        rawBaseNll = if (waiveExt) rawNll else rawNll + lambdaExt * maxOf(1, deltaExt)
-                    } else {
-                        // B1: Length-normalized surprisal for Japanese predictive candidates
-                        val tokens = maxOf(1, (mLengths[index] + 1) / 2)
-                        val normNll = rawNll / tokens.toFloat().pow(0.85f)
-                        rawBaseNll = if (waiveExt) minOf(normNll, rawNll) else normNll
-                    }
+                    rawBaseNll = if (waiveExt) rawNll else rawNll + lambdaExt * maxOf(1, deltaExt)
                 }
 
                 // Hybrid-6b History x SLM Fusion (Contextual Bigram Cache + Time-Decay + Coherence Gate + Gated Soft-Clamping + c=1 Damping)
@@ -266,7 +259,19 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             val logPostScores = FloatArray(topPool.size) { i ->
                 val cand = topPool[i]
                 val isExactUser = (cand.source == "user" || cand.source == "user_english") && cand.obsPenalty == 0.0f
-                if (isExactUser) 10.0f else -(baseScores[i])
+                if (isExactUser) {
+                    10.0f
+                } else if (isEnglishPool) {
+                    -(baseScores[i])
+                } else {
+                    // Length-normalized surprisal for Japanese predictive probability estimation (B1)
+                    val tokens = maxOf(1, (mLengths[i] + 1) / 2)
+                    val normNll = scores[i] / tokens.toFloat().pow(0.85f)
+                    val obsEff = lambdaObs * cand.obsPenalty * 5.0f
+                    val priorHist = if (cand.historyCount > 0) minOf(3.0f, cand.historyCount.toFloat()) else 0.0f
+                    val rankCost = (i * 0.15f)
+                    -(normNll + obsEff + rankCost - priorHist)
+                }
             }
             val maxLogPost = logPostScores.maxOrNull() ?: 0.0f
             var sumExp = 0.0
@@ -439,8 +444,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 if (rankedFull.isNotEmpty()) {
                     val topFullIdx = topPool.indexOf(rankedFull[0])
                     topFullIdx >= 0 && (
-                        utilities[extIdx] > utilities[topFullIdx] - 0.10f ||
-                        baseScores[extIdx] < baseScores[topFullIdx] - 0.50f
+                        utilities[extIdx] > utilities[topFullIdx] + slot1MarginSec ||
+                        topPool[extIdx].priority >= 3.5f
                     )
                 } else {
                     true
@@ -449,18 +454,23 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
             if (candidateToPromote != null && rankedFull.isNotEmpty() && n > 0) {
                 val topFullIdx = topPool.indexOf(rankedFull[0])
-                val canPromoteTop1 = !isEnglishPool && n in 1..4 && topFullIdx >= 0 && (
+                val isStrictCoherent = topFullIdx >= 0 && (scores[candidateToPromote] - scores[topFullIdx] < 5.0f || topPool[candidateToPromote].priority >= 3.5f)
+                val canPromoteTop1 = !isEnglishPool && n in 2..4 && topFullIdx >= 0 && isStrictCoherent && (
                     utilities[candidateToPromote] > utilities[topFullIdx] + slot1MarginSec ||
                     topPool[candidateToPromote].priority >= 3.5f ||
-                    baseScores[candidateToPromote] < baseScores[topFullIdx] - 0.50f
+                    (candidateToPromote == topHistPredIdx && baseScores[candidateToPromote] < baseScores[topFullIdx] - 0.50f)
                 )
                 if (canPromoteTop1) {
                     addCandidate(topPool[candidateToPromote])
                     addCandidate(rankedFull[fullIdx++])
-                } else {
+                } else if (candidateToPromote == topHistPredIdx) {
                     addCandidate(rankedFull[fullIdx++])
                     addCandidate(topPool[candidateToPromote])
+                } else {
+                    addCandidate(rankedFull[fullIdx++])
                 }
+            } else if (rankedFull.isNotEmpty()) {
+                addCandidate(rankedFull[fullIdx++])
             }
             while (fullIdx < minOf(topFullQuota, rankedFull.size)) {
                 addCandidate(rankedFull[fullIdx++])

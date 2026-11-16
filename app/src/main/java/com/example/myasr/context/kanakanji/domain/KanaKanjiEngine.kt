@@ -599,10 +599,16 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     !cand.isPrediction &&
                     cand.source != "flick_correction" &&
                     cand.surface == normalized
-            if (cand.surface.isNotBlank() &&
-                !isRedundantHiragana &&
-                seenSurfaces.add(cand.surface)) {
-                result.add(cand)
+            if (cand.surface.isNotBlank() && !isRedundantHiragana) {
+                if (seenSurfaces.add(cand.surface)) {
+                    result.add(cand)
+                } else if (cand.priority > 0f) {
+                    val existing = result.firstOrNull { it.surface == cand.surface }
+                    if (existing != null && cand.priority > existing.priority) {
+                        val idx = result.indexOf(existing)
+                        result[idx] = existing.copy(priority = cand.priority, source = cand.source)
+                    }
+                }
             }
         }
 
@@ -813,12 +819,12 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
 
-            // 5. Predictive prefix matches from in-memory Trie (scans cost-priority subtree up to 160, takes top 50 by cost)
+            // 5. Predictive prefix matches from in-memory Trie (scans cost-priority subtree up to 80, takes top 40 by cost)
             if (exactNode != null) {
                 val prefixWords = mutableListOf<Pair<String, WordEntry>>()
-                collectPrefixWords(exactNode, normalized, prefixWords, maxCount = 160)
+                collectPrefixWords(exactNode, normalized, prefixWords, maxCount = 80)
                 prefixWords.sortBy { it.second.cost }
-                for ((reading, entry) in prefixWords.take(50)) {
+                for ((reading, entry) in prefixWords.take(40)) {
                     addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source))
                 }
             }
@@ -1148,38 +1154,29 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return currentPaths
     }
 
-    private class PrefixQueueItem(
-        val reading: String,
-        val node: TrieNode,
-        val minCost: Int
-    ) : Comparable<PrefixQueueItem> {
-        override fun compareTo(other: PrefixQueueItem): Int = this.minCost.compareTo(other.minCost)
-    }
-
     private fun collectPrefixWords(
         startNode: TrieNode,
         baseReading: String,
         outList: MutableList<Pair<String, WordEntry>>,
         maxCount: Int
     ) {
-        val queue = java.util.PriorityQueue<PrefixQueueItem>()
-        queue.add(PrefixQueueItem(baseReading, startNode, startNode.minCostInSubtree))
+        val queue = ArrayDeque<Pair<String, TrieNode>>()
+        queue.add(Pair(baseReading, startNode))
 
         while (queue.isNotEmpty() && outList.size < maxCount) {
-            val item = queue.poll() ?: break
-            val currentReading = item.reading
-            val currentNode = item.node
+            val (currentReading, currentNode) = queue.removeFirst()
 
             if (currentNode !== startNode) {
-                val countToAdd = minOf(6, currentNode.words.size)
+                val countToAdd = minOf(3, currentNode.words.size)
                 for (i in 0 until countToAdd) {
                     outList.add(Pair(currentReading, currentNode.words[i]))
                     if (outList.size >= maxCount) return
                 }
             }
 
-            for ((ch, childNode) in currentNode.children) {
-                queue.add(PrefixQueueItem(currentReading + ch, childNode, childNode.minCostInSubtree))
+            val sortedChildren = currentNode.children.entries.sortedBy { it.value.minCostInSubtree }
+            for ((ch, childNode) in sortedChildren) {
+                queue.add(Pair(currentReading + ch, childNode))
             }
         }
     }
