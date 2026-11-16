@@ -10,6 +10,7 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 >   - 📊 [EIS ベースライン計測レポート (`docs/eis_baseline_report.md`)](eis_baseline_report.md)
 >   - 🚀 [日本語フリック入力 (CUJ-2) ヘッドルーム分析と EIS 高速化ロードマップ (`docs/flick_eis_headroom_analysis.md`)](flick_eis_headroom_analysis.md)
 >   - 🌌 [フリック入力 (CUJ-2/3) ヘッドルーム精密解剖と抜本的・画期的コンセプト構想書 (`docs/eis_radical_headroom_and_moonshot_concepts.md`)](eis_radical_headroom_and_moonshot_concepts.md)
+>   - 🧪 [日本語フリック入力 100件ヘッドルーム評価レポート (`docs/flick_input_100_headroom_evaluation_report.md`)](flick_input_100_headroom_evaluation_report.md)
 >
 > 🎯 **[評価セット・評価方法 統合ガイド (Master Evaluation Index)](docs/evaluation_suites_and_methods.md)** — リポジトリ内の全評価データセット・評価スクリプト・JVM単体テスト・C++ベンチマーク・形式検証の全体マップ
 

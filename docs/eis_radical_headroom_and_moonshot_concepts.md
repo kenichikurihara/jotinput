@@ -1,7 +1,8 @@
 # フリック入力 (CUJ-2 / CUJ-3 Flick) ヘッドルーム精密解剖と抜本的・画期的コンセプト構想書
 
 - **上位仕様**: [JotInput トップレベル PRD (`docs/prd_top_level.md`)](prd_top_level.md)
-- **関連ドキュメント**: [EIS-v1 ベースラインレポート (`docs/eis_baseline_report.md`)](eis_baseline_report.md) / [CUJ-2 初期ヘッドルーム分析 (`docs/flick_eis_headroom_analysis.md`)](flick_eis_headroom_analysis.md)
+- **関連ドキュメント**: [EIS-v1 ベースラインレポート (`docs/eis_baseline_report.md`)](eis_baseline_report.md) / [CUJ-2 初期ヘッドルーム分析 (`docs/flick_eis_headroom_analysis.md`)](flick_eis_headroom_analysis.md) / [100件ヘッドルーム評価レポート (`docs/flick_input_100_headroom_evaluation_report.md`)](flick_input_100_headroom_evaluation_report.md)
+- **実証データセット**: [`eval/flick_headroom_dataset_100.json`](eval/flick_headroom_dataset_100.json) (100件) / [`eval/flick_headroom_100_results.json`](eval/flick_headroom_100_results.json)
 - **対象スコープ**: **日本語 12 キーフリック入力 (`CUJ-2` および `CUJ-3` フリック経路) に完全特化**
 - **現在地 (ローハンギングフルーツ Step 1〜3 完了後)**:
   - **CUJ-2 EIS (Test)**: **`173.6 文字/分`**（初期値 `128.1 cpm` から `+45.5 cpm` 改善済み｜内訳: 変換 `conv = 123.2 cpm`、予測 `pred = 345.5 cpm`）

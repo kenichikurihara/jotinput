@@ -1,0 +1,1046 @@
+#!/usr/bin/env python3
+"""
+build_flick_headroom_dataset_100.py
+
+Generates a dedicated 100-case Japanese Flick Input Headroom Benchmark Dataset
+(eval/flick_headroom_dataset_100.json).
+
+Each case is carefully designed to exhibit demonstrable, quantifiable headroom
+where traditional flick input (full kana typing + candidate strip selection +
+confirm tap + particle selection) is severely bottlenecked, and where radical
+input concepts (1-mora prediction, skeleton decoding, Slot-1 takeover,
+Flick-on-Chip, live auto-commit, Seion Turbo, Neural Flick-Glide) unlock
+massive speedups.
+
+5 Categories (100 total cases):
+- Category 1: Multi-Bunsetsu / Long Phrase Chunks (25 cases)
+- Category 2: Context-Aware Homophones & Disambiguation (20 cases)
+- Category 3: Initial-Mora / Skeleton Input (20 cases)
+- Category 4: Next-Phrase Collocations & Zero-Char Headroom (20 cases)
+- Category 5: Seion Turbo / Voicing & Typo Recovery (15 cases)
+"""
+
+import json
+import os
+
+def get_100_cases():
+    cases = []
+
+    # =========================================================================
+    # Category 1: Multi-Bunsetsu / Long Phrase Chunks (25 cases)
+    # Headroom: Full kana typing takes 8-18 keystrokes (3.2 - 7.5s), but
+    # predictive chunk synthesis or 1-mora prefix completion allows selection
+    # after 2-4 keystrokes or 1 glide gesture.
+    # =========================================================================
+    cat1_cases = [
+        {
+            "id": "c1_mb_001",
+            "category": "multi_bunsetsu",
+            "context": "近日中の再開に向けて、",
+            "input": "さぎょうちゅうですので",
+            "target": "作業中ですので",
+            "domain": "business",
+            "notes": "11 kana -> 7 chars. Naive Viterbi risks '作業厨デスので', full typing 11 keys (4.8s). 2 keys 'さぎ' allows mid-phrase completion."
+        },
+        {
+            "id": "c1_mb_002",
+            "category": "multi_bunsetsu",
+            "context": "地震の揺れによる",
+            "input": "かぐとうかいぼうしの",
+            "target": "家具倒壊防止の",
+            "domain": "safety",
+            "notes": "10 kana -> 7 chars. Naive split risks '家具東海帽しの'. Full typing 10 keys (4.4s)."
+        },
+        {
+            "id": "c1_mb_003",
+            "category": "multi_bunsetsu",
+            "context": "何かしようと",
+            "input": "おもっているのに",
+            "target": "思っているのに",
+            "domain": "conversational",
+            "notes": "8 kana -> 8 chars. Full typing 8 keys (3.6s). 2 keys 'おも' allows immediate chunk completion."
+        },
+        {
+            "id": "c1_mb_004",
+            "category": "multi_bunsetsu",
+            "context": "社員一同、品質の向上に",
+            "input": "つとめております。",
+            "target": "努めております。",
+            "domain": "business",
+            "notes": "10 kana -> 9 chars. Full typing 10 keys (4.4s). 2 keys 'つと' completes politely."
+        },
+        {
+            "id": "c1_mb_005",
+            "category": "multi_bunsetsu",
+            "context": "来週の打ち合わせの日程を",
+            "input": "ちょうせいさせていただきます",
+            "target": "調整させていただきます",
+            "domain": "business",
+            "notes": "14 kana -> 11 chars. Full typing 14 keys (6.0s). 'ちょう' (3 keys) completes phrase."
+        },
+        {
+            "id": "c1_mb_006",
+            "category": "multi_bunsetsu",
+            "context": "お忙しいところ恐縮ですが、",
+            "input": "ごかくにんのほど",
+            "target": "ご確認のほど",
+            "domain": "business",
+            "notes": "8 kana -> 6 chars. 'ごか' (2 keys) completes the honorific phrase."
+        },
+        {
+            "id": "c1_mb_007",
+            "category": "multi_bunsetsu",
+            "context": "前向きに前向きに",
+            "input": "ごけんとういただけますと",
+            "target": "ご検討いただけますと",
+            "domain": "business",
+            "notes": "11 kana -> 10 chars. Full typing 11 keys (4.8s)."
+        },
+        {
+            "id": "c1_mb_008",
+            "category": "multi_bunsetsu",
+            "context": "最新の修正版の",
+            "input": "てんぷふぁいるをそうふいたしました",
+            "target": "添付ファイルを送付いたしました",
+            "domain": "business",
+            "notes": "17 kana -> 15 chars. Full typing 18.2 keys (7.68s). Massive headroom via chunk prediction."
+        },
+        {
+            "id": "c1_mb_009",
+            "category": "multi_bunsetsu",
+            "context": "本日の進捗状況につきまして、",
+            "input": "ごほうこくいたします",
+            "target": "ご報告いたします",
+            "domain": "business",
+            "notes": "10 kana -> 8 chars. Full typing 10 keys (4.4s)."
+        },
+        {
+            "id": "c1_mb_010",
+            "category": "multi_bunsetsu",
+            "context": "お困りの点がございましたら、",
+            "input": "いつでもごれんらくください",
+            "target": "いつでもご連絡ください",
+            "domain": "customer_support",
+            "notes": "12 kana -> 11 chars. Full typing 12 keys (5.2s)."
+        },
+        {
+            "id": "c1_mb_011",
+            "category": "multi_bunsetsu",
+            "context": "十分に資産があれば、新築を",
+            "input": "こうにゅうすべきでしょう。",
+            "target": "購入すべきでしょう。",
+            "domain": "finance",
+            "notes": "13 kana -> 11 chars. Baseline full typing takes 13 keys (5.6s)."
+        },
+        {
+            "id": "c1_mb_012",
+            "category": "multi_bunsetsu",
+            "context": "ハワイの伝統的なマッサージの",
+            "input": "りらくぜーしょんさろんです。",
+            "target": "リラクゼーションサロンです。",
+            "domain": "lifestyle",
+            "notes": "14 kana -> 14 chars. Full typing 14.6 keys (6.24s)."
+        },
+        {
+            "id": "c1_mb_013",
+            "category": "multi_bunsetsu",
+            "context": "長年の研究と努力の末に、",
+            "input": "しんぎじゅつをかいはつしました",
+            "target": "新技術を開発しました",
+            "domain": "tech",
+            "notes": "15 kana -> 10 chars. Full typing 15.6 keys (6.64s)."
+        },
+        {
+            "id": "c1_mb_014",
+            "category": "multi_bunsetsu",
+            "context": "これまでの経験を生かして、",
+            "input": "ぜんりょくでとりくみます",
+            "target": "全力で取り組みます",
+            "domain": "conversational",
+            "notes": "12 kana -> 9 chars. Full typing 12 keys (5.2s)."
+        },
+        {
+            "id": "c1_mb_015",
+            "category": "multi_bunsetsu",
+            "context": "突然のご連絡となり、",
+            "input": "たいへんしつれいいたしました",
+            "target": "大変失礼いたしました",
+            "domain": "business",
+            "notes": "13 kana -> 10 chars. Full typing 13 keys (5.6s)."
+        },
+        {
+            "id": "c1_mb_016",
+            "category": "multi_bunsetsu",
+            "context": "詳しい詳細については、",
+            "input": "べっとごあんないもうしあげます",
+            "target": "別途ご案内申し上げます",
+            "domain": "business",
+            "notes": "15 kana -> 11 chars. Full typing 15.6 keys (6.64s)."
+        },
+        {
+            "id": "c1_mb_017",
+            "category": "multi_bunsetsu",
+            "context": "現地調査の結果を踏まえて、",
+            "input": "たいさくをけんとうしています",
+            "target": "対策を検討しています",
+            "domain": "investigation",
+            "notes": "14 kana -> 10 chars. Full typing 14 keys (6.0s)."
+        },
+        {
+            "id": "c1_mb_018",
+            "category": "multi_bunsetsu",
+            "context": "今後のスケジュールについて、",
+            "input": "ごそうだんさせてください",
+            "target": "ご相談させてください",
+            "domain": "business",
+            "notes": "12 kana -> 10 chars. Full typing 12.3 keys (5.32s)."
+        },
+        {
+            "id": "c1_mb_019",
+            "category": "multi_bunsetsu",
+            "context": "今回のトラブルの原因について、",
+            "input": "ちょうさをおこなっています",
+            "target": "調査を行っています",
+            "domain": "incident",
+            "notes": "13 kana -> 9 chars. Full typing 13 keys (5.6s)."
+        },
+        {
+            "id": "c1_mb_020",
+            "category": "multi_bunsetsu",
+            "context": "プロジェクトの成功に向けて、",
+            "input": "いっちだんけつしてがんばりましょう",
+            "target": "一致団結して頑張りましょう",
+            "domain": "motivation",
+            "notes": "17 kana -> 13 chars. Full typing 17.6 keys (7.44s)."
+        },
+        {
+            "id": "c1_mb_021",
+            "category": "multi_bunsetsu",
+            "context": "お客様からのお問い合わせに、",
+            "input": "じんそくにしゅざいします",
+            "target": "迅速に対応いたします",
+            "domain": "customer_support",
+            "notes": "11 kana -> 10 chars. Highly repetitive pattern ripe for ghost completion."
+        },
+        {
+            "id": "c1_mb_022",
+            "category": "multi_bunsetsu",
+            "context": "安全管理の観点から、",
+            "input": "じゅうぶんにちゅういしてください",
+            "target": "十分にご注意ください",
+            "domain": "safety",
+            "notes": "16 kana -> 10 chars. Full typing 16.6 keys (7.04s)."
+        },
+        {
+            "id": "c1_mb_023",
+            "category": "multi_bunsetsu",
+            "context": "皆さんの温かいご支援に、",
+            "input": "こころよりかんしゃもうしあげます",
+            "target": "心より感謝申し上げます",
+            "domain": "greeting",
+            "notes": "16 kana -> 11 chars. Full typing 16 keys (6.8s)."
+        },
+        {
+            "id": "c1_mb_024",
+            "category": "multi_bunsetsu",
+            "context": "新しい企画の提案について、",
+            "input": "いけんをきかせてください",
+            "target": "意見を聞かせてください",
+            "domain": "meeting",
+            "notes": "12 kana -> 11 chars. Full typing 12 keys (5.2s)."
+        },
+        {
+            "id": "c1_mb_025",
+            "category": "multi_bunsetsu",
+            "context": "契約の更新時期が近づいてまいりましたので、",
+            "input": "ごてつづきをおねがいいたします",
+            "target": "お手続きをお願いいたします",
+            "domain": "business",
+            "notes": "15 kana -> 13 chars. Full typing 15.3 keys (6.52s)."
+        }
+    ]
+    cases.extend(cat1_cases)
+
+    # =========================================================================
+    # Category 2: Context-Aware Homophones & Disambiguation (20 cases)
+    # Headroom: Short kanji words (1-2 chars, output rate capped at 60-75 cpm
+    # under full typing). 1-mora predictive promotion or Slot-1 takeover lifts
+    # CPM to 180-250 cpm.
+    # =========================================================================
+    cat2_cases = [
+        {
+            "id": "c2_hp_001",
+            "category": "context_homophone",
+            "context": "新幹線を使って大阪へ",
+            "input": "いどう",
+            "target": "移動",
+            "domain": "travel",
+            "notes": "Output 2 chars, 3.3 keys. Baseline 1.72s (70 cpm). 1-mora 'い' -> '移動' = 1.0 key + 0.4s (86 cpm) or auto-commit."
+        },
+        {
+            "id": "c2_hp_002",
+            "category": "context_homophone",
+            "context": "来年春の人事異動で営業部への",
+            "input": "いどう",
+            "target": "異動",
+            "domain": "hr",
+            "notes": "Direct contrast to c2_hp_001. Disambiguated by '人事異動' / '営業部への'."
+        },
+        {
+            "id": "c2_hp_003",
+            "category": "context_homophone",
+            "context": "最新の人工知能技術に強い",
+            "input": "かんしん",
+            "target": "関心",
+            "domain": "tech",
+            "notes": "Output 2 chars, 4.0 keys. Baseline 2.00s (60 cpm). Context '強い' strongly favors '関心'."
+        },
+        {
+            "id": "c2_hp_004",
+            "category": "context_homophone",
+            "context": "彼の素晴らしい礼儀正しさにとても",
+            "input": "かんしん",
+            "target": "感心",
+            "domain": "conversational",
+            "notes": "Output 2 chars. Context '礼儀正しさにとても' favors '感心'."
+        },
+        {
+            "id": "c2_hp_005",
+            "category": "context_homophone",
+            "context": "この法律は国民の基本的な人権を",
+            "input": "ほしょう",
+            "target": "保障",
+            "domain": "legal",
+            "notes": "Output 2 chars, 4.0 keys. Baseline 2.00s (60 cpm). '人権を' -> '保障'."
+        },
+        {
+            "id": "c2_hp_006",
+            "category": "context_homophone",
+            "context": "メーカーによる製品の無償",
+            "input": "ほしょう",
+            "target": "保証",
+            "domain": "commerce",
+            "notes": "Output 2 chars. '製品の無償' -> '保証'."
+        },
+        {
+            "id": "c2_hp_007",
+            "category": "context_homophone",
+            "context": "交通事故による被害者への損害を",
+            "input": "ほしょう",
+            "target": "補償",
+            "domain": "legal",
+            "notes": "Output 2 chars. '損害を' -> '補償'."
+        },
+        {
+            "id": "c2_hp_008",
+            "category": "context_homophone",
+            "context": "大雨で傷んだ道路のアスファルトの",
+            "input": "ほしょう",
+            "target": "舗装",
+            "domain": "construction",
+            "notes": "Output 2 chars. 'アスファルトの' -> '舗装'."
+        },
+        {
+            "id": "c2_hp_009",
+            "category": "context_homophone",
+            "context": "問題の本質に鋭く迫る",
+            "input": "かくしん",
+            "target": "核心",
+            "domain": "journalism",
+            "notes": "Output 2 chars, 4.0 keys. Baseline 2.00s (60 cpm). '本質に迫る' -> '核心'."
+        },
+        {
+            "id": "c2_hp_010",
+            "category": "context_homophone",
+            "context": "自分の直感を信じて勝利を",
+            "input": "かくしん",
+            "target": "確信",
+            "domain": "sports",
+            "notes": "Output 2 chars. '勝利を' -> '確信'."
+        },
+        {
+            "id": "c2_hp_011",
+            "category": "context_homophone",
+            "context": "左右が均等に美しく揃った幾何学的な",
+            "input": "たいしょう",
+            "target": "対称",
+            "domain": "design",
+            "notes": "Output 2 chars, 5.0 keys. Baseline 2.40s (50 cpm). '左右' -> '対称'."
+        },
+        {
+            "id": "c2_hp_012",
+            "category": "context_homophone",
+            "context": "今年度の国勢調査の",
+            "input": "たいしょう",
+            "target": "対象",
+            "domain": "government",
+            "notes": "Output 2 chars. '国勢調査の' -> '対象'."
+        },
+        {
+            "id": "c2_hp_013",
+            "category": "context_homophone",
+            "context": "前年同月の売上データと",
+            "input": "たいしょう",
+            "target": "対照",
+            "domain": "business",
+            "notes": "Output 2 chars. '売上データと' -> '対照'."
+        },
+        {
+            "id": "c2_hp_014",
+            "category": "context_homophone",
+            "context": "住民税を定められた期日までに",
+            "input": "おさめる",
+            "target": "納める",
+            "domain": "tax",
+            "notes": "Output 3 chars, 4.0 keys. Baseline 2.00s (90 cpm). '税を期日までに' -> '納める'."
+        },
+        {
+            "id": "c2_hp_015",
+            "category": "context_homophone",
+            "context": "大会で見事に素晴らしい成績を",
+            "input": "おさめる",
+            "target": "収める",
+            "domain": "sports",
+            "notes": "Output 3 chars. '成績を' -> '収める'."
+        },
+        {
+            "id": "c2_hp_016",
+            "category": "context_homophone",
+            "context": "争いを鎮めて領民を平和に",
+            "input": "おさめる",
+            "target": "治める",
+            "domain": "history",
+            "notes": "Output 3 chars. '平和に' -> '治める'."
+        },
+        {
+            "id": "c2_hp_017",
+            "category": "context_homophone",
+            "context": "子どもたちに将来の夢を熱く",
+            "input": "かたる",
+            "target": "語る",
+            "domain": "conversational",
+            "notes": "Output 2 chars, 3.0 keys. Baseline 1.60s (75 cpm). '夢を熱く' -> '語る'."
+        },
+        {
+            "id": "c2_hp_018",
+            "category": "context_homophone",
+            "context": "実在する大手銀行の名を騙って身元を",
+            "input": "かたる",
+            "target": "騙る",
+            "domain": "crime",
+            "notes": "Output 2 chars. '身元を' -> '騙る'."
+        },
+        {
+            "id": "c2_hp_019",
+            "category": "context_homophone",
+            "context": "冬が終わり、桜が咲き誇る暖かい",
+            "input": "はる",
+            "target": "春",
+            "domain": "nature",
+            "notes": "Output 1 char, 2.0 keys. Baseline 1.20s (50 cpm). Full typing yields very low CPM for single kanji."
+        },
+        {
+            "id": "c2_hp_020",
+            "category": "context_homophone",
+            "context": "目的の駅に到着したので電車から",
+            "input": "おりる",
+            "target": "降りる",
+            "domain": "transport",
+            "notes": "Output 3 chars, 3.0 keys. Baseline 1.60s (112 cpm). '電車から' -> '降りる'."
+        }
+    ]
+    cases.extend(cat2_cases)
+
+    # =========================================================================
+    # Category 3: Initial-Mora / Skeleton Input (20 cases)
+    # Headroom: User types only the first mora of each bunsetsu (2-3 keys),
+    # generating the full 6-12 character multi-word clause.
+    # Keystrokes drop by 65-80%!
+    # =========================================================================
+    cat3_cases = [
+        {
+            "id": "c3_sk_001",
+            "category": "skeleton_input",
+            "context": "朝の通勤ラッシュで満員の",
+            "input": "てんしゃにのる",
+            "skeleton": "ての",
+            "target": "電車に乗る",
+            "domain": "daily",
+            "notes": "Full 7 keys (3.2s) vs Skeleton 'ての' (2 keys, 1.2s). Speedup: 2.7x."
+        },
+        {
+            "id": "c3_sk_002",
+            "category": "skeleton_input",
+            "context": "夜空に広がる美しい",
+            "input": "ほしそらをみる",
+            "skeleton": "ほみ",
+            "target": "星空を見る",
+            "domain": "daily",
+            "notes": "Full 7 keys (3.2s) vs Skeleton 'ほみ' (2 keys, 1.2s). Speedup: 2.7x."
+        },
+        {
+            "id": "c3_sk_003",
+            "category": "skeleton_input",
+            "context": "処方箋を持って",
+            "input": "くすりをもらってかえる",
+            "skeleton": "くもか",
+            "target": "薬をもらって帰る",
+            "domain": "health",
+            "notes": "Full 11 keys (4.8s) vs Skeleton 'くもか' (3 keys, 1.6s). Speedup: 3.0x."
+        },
+        {
+            "id": "c3_sk_004",
+            "category": "skeleton_input",
+            "context": "先ほどメールにて",
+            "input": "しりょうをそうしんしました",
+            "skeleton": "しそし",
+            "target": "資料を送信しました",
+            "domain": "business",
+            "notes": "Full 13 keys (5.6s) vs Skeleton 'しそし' (3 keys, 1.6s). 9 chars in 1.6s = 338 cpm."
+        },
+        {
+            "id": "c3_sk_005",
+            "category": "skeleton_input",
+            "context": "明日の午後からの",
+            "input": "かいぎにさんかします",
+            "skeleton": "かさ",
+            "target": "会議に参加します",
+            "domain": "business",
+            "notes": "Full 10 keys (4.4s) vs Skeleton 'かさ' (2 keys, 1.2s). 8 chars in 1.2s = 400 cpm."
+        },
+        {
+            "id": "c3_sk_006",
+            "category": "skeleton_input",
+            "context": "本番環境へのリリースの",
+            "input": "じゅんびがかんりょうしました",
+            "skeleton": "じか",
+            "target": "準備が完了しました",
+            "domain": "dev",
+            "notes": "Full 13 keys (5.6s) vs Skeleton 'じか' (2.3 keys, 1.32s). 9 chars = 409 cpm."
+        },
+        {
+            "id": "c3_sk_007",
+            "category": "skeleton_input",
+            "context": "今後ともどうぞ",
+            "input": "よろしくおねがいします",
+            "skeleton": "よおし",
+            "target": "よろしくお願いします",
+            "domain": "greeting",
+            "notes": "Full 11 keys (4.8s) vs Skeleton 'よおし' (3 keys, 1.6s). 10 chars = 375 cpm."
+        },
+        {
+            "id": "c3_sk_008",
+            "category": "skeleton_input",
+            "context": "いつも温かいお心遣いを",
+            "input": "ありがとうございます",
+            "skeleton": "あざま",
+            "target": "ありがとうございます",
+            "domain": "greeting",
+            "notes": "Full 10 keys (4.4s) vs Skeleton 'あざま' (3.3 keys, 1.72s). 10 chars = 348 cpm."
+        },
+        {
+            "id": "c3_sk_009",
+            "category": "skeleton_input",
+            "context": "暗い夜道ですので、",
+            "input": "きをつけておかえりください",
+            "skeleton": "きおか",
+            "target": "気を付けてお帰りください",
+            "domain": "conversational",
+            "notes": "Full 13 keys (5.6s) vs Skeleton 'きおか' (3 keys, 1.6s). 12 chars = 450 cpm."
+        },
+        {
+            "id": "c3_sk_010",
+            "category": "skeleton_input",
+            "context": "週末は全国的に",
+            "input": "てんきがよいですね",
+            "skeleton": "てよ",
+            "target": "天気が良いですね",
+            "domain": "weather",
+            "notes": "Full 9 keys (4.0s) vs Skeleton 'てよ' (2 keys, 1.2s). 8 chars = 400 cpm."
+        },
+        {
+            "id": "c3_sk_011",
+            "category": "skeleton_input",
+            "context": "このツールは日々の業務でとても",
+            "input": "やくにたちます",
+            "skeleton": "やた",
+            "target": "役に立ちます",
+            "domain": "review",
+            "notes": "Full 7 keys (3.2s) vs Skeleton 'やた' (2 keys, 1.2s)."
+        },
+        {
+            "id": "c3_sk_012",
+            "category": "skeleton_input",
+            "context": "先輩の貴重なご講義は大変",
+            "input": "べんきょうになります",
+            "skeleton": "べにな",
+            "target": "勉強になります",
+            "domain": "business",
+            "notes": "Full 10 keys (4.4s) vs Skeleton 'べにな' (3.3 keys, 1.72s)."
+        },
+        {
+            "id": "c3_sk_013",
+            "category": "skeleton_input",
+            "context": "担当者からの折り返しの",
+            "input": "れんらくをまちます",
+            "skeleton": "れま",
+            "target": "連絡を待ちます",
+            "domain": "business",
+            "notes": "Full 9 keys (4.0s) vs Skeleton 'れま' (2 keys, 1.2s)."
+        },
+        {
+            "id": "c3_sk_014",
+            "category": "skeleton_input",
+            "context": "早急にご確認の上、折り返し",
+            "input": "へんじをおねがいします",
+            "skeleton": "へおし",
+            "target": "返事をお願いします",
+            "domain": "business",
+            "notes": "Full 11 keys (4.8s) vs Skeleton 'へおし' (3.3 keys, 1.72s)."
+        },
+        {
+            "id": "c3_sk_015",
+            "category": "skeleton_input",
+            "context": "進路について悩んでいるので、",
+            "input": "そうだんにのってください",
+            "skeleton": "その",
+            "target": "相談に乗ってください",
+            "domain": "advice",
+            "notes": "Full 12 keys (5.2s) vs Skeleton 'その' (2 keys, 1.2s)."
+        },
+        {
+            "id": "c3_sk_016",
+            "category": "skeleton_input",
+            "context": "今後の景気動向について、",
+            "input": "みとおしがあかるい",
+            "skeleton": "みあ",
+            "target": "見通しが明るい",
+            "domain": "economics",
+            "notes": "Full 9 keys (4.0s) vs Skeleton 'みあ' (2 keys, 1.2s)."
+        },
+        {
+            "id": "c3_sk_017",
+            "category": "skeleton_input",
+            "context": "被災地の皆様に心から",
+            "input": "おみまいをもうしあげます",
+            "skeleton": "おも",
+            "target": "お見舞いを申し上げます",
+            "domain": "greeting",
+            "notes": "Full 12 keys (5.2s) vs Skeleton 'おも' (2 keys, 1.2s)."
+        },
+        {
+            "id": "c3_sk_018",
+            "category": "skeleton_input",
+            "context": "新規事業の立ち上げに向けて、",
+            "input": "あたらしいていあんをさくせいします",
+            "skeleton": "あてさ",
+            "target": "新しい提案を作成します",
+            "domain": "business",
+            "notes": "Full 17 keys (7.2s) vs Skeleton 'あてさ' (3 keys, 1.6s). 11 chars = 412 cpm."
+        },
+        {
+            "id": "c3_sk_019",
+            "category": "skeleton_input",
+            "context": "次回の定例ミーティングの",
+            "input": "よていをきめましょう",
+            "skeleton": "よき",
+            "target": "予定を決めましょう",
+            "domain": "meeting",
+            "notes": "Full 10 keys (4.4s) vs Skeleton 'よき' (2 keys, 1.2s)."
+        },
+        {
+            "id": "c3_sk_020",
+            "category": "skeleton_input",
+            "context": "厳正な書類選考を行い、",
+            "input": "しんさけっかをつうちします",
+            "skeleton": "しけつ",
+            "target": "審査結果を通知します",
+            "domain": "admin",
+            "notes": "Full 13 keys (5.6s) vs Skeleton 'しけつ' (3 keys, 1.6s)."
+        }
+    ]
+    cases.extend(cat3_cases)
+
+    # =========================================================================
+    # Category 4: Next-Phrase Collocations & Zero-Char Headroom (20 cases)
+    # Headroom: Previous word is committed. Zero-char prediction or Flick-on-Chip
+    # allows instant 1-tap or 1-glide selection instead of full typing.
+    # =========================================================================
+    cat4_cases = [
+        {
+            "id": "c4_np_001",
+            "category": "next_phrase_collocation",
+            "context": "重要な公式の契約書に",
+            "input": "なついんする",
+            "target": "捺印する",
+            "domain": "business",
+            "notes": "Prev word '契約書に'. Zero-char or 1-char 'な' should offer '捺印する'."
+        },
+        {
+            "id": "c4_np_002",
+            "category": "next_phrase_collocation",
+            "context": "システム障害の根本的な",
+            "input": "げんいんをきゅうめいする",
+            "target": "原因を究明する",
+            "domain": "tech",
+            "notes": "Prev word '根本的な'. 1-char 'げ' -> '原因を究明する'."
+        },
+        {
+            "id": "c4_np_003",
+            "category": "next_phrase_collocation",
+            "context": "来期発売予定の新商品の",
+            "input": "きかくしょをさくせいする",
+            "target": "企画書を作成する",
+            "domain": "marketing",
+            "notes": "Prev word '新商品の'. 'き' -> '企画書を作成する'."
+        },
+        {
+            "id": "c4_np_004",
+            "category": "next_phrase_collocation",
+            "context": "セキュリティ監査で発見された",
+            "input": "ぜいじゃくせいをしゅうせいする",
+            "target": "脆弱性を修正する",
+            "domain": "security",
+            "notes": "Prev word '発見された'. 'ぜ' (or 'せ') -> '脆弱性を修正する'."
+        },
+        {
+            "id": "c4_np_005",
+            "category": "next_phrase_collocation",
+            "context": "過去３年間の売上データを",
+            "input": "ぶんせきしたけっか",
+            "target": "分析した結果",
+            "domain": "data",
+            "notes": "Prev word '売上データを'. 'ぶ' -> '分析した結果'."
+        },
+        {
+            "id": "c4_np_006",
+            "category": "next_phrase_collocation",
+            "context": "海外市場への新規",
+            "input": "しんしゅつをはかる",
+            "target": "進出を図る",
+            "domain": "business",
+            "notes": "Prev word '新規'. 'し' -> '進出を図る'."
+        },
+        {
+            "id": "c4_np_007",
+            "category": "next_phrase_collocation",
+            "context": "専門家の意見を広く",
+            "input": "とりいれる",
+            "target": "取り入れる",
+            "domain": "academic",
+            "notes": "Prev word '広く'. 'と' -> '取り入れる'."
+        },
+        {
+            "id": "c4_np_008",
+            "category": "next_phrase_collocation",
+            "context": "周囲の期待にしっかりと",
+            "input": "こたえる",
+            "target": "応える",
+            "domain": "conversational",
+            "notes": "Prev word 'しっかりと'. 'こ' -> '応える'."
+        },
+        {
+            "id": "c4_np_009",
+            "category": "next_phrase_collocation",
+            "context": "困難な課題に正面から",
+            "input": "たちむかう",
+            "target": "立ち向かう",
+            "domain": "motivation",
+            "notes": "Prev word '正面から'. 'た' -> '立ち向かう'."
+        },
+        {
+            "id": "c4_np_010",
+            "category": "next_phrase_collocation",
+            "context": "お客様の信頼を第一に",
+            "input": "かんがえる",
+            "target": "考える",
+            "domain": "service",
+            "notes": "Prev word '第一に'. 'か' -> '考える'."
+        },
+        {
+            "id": "c4_np_011",
+            "category": "next_phrase_collocation",
+            "context": "環境保護に対する高い",
+            "input": "いしきをもつ",
+            "target": "意識を持つ",
+            "domain": "environment",
+            "notes": "Prev word '高い'. 'い' -> '意識を持つ'."
+        },
+        {
+            "id": "c4_np_012",
+            "category": "next_phrase_collocation",
+            "context": "最新の学術論文を丁寧に",
+            "input": "よみとく",
+            "target": "読み解く",
+            "domain": "academic",
+            "notes": "Prev word '丁寧に'. 'よ' -> '読み解く'."
+        },
+        {
+            "id": "c4_np_013",
+            "category": "next_phrase_collocation",
+            "context": "業務プロセスの効率化を",
+            "input": "すいしんする",
+            "target": "推進する",
+            "domain": "management",
+            "notes": "Prev word '効率化を'. 'す' -> '推進する'."
+        },
+        {
+            "id": "c4_np_014",
+            "category": "next_phrase_collocation",
+            "context": "急な天候の悪化に十分",
+            "input": "けいかいしてください",
+            "target": "警戒してください",
+            "domain": "weather",
+            "notes": "Prev word '十分'. 'け' -> '警戒してください'."
+        },
+        {
+            "id": "c4_np_015",
+            "category": "next_phrase_collocation",
+            "context": "社会秩序を乱す行為を厳しく",
+            "input": "とりしまる",
+            "target": "取り締まる",
+            "domain": "law",
+            "notes": "Prev word '厳しく'. 'と' -> '取り締まる'."
+        },
+        {
+            "id": "c4_np_016",
+            "category": "next_phrase_collocation",
+            "context": "予算の執行状況を厳密に",
+            "input": "かんりする",
+            "target": "管理する",
+            "domain": "finance",
+            "notes": "Prev word '厳密に'. 'か' -> '管理する'."
+        },
+        {
+            "id": "c4_np_017",
+            "category": "next_phrase_collocation",
+            "context": "チーム全員の意見を柔軟に",
+            "input": "はんえいさせる",
+            "target": "反映させる",
+            "domain": "teamwork",
+            "notes": "Prev word '柔軟に'. 'は' -> '反映させる'."
+        },
+        {
+            "id": "c4_np_018",
+            "category": "next_phrase_collocation",
+            "context": "新サービスの利用者数を着実に",
+            "input": "のばす",
+            "target": "伸ばす",
+            "domain": "marketing",
+            "notes": "Prev word '着実に'. 'の' -> '伸ばす'."
+        },
+        {
+            "id": "c4_np_019",
+            "category": "next_phrase_collocation",
+            "context": "歴史ある伝統の味を大切に",
+            "input": "うけつぐ",
+            "target": "受け継ぐ",
+            "domain": "culture",
+            "notes": "Prev word '大切に'. 'う' -> '受け継ぐ'."
+        },
+        {
+            "id": "c4_np_020",
+            "category": "next_phrase_collocation",
+            "context": "将来のリスクを最小限に",
+            "input": "おさえる",
+            "target": "抑える",
+            "domain": "risk",
+            "notes": "Prev word '最小限に'. 'お' -> '抑える'."
+        }
+    ]
+    cases.extend(cat4_cases)
+
+    # =========================================================================
+    # Category 5: Seion Turbo / Voicing & Typo Recovery (15 cases)
+    # Headroom: Modifiers (voicing, semi-voicing, small kana) impose 2-action
+    # penalties (+0.3 keystrokes per char). Typing unvoiced / uncontracted keys
+    # eliminates modifier delay.
+    # =========================================================================
+    cat5_cases = [
+        {
+            "id": "c5_st_001",
+            "category": "seion_turbo",
+            "context": "来年度の第４四半期は",
+            "input": "じゅうがつから",
+            "unvoiced_input": "しゆうかつから",
+            "target": "十月から",
+            "domain": "calendar",
+            "notes": "Full input has voiced 'じ', small 'ゅ', voiced 'が' (+0.9 keys). Seion turbo: 6 clean keys."
+        },
+        {
+            "id": "c5_st_002",
+            "category": "seion_turbo",
+            "context": "水産市場で新鮮な",
+            "input": "ぎょかいるいの",
+            "unvoiced_input": "きよかいるいの",
+            "target": "魚介類の",
+            "domain": "food",
+            "notes": "Full input has voiced 'ぎ', small 'ょ' (+0.6 keys). Seion turbo: 'きよかいるいの'."
+        },
+        {
+            "id": "c5_st_003",
+            "category": "seion_turbo",
+            "context": "太陽系に属する",
+            "input": "ちきゅうじょうの",
+            "unvoiced_input": "ちきゆうしようの",
+            "target": "地球上の",
+            "domain": "science",
+            "notes": "Voiced 'じ', small 'ゅ', 'ょ' (+0.9 keys)."
+        },
+        {
+            "id": "c5_st_004",
+            "category": "seion_turbo",
+            "context": "フライパンの表面に黒い",
+            "input": "こげなどが",
+            "unvoiced_input": "こけなとか",
+            "target": "焦げなどが",
+            "domain": "cooking",
+            "notes": "Voiced 'げ', 'が' (+0.6 keys). Seion turbo: 'こけなとか'."
+        },
+        {
+            "id": "c5_st_005",
+            "category": "seion_turbo",
+            "context": "急な腹痛で救急",
+            "input": "びょういんでくすりを",
+            "unvoiced_input": "ひよういんてくすりを",
+            "target": "病院で薬を",
+            "domain": "medical",
+            "notes": "Semi-voiced 'びょ', voiced 'で' (+0.9 keys)."
+        },
+        {
+            "id": "c5_st_006",
+            "category": "seion_turbo",
+            "context": "役員室で行われる重要な",
+            "input": "かいぎにさんかする",
+            "unvoiced_input": "かいきにさんかする",
+            "target": "会議に参加する",
+            "domain": "business",
+            "notes": "Voiced 'ぎ' (+0.3 keys). Typing clean 'かいき' directly resolves to '会議'."
+        },
+        {
+            "id": "c5_st_007",
+            "category": "seion_turbo",
+            "context": "この会議室は現在",
+            "input": "しようちゅうですので",
+            "unvoiced_input": "しようちゆうてすのて",
+            "target": "使用中ですので",
+            "domain": "office",
+            "notes": "Voiced 'で', 'で' (+0.6 keys). 'しようちゆうてすのて' recovers instantly."
+        },
+        {
+            "id": "c5_st_008",
+            "category": "seion_turbo",
+            "context": "雨の日の濡れた",
+            "input": "どうろがすべる",
+            "unvoiced_input": "とうろかすへる",
+            "target": "道路が滑る",
+            "domain": "traffic",
+            "notes": "Voiced 'ど', 'が', 'べ' (+0.9 keys). 'とうろかすへる' -> '道路が滑る'."
+        },
+        {
+            "id": "c5_st_009",
+            "category": "seion_turbo",
+            "context": "厳しい寒さで体が",
+            "input": "こごえてしまう",
+            "unvoiced_input": "ここえてしまう",
+            "target": "凍えてしまう",
+            "domain": "nature",
+            "notes": "Voiced 'ご' (+0.3 keys)."
+        },
+        {
+            "id": "c5_st_010",
+            "category": "seion_turbo",
+            "context": "美しい満天の",
+            "input": "よぞらをみあげる",
+            "unvoiced_input": "よそらをみあける",
+            "target": "夜空を見上げる",
+            "domain": "nature",
+            "notes": "Voiced 'ぞ', 'げ' (+0.6 keys)."
+        },
+        {
+            "id": "c5_st_011",
+            "category": "seion_turbo",
+            "context": "書類の重要事項を赤ペンで",
+            "input": "じゅうてんてきに",
+            "unvoiced_input": "しゆうてんてきに",
+            "target": "重点的に",
+            "domain": "business",
+            "notes": "Voiced 'じ' (+0.3 keys)."
+        },
+        {
+            "id": "c5_st_012",
+            "category": "seion_turbo",
+            "context": "冷えたミネラルウォーターをコップで",
+            "input": "ごくごくとのむ",
+            "unvoiced_input": "こくこくとのむ",
+            "target": "ゴクゴクと飲む",
+            "domain": "lifestyle",
+            "notes": "Voiced 'ご', 'ご' (+0.6 keys)."
+        },
+        {
+            "id": "c5_st_013",
+            "category": "seion_turbo",
+            "context": "週末のキャンプ場をネットで",
+            "input": "よやくしておいた",
+            "unvoiced_input": "よやくしておいた",
+            "target": "予約しておいた",
+            "domain": "travel",
+            "notes": "Typo slip case: 'よやくして' recovers compound past form."
+        },
+        {
+            "id": "c5_st_014",
+            "category": "seion_turbo",
+            "context": "急な坂道を自転車で",
+            "input": "のぼりきる",
+            "unvoiced_input": "のほりきる",
+            "target": "登り切る",
+            "domain": "sports",
+            "notes": "Voiced 'ぼ' (+0.3 keys). 'のほりきる' -> '登り切る'."
+        },
+        {
+            "id": "c5_st_015",
+            "category": "seion_turbo",
+            "context": "毎朝のラジオ体操で体を",
+            "input": "ほぐしていく",
+            "unvoiced_input": "ほくしていく",
+            "target": "ほぐしていく",
+            "domain": "health",
+            "notes": "Voiced 'ぐ' (+0.3 keys). 'ほくしていく' -> 'ほぐしていく'."
+        }
+    ]
+    cases.extend(cat5_cases)
+
+    return cases
+
+def main():
+    cases = get_100_cases()
+    assert len(cases) == 100, f"Expected 100 cases, got {len(cases)}"
+
+    # Categorical verification
+    counts = {}
+    for c in cases:
+        cat = c["category"]
+        counts[cat] = counts.get(cat, 0) + 1
+
+    print(f"Constructed {len(cases)} flick headroom benchmark cases:")
+    for cat, n in counts.items():
+        print(f"  - {cat:28s}: {n:2d} cases")
+
+    out_path = "eval/flick_headroom_dataset_100.json"
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump({
+            "metadata": {
+                "name": "JotInput 100-Case Flick Input Headroom Benchmark",
+                "version": "1.0",
+                "date": "2026-11-16",
+                "total_cases": len(cases),
+                "categories": counts,
+                "description": "Comprehensive benchmark dataset exhibiting massive quantifiable headroom for Japanese mobile flick input."
+            },
+            "cases": cases
+        }, f, ensure_ascii=False, indent=2)
+
+    print(f"Saved dataset to {out_path} ({os.path.getsize(out_path)} bytes).")
+
+if __name__ == "__main__":
+    main()
