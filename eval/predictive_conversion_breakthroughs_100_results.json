@@ -1,0 +1,4707 @@
+{
+  "total_cases": 100,
+  "total_chars": 646,
+  "stage_waterfall": {
+    "S0_baseline": {
+      "total_keys": 888.9,
+      "total_sec": 406.06,
+      "eis_cpm": 95.5,
+      "gain_cpm": 0.0,
+      "speedup_ratio": 1.0
+    },
+    "S1_trie_and_utility_rerank": {
+      "total_keys": 818.7,
+      "total_sec": 377.08,
+      "eis_cpm": 102.8,
+      "gain_cpm": 7.3,
+      "speedup_ratio": 1.08
+    },
+    "S2_dynamic_tail_rollout": {
+      "total_keys": 215.0,
+      "total_sec": 156.0,
+      "eis_cpm": 248.5,
+      "gain_cpm": 153.0,
+      "speedup_ratio": 2.6
+    },
+    "S3_slm_zero_and_1mora": {
+      "total_keys": 149.2,
+      "total_sec": 129.68,
+      "eis_cpm": 298.9,
+      "gain_cpm": 203.4,
+      "speedup_ratio": 3.13
+    },
+    "S4_slot1_promotion_standard": {
+      "total_keys": 149.2,
+      "total_sec": 99.68,
+      "eis_cpm": 388.8,
+      "gain_cpm": 293.4,
+      "speedup_ratio": 4.07
+    },
+    "S4_plus_fuzzy_voicing": {
+      "total_keys": 145.9,
+      "total_sec": 98.36,
+      "eis_cpm": 394.1,
+      "gain_cpm": 298.6,
+      "speedup_ratio": 4.13
+    }
+  },
+  "category_summary": {
+    "multi_bunsetsu": {
+      "n": 25,
+      "chars": 251,
+      "s0_keys": 334.6,
+      "s4_keys": 53.3,
+      "s0_sec": 143.84,
+      "s4_sec": 31.32,
+      "s0_eis_cpm": 104.7,
+      "s4_eis_cpm": 480.8,
+      "speedup_ratio": 4.59
+    },
+    "context_homophone": {
+      "n": 20,
+      "chars": 43,
+      "s0_keys": 76.6,
+      "s4_keys": 20.0,
+      "s0_sec": 44.64,
+      "s4_sec": 16.0,
+      "s0_eis_cpm": 57.8,
+      "s4_eis_cpm": 161.2,
+      "speedup_ratio": 2.79
+    },
+    "skeleton_input": {
+      "n": 20,
+      "chars": 171,
+      "s0_keys": 220.4,
+      "s4_keys": 40.6,
+      "s0_sec": 96.16,
+      "s4_sec": 24.24,
+      "s0_eis_cpm": 106.7,
+      "s4_eis_cpm": 423.3,
+      "speedup_ratio": 3.97
+    },
+    "next_phrase_collocation": {
+      "n": 20,
+      "chars": 99,
+      "s0_keys": 138.4,
+      "s4_keys": 2.0,
+      "s0_sec": 63.36,
+      "s4_sec": 8.8,
+      "s0_eis_cpm": 93.8,
+      "s4_eis_cpm": 675.0,
+      "speedup_ratio": 7.2
+    },
+    "seion_turbo": {
+      "n": 15,
+      "chars": 82,
+      "s0_keys": 118.9,
+      "s4_keys": 33.3,
+      "s0_sec": 58.06,
+      "s4_sec": 19.32,
+      "s0_eis_cpm": 84.7,
+      "s4_eis_cpm": 254.7,
+      "speedup_ratio": 3.01
+    }
+  },
+  "cases": [
+    {
+      "id": "c1_mb_001",
+      "category": "multi_bunsetsu",
+      "context": "近日中の再開に向けて、",
+      "input": "さぎょうちゅうですので",
+      "target": "作業中ですので",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 11.9,
+          "rank": 1,
+          "sec": 5.16,
+          "cpm": 81.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 11.9,
+          "rank": 1,
+          "sec": 5.16,
+          "cpm": 81.4
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 259.3
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 259.3
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 318.2
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 318.2
+        }
+      }
+    },
+    {
+      "id": "c1_mb_002",
+      "category": "multi_bunsetsu",
+      "context": "地震の揺れによる",
+      "input": "かぐとうかいぼうしの",
+      "target": "家具倒壊防止の",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 10.6,
+          "rank": 1,
+          "sec": 4.64,
+          "cpm": 90.5
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 10.6,
+          "rank": 1,
+          "sec": 4.64,
+          "cpm": 90.5
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 259.3
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 259.3
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 318.2
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 318.2
+        }
+      }
+    },
+    {
+      "id": "c1_mb_003",
+      "category": "multi_bunsetsu",
+      "context": "何かしようと",
+      "input": "おもっているのに",
+      "target": "思っているのに",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 8.0,
+          "rank": 1,
+          "sec": 3.6,
+          "cpm": 116.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 8.0,
+          "rank": 1,
+          "sec": 3.6,
+          "cpm": 116.7
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 3.0,
+          "rank": 2,
+          "sec": 1.9,
+          "cpm": 221.1
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 280.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_004",
+      "category": "multi_bunsetsu",
+      "context": "社員一同、品質の向上に",
+      "input": "つとめております。",
+      "target": "努めております。",
+      "chars": 8,
+      "stages": {
+        "S0_baseline": {
+          "keys": 9.0,
+          "rank": 1,
+          "sec": 4.0,
+          "cpm": 120.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 9.0,
+          "rank": 1,
+          "sec": 4.0,
+          "cpm": 120.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 320.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 320.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 400.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 400.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_005",
+      "category": "multi_bunsetsu",
+      "context": "来週の打ち合わせの日程を",
+      "input": "ちょうせいさせていただきます",
+      "target": "調整させていただきます",
+      "chars": 11,
+      "stages": {
+        "S0_baseline": {
+          "keys": 14.3,
+          "rank": 1,
+          "sec": 6.12,
+          "cpm": 107.8
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 14.3,
+          "rank": 1,
+          "sec": 6.12,
+          "cpm": 107.8
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_006",
+      "category": "multi_bunsetsu",
+      "context": "お忙しいところ恐縮ですが、",
+      "input": "ごかくにんのほど",
+      "target": "ご確認のほど",
+      "chars": 6,
+      "stages": {
+        "S0_baseline": {
+          "keys": 8.6,
+          "rank": 1,
+          "sec": 3.84,
+          "cpm": 93.8
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 8.6,
+          "rank": 1,
+          "sec": 3.84,
+          "cpm": 93.8
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 3.3,
+          "rank": 2,
+          "sec": 2.02,
+          "cpm": 178.2
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 222.2
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 272.7
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 272.7
+        }
+      }
+    },
+    {
+      "id": "c1_mb_007",
+      "category": "multi_bunsetsu",
+      "context": "前向きに前向きに",
+      "input": "ごけんとういただけますと",
+      "target": "ご検討いただけますと",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 12.6,
+          "rank": 1,
+          "sec": 5.44,
+          "cpm": 110.3
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 12.6,
+          "rank": 1,
+          "sec": 5.44,
+          "cpm": 110.3
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 3.3,
+          "rank": 2,
+          "sec": 2.02,
+          "cpm": 297.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 370.4
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 454.5
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 454.5
+        }
+      }
+    },
+    {
+      "id": "c1_mb_008",
+      "category": "multi_bunsetsu",
+      "context": "最新の修正版の",
+      "input": "てんぷふぁいるをそうふいたしました",
+      "target": "添付ファイルを送付いたしました",
+      "chars": 15,
+      "stages": {
+        "S0_baseline": {
+          "keys": 17.3,
+          "rank": 1,
+          "sec": 7.32,
+          "cpm": 123.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 17.3,
+          "rank": 1,
+          "sec": 7.32,
+          "cpm": 123.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 600.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 600.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 750.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 750.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_009",
+      "category": "multi_bunsetsu",
+      "context": "本日の進捗状況につきまして、",
+      "input": "ごほうこくいたします",
+      "target": "ご報告いたします",
+      "chars": 8,
+      "stages": {
+        "S0_baseline": {
+          "keys": 10.3,
+          "rank": 1,
+          "sec": 4.52,
+          "cpm": 106.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 10.3,
+          "rank": 1,
+          "sec": 4.52,
+          "cpm": 106.2
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 3.3,
+          "rank": 2,
+          "sec": 2.02,
+          "cpm": 237.6
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 296.3
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 363.6
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 363.6
+        }
+      }
+    },
+    {
+      "id": "c1_mb_010",
+      "category": "multi_bunsetsu",
+      "context": "お困りの点がございましたら、",
+      "input": "いつでもごれんらくください",
+      "target": "いつでもご連絡ください",
+      "chars": 11,
+      "stages": {
+        "S0_baseline": {
+          "keys": 13.9,
+          "rank": 1,
+          "sec": 5.96,
+          "cpm": 110.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 13.9,
+          "rank": 1,
+          "sec": 5.96,
+          "cpm": 110.7
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_011",
+      "category": "multi_bunsetsu",
+      "context": "十分に資産があれば、新築を",
+      "input": "こうにゅうすべきでしょう。",
+      "target": "購入すべきでしょう。",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 13.6,
+          "rank": 1,
+          "sec": 5.84,
+          "cpm": 102.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 13.6,
+          "rank": 1,
+          "sec": 5.84,
+          "cpm": 102.7
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_012",
+      "category": "multi_bunsetsu",
+      "context": "ハワイの伝統的なマッサージの",
+      "input": "りらくぜーしょんさろんです。",
+      "target": "リラクゼーションサロンです。",
+      "chars": 14,
+      "stages": {
+        "S0_baseline": {
+          "keys": 14.6,
+          "rank": 1,
+          "sec": 6.24,
+          "cpm": 134.6
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 14.6,
+          "rank": 1,
+          "sec": 6.24,
+          "cpm": 134.6
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 560.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 560.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 700.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 700.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_013",
+      "category": "multi_bunsetsu",
+      "context": "長年の研究と努力の末に、",
+      "input": "しんぎじゅつをかいはつしました",
+      "target": "新技術を開発しました",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 15.6,
+          "rank": 1,
+          "sec": 6.64,
+          "cpm": 90.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 15.6,
+          "rank": 1,
+          "sec": 6.64,
+          "cpm": 90.4
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_014",
+      "category": "multi_bunsetsu",
+      "context": "これまでの経験を生かして、",
+      "input": "ぜんりょくでとりくみます",
+      "target": "全力で取り組みます",
+      "chars": 9,
+      "stages": {
+        "S0_baseline": {
+          "keys": 12.6,
+          "rank": 1,
+          "sec": 5.44,
+          "cpm": 99.3
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 12.6,
+          "rank": 1,
+          "sec": 5.44,
+          "cpm": 99.3
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 333.3
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 333.3
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 409.1
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 409.1
+        }
+      }
+    },
+    {
+      "id": "c1_mb_015",
+      "category": "multi_bunsetsu",
+      "context": "突然のご連絡となり、",
+      "input": "たいへんしつれいいたしました",
+      "target": "大変失礼いたしました",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 14.0,
+          "rank": 1,
+          "sec": 6.0,
+          "cpm": 100.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 14.0,
+          "rank": 1,
+          "sec": 6.0,
+          "cpm": 100.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_016",
+      "category": "multi_bunsetsu",
+      "context": "詳しい詳細については、",
+      "input": "べっとごあんないもうしあげます",
+      "target": "別途ご案内申し上げます",
+      "chars": 11,
+      "stages": {
+        "S0_baseline": {
+          "keys": 15.9,
+          "rank": 1,
+          "sec": 6.76,
+          "cpm": 97.6
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 15.9,
+          "rank": 1,
+          "sec": 6.76,
+          "cpm": 97.6
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 407.4
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 407.4
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 500.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 500.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_017",
+      "category": "multi_bunsetsu",
+      "context": "現地調査の結果を踏まえて、",
+      "input": "たいさくをけんとうしています",
+      "target": "対策を検討しています",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 14.0,
+          "rank": 1,
+          "sec": 6.0,
+          "cpm": 100.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 14.0,
+          "rank": 1,
+          "sec": 6.0,
+          "cpm": 100.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_018",
+      "category": "multi_bunsetsu",
+      "context": "今後のスケジュールについて、",
+      "input": "ごそうだんさせてください",
+      "target": "ご相談させてください",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 12.9,
+          "rank": 1,
+          "sec": 5.56,
+          "cpm": 107.9
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 12.9,
+          "rank": 1,
+          "sec": 5.56,
+          "cpm": 107.9
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 3.3,
+          "rank": 2,
+          "sec": 2.02,
+          "cpm": 297.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 370.4
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 454.5
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 454.5
+        }
+      }
+    },
+    {
+      "id": "c1_mb_019",
+      "category": "multi_bunsetsu",
+      "context": "今回のトラブルの原因について、",
+      "input": "ちょうさをおこなっています",
+      "target": "調査を行っています",
+      "chars": 9,
+      "stages": {
+        "S0_baseline": {
+          "keys": 13.0,
+          "rank": 1,
+          "sec": 5.6,
+          "cpm": 96.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 13.0,
+          "rank": 1,
+          "sec": 5.6,
+          "cpm": 96.4
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 360.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 360.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 450.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 450.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_020",
+      "category": "multi_bunsetsu",
+      "context": "プロジェクトの成功に向けて、",
+      "input": "いっちだんけつしてがんばりましょう",
+      "target": "一致団結して頑張りましょう",
+      "chars": 13,
+      "stages": {
+        "S0_baseline": {
+          "keys": 17.9,
+          "rank": 1,
+          "sec": 7.56,
+          "cpm": 103.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 17.9,
+          "rank": 1,
+          "sec": 7.56,
+          "cpm": 103.2
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 520.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 520.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 650.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 650.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_021",
+      "category": "multi_bunsetsu",
+      "context": "お客様からのお問い合わせに、",
+      "input": "じんそくにしゅざいします",
+      "target": "迅速に対応いたします",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 12.6,
+          "rank": 1,
+          "sec": 5.44,
+          "cpm": 110.3
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 12.6,
+          "rank": 1,
+          "sec": 5.44,
+          "cpm": 110.3
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 370.4
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 370.4
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 454.5
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 454.5
+        }
+      }
+    },
+    {
+      "id": "c1_mb_022",
+      "category": "multi_bunsetsu",
+      "context": "安全管理の観点から、",
+      "input": "じゅうぶんにちゅういしてください",
+      "target": "十分にご注意ください",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 16.9,
+          "rank": 1,
+          "sec": 7.16,
+          "cpm": 83.8
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 16.9,
+          "rank": 1,
+          "sec": 7.16,
+          "cpm": 83.8
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 370.4
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 370.4
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 454.5
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 454.5
+        }
+      }
+    },
+    {
+      "id": "c1_mb_023",
+      "category": "multi_bunsetsu",
+      "context": "皆さんの温かいご支援に、",
+      "input": "こころよりかんしゃもうしあげます",
+      "target": "心より感謝申し上げます",
+      "chars": 11,
+      "stages": {
+        "S0_baseline": {
+          "keys": 16.3,
+          "rank": 1,
+          "sec": 6.92,
+          "cpm": 95.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 16.3,
+          "rank": 1,
+          "sec": 6.92,
+          "cpm": 95.4
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_024",
+      "category": "multi_bunsetsu",
+      "context": "新しい企画の提案について、",
+      "input": "いけんをきかせてください",
+      "target": "意見を聞かせてください",
+      "chars": 11,
+      "stages": {
+        "S0_baseline": {
+          "keys": 12.3,
+          "rank": 1,
+          "sec": 5.32,
+          "cpm": 124.1
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 12.3,
+          "rank": 1,
+          "sec": 5.32,
+          "cpm": 124.1
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        }
+      }
+    },
+    {
+      "id": "c1_mb_025",
+      "category": "multi_bunsetsu",
+      "context": "契約の更新時期が近づいてまいりましたので、",
+      "input": "ごてつづきをおねがいいたします",
+      "target": "お手続きをお願いいたします",
+      "chars": 13,
+      "stages": {
+        "S0_baseline": {
+          "keys": 15.9,
+          "rank": 1,
+          "sec": 6.76,
+          "cpm": 115.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 15.9,
+          "rank": 1,
+          "sec": 6.76,
+          "cpm": 115.4
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 3.3,
+          "rank": 2,
+          "sec": 2.02,
+          "cpm": 386.1
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 481.5
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 590.9
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 590.9
+        }
+      }
+    },
+    {
+      "id": "c2_hp_001",
+      "category": "context_homophone",
+      "context": "新幹線を使って大阪へ",
+      "input": "いどう",
+      "target": "移動",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 3.3,
+          "rank": 2,
+          "sec": 2.02,
+          "cpm": 59.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 74.1
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 74.1
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_002",
+      "category": "context_homophone",
+      "context": "来年春の人事異動で営業部への",
+      "input": "いどう",
+      "target": "異動",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 3.3,
+          "rank": 2,
+          "sec": 2.02,
+          "cpm": 59.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 74.1
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 74.1
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_003",
+      "category": "context_homophone",
+      "context": "最新の人工知能技術に強い",
+      "input": "かんしん",
+      "target": "関心",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 2,
+          "sec": 2.3,
+          "cpm": 52.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_004",
+      "category": "context_homophone",
+      "context": "彼の素晴らしい礼儀正しさにとても",
+      "input": "かんしん",
+      "target": "感心",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 2,
+          "sec": 2.3,
+          "cpm": 52.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_005",
+      "category": "context_homophone",
+      "context": "この法律は国民の基本的な人権を",
+      "input": "ほしょう",
+      "target": "保障",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 2,
+          "sec": 2.3,
+          "cpm": 52.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_006",
+      "category": "context_homophone",
+      "context": "メーカーによる製品の無償",
+      "input": "ほしょう",
+      "target": "保証",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 2,
+          "sec": 2.3,
+          "cpm": 52.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_007",
+      "category": "context_homophone",
+      "context": "交通事故による被害者への損害を",
+      "input": "ほしょう",
+      "target": "補償",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 2,
+          "sec": 2.3,
+          "cpm": 52.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_008",
+      "category": "context_homophone",
+      "context": "大雨で傷んだ道路のアスファルトの",
+      "input": "ほしょう",
+      "target": "舗装",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 2,
+          "sec": 2.3,
+          "cpm": 52.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_009",
+      "category": "context_homophone",
+      "context": "問題の本質に鋭く迫る",
+      "input": "かくしん",
+      "target": "核心",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 2,
+          "sec": 2.3,
+          "cpm": 52.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_010",
+      "category": "context_homophone",
+      "context": "自分の直感を信じて勝利を",
+      "input": "かくしん",
+      "target": "確信",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 2,
+          "sec": 2.3,
+          "cpm": 52.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_011",
+      "category": "context_homophone",
+      "context": "左右が均等に美しく揃った幾何学的な",
+      "input": "たいしょう",
+      "target": "対称",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 5.0,
+          "rank": 2,
+          "sec": 2.7,
+          "cpm": 44.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_012",
+      "category": "context_homophone",
+      "context": "今年度の国勢調査の",
+      "input": "たいしょう",
+      "target": "対象",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 5.0,
+          "rank": 2,
+          "sec": 2.7,
+          "cpm": 44.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_013",
+      "category": "context_homophone",
+      "context": "前年同月の売上データと",
+      "input": "たいしょう",
+      "target": "対照",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 5.0,
+          "rank": 2,
+          "sec": 2.7,
+          "cpm": 44.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_014",
+      "category": "context_homophone",
+      "context": "住民税を定められた期日までに",
+      "input": "おさめる",
+      "target": "納める",
+      "chars": 3,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 2,
+          "sec": 2.3,
+          "cpm": 78.3
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 163.6
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 225.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 225.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_015",
+      "category": "context_homophone",
+      "context": "大会で見事に素晴らしい成績を",
+      "input": "おさめる",
+      "target": "収める",
+      "chars": 3,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 2,
+          "sec": 2.3,
+          "cpm": 78.3
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 163.6
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 225.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 225.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_016",
+      "category": "context_homophone",
+      "context": "争いを鎮めて領民を平和に",
+      "input": "おさめる",
+      "target": "治める",
+      "chars": 3,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 2,
+          "sec": 2.3,
+          "cpm": 78.3
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 163.6
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 225.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 225.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_017",
+      "category": "context_homophone",
+      "context": "子どもたちに将来の夢を熱く",
+      "input": "かたる",
+      "target": "語る",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 3.0,
+          "rank": 2,
+          "sec": 1.9,
+          "cpm": 63.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_018",
+      "category": "context_homophone",
+      "context": "実在する大手銀行の名を騙って身元を",
+      "input": "かたる",
+      "target": "騙る",
+      "chars": 2,
+      "stages": {
+        "S0_baseline": {
+          "keys": 3.0,
+          "rank": 2,
+          "sec": 1.9,
+          "cpm": 63.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 80.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 109.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 150.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_019",
+      "category": "context_homophone",
+      "context": "冬が終わり、桜が咲き誇る暖かい",
+      "input": "はる",
+      "target": "春",
+      "chars": 1,
+      "stages": {
+        "S0_baseline": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 40.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 40.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 40.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 54.5
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 75.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 75.0
+        }
+      }
+    },
+    {
+      "id": "c2_hp_020",
+      "category": "context_homophone",
+      "context": "目的の駅に到着したので電車から",
+      "input": "おりる",
+      "target": "降りる",
+      "chars": 3,
+      "stages": {
+        "S0_baseline": {
+          "keys": 3.0,
+          "rank": 2,
+          "sec": 1.9,
+          "cpm": 94.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 163.6
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 225.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 225.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_001",
+      "category": "skeleton_input",
+      "context": "朝の通勤ラッシュで満員の",
+      "input": "てんしゃにのる",
+      "target": "電車に乗る",
+      "chars": 5,
+      "stages": {
+        "S0_baseline": {
+          "keys": 7.0,
+          "rank": 1,
+          "sec": 3.2,
+          "cpm": 93.8
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 7.0,
+          "rank": 1,
+          "sec": 3.2,
+          "cpm": 93.8
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 200.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 200.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 250.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 250.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_002",
+      "category": "skeleton_input",
+      "context": "夜空に広がる美しい",
+      "input": "ほしそらをみる",
+      "target": "星空を見る",
+      "chars": 5,
+      "stages": {
+        "S0_baseline": {
+          "keys": 7.0,
+          "rank": 1,
+          "sec": 3.2,
+          "cpm": 93.8
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 7.0,
+          "rank": 1,
+          "sec": 3.2,
+          "cpm": 93.8
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 200.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 200.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 250.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 250.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_003",
+      "category": "skeleton_input",
+      "context": "処方箋を持って",
+      "input": "くすりをもらってかえる",
+      "target": "薬をもらって帰る",
+      "chars": 8,
+      "stages": {
+        "S0_baseline": {
+          "keys": 11.0,
+          "rank": 1,
+          "sec": 4.8,
+          "cpm": 100.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 11.0,
+          "rank": 1,
+          "sec": 4.8,
+          "cpm": 100.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 320.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 320.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 400.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 400.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_004",
+      "category": "skeleton_input",
+      "context": "先ほどメールにて",
+      "input": "しりょうをそうしんしました",
+      "target": "資料を送信しました",
+      "chars": 9,
+      "stages": {
+        "S0_baseline": {
+          "keys": 13.0,
+          "rank": 1,
+          "sec": 5.6,
+          "cpm": 96.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 13.0,
+          "rank": 1,
+          "sec": 5.6,
+          "cpm": 96.4
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 360.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 360.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 450.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 450.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_005",
+      "category": "skeleton_input",
+      "context": "明日の午後からの",
+      "input": "かいぎにさんかします",
+      "target": "会議に参加します",
+      "chars": 8,
+      "stages": {
+        "S0_baseline": {
+          "keys": 10.3,
+          "rank": 1,
+          "sec": 4.52,
+          "cpm": 106.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 10.3,
+          "rank": 1,
+          "sec": 4.52,
+          "cpm": 106.2
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 320.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 320.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 400.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 400.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_006",
+      "category": "skeleton_input",
+      "context": "本番環境へのリリースの",
+      "input": "じゅんびがかんりょうしました",
+      "target": "準備が完了しました",
+      "chars": 9,
+      "stages": {
+        "S0_baseline": {
+          "keys": 14.9,
+          "rank": 1,
+          "sec": 6.36,
+          "cpm": 84.9
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 14.9,
+          "rank": 1,
+          "sec": 6.36,
+          "cpm": 84.9
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 333.3
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 333.3
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 409.1
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 409.1
+        }
+      }
+    },
+    {
+      "id": "c3_sk_007",
+      "category": "skeleton_input",
+      "context": "今後ともどうぞ",
+      "input": "よろしくおねがいします",
+      "target": "よろしくお願いします",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 11.3,
+          "rank": 1,
+          "sec": 4.92,
+          "cpm": 122.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 11.3,
+          "rank": 1,
+          "sec": 4.92,
+          "cpm": 122.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_008",
+      "category": "skeleton_input",
+      "context": "いつも温かいお心遣いを",
+      "input": "ありがとうございます",
+      "target": "ありがとうございます",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 10.9,
+          "rank": 1,
+          "sec": 4.76,
+          "cpm": 126.1
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 10.9,
+          "rank": 1,
+          "sec": 4.76,
+          "cpm": 126.1
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_009",
+      "category": "skeleton_input",
+      "context": "暗い夜道ですので、",
+      "input": "きをつけておかえりください",
+      "target": "気を付けてお帰りください",
+      "chars": 12,
+      "stages": {
+        "S0_baseline": {
+          "keys": 13.3,
+          "rank": 1,
+          "sec": 5.72,
+          "cpm": 125.9
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 13.3,
+          "rank": 1,
+          "sec": 5.72,
+          "cpm": 125.9
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 480.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 480.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 600.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 600.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_010",
+      "category": "skeleton_input",
+      "context": "週末は全国的に",
+      "input": "てんきがよいですね",
+      "target": "天気が良いですね",
+      "chars": 8,
+      "stages": {
+        "S0_baseline": {
+          "keys": 9.6,
+          "rank": 1,
+          "sec": 4.24,
+          "cpm": 113.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 9.6,
+          "rank": 1,
+          "sec": 4.24,
+          "cpm": 113.2
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 320.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 320.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 400.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 400.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_011",
+      "category": "skeleton_input",
+      "context": "このツールは日々の業務でとても",
+      "input": "やくにたちます",
+      "target": "役に立ちます",
+      "chars": 6,
+      "stages": {
+        "S0_baseline": {
+          "keys": 7.0,
+          "rank": 1,
+          "sec": 3.2,
+          "cpm": 112.5
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 7.0,
+          "rank": 1,
+          "sec": 3.2,
+          "cpm": 112.5
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 240.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 240.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 300.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 300.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_012",
+      "category": "skeleton_input",
+      "context": "先輩の貴重なご講義は大変",
+      "input": "べんきょうになります",
+      "target": "勉強になります",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 10.3,
+          "rank": 1,
+          "sec": 4.52,
+          "cpm": 92.9
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 10.3,
+          "rank": 1,
+          "sec": 4.52,
+          "cpm": 92.9
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 259.3
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 259.3
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 318.2
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 318.2
+        }
+      }
+    },
+    {
+      "id": "c3_sk_013",
+      "category": "skeleton_input",
+      "context": "担当者からの折り返しの",
+      "input": "れんらくをまちます",
+      "target": "連絡を待ちます",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 9.0,
+          "rank": 1,
+          "sec": 4.0,
+          "cpm": 105.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 9.0,
+          "rank": 1,
+          "sec": 4.0,
+          "cpm": 105.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 280.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 280.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_014",
+      "category": "skeleton_input",
+      "context": "早急にご確認の上、折り返し",
+      "input": "へんじをおねがいします",
+      "target": "返事をお願いします",
+      "chars": 9,
+      "stages": {
+        "S0_baseline": {
+          "keys": 11.6,
+          "rank": 1,
+          "sec": 5.04,
+          "cpm": 107.1
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 11.6,
+          "rank": 1,
+          "sec": 5.04,
+          "cpm": 107.1
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 360.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 360.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 450.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 450.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_015",
+      "category": "skeleton_input",
+      "context": "進路について悩んでいるので、",
+      "input": "そうだんにのってください",
+      "target": "相談に乗ってください",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 12.6,
+          "rank": 1,
+          "sec": 5.44,
+          "cpm": 110.3
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 12.6,
+          "rank": 1,
+          "sec": 5.44,
+          "cpm": 110.3
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_016",
+      "category": "skeleton_input",
+      "context": "今後の景気動向について、",
+      "input": "みとおしがあかるい",
+      "target": "見通しが明るい",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 9.3,
+          "rank": 1,
+          "sec": 4.12,
+          "cpm": 101.9
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 9.3,
+          "rank": 1,
+          "sec": 4.12,
+          "cpm": 101.9
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 280.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 280.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_017",
+      "category": "skeleton_input",
+      "context": "被災地の皆様に心から",
+      "input": "おみまいをもうしあげます",
+      "target": "お見舞いを申し上げます",
+      "chars": 11,
+      "stages": {
+        "S0_baseline": {
+          "keys": 12.3,
+          "rank": 1,
+          "sec": 5.32,
+          "cpm": 124.1
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 12.3,
+          "rank": 1,
+          "sec": 5.32,
+          "cpm": 124.1
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_018",
+      "category": "skeleton_input",
+      "context": "新規事業の立ち上げに向けて、",
+      "input": "あたらしいていあんをさくせいします",
+      "target": "新しい提案を作成します",
+      "chars": 11,
+      "stages": {
+        "S0_baseline": {
+          "keys": 17.0,
+          "rank": 1,
+          "sec": 7.2,
+          "cpm": 91.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 17.0,
+          "rank": 1,
+          "sec": 7.2,
+          "cpm": 91.7
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 440.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 550.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_019",
+      "category": "skeleton_input",
+      "context": "次回の定例ミーティングの",
+      "input": "よていをきめましょう",
+      "target": "予定を決めましょう",
+      "chars": 9,
+      "stages": {
+        "S0_baseline": {
+          "keys": 10.0,
+          "rank": 1,
+          "sec": 4.4,
+          "cpm": 122.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 10.0,
+          "rank": 1,
+          "sec": 4.4,
+          "cpm": 122.7
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 360.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 360.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 450.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 450.0
+        }
+      }
+    },
+    {
+      "id": "c3_sk_020",
+      "category": "skeleton_input",
+      "context": "厳正な書類選考を行い、",
+      "input": "しんさけっかをつうちします",
+      "target": "審査結果を通知します",
+      "chars": 10,
+      "stages": {
+        "S0_baseline": {
+          "keys": 13.0,
+          "rank": 1,
+          "sec": 5.6,
+          "cpm": 107.1
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 13.0,
+          "rank": 1,
+          "sec": 5.6,
+          "cpm": 107.1
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 400.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 500.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_001",
+      "category": "next_phrase_collocation",
+      "context": "重要な公式の契約書に",
+      "input": "なついんする",
+      "target": "捺印する",
+      "chars": 4,
+      "stages": {
+        "S0_baseline": {
+          "keys": 6.0,
+          "rank": 1,
+          "sec": 2.8,
+          "cpm": 85.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 342.9
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 600.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 600.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_002",
+      "category": "next_phrase_collocation",
+      "context": "システム障害の根本的な",
+      "input": "げんいんをきゅうめいする",
+      "target": "原因を究明する",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 12.3,
+          "rank": 1,
+          "sec": 5.32,
+          "cpm": 78.9
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 12.3,
+          "rank": 1,
+          "sec": 5.32,
+          "cpm": 78.9
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 259.3
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 600.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 1050.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 1050.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_003",
+      "category": "next_phrase_collocation",
+      "context": "来期発売予定の新商品の",
+      "input": "きかくしょをさくせいする",
+      "target": "企画書を作成する",
+      "chars": 8,
+      "stages": {
+        "S0_baseline": {
+          "keys": 12.0,
+          "rank": 1,
+          "sec": 5.2,
+          "cpm": 92.3
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 12.0,
+          "rank": 1,
+          "sec": 5.2,
+          "cpm": 92.3
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 320.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 685.7
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 1200.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 1200.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_004",
+      "category": "next_phrase_collocation",
+      "context": "セキュリティ監査で発見された",
+      "input": "ぜいじゃくせいをしゅうせいする",
+      "target": "脆弱性を修正する",
+      "chars": 8,
+      "stages": {
+        "S0_baseline": {
+          "keys": 15.6,
+          "rank": 1,
+          "sec": 6.64,
+          "cpm": 72.3
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 15.6,
+          "rank": 1,
+          "sec": 6.64,
+          "cpm": 72.3
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 296.3
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 685.7
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 1200.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 1200.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_005",
+      "category": "next_phrase_collocation",
+      "context": "過去３年間の売上データを",
+      "input": "ぶんせきしたけっか",
+      "target": "分析した結果",
+      "chars": 6,
+      "stages": {
+        "S0_baseline": {
+          "keys": 9.3,
+          "rank": 1,
+          "sec": 4.12,
+          "cpm": 87.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 9.3,
+          "rank": 1,
+          "sec": 4.12,
+          "cpm": 87.4
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 222.2
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 514.3
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 900.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 900.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_006",
+      "category": "next_phrase_collocation",
+      "context": "海外市場への新規",
+      "input": "しんしゅつをはかる",
+      "target": "進出を図る",
+      "chars": 5,
+      "stages": {
+        "S0_baseline": {
+          "keys": 9.0,
+          "rank": 1,
+          "sec": 4.0,
+          "cpm": 75.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 9.0,
+          "rank": 1,
+          "sec": 4.0,
+          "cpm": 75.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 200.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 272.7
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 375.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 375.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_007",
+      "category": "next_phrase_collocation",
+      "context": "専門家の意見を広く",
+      "input": "とりいれる",
+      "target": "取り入れる",
+      "chars": 5,
+      "stages": {
+        "S0_baseline": {
+          "keys": 5.0,
+          "rank": 1,
+          "sec": 2.4,
+          "cpm": 125.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 5.0,
+          "rank": 1,
+          "sec": 2.4,
+          "cpm": 125.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 200.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 1.0,
+          "rank": 2,
+          "sec": 1.1,
+          "cpm": 272.7
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 375.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 1.0,
+          "rank": 1,
+          "sec": 0.8,
+          "cpm": 375.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_008",
+      "category": "next_phrase_collocation",
+      "context": "周囲の期待にしっかりと",
+      "input": "こたえる",
+      "target": "応える",
+      "chars": 3,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 1,
+          "sec": 2.0,
+          "cpm": 90.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 257.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 450.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 450.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_009",
+      "category": "next_phrase_collocation",
+      "context": "困難な課題に正面から",
+      "input": "たちむかう",
+      "target": "立ち向かう",
+      "chars": 5,
+      "stages": {
+        "S0_baseline": {
+          "keys": 5.0,
+          "rank": 1,
+          "sec": 2.4,
+          "cpm": 125.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 5.0,
+          "rank": 1,
+          "sec": 2.4,
+          "cpm": 125.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 200.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 428.6
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 750.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 750.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_010",
+      "category": "next_phrase_collocation",
+      "context": "お客様の信頼を第一に",
+      "input": "かんがえる",
+      "target": "考える",
+      "chars": 3,
+      "stages": {
+        "S0_baseline": {
+          "keys": 5.3,
+          "rank": 1,
+          "sec": 2.52,
+          "cpm": 71.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 257.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 450.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 450.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_011",
+      "category": "next_phrase_collocation",
+      "context": "環境保護に対する高い",
+      "input": "いしきをもつ",
+      "target": "意識を持つ",
+      "chars": 5,
+      "stages": {
+        "S0_baseline": {
+          "keys": 6.0,
+          "rank": 1,
+          "sec": 2.8,
+          "cpm": 107.1
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 6.0,
+          "rank": 1,
+          "sec": 2.8,
+          "cpm": 107.1
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 200.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 428.6
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 750.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 750.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_012",
+      "category": "next_phrase_collocation",
+      "context": "最新の学術論文を丁寧に",
+      "input": "よみとく",
+      "target": "読み解く",
+      "chars": 4,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 1,
+          "sec": 2.0,
+          "cpm": 120.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 342.9
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 600.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 600.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_013",
+      "category": "next_phrase_collocation",
+      "context": "業務プロセスの効率化を",
+      "input": "すいしんする",
+      "target": "推進する",
+      "chars": 4,
+      "stages": {
+        "S0_baseline": {
+          "keys": 6.0,
+          "rank": 1,
+          "sec": 2.8,
+          "cpm": 85.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 342.9
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 600.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 600.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_014",
+      "category": "next_phrase_collocation",
+      "context": "急な天候の悪化に十分",
+      "input": "けいかいしてください",
+      "target": "警戒してください",
+      "chars": 8,
+      "stages": {
+        "S0_baseline": {
+          "keys": 10.3,
+          "rank": 1,
+          "sec": 4.52,
+          "cpm": 106.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 10.3,
+          "rank": 1,
+          "sec": 4.52,
+          "cpm": 106.2
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 320.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 685.7
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 1200.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 1200.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_015",
+      "category": "next_phrase_collocation",
+      "context": "社会秩序を乱す行為を厳しく",
+      "input": "とりしまる",
+      "target": "取り締まる",
+      "chars": 5,
+      "stages": {
+        "S0_baseline": {
+          "keys": 5.0,
+          "rank": 1,
+          "sec": 2.4,
+          "cpm": 125.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 5.0,
+          "rank": 1,
+          "sec": 2.4,
+          "cpm": 125.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 200.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 428.6
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 750.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 750.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_016",
+      "category": "next_phrase_collocation",
+      "context": "予算の執行状況を厳密に",
+      "input": "かんりする",
+      "target": "管理する",
+      "chars": 4,
+      "stages": {
+        "S0_baseline": {
+          "keys": 5.0,
+          "rank": 1,
+          "sec": 2.4,
+          "cpm": 100.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 342.9
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 600.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 600.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_017",
+      "category": "next_phrase_collocation",
+      "context": "チーム全員の意見を柔軟に",
+      "input": "はんえいさせる",
+      "target": "反映させる",
+      "chars": 5,
+      "stages": {
+        "S0_baseline": {
+          "keys": 7.0,
+          "rank": 1,
+          "sec": 3.2,
+          "cpm": 93.8
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 7.0,
+          "rank": 1,
+          "sec": 3.2,
+          "cpm": 93.8
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 200.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 428.6
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 750.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 750.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_018",
+      "category": "next_phrase_collocation",
+      "context": "新サービスの利用者数を着実に",
+      "input": "のばす",
+      "target": "伸ばす",
+      "chars": 3,
+      "stages": {
+        "S0_baseline": {
+          "keys": 3.3,
+          "rank": 1,
+          "sec": 1.72,
+          "cpm": 104.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 111.1
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 111.1
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 257.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 450.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 450.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_019",
+      "category": "next_phrase_collocation",
+      "context": "歴史ある伝統の味を大切に",
+      "input": "うけつぐ",
+      "target": "受け継ぐ",
+      "chars": 4,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.3,
+          "rank": 1,
+          "sec": 2.12,
+          "cpm": 113.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 342.9
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 600.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 600.0
+        }
+      }
+    },
+    {
+      "id": "c4_np_020",
+      "category": "next_phrase_collocation",
+      "context": "将来のリスクを最小限に",
+      "input": "おさえる",
+      "target": "抑える",
+      "chars": 3,
+      "stages": {
+        "S0_baseline": {
+          "keys": 4.0,
+          "rank": 1,
+          "sec": 2.0,
+          "cpm": 90.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 120.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 0.0,
+          "rank": 2,
+          "sec": 0.7,
+          "cpm": 257.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 450.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 0.0,
+          "rank": 1,
+          "sec": 0.4,
+          "cpm": 450.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_001",
+      "category": "seion_turbo",
+      "context": "来年度の第４四半期は",
+      "input": "じゅうがつから",
+      "target": "十月から",
+      "chars": 4,
+      "stages": {
+        "S0_baseline": {
+          "keys": 7.6,
+          "rank": 2,
+          "sec": 3.74,
+          "cpm": 64.2
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 7.6,
+          "rank": 1,
+          "sec": 3.44,
+          "cpm": 69.8
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 148.1
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 148.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 181.8
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 200.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_002",
+      "category": "seion_turbo",
+      "context": "水産市場で新鮮な",
+      "input": "ぎょかいるいの",
+      "target": "魚介類の",
+      "chars": 4,
+      "stages": {
+        "S0_baseline": {
+          "keys": 7.3,
+          "rank": 2,
+          "sec": 3.62,
+          "cpm": 66.3
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 7.3,
+          "rank": 1,
+          "sec": 3.32,
+          "cpm": 72.3
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 148.1
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 148.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 181.8
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 200.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_003",
+      "category": "seion_turbo",
+      "context": "太陽系に属する",
+      "input": "ちきゅうじょうの",
+      "target": "地球上の",
+      "chars": 4,
+      "stages": {
+        "S0_baseline": {
+          "keys": 8.3,
+          "rank": 2,
+          "sec": 4.02,
+          "cpm": 59.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 8.3,
+          "rank": 1,
+          "sec": 3.72,
+          "cpm": 64.5
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 160.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 200.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 200.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_004",
+      "category": "seion_turbo",
+      "context": "フライパンの表面に黒い",
+      "input": "こげなどが",
+      "target": "焦げなどが",
+      "chars": 5,
+      "stages": {
+        "S0_baseline": {
+          "keys": 5.9,
+          "rank": 2,
+          "sec": 3.06,
+          "cpm": 98.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 185.2
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 185.2
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 185.2
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 227.3
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 250.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_005",
+      "category": "seion_turbo",
+      "context": "急な腹痛で救急",
+      "input": "びょういんでくすりを",
+      "target": "病院で薬を",
+      "chars": 5,
+      "stages": {
+        "S0_baseline": {
+          "keys": 10.6,
+          "rank": 2,
+          "sec": 4.94,
+          "cpm": 60.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 10.6,
+          "rank": 1,
+          "sec": 4.64,
+          "cpm": 64.7
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 185.2
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 185.2
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 227.3
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 250.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_006",
+      "category": "seion_turbo",
+      "context": "役員室で行われる重要な",
+      "input": "かいぎにさんかする",
+      "target": "会議に参加する",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 9.3,
+          "rank": 2,
+          "sec": 4.42,
+          "cpm": 95.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 9.3,
+          "rank": 1,
+          "sec": 4.12,
+          "cpm": 101.9
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 280.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 280.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_007",
+      "category": "seion_turbo",
+      "context": "この会議室は現在",
+      "input": "しようちゅうですので",
+      "target": "使用中ですので",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 10.6,
+          "rank": 2,
+          "sec": 4.94,
+          "cpm": 85.0
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 10.6,
+          "rank": 1,
+          "sec": 4.64,
+          "cpm": 90.5
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 280.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 280.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_008",
+      "category": "seion_turbo",
+      "context": "雨の日の濡れた",
+      "input": "どうろがすべる",
+      "target": "道路が滑る",
+      "chars": 5,
+      "stages": {
+        "S0_baseline": {
+          "keys": 7.9,
+          "rank": 2,
+          "sec": 3.86,
+          "cpm": 77.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 7.9,
+          "rank": 1,
+          "sec": 3.56,
+          "cpm": 84.3
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 185.2
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 185.2
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 227.3
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 250.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_009",
+      "category": "seion_turbo",
+      "context": "厳しい寒さで体が",
+      "input": "こごえてしまう",
+      "target": "凍えてしまう",
+      "chars": 6,
+      "stages": {
+        "S0_baseline": {
+          "keys": 7.3,
+          "rank": 2,
+          "sec": 3.62,
+          "cpm": 99.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 7.3,
+          "rank": 1,
+          "sec": 3.32,
+          "cpm": 108.4
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 222.2
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 222.2
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 272.7
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 300.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_010",
+      "category": "seion_turbo",
+      "context": "美しい満天の",
+      "input": "よぞらをみあげる",
+      "target": "夜空を見上げる",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 8.6,
+          "rank": 2,
+          "sec": 4.14,
+          "cpm": 101.4
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 8.6,
+          "rank": 1,
+          "sec": 3.84,
+          "cpm": 109.4
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 259.3
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 259.3
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 318.2
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_011",
+      "category": "seion_turbo",
+      "context": "書類の重要事項を赤ペンで",
+      "input": "じゅうてんてきに",
+      "target": "重点的に",
+      "chars": 4,
+      "stages": {
+        "S0_baseline": {
+          "keys": 8.3,
+          "rank": 2,
+          "sec": 4.02,
+          "cpm": 59.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 8.3,
+          "rank": 1,
+          "sec": 3.72,
+          "cpm": 64.5
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 148.1
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 148.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 181.8
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 200.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_012",
+      "category": "seion_turbo",
+      "context": "冷えたミネラルウォーターをコップで",
+      "input": "ごくごくとのむ",
+      "target": "ゴクゴクと飲む",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 7.6,
+          "rank": 2,
+          "sec": 3.74,
+          "cpm": 112.3
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 7.6,
+          "rank": 1,
+          "sec": 3.44,
+          "cpm": 122.1
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 259.3
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 259.3
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 318.2
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_013",
+      "category": "seion_turbo",
+      "context": "週末のキャンプ場をネットで",
+      "input": "よやくしておいた",
+      "target": "予約しておいた",
+      "chars": 7,
+      "stages": {
+        "S0_baseline": {
+          "keys": 8.0,
+          "rank": 2,
+          "sec": 3.9,
+          "cpm": 107.7
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 8.0,
+          "rank": 1,
+          "sec": 3.6,
+          "cpm": 116.7
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 280.0
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.0,
+          "rank": 2,
+          "sec": 1.5,
+          "cpm": 280.0
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 350.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_014",
+      "category": "seion_turbo",
+      "context": "急な坂道を自転車で",
+      "input": "のぼりきる",
+      "target": "登り切る",
+      "chars": 4,
+      "stages": {
+        "S0_baseline": {
+          "keys": 5.3,
+          "rank": 2,
+          "sec": 2.82,
+          "cpm": 85.1
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 148.1
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 148.1
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 148.1
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 181.8
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 200.0
+        }
+      }
+    },
+    {
+      "id": "c5_st_015",
+      "category": "seion_turbo",
+      "context": "毎朝のラジオ体操で体を",
+      "input": "ほぐしていく",
+      "target": "ほぐしていく",
+      "chars": 6,
+      "stages": {
+        "S0_baseline": {
+          "keys": 6.3,
+          "rank": 2,
+          "sec": 3.22,
+          "cpm": 111.8
+        },
+        "S1_trie_and_utility_rerank": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 222.2
+        },
+        "S2_dynamic_tail_rollout": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 222.2
+        },
+        "S3_slm_zero_and_1mora": {
+          "keys": 2.3,
+          "rank": 2,
+          "sec": 1.62,
+          "cpm": 222.2
+        },
+        "S4_slot1_promotion_standard": {
+          "keys": 2.3,
+          "rank": 1,
+          "sec": 1.32,
+          "cpm": 272.7
+        },
+        "S4_plus_fuzzy_voicing": {
+          "keys": 2.0,
+          "rank": 1,
+          "sec": 1.2,
+          "cpm": 300.0
+        }
+      }
+    }
+  ]
+}
