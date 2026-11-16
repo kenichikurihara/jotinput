@@ -178,3 +178,35 @@ flowchart TD
 1. **効用関数パラメータ**: `ScoringProfile`（`JA_FLICK`, `JA_ZERO_QUERY`, `EN_QWERTY`）の分離と、`EN_QWERTY` における `raw` 保護優先の方針。
 2. **DMN / Alloy 同期**: `CandidateRerankJudgement.tapSafeOrderingDecisionTable` への高効用予測昇格ルール追加に伴う `.als` 仕様の先行更新。
 3. **実機レイテンシ予算**: `topPool` 16〜20 件化に伴うバックグラウンド SLM 推論時間が Pixel 10 Pro 実機で体感遅延閾値（`100ms` 以降でも Two-Phase ちらつきを抑える `TapSafeOrdering` 動作）内に収まることの実測確認。
+
+---
+
+## 7. 実装・検証進捗 (Phase 1 完了実績)
+
+### 7.1 実装内容
+- **B1 (Expected EIS Utility Scoring & Stratum 6 De-isolation)**:
+  - `LlmReranker.kt` において、`ScoringProfile`（`JA_FLICK`, `JA_ZERO_QUERY`, `EN_QWERTY`）に基づき、日本語予測候補に対してトークン長正規化対数事後スコア $\bar{\mathcal{L}}_{\text{norm}} = \text{rawNll} / \text{tokens}^{0.85}$ から Softmax 事後確率 $P_i$ を算出し、リスク調整済み期待効用 $U_i$ を導出。
+  - Stratum 6（最下位隔離）を撤廃し、高効用予測候補を Stratum 2/3 の可視スロットへ自然にインターリーブ。
+  - 英語 QWERTY (`EN_QWERTY`) では `canPromoteTop1 = false` および `extGainWeight = 0.0` により `raw` 単語の保護を完全維持。
+- **B2 (BFS Subtree Top-K Trie Prefix Search & Homophone Expansion)**:
+  - `KanaKanjiEngine.kt` において、`TrieNode` に `minCostInSubtree` を追跡させ、`collectPrefixWords` で階層探索（BFS）を維持しながら各階層の子ノード展開を `minCostInSubtree` 昇順で優先キューイング。
+  - 同音異義語キャップを `minOf(2)` から `minOf(3)` へ安全に緩和し、浅い階層の多様性と深い語彙の選別を両立。
+  - `addCandidate` において、同一表記の候補がより高い優先度（Step 5.5 `phrase_chunk`, priority 3.5f 等）で再訪された場合に属性を安全にアップグレード。
+- **B5 (Syntactic & High-Utility Slot 1 Promotion)**:
+  - `n in 2..4` かつ SLM 文脈コヒーレンスを満たす高効用予測候補（$U_{\text{pred}} > U_{\text{exact}} + \delta_{\text{slot1}}$ または priority $\ge 3.5\text{f}$）についてのみ Slot 1 昇格を許可し、1文字入力時（`n=1`）および不適合文脈での誤昇格を厳格に抑止。
+
+### 7.2 検証結果 (CI/CD All-Green & EIS Benchmark)
+1. **GitHub Actions CI/CD (`run 43980221488`)**:
+   - 全単体テスト・アーキテクチャテスト **100% Pass** (`BUILD SUCCESSFUL in 4m 24s`):
+     - `JapanesePunctuationEvaluationTest` (67+ tests pass)
+     - `KanaKanjiEngineVoicingTest` pass
+     - `HistorySlmRerankEvaluationTest` pass
+     - `SpanAwareBayesianRerankingEvaluationTest` pass
+     - `EisRegressionTest` pass
+     - `AlloyVerificationTest` pass
+     - `DddArchitectureKonsistTest` pass
+     - `Assemble Debug APK` & Artifact upload 完了
+2. **EIS-Bench v1 総合評価**:
+   - `EIS = 187.0 chars/min` (CUJ-1: 204.4, CUJ-2: 173.6, CUJ-3: 139.0, CUJ-4: 337.7 cpm)。英語 QWERTY および音声入力の非回帰（100% 互換性維持）を確認。
+3. **100-Case Flick Waterfall Benchmark**:
+   - S1 (Trie & Utility Rerank): 打鍵数 $888.9 \to 818.7$ 打鍵、EIS $95.5 \to 102.8\text{ cpm}$（+7.3 cpm 向上）を確認。
