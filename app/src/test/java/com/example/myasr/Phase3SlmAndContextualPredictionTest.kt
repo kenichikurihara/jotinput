@@ -1,10 +1,10 @@
 package com.example.myasr
 
 import com.example.myasr.context.kanakanji.domain.ConversionCandidate
-import com.example.myasr.context.kanakanji.domain.DictionaryEntry
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
 import com.example.myasr.context.kanakanji.domain.NextPhrasePredictor
-import com.example.myasr.context.kanakanji.domain.Priority
+import com.example.myasr.context.vocabulary.domain.DictionaryEntry
+import com.example.myasr.context.vocabulary.domain.Priority
 import com.example.myasr.context.reranking.infrastructure.LlmReranker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
