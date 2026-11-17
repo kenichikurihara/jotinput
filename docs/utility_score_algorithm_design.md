@@ -271,26 +271,31 @@ flowchart TD
 
 2. **B4-2: 1文字入力時の文脈プレフィックス予測の安全昇格 (`LlmReranker.kt` & `CandidateRerankJudgement.kt`)**:
    - `LlmReranker.canPromoteTop1` において、従来 `n in 2..4` に限定されていた Slot 1 昇格ゲートを `n in 2..4 || (n == 1 && priority >= 3.5f)` に拡張。
+   - 1文字入力時（`n == 1`）の Slot-1 昇格は、1文字格助詞（`を`, `に`, `が`, `は`）や単漢字入力の確実な保護のため、通常の履歴予測（`priority < 3.5f`）では Slot-1 への誤昇格を厳格に抑止し、`context_collocation` や高優先度辞書単語（`priority >= 3.5f`）に限定。
+   - `n == 1` において履歴候補（`historyCount >= 2`）が存在する場合でも、高優先度連語（`priority >= 3.5f`）をシャドウイング（隠蔽）せず確実に Slot 1 に選出する優先度解決を実装。また `rankedFull` が空の場合（0文字予測等）の予測候補ドロップを物理的に防止。
    - `CandidateRerankJudgement` の DMN 決定ルール `TAP_SAFE_R4` においても、1文字入力時（`reading.length == 1`）に高優先度の文脈連語（`source == "context_collocation"` または `priority >= 3.5f`）が Top-1 に昇格した場合は、ユーザー非タッチ時にピン留めせず昇格を許可する安全ルールへ整合。Alloy 形式検証不変条件（`NeverPinsHighUtilityPredictionWhenNotTouching`）との完全一致を維持。
 
 3. **B6-1: SLM 文脈尤度ゲート付き観測ペナルティ減衰 (`LlmReranker.kt`)**:
-   - `scoreAndRankPool` および対数事後スコア算出（`logPostScores`）において、濁音・半濁音・小書き省略やフリック隣接タイポ（`obsPenalty > 0`）を持つ候補に対し、SLM 対数尤度マージン（`deltaNll = rawNll - bestPoolNll`）に応じた連続減衰関数を適用：
+   - `scoreAndRankPool` および対数事後スコア算出（`logPostScores`）において、日本語入力プール（`!isEnglishPool`）の濁音・半濁音・小書き省略やフリック隣接タイポ（`obsPenalty > 0`）を持つ候補に対し、SLM 対数尤度マージン（`deltaNll = rawNll - bestPoolNll`）に応じた連続減衰関数を適用：
      $$\text{obsDiscount} = 0.20 + 0.80 \times \text{clamp}\left(\frac{\Delta\text{Nll} - 1.5}{3.0}, 0.0, 1.0\right)$$
    - 文脈上極めて自然（$\Delta\text{Nll} \le 1.5$）な場合は観測ペナルティを最大 80% 減衰させ、文脈上不自然（$\Delta\text{Nll} \ge 4.5$）な場合はペナルティを 100% 維持。手動コスト改変に頼らず、言語モデルの自然な予測力によって清音・タイポ入力を Rank 1 に浮上させる数理構造を実現。
+   - **英語 QWERTY プールの厳格保護**: `obsDiscount` は日本語入力プール（`!isEnglishPool`）に限定して適用。英語 QWERTY 入力プール（`isEnglishPool == true`）では空間タイポペナルティ（`obsPenalty`）の減衰を抑止し、短縮語や稀頻度な生の英単語（`raw` candidates）が意図せずタイポ候補に上書きされるリスクを物理的に防止。
 
 4. **B6-2: ユーザー辞書エンティティからの動的複文節テイル展開 (`KanaKanjiEngine.kt`)**:
    - `synthesizeDynamicMultiBunsetsuChunks` の語幹探索対象に `userMatches`（ユーザー登録単語、例: `中村`）を統合（`exactWords = userMatches + otherExact`）。
    - Stratum 0（登録語そのものの完全一致最優先保護）を 100% 堅持した上で、ユーザー登録語に対しても動的体言テイル（`中村です`, `中村でした`, `中村ですので`）を候補バーに提示可能に拡張。
 
 5. **体系的単体テスト配備 (`Phase3SlmAndContextualPredictionTest.kt` & `CandidateRerankJudgementTest.kt`)**:
-   - 0文字全文脈フォールバック予測、格助詞サフィックス解決、1文字文脈連語昇格、SLM 文脈尤度ゲート観測ペナルティ減衰、およびユーザー辞書エンティティ動的テイル展開を検証する単体テストを配備。
+   - 0文字全文脈フォールバック予測、格助詞サフィックス解決、1文字文脈連語昇格、1文字入力時高優先度候補シャドウイング防止、0文字予測効用順序保存、英語プール観測ペナルティ保護、SLM 文脈尤度ゲート観測ペナルティ減衰、およびユーザー辞書エンティティ動的テイル展開を検証する単体テストを配備。
 
 ### 9.2 Phase 3 検証結果
 1. **EIS-Bench v1 総合評価**:
    - `EIS = 187.0 chars/min` (CUJ-1: 204.4, CUJ-2: 173.6, CUJ-3: 139.0, CUJ-4: 337.7 cpm)。全 CUJ の完全非回帰・後方互換性を確認。
-2. **100-Case Flick Waterfall Benchmark**:
+2. **100-Case Flick Waterfall Benchmark (Python 分析モデル)**:
    - S3 (+B4 全文脈 0/1文字予測): $149.2\text{ keys} / 129.7\text{s}$ (EIS $298.9\text{ cpm}$, 3.13x)
    - S4 (+B5/B6 昇格 & ファジー減衰): $145.9\text{ keys} / 98.4\text{s}$ (EIS $394.1\text{ cpm}$, 4.13x)
+   - *注*: S3 (298.9 cpm) および S4 (394.1 cpm) は Python 分析シミュレータ (`evaluate_predictive_conversion_breakthroughs_100.py`) によるウォーターフォール理論上限値推計（分析モデル）であり、EIS-Bench v1 実測値とは算出モデルおよび文脈セッション構造が異なる。
+
 
 
 

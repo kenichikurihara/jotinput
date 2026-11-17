@@ -259,7 +259,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     rawBaseNll
                 }
 
-                val obsDiscount = if (candidate.obsPenalty > 0f) {
+                val obsDiscount = if (!isEnglishPool && candidate.obsPenalty > 0f) {
                     val deltaNll = rawNll - bestPoolNll
                     0.20f + 0.80f * ((deltaNll - 1.5f) / 3.0f).coerceIn(0.0f, 1.0f)
                 } else {
@@ -442,6 +442,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             }
             val rankedExt = rankedExtIndices.map { topPool[it] }
+            val topHighPriIdx = rankedExtIndices.firstOrNull { topPool[it].priority >= 3.5f }
             val topHistPredIdx = rankedExtIndices.firstOrNull {
                 topPool[it].historyCount >= 2 || topPool[it].source == "history_bigram"
             }
@@ -468,18 +469,23 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             // Stratum 1: Top full candidates + Prediction / History Promotion (Slot-2 / Conditional Top-1)
             var fullIdx = 0
             var partialIdx = 0
-            val candidateToPromote = topHistPredIdx ?: bestExtIdx?.takeIf { extIdx ->
-                if (rankedFull.isNotEmpty()) {
-                    val topFullIdx = topPool.indexOf(rankedFull[0])
-                    topFullIdx >= 0 && (
-                        utilities[extIdx] > utilities[topFullIdx] + slot1MarginSec ||
-                        topPool[extIdx].priority >= 3.5f
-                    )
+            val candidateToPromote = if (rankedFull.isNotEmpty() && n > 0) {
+                if (n == 1) {
+                    topHighPriIdx ?: topHistPredIdx
                 } else {
-                    true
+                    topHighPriIdx ?: topHistPredIdx ?: bestExtIdx?.takeIf { extIdx ->
+                        val topFullIdx = topPool.indexOf(rankedFull[0])
+                        topFullIdx >= 0 && (
+                            utilities[extIdx] > utilities[topFullIdx] + slot1MarginSec ||
+                            topPool[extIdx].priority >= 3.5f
+                        )
+                    }
                 }
+            } else {
+                null
             }
 
+            var promotedCandidateSurface: String? = null
             if (candidateToPromote != null && rankedFull.isNotEmpty() && n > 0) {
                 val topFullIdx = topPool.indexOf(rankedFull[0])
                 val isStrictCoherent = topFullIdx >= 0 && (scores[candidateToPromote] - scores[topFullIdx] < 5.0f || topPool[candidateToPromote].priority >= 3.5f)
@@ -489,11 +495,15 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     (candidateToPromote == topHistPredIdx && baseScores[candidateToPromote] < baseScores[topFullIdx] - 0.50f)
                 )
                 if (canPromoteTop1) {
-                    addCandidate(topPool[candidateToPromote])
+                    val cand = topPool[candidateToPromote]
+                    promotedCandidateSurface = cand.surface
+                    addCandidate(cand)
                     addCandidate(rankedFull[fullIdx++])
                 } else if (candidateToPromote == topHistPredIdx) {
+                    val cand = topPool[candidateToPromote]
+                    promotedCandidateSurface = cand.surface
                     addCandidate(rankedFull[fullIdx++])
-                    addCandidate(topPool[candidateToPromote])
+                    addCandidate(cand)
                 } else {
                     addCandidate(rankedFull[fullIdx++])
                 }
@@ -504,7 +514,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 addCandidate(rankedFull[fullIdx++])
             }
             // Interleave remaining high-utility prediction candidate into Stratum 2/3 (B1: Eliminates Stratum 6 burial)
-            val remainingExt = rankedExt.filter { it.surface != topPool.getOrNull(candidateToPromote ?: -1)?.surface }
+            val remainingExt = rankedExt.filter { it.surface != promotedCandidateSurface }
             var remExtIdx = 0
             if (remExtIdx < remainingExt.size && !isEnglishPool && (remainingExt[remExtIdx].priority >= 3.0f || utilities[topPool.indexOf(remainingExt[remExtIdx])] > 0.0f)) {
                 addCandidate(remainingExt[remExtIdx++])

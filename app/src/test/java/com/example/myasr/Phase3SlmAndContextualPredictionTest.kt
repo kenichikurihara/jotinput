@@ -169,4 +169,146 @@ class Phase3SlmAndContextualPredictionTest {
         val hasTailRollout = surfaces.any { it.startsWith("中村") && it != "中村" }
         assertTrue("User dictionary entity '中村' should synthesize multi-bunsetsu tail (e.g. 中村です), was: ${surfaces.take(6)}", hasTailRollout)
     }
+
+    @Test
+    fun testEnglishPoolDoesNotApplyObsPenaltyDiscount() {
+        // In English QWERTY pool, raw candidate must NOT be overwritten by typo candidate
+        // despite lower typo NLL, because obsDiscount is guarded with !isEnglishPool.
+        val rawCandidate = ConversionCandidate(
+            surface = "thr",
+            reading = "thr",
+            isPrediction = false,
+            source = "english_raw",
+            obsPenalty = 0.0f
+        )
+        val typoCandidate = ConversionCandidate(
+            surface = "the",
+            reading = "thr",
+            isPrediction = false,
+            source = "english_typo",
+            obsPenalty = 1.0f
+        )
+        val pool = listOf(rawCandidate, typoCandidate)
+        // typoCandidate has lower NLL (1.0f vs 5.0f)
+        val scores = floatArrayOf(5.0f, 1.0f)
+
+        val ranked = LlmReranker.Companion.scoreAndRankPool(
+            topPool = pool,
+            scores = scores,
+            currentShownTop1 = null,
+            weightAlpha = 0.0f,
+            lambdaObs = 1.0f,
+            gammaUser = 0.5f,
+            targetInputLength = 3,
+            isEnglishPool = true
+        )
+
+        assertTrue(ranked.isNotEmpty())
+        assertEquals(
+            "Raw English candidate must rank #1 over typo candidate because obsPenalty is not discounted in English pool",
+            "thr",
+            ranked.first().surface
+        )
+    }
+
+    @Test
+    fun testOneMoraHighPriorityCollocationNotShadowedByHistory() {
+        // At n = 1:
+        // - A full candidate (exact 1-char match, e.g. "そ")
+        // - An ordinary history prediction (historyCount = 3, priority = 0.0f, e.g. "そうですね")
+        // - A high-priority context collocation (priority = 5.0f, source = "context_collocation", e.g. "送信")
+        val fullCand = ConversionCandidate(
+            surface = "そ",
+            reading = "そ",
+            isPrediction = false,
+            consumedYomiLength = 1,
+            source = "dict"
+        )
+        val histPred = ConversionCandidate(
+            surface = "そうですね",
+            reading = "そうですね",
+            isPrediction = true,
+            consumedYomiLength = 5,
+            historyCount = 3,
+            priority = 0.0f,
+            source = "history"
+        )
+        val collocPred = ConversionCandidate(
+            surface = "送信",
+            reading = "そうしん",
+            isPrediction = true,
+            consumedYomiLength = 4,
+            priority = 5.0f,
+            source = "context_collocation"
+        )
+        val pool = listOf(fullCand, histPred, collocPred)
+        val scores = floatArrayOf(4.0f, 3.5f, 2.0f)
+
+        val ranked = LlmReranker.Companion.scoreAndRankPool(
+            topPool = pool,
+            scores = scores,
+            currentShownTop1 = null,
+            weightAlpha = 0.0f,
+            lambdaObs = 1.0f,
+            gammaUser = 0.5f,
+            targetInputLength = 1,
+            isEnglishPool = false
+        )
+
+        assertTrue("Ranked candidates must not be empty", ranked.size >= 2)
+        assertEquals(
+            "High priority context collocation must promote to Slot 1 at n=1, not shadowed by history",
+            "送信",
+            ranked[0].surface
+        )
+        assertEquals(
+            "Slot 2 must be the exact full candidate",
+            "そ",
+            ranked[1].surface
+        )
+    }
+
+    @Test
+    fun testZeroQuerySlmUtilityRanking() {
+        // Zero-query prediction (n = 0): all candidates are predictive continuations
+        val candA = ConversionCandidate(
+            surface = "確認",
+            reading = "かくにん",
+            isPrediction = true,
+            consumedYomiLength = 4,
+            source = "slm"
+        )
+        val candB = ConversionCandidate(
+            surface = "お願いいたします",
+            reading = "おねがいいたします",
+            isPrediction = true,
+            consumedYomiLength = 9,
+            source = "slm"
+        )
+        val candC = ConversionCandidate(
+            surface = "ありがとうございます",
+            reading = "ありがとうございます",
+            isPrediction = true,
+            consumedYomiLength = 10,
+            source = "slm"
+        )
+        val pool = listOf(candA, candB, candC)
+        val scores = floatArrayOf(3.0f, 1.2f, 2.5f)
+
+        val ranked = LlmReranker.Companion.scoreAndRankPool(
+            topPool = pool,
+            scores = scores,
+            currentShownTop1 = null,
+            weightAlpha = 0.0f,
+            lambdaObs = 1.0f,
+            gammaUser = 0.5f,
+            targetInputLength = 0,
+            isEnglishPool = false
+        )
+
+        // All candidates must be preserved and ranked by utility (no dropped predictions)
+        assertEquals("All zero-query candidates must be preserved", pool.size, ranked.size)
+        // candB has the lowest NLL (1.2f) and high character length saving, so it should rank #1
+        assertEquals("Highest expected utility candidate must rank #1", "お願いいたします", ranked[0].surface)
+    }
 }
