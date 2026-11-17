@@ -272,21 +272,21 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 CollocationEntry("のところ", "のところ")
             ),
             "会議" to listOf(
+                CollocationEntry("に", "に"),
                 CollocationEntry("に参加します", "にさんかします"),
                 CollocationEntry("に参加する", "にさんかする"),
                 CollocationEntry("を始めます", "をはじめます"),
                 CollocationEntry("室を予約する", "しつをよやくする"),
                 CollocationEntry("の", "の"),
-                CollocationEntry("に", "に"),
                 CollocationEntry("は", "は"),
                 CollocationEntry("室", "しつ")
             ),
             "資料" to listOf(
+                CollocationEntry("を", "を"),
                 CollocationEntry("を送信しました", "をそうしんしました"),
                 CollocationEntry("を添付しました", "をてんぷしました"),
                 CollocationEntry("を確認する", "をかくにんする"),
                 CollocationEntry("を作成する", "をさくせいする"),
-                CollocationEntry("を", "を"),
                 CollocationEntry("の", "の"),
                 CollocationEntry("作成", "さくせい"),
                 CollocationEntry("確認", "かくにん")
