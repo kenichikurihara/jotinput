@@ -198,7 +198,7 @@ data class DictionaryStatusInfo(
 2. **既存インストール済み環境の自動マイグレーション（フォールバック）**:
    - `getLocalUpdatedAtMillis(sourceId)` 呼び出し時、対象辞書が導入済み（`wordCount > 0` または `isBaseDictionaryDownloaded() == true`）であるにもかかわらず `local_updated_ms_${sourceId}` が未記録（`0L`）の場合：
      - `base_dictionary`: `KanaKanjiEngine.getInstance(context).getBaseDictionaryFile().lastModified()` を取得して初期値として保存・返却する。
-     - 拡張辞書 (`DictionaryType`): `context.getDatabasePath(DictionaryDatabaseHelper.DATABASE_NAME).lastModified()` を取得して初期値として保存・返却する。
+     - 拡張辞書 (`DictionaryType`): 各 `dict_${type.id}.bin` の `lastModified()` を取得して初期値として保存・返却する。
    - これにより、アップデート前から利用しているユーザー環境でも即座に正確なローカル導入日が表示される。
 
 ---

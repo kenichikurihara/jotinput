@@ -153,7 +153,7 @@ DDD Crew の **Bounded Context Canvas** 形式に基づき、JotInput の全 8 �
 
 ### Tactical Building Blocks
 - **Aggregate Root / Entity**: `DictionaryEntry`
-- **Repository / Infrastructure**: `DictionaryRepository`, `DictionaryDatabaseHelper`
+- **Repository / Infrastructure**: `DictionaryRepository`
 - **Presentation**: `DictionaryAdapter`（+ `DictionaryActivity`）
 
 ---

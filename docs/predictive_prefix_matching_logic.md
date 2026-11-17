@@ -3,7 +3,7 @@
 ## 1. 概要
 入力途中の読み（例: `「ぱ」`）に対して、その読みから始まる語彙（例: `「パン」`（読み: `ぱん`）、`「パンダ」`、`「パンツ」`など、**入力文字数より長い読みを持つ単語**）が変換・予測候補（サジェスト）として提示される仕組みについての調査結果です。
 
-本アプリ（JotInput）では、[`KanaKanjiEngine.kt`](app/src/main/java/com/example/myasr/KanaKanjiEngine.kt) および [`DictionaryDatabaseHelper.kt`](app/src/main/java/com/example/myasr/DictionaryDatabaseHelper.kt) により、完全一致変換に続いて**二重のインフラ（SQLite multi-dictionary DB ＋ オンメモリ Trie 木）**を用いた前方一致（Prefix Search）探索が実行されています。
+本アプリ（JotInput）では、[`KanaKanjiEngine.kt`](app/src/main/java/com/example/myasr/KanaKanjiEngine.kt) により、完全一致変換に続いて**メモリマップドバイナリ辞書（MmapDictionary）＋ オンメモリ Trie 木**を用いた前方一致（Prefix Search）探索が実行されています（従来の SQLite 構成から Mmap 辞書バイナリへ移行・統合済み）。
 
 ---
 

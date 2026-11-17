@@ -194,11 +194,11 @@ The [`VoiceInputMethodService`](app/src/main/java/com/example/myasr/VoiceInputMe
 The [`KanaKanjiEngine`](app/src/main/java/com/example/myasr/KanaKanjiEngine.kt) provides high-performance, offline Japanese text conversion for touch typing (12-key Flick, QWERTY, and hardware keyboards).
 
 - **Dual-Layer Dictionary Storage**:
-  1. **Core In-Memory Trie**: Parsed from `mozc/base_dictionary.tsv` located in app storage (`getExternalFilesDir(null)/mozc/` or `filesDir/mozc/`), downloaded on demand by `BaseDictionaryDownloader` (or provisioned by `deploy.sh` from `tools/mozc_dict/`); a binary mmap `system_dictionary.bin` ([`MmapDictionary`](app/src/main/java/com/example/myasr/MmapDictionary.kt)) and `connection_data.bin` ([`ConnectionDataManager`](app/src/main/java/com/example/myasr/ConnectionDataManager.kt)) are used when present. Nothing is bundled in the APK; an assets path remains only as a legacy fallback. Provides instantaneous prefix and exact match lookups ($< 1\text{ ms}$).
-  2. **SQLite Multi-Dictionary Database ([`DictionaryDatabaseHelper`](app/src/main/java/com/example/myasr/DictionaryDatabaseHelper.kt))**: Houses extended vocabulary, Wikipedia terms, NEologd expressions, and regional names with indexed B-trees on `(reading, cost DESC)`. It provides rich vocabulary without polluting Java heap memory.
-  3. **User Custom Dictionary**: Synchronized directly into the root Trie with cost `10000` (absolute priority over system entries).
+  1. **Core In-Memory Trie**: Parsed from base dictionary, synchronized with user custom dictionary and connection matrix. Provides instantaneous prefix and exact match lookups ($< 1\text{ ms}$).
+  2. **Memory-Mapped (Mmap) Multi-Dictionaries (`MYASRDIC v1`)**: Houses extended vocabulary, SudachiDict, Wikipedia terms, regional names, and emojis compiled into zero-copy binary mmap files (`dict_*.bin`). It provides rich vocabulary and full Viterbi phrase lattice integration without polluting Java heap memory.
+  3. **User Custom Dictionary**: Persisted in `custom_dictionary.json` and synchronized directly into the root Trie with cost `10000` (absolute priority over system entries).
 - **Two-Stage Candidate Generation**:
-  - `getBaseCandidates(rawReading: String)`: Fast-path candidate generation that queries in-memory Trie + SQLite query cache, deriving Katakana, Hiragana, and half-width variants synchronously on the main thread in $< 1\text{ ms}$.
+  - `getBaseCandidates(rawReading: String)`: Fast-path candidate generation that queries in-memory Trie + Mmap candidate query cache, deriving Katakana, Hiragana, and half-width variants synchronously on the main thread in $< 1\text{ ms}$.
   - `rerankCandidates(contextPrefix: String, baseCandidates: List<ConversionCandidate>)`: Asynchronous contextual re-ranking that delegates to [`LlmReranker`](app/src/main/java/com/example/myasr/LlmReranker.kt) on background threads.
 
 ---

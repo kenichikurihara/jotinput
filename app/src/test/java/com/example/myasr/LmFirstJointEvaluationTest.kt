@@ -139,7 +139,7 @@ class LmFirstJointEvaluationTest {
         // "結果" is 1 token with NLL = 12.20
         // "欠課" is 2 tokens with sum NLL = 23.14
         val candKekka = ConversionCandidate(surface = "結果", reading = "けっか", source = "mmap")
-        val candKekkaAlt = ConversionCandidate(surface = "欠課", reading = "けっか", source = "sqlite")
+        val candKekkaAlt = ConversionCandidate(surface = "欠課", reading = "けっか", source = "mmap")
 
         val scoreKekka = scoreLmFirstCandidate(candKekka, rawNll = 12.20f, sysBestNll = 12.20f, rankIndex = 0)
         val scoreKekkaAlt = scoreLmFirstCandidate(candKekkaAlt, rawNll = 23.14f, sysBestNll = 12.20f, rankIndex = 1)

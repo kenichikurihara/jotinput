@@ -8,7 +8,6 @@ import com.example.myasr.context.reranking.domain.RerankEngineType
 import com.example.myasr.context.reranking.infrastructure.LlmReranker
 import com.example.myasr.context.vocabulary.domain.DictionaryEntry
 import com.example.myasr.context.vocabulary.domain.Priority
-import com.example.myasr.context.vocabulary.infrastructure.DictionaryDatabaseHelper
 
 import android.content.Context
 import android.util.Log
@@ -77,7 +76,6 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     private val queryCache = LinkedHashMap<String, List<ConversionCandidate>>(300, 0.75f, true)
     private val historyFile = context?.let { File(it.filesDir, "ime_history.json") }
     private val historyTimestampFile = context?.let { File(it.filesDir, "ime_history_timestamps.json") }
-    private val dbHelper = context?.let { DictionaryDatabaseHelper.getInstance(it) }
 
     private val ioScope = CoroutineScope(Dispatchers.IO)
     private var saveHistoryJob: Job? = null
@@ -599,7 +597,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     /**
-     * Fast-path candidate retrieval (in-memory Trie + SQLite query cache).
+     * Fast-path candidate retrieval (in-memory Trie + Mmap candidate query cache).
      * Safe to run synchronously on the UI thread (< 1ms).
      */
     @JvmOverloads
@@ -689,17 +687,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 addCandidate(numCand)
             }
 
-            // 2. Exact matches from SQLite multi-dictionary database
-            try {
-                val dbExact = dbHelper?.getExactMatches(normalized, limit = 50) ?: emptyList()
-                for (cand in dbExact) {
-                    addCandidate(cand)
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "DB exact query failed: ${e.message}")
-            }
-
-            // 3. Base in-memory Trie & MmapDictionary exact matches
+            // 2. Base in-memory Trie & MmapDictionary exact matches
             val mmapTokens = queryAllMmapExactTokens(normalized)
             for (tok in mmapTokens) {
                 addCandidate(ConversionCandidate(surface = tok.surface, reading = normalized, isPrediction = false, source = tok.source))
@@ -746,19 +734,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 for ((reading, entry, vDist) in voicedExactWords) {
                     addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = 1.2f * vDist))
                 }
-                // Query Mmap & SQLite exact matches for top voiced readings (up to 2 readings)
+                // Query Mmap exact matches for top voiced readings (up to 2 readings)
                 for (vPath in voicedPaths.take(2)) {
                     val mmapVoicedExact = queryAllMmapExactTokens(vPath.reading)
                     for (tok in mmapVoicedExact) {
                         addCandidate(ConversionCandidate(surface = tok.surface, reading = vPath.reading, isPrediction = true, source = tok.source, obsPenalty = 1.2f * vPath.voicingDistance))
-                    }
-                    try {
-                        val dbVoicedExact = dbHelper?.getExactMatches(vPath.reading, limit = 15) ?: emptyList()
-                        for (cand in dbVoicedExact) {
-                            addCandidate(ConversionCandidate(surface = cand.surface, reading = cand.reading, isPrediction = true, source = cand.source))
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "DB voiced exact query failed: ${e.message}")
                     }
                 }
             }
@@ -788,17 +768,6 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
                 for ((reading, entry, _) in voicedPrefixWords) {
                     addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source))
-                }
-                // Query SQLite prefix matches for top voiced readings (up to 2 readings)
-                for (vPath in voicedPaths.take(2)) {
-                    try {
-                        val dbVoicedPrefix = dbHelper?.getPrefixMatches(vPath.reading, limit = 15) ?: emptyList()
-                        for (cand in dbVoicedPrefix) {
-                            addCandidate(ConversionCandidate(surface = cand.surface, reading = cand.reading, isPrediction = true, source = cand.source))
-                        }
-                    } catch (e: Exception) {
-                        Log.w(TAG, "DB voiced prefix query failed: ${e.message}")
-                    }
                 }
             }
 
@@ -871,18 +840,10 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
 
-            // 5.2. Predictive prefix matches from Mmap dictionaries & SQLite
+            // 5.2. Predictive prefix matches from Mmap dictionaries
             val mmapPrefixes = queryAllMmapPrefixTokens(normalized, maxCount = 10)
             for (cand in mmapPrefixes) {
                 addCandidate(cand)
-            }
-            try {
-                val dbPrefix = dbHelper?.getPrefixMatches(normalized, limit = 5) ?: emptyList()
-                for (cand in dbPrefix) {
-                    addCandidate(cand)
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "DB prefix query failed: ${e.message}")
             }
 
             // 5.5 Compound Multi-Bunsetsu Chunk Prediction (B3: Dynamic Multi-Bunsetsu Tail Rollout)

@@ -198,7 +198,7 @@ class DictionaryUpdateTracker(private val context: Context) {
 
     /**
      * Returns the local installation/update timestamp for a dictionary.
-     * If the dictionary is already installed on disk/SQLite from before this tracker existed,
+     * If the dictionary is already installed on disk from before this tracker existed,
      * falls back to the file's lastModified() timestamp and persists it.
      */
     fun getLocalUpdatedAtMillis(sourceId: String, isInstalled: Boolean): Long {

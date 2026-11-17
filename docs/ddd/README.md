@@ -64,7 +64,7 @@ com.example.myasr
     │
     ├── vocabulary/                    # BC-5: Custom Vocabulary [Supporting]
     │   ├── domain/                    #   DictionaryEntry, VocabularyChangedEvent
-    │   ├── infrastructure/            #   DictionaryRepository, DictionaryDatabaseHelper
+    │   ├── infrastructure/            #   DictionaryRepository
     │   └── presentation/              #   DictionaryAdapter
     │
     ├── provisioning/                  # BC-6: Asset & Model Provisioning [Generic]

@@ -71,7 +71,7 @@
 | **BC-4: English Typing** | `context.english.domain` | `EnglishCapitalizationAnalyzer`, `EnglishDictionaryUtils`, `EnglishAssistJudgement` |
 | | `context.english.infrastructure` | `FutoSwipeEngine`, `EnglishSpellEngine` |
 | **BC-5: Custom Vocabulary** | `context.vocabulary.domain` | `DictionaryEntry` |
-| | `context.vocabulary.infrastructure` | `DictionaryRepository`, `DictionaryDatabaseHelper` |
+| | `context.vocabulary.infrastructure` | `DictionaryRepository` |
 | | `context.vocabulary.presentation` | `DictionaryAdapter` |
 | **BC-6: Provisioning** | `context.provisioning.domain` | `DictionaryUpdateTracker`, `ModelWarmUpManager` |
 | | `context.provisioning.infrastructure` | `ModelDownloader`, `BaseDictionaryDownloader`, `MultiDictionaryManager`, `ConnectionDataManager`, `FutoSwipeDownloader`, `EnglishSpellDownloader` |
