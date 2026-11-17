@@ -1120,7 +1120,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
         for (i in normalized.indices) {
             val originalChar = normalized[i]
-            val voicingExpansions = JapaneseKanaUtils.getVoicingExpansions(originalChar)
+            val voicingExpansions = JapaneseKanaUtils.getPhoneticModifierExpansions(originalChar)
             val flickExpansions = JapaneseKanaUtils.getFlickTypoExpansions(originalChar)
 
             val nextPaths = ArrayList<MatchedTrieNode>(currentPaths.size * (voicingExpansions.size + flickExpansions.size))

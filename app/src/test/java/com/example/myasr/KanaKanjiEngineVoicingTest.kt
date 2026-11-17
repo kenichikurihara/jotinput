@@ -56,6 +56,19 @@ class KanaKanjiEngineVoicingTest {
     }
 
     @Test
+    fun testPhoneticModifierExpansionsIntegrity() {
+        // Voiced & semi-voiced
+        assertEquals(listOf('か', 'が'), JapaneseKanaUtils.getPhoneticModifierExpansions('か'))
+        assertEquals(listOf('は', 'ば', 'ぱ'), JapaneseKanaUtils.getPhoneticModifierExpansions('は'))
+        // Small kana / youon / sokuon
+        assertEquals(listOf('よ', 'ょ'), JapaneseKanaUtils.getPhoneticModifierExpansions('よ'))
+        assertEquals(listOf('や', 'ゃ'), JapaneseKanaUtils.getPhoneticModifierExpansions('や'))
+        assertEquals(listOf('ゆ', 'ゅ'), JapaneseKanaUtils.getPhoneticModifierExpansions('ゆ'))
+        assertEquals(listOf('つ', 'づ', 'っ'), JapaneseKanaUtils.getPhoneticModifierExpansions('つ'))
+        assertEquals(listOf('う', 'ゔ', 'ぅ'), JapaneseKanaUtils.getPhoneticModifierExpansions('う'))
+    }
+
+    @Test
     fun testKaikiSuggestsKaigi() {
         // User inputs "かいき" (unvoiced); "会議" (かいぎ) must be suggested
         val candidates = engine.getBaseCandidates("かいき")
