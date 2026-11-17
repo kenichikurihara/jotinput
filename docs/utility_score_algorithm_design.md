@@ -220,25 +220,43 @@ flowchart TD
 
 ---
 
-## 8. 実装・検証進捗 (Phase 2 完了: B3 動的複文節テイル合成)
+## 8. 実装・検証進捗 (Phase 2 完了: B3 動的複文節テイル合成 & 耐過学習アーキテクチャ)
 
 ### 8.1 実装内容 (Phase 2: B3 Dynamic Multi-Bunsetsu Tail Rollout)
-1. **B3-1: 正統連語辞書の大幅拡充 & 語幹インデックス拡張 (`NextPhrasePredictor.kt`)**:
-   - 従来の 37 語幹制限を撤廃し、ビジネス・日常会話で頻出する多品詞の語幹と連語対（`電車` $\to$ `に乗る / に乗っています / が遅れている`、`資料` $\to$ `を送信しました / を添付しました / を確認する / を作成する`、`会議` $\to$ `に参加します / を始めます / 室を予約する`、`予定` $\to$ `を確認する / を決めましょう / を調整する`、`体調` $\to$ `が悪い / に気をつけて`、`お腹` $\to$ `が空いた / が痛い`、`風邪` $\to$ `をひいた`、`病院` $\to$ `に行く`、`天気` $\to$ `が良いですね / が良い`、`時間` $\to$ `がある / がない / に間に合う`、`調整` $\to$ `させていただきます`、`ご確認` $\to$ `のほどよろしくお願いいたします`、`ご報告` $\to$ `いたします`、`努め` $\to$ `ております`、`思っ` $\to$ `ているのに`、`進捗状況` $\to$ `をご報告いたします`、`添付ファイル` $\to$ `を送付いたしました` 等）を `CANONICAL_STEM_READINGS` および `CANONICAL_COLLOCATIONS` に追加。
-   - 回帰テスト互換性を厳格に保護し、`作業`（先頭 `を進めます`）、`確認`（先頭 `しました`）、`連絡`（先頭 `します`）、`お願い`（先頭 `します`）の順序を完全死守。
-2. **B3-2: 一般辞書語幹からの動的機能語・助動詞テイル合成エンジン (`KanaKanjiEngine.kt`)**:
-   - `KanaKanjiEngine.synthesizeDynamicMultiBunsetsuChunks` を新設し、入力長 $N \in [2..8]$（助詞・テイル途中入力含む）において、`exactWords` および `prefixWords` の上位語幹に対して品詞別（サ変名詞 `DYNAMIC_SAHEN_TAILS`、動詞語幹 `DYNAMIC_VERB_TAILS`、一般名詞 `DYNAMIC_NOUN_TAILS`）に動的ロールアウト。
-   - Mozc 連接コスト行列 (`connectionMatrix`) が利用可能な場合は `matrix.getTransitionCost(stem.rid, tail.lid) < INVALID_COST` による文法遷移整合性を検証。
-   - 合成候補は上位 16 件に制限し、`priority = 3.3f..3.5f`、`source = "phrase_chunk"` として候補プールに投入。
-3. **B3-3: 単体テストスイートの整備 (`DynamicMultiBunsetsuTailRolloutTest.kt`)**:
-   - サ変名詞テイル合成、名詞＋格助詞＋述語連語合成、動詞活用テイル合成、助詞途中入力プレフィックスマッチ、および既存の正統連語非回帰（100% パス）を検証する包括テストを追加。
+1. **B3-1: 正統連語辞書の普遍的整理 & 耐過学習設計 (`NextPhrasePredictor.kt`)**:
+   - ベンチマーク評価データセット特有の一文限りの丸暗記エントリ（`家具` $\to$ `倒壊防止の`、`新築` $\to$ `を購入すべきでしょう`、`審査結果` $\to$ `を通知します`、`定例ミーティング` $\to$ `の予定を決めましょう`、`星空` $\to$ `を見る`、`薬` $\to$ `をもらって帰る`、`購入` $\to$ `すべきでしょう`、`送付` $\to$ `いたしました` 等）を完全排除（Anti-Overfitting Contract 遵守）。
+   - ビジネス・日常会話で普遍的に用いられる真の高頻度語幹・連語対（`電車` $\to$ `に乗る / に乗っています / が遅れている`、`資料` $\to$ `を送信しました / を添付しました / を確認する / を作成する`、`会議` $\to$ `に参加します / を始めます`、`予定` $\to$ `を確認する / を調整する`、`体調` $\to$ `が悪い / に気をつけて`、`お腹` $\to$ `が空いた / が痛い`、`風邪` $\to$ `をひいた`、`病院` $\to$ `に行く`、`天気` $\to$ `が良いですね / が良い`、`時間` $\to$ `がある / がない / に間に合う`、`調整` $\to$ `させていただきます`、`ご確認` $\to$ `のほどよろしくお願いいたします`、`ご報告` $\to$ `いたします`、`ご連絡` $\to$ `ください / お待ちしております`、`回答` $\to$ `いたしました`、`相談` $\to$ `に乗ってください` 等）に絞り込み。
+   - `購入`、`送付`、`案内`、`登録`、`変更`、`設定`、`削除`、`検索`、`調査`、`提出` 等の一般サ変名詞は、辞書ハードコードではなく Loop 2 動的テイル合成により体系的に自律生成するアーキテクチャへ移行。
+   - 回帰テスト互換性を厳格に保護し、`作業`（先頭 `を進めます`）、`確認`（先頭 `しました`）、`連絡`（先頭 `します`）、`お願い`（先頭 `します`）、`資料`（先頭 `を`）、`会議`（先頭 `に`）、`準備`（先頭 `が`）の順序を完全死守。
+
+2. **B3-2: 一般辞書語幹からの動的機能語・助動詞テイル合成エンジン & 品詞・遷移安全性 (`KanaKanjiEngine.kt`)**:
+   - `KanaKanjiEngine.synthesizeDynamicMultiBunsetsuChunks` において、入力長 $N \in [2..8]$（助詞・テイル途中入力含む）で動作。
+   - **厳密な Mozc 品詞 ID 判定**: サ変名詞（`lid == 1841 || rid == 1841 || lid in 2035..2150 || rid in 2035..2150`）、一般名詞（`lid in 1841..2195` かつサ変・固有名詞除外）、動詞語幹を峻別。固有名詞（`isProperNoun`: `1917..1940`、例: `東京`）はサ変および動詞判定から厳格に除外し、`東京します` などの異常生成を物理的に防止。安全性を損なう漢字全一致フォールバック（`surface.all { isKanji }`）は完全撤廃。
+   - **直前文脈連接ソート**: 入力に未ソートの `exactTrieWords` ではなく、直前文脈 ID (`contextRid`) とユニグラムコストでソート済みの `otherExact` を渡し、Loop 2 語幹候補も `entry.cost + matrix.getTransitionCost(contextRid, entry.lid)` で順位付け。
+   - **Loop 1 / Loop 2 枠の完全分離と語幹あたり生成制限**: Loop 1（正統連語）から最大 5 件（語幹あたり最大 2 件）、Loop 2（動的合成）から最大 5 件（語幹あたり最大 2 件）の独立クォータ制を導入し、相互の飢餓を防止。全体でも最大 8 件に安全集約。
+   - **Mozc 連接コスト行列 (`connectionMatrix`) による文法遷移フィルタリング**: `matrix.getTransitionCost(stem.rid, tail.lid) < INVALID_COST` により非文法的接続を事前破棄。
+
+3. **B3-3: SLM Reranker 単語プレフィックス候補保護 (`LlmReranker.kt`)**:
+   - `tryFastRerankWithStatus` および `rerankWithStatus` において、`prefixCands` 取得時に `phrase_chunk` が 8 枠を独占して通常の単語プレフィックス（`会社`, `開発`, `開始` 等）を追い出す問題を解決。
+   - `phrase_chunk` に最大 4 枠、単語プレフィックス（`viterbi_prefix` / 辞書予測単語）に最大 4 枠を割り振るバランシング機構を導入し、プレフィックス補完の多様性と語彙探索能力を完全保護。
+
+4. **B3-4: 体系的単体テストスイートの整備 (`DynamicMultiBunsetsuTailRolloutTest.kt`)**:
+   - サ変名詞テイル合成、名詞＋格助詞＋述語連語合成、動詞活用テイル合成、助詞途中入力プレフィックスマッチに加え、以下の非過学習検証テストを配備：
+     - `testLoop2DynamicRolloutFromGeneralLexiconStems`: 辞書内サ変名詞（`登録` $\to$ `登録します`、`案内` $\to$ `案内します`）が `CANONICAL_STEM_READINGS` に含まれていないことをアサートした上で、Loop 2 動的合成が機能することを検証。
+     - `testProperNounExclusionFromVerbalTails`: 固有名詞 `東京` にサ変テイルが付与されないことを検証。
+     - `testGeneralNounVersusSahenNounTailSeparation`: 一般名詞 `映画` にサ変テイルが付かず、体言テイル（`映画です`）が付与されることを検証。
+     - `testConnectionMatrixSuppressesInvalidTransitions`: `ConnectionMatrix` で `INVALID_COST` を設定した接続遷移が確実に破棄されることを検証。
+     - `testSingleWordPrefixPreservationUnderPrefixChunk`: `かい` 入力時に `会社` 等の単語プレフィックスが上位から追い出されないことを検証。
+     - 既存の正統連語・品詞保護回帰テスト（`EisRegressionTest` 含む）の 100% パスを確認。
 
 ### 8.2 Phase 2 検証結果
-1. **100-Case Flick Waterfall Benchmark**:
+1. **100-Case Flick Waterfall Benchmark (Python 分析モデル)**:
    - **Stage 2 (+B3 動的複文節テイル合成)**:
      - 打鍵数: $888.9 \to \mathbf{215.0}\text{ keys}$（**-75.8% 削減**）
      - 入力時間: $406.1\text{s} \to \mathbf{156.0}\text{s}$
      - **有効入力速度 (EIS)**: $95.5\text{ cpm} \to \mathbf{248.5\text{ cpm}}$（**+153.0 cpm 向上、2.60倍速**）
+     - *注*: 248.5 cpm は Python 分析シミュレータ (`evaluate_predictive_conversion_breakthroughs_100.py`) によるウォーターフォール理論上限値推計であり、Android 実機上での EIS-Bench v1 実測値とは算出モデルおよび文脈セッション構造が異なる。実機・Kotlin 側での過学習を排した一般化品質を本フェーズで確立した。
 2. **EIS-Bench v1 総合評価**:
    - `EIS = 187.0 chars/min` (CUJ-1: 204.4, CUJ-2: 173.6, CUJ-3: 139.0, CUJ-4: 337.7 cpm)。英語 QWERTY および音声認識との 100% 互換性・非回帰を確認。
+
 

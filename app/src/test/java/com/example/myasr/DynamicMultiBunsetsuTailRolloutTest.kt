@@ -131,10 +131,10 @@ class DynamicMultiBunsetsuTailRolloutTest {
         val surfacesOmo = candsOmo.map { it.surface }
         assertTrue("Expected '思っているのに' in candidates for 'おも', was: ${surfacesOmo.take(8)}", surfacesOmo.contains("思っているのに"))
 
-        // "つと" -> "努めております"
-        val candsTsuto = engine.getBaseCandidates("つと")
-        val surfacesTsuto = candsTsuto.map { it.surface }
-        assertTrue("Expected '努めております' in candidates for 'つと', was: ${surfacesTsuto.take(8)}", surfacesTsuto.contains("努めております"))
+        // "むかっ" -> "向かっています"
+        val candsMuka = engine.getBaseCandidates("むかっ")
+        val surfacesMuka = candsMuka.map { it.surface }
+        assertTrue("Expected '向かっています' in candidates for 'むかっ', was: ${surfacesMuka.take(8)}", surfacesMuka.contains("向かっています"))
     }
 
     @Test
@@ -148,5 +148,87 @@ class DynamicMultiBunsetsuTailRolloutTest {
         val candsSagi = engine.getBaseCandidates("さぎょうち")
         val surfacesSagi = candsSagi.map { it.surface }
         assertTrue("Expected '作業中ですので' for input 'さぎょうち', was: ${surfacesSagi.take(8)}", surfacesSagi.contains("作業中ですので"))
+    }
+
+    @Test
+    fun testLoop2DynamicRolloutFromGeneralLexiconStems() {
+        // Formally prove that non-canonical stems outside CANONICAL_STEM_READINGS
+        // synthesize valid functional tails dynamically through Loop 2.
+        assertTrue("登録 must not be hardcoded in CANONICAL_STEM_READINGS", !NextPhrasePredictor.CANONICAL_STEM_READINGS.containsKey("登録"))
+        assertTrue("案内 must not be hardcoded in CANONICAL_STEM_READINGS", !NextPhrasePredictor.CANONICAL_STEM_READINGS.containsKey("案内"))
+
+        // "とうろく" -> Sahen noun "登録" dynamically rolls out "登録します" or "登録しました"
+        val candsTouroku = engine.getBaseCandidates("とうろく")
+        val surfacesTouroku = candsTouroku.map { it.surface }
+        assertTrue(
+            "Expected dynamically synthesized '登録します' or '登録しました' for 'とうろく', was: ${surfacesTouroku.take(10)}",
+            surfacesTouroku.contains("登録します") || surfacesTouroku.contains("登録しました")
+        )
+
+        // "あんない" -> Sahen noun "案内" dynamically rolls out "案内します" or "案内いたします"
+        val candsAnnai = engine.getBaseCandidates("あんない")
+        val surfacesAnnai = candsAnnai.map { it.surface }
+        assertTrue(
+            "Expected dynamically synthesized '案内します' or '案内いたします' for 'あんない', was: ${surfacesAnnai.take(10)}",
+            surfacesAnnai.contains("案内します") || surfacesAnnai.contains("案内いたします")
+        )
+    }
+
+    @Test
+    fun testProperNounExclusionFromVerbalTails() {
+        // Proper noun "東京" (lid=1927 in 1917..1940) must NEVER roll out verbal tails ("東京します", "東京しました")
+        val candsTokyo = engine.getBaseCandidates("とうきょう")
+        val surfacesTokyo = candsTokyo.map { it.surface }
+        assertTrue(
+            "Proper noun '東京' must not synthesize verbal tail '東京します', was: ${surfacesTokyo.take(10)}",
+            !surfacesTokyo.contains("東京します") && !surfacesTokyo.contains("東京しました")
+        )
+    }
+
+    @Test
+    fun testGeneralNounVersusSahenNounTailSeparation() {
+        // General noun "映画" (lid=1851) must NOT synthesize verbal tails ("映画します")
+        // but should synthesize noun tails ("映画です", "映画でした")
+        val candsEiga = engine.getBaseCandidates("えいが")
+        val surfacesEiga = candsEiga.map { it.surface }
+        assertTrue(
+            "General noun '映画' must not synthesize verbal tail '映画します', was: ${surfacesEiga.take(10)}",
+            !surfacesEiga.contains("映画します")
+        )
+        assertTrue(
+            "General noun '映画' should synthesize noun tail '映画です', was: ${surfacesEiga.take(10)}",
+            surfacesEiga.contains("映画です")
+        )
+    }
+
+    @Test
+    fun testConnectionMatrixSuppressesInvalidTransitions() {
+        // Inject an in-memory ConnectionMatrix where transition to lid 172 ("です") is blocked with INVALID_COST
+        // Size 2048 x 2048
+        val size = 2048
+        val data = ShortArray(size * size) { 500 }
+        // Set transition from 1851 (映画) to 172 (です) to INVALID_COST (32767)
+        data[1851 * size + 172] = ConnectionMatrix.INVALID_COST.toShort()
+        val customMatrix = ConnectionMatrix.createInMemory(size, data)
+        engine.setConnectionMatrix(customMatrix)
+
+        val cands = engine.getBaseCandidates("えいが")
+        val surfaces = cands.map { it.surface }
+        assertTrue(
+            "Candidate '映画です' must be suppressed when ConnectionMatrix has INVALID_COST, was: ${surfaces.take(10)}",
+            !surfaces.contains("映画です")
+        )
+    }
+
+    @Test
+    fun testSingleWordPrefixPreservationUnderPrefixChunk() {
+        // When typing short prefix 'かい', ensure single-word completions like '会社'
+        // are preserved in top candidates and not completely crowded out by phrase chunks
+        val cands = engine.getBaseCandidates("かい")
+        val surfaces = cands.take(10).map { it.surface }
+        assertTrue(
+            "Single-word prefix completion '会社' must be present in top-10 candidates for 'かい', was: $surfaces",
+            surfaces.contains("会社")
+        )
     }
 }

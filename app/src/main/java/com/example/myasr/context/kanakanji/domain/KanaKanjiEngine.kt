@@ -889,7 +889,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             if (normalized.length in 2..8) {
                 val synthesizedChunks = synthesizeDynamicMultiBunsetsuChunks(
                     normalized = normalized,
-                    exactWords = exactTrieWords,
+                    exactWords = otherExact,
                     prefixWords = prefixWords,
                     contextRid = contextRid
                 )
@@ -2002,17 +2002,20 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     private fun isSahenNoun(lid: Int, rid: Int, surface: String): Boolean {
-        if (lid in 2035..2150 || rid in 2035..2150) return true
-        return surface.length >= 2 && surface.all { it in '\u4E00'..'\u9FFF' }
+        if (isProperNoun(lid) || isProperNoun(rid)) return false
+        return lid == 1841 || rid == 1841 || lid in 2035..2150 || rid in 2035..2150
     }
 
     private fun isVerbStem(lid: Int, rid: Int, surface: String): Boolean {
+        if (isProperNoun(lid) || isProperNoun(rid)) return false
         if (isPredicatePos(lid) || isPredicatePos(rid)) return true
         return surface.length >= 2 && (surface.endsWith("っ") || surface.endsWith("い") || surface.endsWith("め") ||
             surface.endsWith("り") || surface.endsWith("き") || surface.endsWith("ぎ") || surface.endsWith("し") || surface.endsWith("ち"))
     }
 
     private fun isGeneralNoun(lid: Int, rid: Int, surface: String): Boolean {
+        if (isProperNoun(lid) || isProperNoun(rid)) return false
+        if (isSahenNoun(lid, rid, surface)) return false
         return (lid in 1841..2195 || rid in 1841..2195) || isContentWord(lid)
     }
 
@@ -2032,15 +2035,17 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val matrix = connectionMatrix
 
         // 1. Canonical Collocations from NextPhrasePredictor (Highest priority = 3.5f)
+        val canonicalChunks = mutableListOf<ConversionCandidate>()
         for ((stemSurface, stemReading) in NextPhrasePredictor.CANONICAL_STEM_READINGS) {
             if (stemReading.startsWith(normalized) || normalized.startsWith(stemReading)) {
                 val continuations = NextPhrasePredictor.CANONICAL_COLLOCATIONS[stemSurface] ?: continue
+                var countForStem = 0
                 for (entry in continuations) {
                     val fullSurface = stemSurface + entry.surface
                     val fullReading = stemReading + entry.reading
                     if (fullReading.startsWith(normalized) && fullSurface != normalized) {
                         if (seenSurfaces.add(fullSurface)) {
-                            results.add(
+                            canonicalChunks.add(
                                 ConversionCandidate(
                                     surface = fullSurface,
                                     reading = fullReading,
@@ -2049,11 +2054,14 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                     priority = 3.5f
                                 )
                             )
+                            countForStem++
+                            if (countForStem >= 2) break
                         }
                     }
                 }
             }
         }
+        results.addAll(canonicalChunks.take(5))
 
         // 2. Dynamic Functional & Auxiliary Tail Rollout for Content Stems (Priority = 3.3f)
         val candidateStems = mutableListOf<Pair<String, WordEntry>>()
@@ -2071,8 +2079,15 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
         val topStems = candidateStems
             .distinctBy { it.second.surface }
-            .take(12)
+            .sortedBy { (_, entry) ->
+                val connCost = if (matrix != null && contextRid > 0 && entry.lid > 0) {
+                    matrix.getTransitionCost(contextRid, entry.lid)
+                } else 0
+                entry.cost + connCost
+            }
+            .take(8)
 
+        val dynamicChunks = mutableListOf<ConversionCandidate>()
         for ((stemReading, stemWord) in topStems) {
             val stemSurface = stemWord.surface
             if (NextPhrasePredictor.CANONICAL_STEM_READINGS.containsKey(stemSurface)) continue
@@ -2088,6 +2103,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 else -> emptyList()
             }
 
+            var countForStem = 0
             for (tail in applicableTails) {
                 val fullSurface = stemSurface + tail.surface
                 val fullReading = stemReading + tail.reading
@@ -2107,7 +2123,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                         }
                     }
                     if (seenSurfaces.add(fullSurface)) {
-                        results.add(
+                        dynamicChunks.add(
                             ConversionCandidate(
                                 surface = fullSurface,
                                 reading = fullReading,
@@ -2116,11 +2132,14 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                 priority = 3.3f
                             )
                         )
+                        countForStem++
+                        if (countForStem >= 2) break
                     }
                 }
             }
         }
+        results.addAll(dynamicChunks.take(5))
 
-        return results.take(16)
+        return results.take(8)
     }
 }

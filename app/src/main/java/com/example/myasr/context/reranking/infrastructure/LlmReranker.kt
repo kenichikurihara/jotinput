@@ -753,7 +753,16 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 if (topPool.size >= 16) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
-            for (c in prefixCands.take(8)) {
+            val singleWordPrefix = prefixCands.filter { it.source != "phrase_chunk" }
+            val phraseChunkPrefix = prefixCands.filter { it.source == "phrase_chunk" }
+            val balancedPrefix = mutableListOf<ConversionCandidate>()
+            balancedPrefix.addAll(singleWordPrefix.take(4))
+            balancedPrefix.addAll(phraseChunkPrefix.take(4))
+            if (balancedPrefix.size < 8) {
+                val remaining = singleWordPrefix.drop(4) + phraseChunkPrefix.drop(4)
+                balancedPrefix.addAll(remaining.take(8 - balancedPrefix.size))
+            }
+            for (c in balancedPrefix) {
                 if (topPool.size >= 16) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
@@ -904,7 +913,16 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 if (topPool.size >= 16) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
-            for (c in prefixCands.take(8)) {
+            val singleWordPrefix = prefixCands.filter { it.source != "phrase_chunk" }
+            val phraseChunkPrefix = prefixCands.filter { it.source == "phrase_chunk" }
+            val balancedPrefix = mutableListOf<ConversionCandidate>()
+            balancedPrefix.addAll(singleWordPrefix.take(4))
+            balancedPrefix.addAll(phraseChunkPrefix.take(4))
+            if (balancedPrefix.size < 8) {
+                val remaining = singleWordPrefix.drop(4) + phraseChunkPrefix.drop(4)
+                balancedPrefix.addAll(remaining.take(8 - balancedPrefix.size))
+            }
+            for (c in balancedPrefix) {
                 if (topPool.size >= 16) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
