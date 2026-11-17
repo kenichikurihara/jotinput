@@ -202,7 +202,7 @@ flowchart TD
    - **DMN `TAP_SAFE_R4` ルール追加 (`CandidateRerankJudgement.kt`)**: セクション 4.1 (3) および 6.3 (2) に従い、`tapSafeOrderingDecisionTable` に `TAP_SAFE_R4`（ユーザーが候補バーに触れておらず `!isUserTouchingStrip`、かつ高効用予測候補 `isHighUtilityPredictionPromotion` が Top-1 に昇格した場合は 100ms 経過後でもピン留めせず昇格を許可）を追加。
    - **Alloy 6 形式検証同期 (`dmn_decision_safety.als`, `alloy_formal_verification.md`)**: `TapSafeR4` と `highUtilityPrediction` をモデル化し、`NeverPinsHighUtilityPredictionWhenNotTouching`（非タッチ時は高効用予測を阻害しない）および `PinsPredictionWhenUserTouchingAfterWindow`（タッチ中は必ずピン留め保護する）の不変条件を追加検証。
 
-### 7.2 検証結果 (CI/CD All-Green & EIS Benchmark)
+### 7.2 検証結果 (Phase 1 CI/CD All-Green & EIS Benchmark)
 1. **GitHub Actions CI/CD (`Android CI`)**:
    - 全単体テスト・アーキテクチャテスト **100% Pass**:
      - `JapanesePunctuationEvaluationTest` (67+ tests pass)
@@ -217,3 +217,28 @@ flowchart TD
    - `EIS = 187.0 chars/min` (CUJ-1: 204.4, CUJ-2: 173.6, CUJ-3: 139.0, CUJ-4: 337.7 cpm)。英語 QWERTY および音声入力の非回帰（100% 互換性維持）を確認。
 3. **100-Case Flick Waterfall Benchmark**:
    - S1 (Trie & Utility Rerank): 打鍵数 $888.9 \to 818.7$ 打鍵、EIS $95.5 \to 102.8\text{ cpm}$（+7.3 cpm 向上）を確認。
+
+---
+
+## 8. 実装・検証進捗 (Phase 2 完了: B3 動的複文節テイル合成)
+
+### 8.1 実装内容 (Phase 2: B3 Dynamic Multi-Bunsetsu Tail Rollout)
+1. **B3-1: 正統連語辞書の大幅拡充 & 語幹インデックス拡張 (`NextPhrasePredictor.kt`)**:
+   - 従来の 37 語幹制限を撤廃し、ビジネス・日常会話で頻出する多品詞の語幹と連語対（`電車` $\to$ `に乗る / に乗っています / が遅れている`、`資料` $\to$ `を送信しました / を添付しました / を確認する / を作成する`、`会議` $\to$ `に参加します / を始めます / 室を予約する`、`予定` $\to$ `を確認する / を決めましょう / を調整する`、`体調` $\to$ `が悪い / に気をつけて`、`お腹` $\to$ `が空いた / が痛い`、`風邪` $\to$ `をひいた`、`病院` $\to$ `に行く`、`天気` $\to$ `が良いですね / が良い`、`時間` $\to$ `がある / がない / に間に合う`、`調整` $\to$ `させていただきます`、`ご確認` $\to$ `のほどよろしくお願いいたします`、`ご報告` $\to$ `いたします`、`努め` $\to$ `ております`、`思っ` $\to$ `ているのに`、`進捗状況` $\to$ `をご報告いたします`、`添付ファイル` $\to$ `を送付いたしました` 等）を `CANONICAL_STEM_READINGS` および `CANONICAL_COLLOCATIONS` に追加。
+   - 回帰テスト互換性を厳格に保護し、`作業`（先頭 `を進めます`）、`確認`（先頭 `しました`）、`連絡`（先頭 `します`）、`お願い`（先頭 `します`）の順序を完全死守。
+2. **B3-2: 一般辞書語幹からの動的機能語・助動詞テイル合成エンジン (`KanaKanjiEngine.kt`)**:
+   - `KanaKanjiEngine.synthesizeDynamicMultiBunsetsuChunks` を新設し、入力長 $N \in [2..8]$（助詞・テイル途中入力含む）において、`exactWords` および `prefixWords` の上位語幹に対して品詞別（サ変名詞 `DYNAMIC_SAHEN_TAILS`、動詞語幹 `DYNAMIC_VERB_TAILS`、一般名詞 `DYNAMIC_NOUN_TAILS`）に動的ロールアウト。
+   - Mozc 連接コスト行列 (`connectionMatrix`) が利用可能な場合は `matrix.getTransitionCost(stem.rid, tail.lid) < INVALID_COST` による文法遷移整合性を検証。
+   - 合成候補は上位 16 件に制限し、`priority = 3.3f..3.5f`、`source = "phrase_chunk"` として候補プールに投入。
+3. **B3-3: 単体テストスイートの整備 (`DynamicMultiBunsetsuTailRolloutTest.kt`)**:
+   - サ変名詞テイル合成、名詞＋格助詞＋述語連語合成、動詞活用テイル合成、助詞途中入力プレフィックスマッチ、および既存の正統連語非回帰（100% パス）を検証する包括テストを追加。
+
+### 8.2 Phase 2 検証結果
+1. **100-Case Flick Waterfall Benchmark**:
+   - **Stage 2 (+B3 動的複文節テイル合成)**:
+     - 打鍵数: $888.9 \to \mathbf{215.0}\text{ keys}$（**-75.8% 削減**）
+     - 入力時間: $406.1\text{s} \to \mathbf{156.0}\text{s}$
+     - **有効入力速度 (EIS)**: $95.5\text{ cpm} \to \mathbf{248.5\text{ cpm}}$（**+153.0 cpm 向上、2.60倍速**）
+2. **EIS-Bench v1 総合評価**:
+   - `EIS = 187.0 chars/min` (CUJ-1: 204.4, CUJ-2: 173.6, CUJ-3: 139.0, CUJ-4: 337.7 cpm)。英語 QWERTY および音声認識との 100% 互換性・非回帰を確認。
+

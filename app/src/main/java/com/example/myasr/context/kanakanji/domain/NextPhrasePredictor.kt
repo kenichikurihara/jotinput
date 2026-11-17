@@ -90,7 +90,49 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             "向かっ" to "むかっ",
             "思い" to "おもい",
             "思っ" to "おもっ",
-            "知っ" to "しっ"
+            "知っ" to "しっ",
+            "電車" to "でんしゃ",
+            "星空" to "ほしぞら",
+            "薬" to "くすり",
+            "会議室" to "かいぎしつ",
+            "予算" to "よさん",
+            "原因" to "げんいん",
+            "予定" to "よてい",
+            "体調" to "たいちょう",
+            "お腹" to "おなか",
+            "風邪" to "かぜ",
+            "病院" to "びょういん",
+            "メール" to "めーる",
+            "時間" to "じかん",
+            "天気" to "てんき",
+            "調整" to "ちょうせい",
+            "ご確認" to "ごかくにん",
+            "ご報告" to "ごほうこく",
+            "ご連絡" to "ごれんらく",
+            "回答" to "かいとう",
+            "努め" to "つとめ",
+            "スケジュール" to "すけじゅーる",
+            "パスワード" to "ぱすわーど",
+            "契約書" to "けいやくしょ",
+            "議事録" to "ぎじろく",
+            "添付ファイル" to "てんぷふぁいる",
+            "進捗状況" to "しんちょくじょうきょう",
+            "家具" to "かぐ",
+            "新築" to "しんちく",
+            "審査結果" to "しんさけっか",
+            "見通し" to "みとおし",
+            "お見舞い" to "おみまい",
+            "返事" to "へんじ",
+            "勉強" to "べんきょう",
+            "役に" to "やくに",
+            "気を付けて" to "きをつけて",
+            "気をつけて" to "きをつけて",
+            "定例ミーティング" to "ていれいみーてぃんぐ",
+            "新しい提案" to "あたらしいていあん",
+            "相談" to "そうだん",
+            "よろし" to "よろし",
+            "購入" to "こうにゅう",
+            "送付" to "そうふ"
         )
 
         // Static canonical collocations for standard Japanese expressions and POS-aware transitions
@@ -133,16 +175,19 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             ),
             "作業" to listOf(
                 CollocationEntry("を進めます", "をすすめます"),
+                CollocationEntry("中ですので", "ちゅうですので"),
                 CollocationEntry("を", "を"),
                 CollocationEntry("中", "ちゅう"),
                 CollocationEntry("完了", "かんりょう"),
                 CollocationEntry("内容", "ないよう")
             ),
             "準備" to listOf(
+                CollocationEntry("が完了しました", "がかんりょうしました"),
                 CollocationEntry("が", "が"),
                 CollocationEntry("を", "を"),
                 CollocationEntry("中", "ちゅう"),
-                CollocationEntry("完了", "かんりょう")
+                CollocationEntry("完了", "かんりょう"),
+                CollocationEntry("が進んでいます", "がすすんでいます")
             ),
             "質問" to listOf(
                 CollocationEntry("は", "は"),
@@ -175,6 +220,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             ),
             "ご検討" to listOf(
                 CollocationEntry("のほどよろしくお願いいたします", "のほどよろしくおねがいいたします"),
+                CollocationEntry("いただけますと幸いです", "いただけますとさいわいです"),
                 CollocationEntry("ください", "ください")
             ),
             "検討" to listOf(
@@ -226,12 +272,20 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 CollocationEntry("のところ", "のところ")
             ),
             "会議" to listOf(
+                CollocationEntry("に参加します", "にさんかします"),
+                CollocationEntry("に参加する", "にさんかする"),
+                CollocationEntry("を始めます", "をはじめます"),
+                CollocationEntry("室を予約する", "しつをよやくする"),
                 CollocationEntry("の", "の"),
                 CollocationEntry("に", "に"),
                 CollocationEntry("は", "は"),
                 CollocationEntry("室", "しつ")
             ),
             "資料" to listOf(
+                CollocationEntry("を送信しました", "をそうしんしました"),
+                CollocationEntry("を添付しました", "をてんぷしました"),
+                CollocationEntry("を確認する", "をかくにんする"),
+                CollocationEntry("を作成する", "をさくせいする"),
                 CollocationEntry("を", "を"),
                 CollocationEntry("の", "の"),
                 CollocationEntry("作成", "さくせい"),
@@ -278,6 +332,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             ),
             "思っ" to listOf(
                 CollocationEntry("ています", "ています"),
+                CollocationEntry("ているのに", "ているのに"),
                 CollocationEntry("ております", "ております")
             ),
             "知っ" to listOf(
@@ -316,6 +371,161 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 CollocationEntry("予定", "よてい"),
                 CollocationEntry("連絡", "れんらく"),
                 CollocationEntry("内容", "ないよう")
+            ),
+            "電車" to listOf(
+                CollocationEntry("に乗る", "にのる"),
+                CollocationEntry("に乗っています", "にのっています"),
+                CollocationEntry("が遅れている", "がおくれている")
+            ),
+            "星空" to listOf(
+                CollocationEntry("を見る", "をみる")
+            ),
+            "薬" to listOf(
+                CollocationEntry("をもらって帰る", "をもらってかえる"),
+                CollocationEntry("を飲む", "をのむ")
+            ),
+            "会議室" to listOf(
+                CollocationEntry("を予約する", "をよやくする")
+            ),
+            "予算" to listOf(
+                CollocationEntry("を確保する", "をかくほする")
+            ),
+            "原因" to listOf(
+                CollocationEntry("を究明する", "をきゅうめいする"),
+                CollocationEntry("を調査する", "をちょうさする")
+            ),
+            "予定" to listOf(
+                CollocationEntry("を確認する", "をかくにんする"),
+                CollocationEntry("を決めましょう", "をきめましょう"),
+                CollocationEntry("を調整する", "をちょうせいする"),
+                CollocationEntry("がある", "がある")
+            ),
+            "体調" to listOf(
+                CollocationEntry("が悪い", "がわるい"),
+                CollocationEntry("に気をつけて", "にきをつけて")
+            ),
+            "お腹" to listOf(
+                CollocationEntry("が空いた", "がすいた"),
+                CollocationEntry("が痛い", "がいたい")
+            ),
+            "風邪" to listOf(
+                CollocationEntry("をひいた", "をひいた"),
+                CollocationEntry("を引いた", "をひいた")
+            ),
+            "病院" to listOf(
+                CollocationEntry("に行く", "にいく")
+            ),
+            "メール" to listOf(
+                CollocationEntry("を送る", "をおくる"),
+                CollocationEntry("を送信しました", "をそうしんしました"),
+                CollocationEntry("を確認する", "をかくにんする")
+            ),
+            "時間" to listOf(
+                CollocationEntry("がある", "がある"),
+                CollocationEntry("がない", "がない"),
+                CollocationEntry("に間に合う", "にまにあう")
+            ),
+            "天気" to listOf(
+                CollocationEntry("が良いですね", "がいいですね"),
+                CollocationEntry("が良い", "がいい"),
+                CollocationEntry("が悪い", "がわるい")
+            ),
+            "調整" to listOf(
+                CollocationEntry("させていただきます", "させていただきます"),
+                CollocationEntry("します", "します"),
+                CollocationEntry("いたしました", "いたしました"),
+                CollocationEntry("中", "ちゅう")
+            ),
+            "ご確認" to listOf(
+                CollocationEntry("のほどよろしくお願いいたします", "のほどよろしくおねがいいたします"),
+                CollocationEntry("のほど", "のほど"),
+                CollocationEntry("ください", "ください")
+            ),
+            "ご報告" to listOf(
+                CollocationEntry("いたします", "いたします"),
+                CollocationEntry("申し上げます", "もうしあげます")
+            ),
+            "ご連絡" to listOf(
+                CollocationEntry("ください", "ください"),
+                CollocationEntry("お待ちしております", "おまちしております"),
+                CollocationEntry("いたします", "いたします")
+            ),
+            "回答" to listOf(
+                CollocationEntry("いたしました", "いたしました"),
+                CollocationEntry("しました", "しました")
+            ),
+            "努め" to listOf(
+                CollocationEntry("ております", "ております"),
+                CollocationEntry("ます", "ます")
+            ),
+            "スケジュール" to listOf(
+                CollocationEntry("を調整する", "をちょうせいする")
+            ),
+            "パスワード" to listOf(
+                CollocationEntry("を変更する", "をへんこうする")
+            ),
+            "契約書" to listOf(
+                CollocationEntry("に捺印する", "になついんする")
+            ),
+            "議事録" to listOf(
+                CollocationEntry("を共有する", "をきょうゆうする")
+            ),
+            "添付ファイル" to listOf(
+                CollocationEntry("を送付いたしました", "をそうふいたしました"),
+                CollocationEntry("をご確認ください", "をごかくにんください")
+            ),
+            "進捗状況" to listOf(
+                CollocationEntry("をご報告いたします", "をごほうこくいたします")
+            ),
+            "家具" to listOf(
+                CollocationEntry("倒壊防止の", "とうかいぼうしの")
+            ),
+            "新築" to listOf(
+                CollocationEntry("を購入すべきでしょう", "をこうにゅうすべきでしょう")
+            ),
+            "審査結果" to listOf(
+                CollocationEntry("を通知します", "をつうちします")
+            ),
+            "見通し" to listOf(
+                CollocationEntry("が明るい", "があかるい")
+            ),
+            "お見舞い" to listOf(
+                CollocationEntry("を申し上げます", "をもうしあげます")
+            ),
+            "返事" to listOf(
+                CollocationEntry("をお願いします", "をおねがいします")
+            ),
+            "勉強" to listOf(
+                CollocationEntry("になります", "になります"),
+                CollocationEntry("をする", "をする")
+            ),
+            "役に" to listOf(
+                CollocationEntry("立ちます", "たちます")
+            ),
+            "気を付けて" to listOf(
+                CollocationEntry("お帰りください", "おかえりください")
+            ),
+            "気をつけて" to listOf(
+                CollocationEntry("お帰りください", "おかえりください")
+            ),
+            "定例ミーティング" to listOf(
+                CollocationEntry("の予定を決めましょう", "のよていをきめましょう")
+            ),
+            "新しい提案" to listOf(
+                CollocationEntry("を作成します", "をさくせいします")
+            ),
+            "相談" to listOf(
+                CollocationEntry("に乗ってください", "にのってください"),
+                CollocationEntry("があります", "があります")
+            ),
+            "よろし" to listOf(
+                CollocationEntry("ければ", "ければ")
+            ),
+            "購入" to listOf(
+                CollocationEntry("すべきでしょう", "すべきでしょう")
+            ),
+            "送付" to listOf(
+                CollocationEntry("いたしました", "いたしました")
             )
         )
 

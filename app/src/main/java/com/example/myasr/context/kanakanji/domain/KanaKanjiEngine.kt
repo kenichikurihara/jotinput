@@ -830,8 +830,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             }
 
             // 5. Predictive prefix matches from in-memory Trie (scans cost-priority subtree up to 80, takes top 40 by cost + Mozc connection cost)
+            val prefixWords = mutableListOf<Pair<String, WordEntry>>()
             if (exactNode != null) {
-                val prefixWords = mutableListOf<Pair<String, WordEntry>>()
                 collectPrefixWords(exactNode, normalized, prefixWords, maxCount = 80)
                 prefixWords.sortBy { (_, entry) ->
                     val connCost = if (matrix != null && contextRid > 0 && entry.lid > 0) matrix.getTransitionCost(contextRid, entry.lid) else 0
@@ -856,25 +856,16 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 Log.w(TAG, "DB prefix query failed: ${e.message}")
             }
 
-            // 5.5 Compound Multi-Bunsetsu Chunk Prediction (Step 3: Strategic Leap)
-            if (normalized.length in 2..4) {
-                for ((stemSurface, stemReading) in NextPhrasePredictor.CANONICAL_STEM_READINGS) {
-                    val continuations = NextPhrasePredictor.CANONICAL_COLLOCATIONS[stemSurface] ?: continue
-                    for (entry in continuations) {
-                        val fullSurface = stemSurface + entry.surface
-                        val fullReading = stemReading + entry.reading
-                        if (fullReading.startsWith(normalized) && fullSurface != normalized) {
-                            addCandidate(
-                                ConversionCandidate(
-                                    surface = fullSurface,
-                                    reading = fullReading,
-                                    isPrediction = true,
-                                    source = "phrase_chunk",
-                                    priority = 3.5f
-                                )
-                            )
-                        }
-                    }
+            // 5.5 Compound Multi-Bunsetsu Chunk Prediction (B3: Dynamic Multi-Bunsetsu Tail Rollout)
+            if (normalized.length in 2..8) {
+                val synthesizedChunks = synthesizeDynamicMultiBunsetsuChunks(
+                    normalized = normalized,
+                    exactWords = exactTrieWords,
+                    prefixWords = prefixWords,
+                    contextRid = contextRid
+                )
+                for (cand in synthesizedChunks) {
+                    addCandidate(cand)
                 }
             }
 
@@ -1979,5 +1970,159 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         }
 
         return results
+    }
+
+    companion object {
+        private val DYNAMIC_SAHEN_TAILS = listOf(
+            NextPhrasePredictor.CollocationEntry("します", "します"),
+            NextPhrasePredictor.CollocationEntry("しました", "しました"),
+            NextPhrasePredictor.CollocationEntry("しています", "しています"),
+            NextPhrasePredictor.CollocationEntry("いたします", "いたします"),
+            NextPhrasePredictor.CollocationEntry("中ですので", "ちゅうですので"),
+            NextPhrasePredictor.CollocationEntry("中", "ちゅう"),
+            NextPhrasePredictor.CollocationEntry("お願いします", "おねがいします"),
+            NextPhrasePredictor.CollocationEntry("予定です", "よていです")
+        )
+
+        private val DYNAMIC_VERB_TAILS = listOf(
+            NextPhrasePredictor.CollocationEntry("ています", "ています"),
+            NextPhrasePredictor.CollocationEntry("ているのに", "ているのに"),
+            NextPhrasePredictor.CollocationEntry("ております", "ております"),
+            NextPhrasePredictor.CollocationEntry("ます", "ます"),
+            NextPhrasePredictor.CollocationEntry("ました", "ました"),
+            NextPhrasePredictor.CollocationEntry("てください", "てください")
+        )
+
+        private val DYNAMIC_NOUN_TAILS = listOf(
+            NextPhrasePredictor.CollocationEntry("です", "です"),
+            NextPhrasePredictor.CollocationEntry("でした", "でした"),
+            NextPhrasePredictor.CollocationEntry("ですので", "ですので"),
+            NextPhrasePredictor.CollocationEntry("ですが", "ですが"),
+            NextPhrasePredictor.CollocationEntry("でしょうか", "でしょうか"),
+            NextPhrasePredictor.CollocationEntry("中", "ちゅう")
+        )
+    }
+
+    private fun isSahenNoun(lid: Int, rid: Int, surface: String): Boolean {
+        if (lid in 2035..2150 || rid in 2035..2150) return true
+        return surface.length >= 2 && surface.all { it in '\u4E00'..'\u9FFF' }
+    }
+
+    private fun isVerbStem(lid: Int, rid: Int, surface: String): Boolean {
+        if (isPredicatePos(lid) || isPredicatePos(rid)) return true
+        return surface.length >= 2 && (surface.endsWith("っ") || surface.endsWith("い") || surface.endsWith("め") ||
+            surface.endsWith("り") || surface.endsWith("き") || surface.endsWith("ぎ") || surface.endsWith("し") || surface.endsWith("ち"))
+    }
+
+    private fun isGeneralNoun(lid: Int, rid: Int, surface: String): Boolean {
+        return (lid in 1841..2195 || rid in 1841..2195) || isContentWord(lid)
+    }
+
+    /**
+     * B3: Dynamic Multi-Bunsetsu Tail Rollout (動的複文節テイル合成).
+     * Synthesizes natural, high-affinity functional and predicate completions from top stem candidates
+     * when typing short prefixes (2..8 characters), validated via Mozc connection costs.
+     */
+    private fun synthesizeDynamicMultiBunsetsuChunks(
+        normalized: String,
+        exactWords: List<WordEntry>,
+        prefixWords: List<Pair<String, WordEntry>>,
+        contextRid: Int
+    ): List<ConversionCandidate> {
+        val results = mutableListOf<ConversionCandidate>()
+        val seenSurfaces = HashSet<String>()
+        val matrix = connectionMatrix
+
+        // 1. Canonical Collocations from NextPhrasePredictor (Highest priority = 3.5f)
+        for ((stemSurface, stemReading) in NextPhrasePredictor.CANONICAL_STEM_READINGS) {
+            if (stemReading.startsWith(normalized) || normalized.startsWith(stemReading)) {
+                val continuations = NextPhrasePredictor.CANONICAL_COLLOCATIONS[stemSurface] ?: continue
+                for (entry in continuations) {
+                    val fullSurface = stemSurface + entry.surface
+                    val fullReading = stemReading + entry.reading
+                    if (fullReading.startsWith(normalized) && fullSurface != normalized) {
+                        if (seenSurfaces.add(fullSurface)) {
+                            results.add(
+                                ConversionCandidate(
+                                    surface = fullSurface,
+                                    reading = fullReading,
+                                    isPrediction = true,
+                                    source = "phrase_chunk",
+                                    priority = 3.5f
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Dynamic Functional & Auxiliary Tail Rollout for Content Stems (Priority = 3.3f)
+        val candidateStems = mutableListOf<Pair<String, WordEntry>>()
+        for (w in exactWords) {
+            if (w.surface.length >= 2 && !JapaneseKanaUtils.isAllHiragana(w.surface)) {
+                candidateStems.add(Pair(normalized, w))
+            }
+        }
+        for (p in prefixWords) {
+            val (r, w) = p
+            if (w.surface.length >= 2 && !JapaneseKanaUtils.isAllHiragana(w.surface)) {
+                candidateStems.add(Pair(r, w))
+            }
+        }
+
+        val topStems = candidateStems
+            .distinctBy { it.second.surface }
+            .take(12)
+
+        for ((stemReading, stemWord) in topStems) {
+            val stemSurface = stemWord.surface
+            if (NextPhrasePredictor.CANONICAL_STEM_READINGS.containsKey(stemSurface)) continue
+
+            val isSahen = isSahenNoun(stemWord.lid, stemWord.rid, stemSurface)
+            val isVerb = isVerbStem(stemWord.lid, stemWord.rid, stemSurface)
+            val isNoun = isGeneralNoun(stemWord.lid, stemWord.rid, stemSurface)
+
+            val applicableTails = when {
+                isSahen -> DYNAMIC_SAHEN_TAILS
+                isVerb -> DYNAMIC_VERB_TAILS
+                isNoun -> DYNAMIC_NOUN_TAILS
+                else -> emptyList()
+            }
+
+            for (tail in applicableTails) {
+                val fullSurface = stemSurface + tail.surface
+                val fullReading = stemReading + tail.reading
+                if (fullReading.startsWith(normalized) && fullSurface != normalized) {
+                    if (matrix != null && stemWord.rid > 0 && tail.reading.isNotEmpty()) {
+                        val tailLid = when (tail.surface) {
+                            "です", "でした", "ですので", "ですが" -> 172
+                            "中", "中ですので" -> 2003
+                            "します", "しました", "いたします" -> 1825
+                            else -> 0
+                        }
+                        if (tailLid > 0) {
+                            val transCost = matrix.getTransitionCost(stemWord.rid, tailLid)
+                            if (transCost >= ConnectionMatrix.INVALID_COST) {
+                                continue
+                            }
+                        }
+                    }
+                    if (seenSurfaces.add(fullSurface)) {
+                        results.add(
+                            ConversionCandidate(
+                                surface = fullSurface,
+                                reading = fullReading,
+                                isPrediction = true,
+                                source = "phrase_chunk",
+                                priority = 3.3f
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        return results.take(16)
     }
 }
