@@ -225,4 +225,35 @@ class CandidateRerankJudgementTest {
         assertTrue(touchingTrace.result.pinnedInitialTop1)
         assertEquals("詐欺", touchingTrace.result.finalCandidates.first().surface)
     }
+
+    @Test
+    fun `tapSafeOrdering allows 1-mora context collocation prediction promotion when not touching`() {
+        val base = listOf(
+            ConversionCandidate(surface = "そ", reading = "そ", source = "dict")
+        )
+        val reranked = listOf(
+            ConversionCandidate(
+                surface = "送信",
+                reading = "そうしん",
+                isPrediction = true,
+                source = "context_collocation",
+                priority = 5.0f
+            ),
+            ConversionCandidate(surface = "そ", reading = "そ", source = "dict")
+        )
+
+        val notTouchingTrace = CandidateRerankJudgement.judgeTapSafeOrderingWithTrace(
+            CandidateRerankJudgement.TapSafeOrderingInput(
+                baseCandidates = base,
+                rerankedCandidates = reranked,
+                initialRenderedTop1 = "そ",
+                reading = "そ",
+                elapsedFromFirstRenderMs = 120L,
+                isUserTouchingStrip = false
+            )
+        )
+        assertEquals("TAP_SAFE_R4", notTouchingTrace.selectedRuleId)
+        assertFalse(notTouchingTrace.result.pinnedInitialTop1)
+        assertEquals("送信", notTouchingTrace.result.finalCandidates.first().surface)
+    }
 }

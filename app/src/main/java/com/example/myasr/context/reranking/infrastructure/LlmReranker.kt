@@ -259,7 +259,13 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     rawBaseNll
                 }
 
-                val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f
+                val obsDiscount = if (candidate.obsPenalty > 0f) {
+                    val deltaNll = rawNll - bestPoolNll
+                    0.20f + 0.80f * ((deltaNll - 1.5f) / 3.0f).coerceIn(0.0f, 1.0f)
+                } else {
+                    1.0f
+                }
+                val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f * obsDiscount
                 val rankCost = (index * 1000.0f) / 1000.0f
 
                 val hysteresisBonus = if (currentShownTop1 != null && candidate.surface == currentShownTop1 && !isExactUser) {
@@ -283,7 +289,13 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     // Length-normalized surprisal for Japanese predictive probability estimation (B1)
                     val tokens = maxOf(1, (mLengths[i] + 1) / 2)
                     val normNll = scores[i] / tokens.toFloat().pow(0.85f)
-                    val obsEff = lambdaObs * cand.obsPenalty * 5.0f
+                    val obsDiscount = if (cand.obsPenalty > 0f) {
+                        val deltaNll = scores[i] - bestPoolNll
+                        0.20f + 0.80f * ((deltaNll - 1.5f) / 3.0f).coerceIn(0.0f, 1.0f)
+                    } else {
+                        1.0f
+                    }
+                    val obsEff = lambdaObs * cand.obsPenalty * 5.0f * obsDiscount
                     val priorHist = if (cand.historyCount > 0) minOf(3.0f, cand.historyCount.toFloat()) else 0.0f
                     val rankCost = (i * 0.15f)
                     -(normNll + obsEff + rankCost - priorHist)
@@ -471,7 +483,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             if (candidateToPromote != null && rankedFull.isNotEmpty() && n > 0) {
                 val topFullIdx = topPool.indexOf(rankedFull[0])
                 val isStrictCoherent = topFullIdx >= 0 && (scores[candidateToPromote] - scores[topFullIdx] < 5.0f || topPool[candidateToPromote].priority >= 3.5f)
-                val canPromoteTop1 = !isEnglishPool && n in 2..4 && topFullIdx >= 0 && isStrictCoherent && (
+                val canPromoteTop1 = !isEnglishPool && (n in 2..4 || (n == 1 && topPool[candidateToPromote].priority >= 3.5f)) && topFullIdx >= 0 && isStrictCoherent && (
                     utilities[candidateToPromote] > utilities[topFullIdx] + slot1MarginSec ||
                     topPool[candidateToPromote].priority >= 3.5f ||
                     (candidateToPromote == topHistPredIdx && baseScores[candidateToPromote] < baseScores[topFullIdx] - 0.50f)

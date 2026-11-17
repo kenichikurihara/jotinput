@@ -889,7 +889,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             if (normalized.length in 2..8) {
                 val synthesizedChunks = synthesizeDynamicMultiBunsetsuChunks(
                     normalized = normalized,
-                    exactWords = otherExact,
+                    exactWords = userMatches + otherExact,
                     prefixWords = prefixWords,
                     contextRid = contextRid
                 )

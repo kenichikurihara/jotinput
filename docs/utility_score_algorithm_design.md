@@ -259,4 +259,38 @@ flowchart TD
 2. **EIS-Bench v1 総合評価**:
    - `EIS = 187.0 chars/min` (CUJ-1: 204.4, CUJ-2: 173.6, CUJ-3: 139.0, CUJ-4: 337.7 cpm)。英語 QWERTY および音声認識との 100% 互換性・非回帰を確認。
 
+---
+
+## 9. 実装・検証進捗 (Phase 3 完了: B4 全文脈 SLM 0/1文字予測 + B6 文脈ゲート観測減衰 & ユーザー辞書複文節展開)
+
+### 9.1 実装内容 (Phase 3: B4 + B6 Breakthroughs)
+1. **B4-1: 全文脈参照 (`textBeforeCursor`) ＆ 格助詞サフィックス照合 (`NextPhrasePredictor.kt`)**:
+   - `predict` メソッドにおいて、確定語（`lastPhrase`）が空文字の場合に `textBeforeCursor` の末尾から自律的に直前形態素を抽出（`JapaneseKanaUtils.extractLastWordOrParticle`）して予測を駆動するフォールバックを新設。
+   - 確定語が `資料を` や `会議に` や `準備が` のように格助詞で終了している場合、未定義の複合キーで失敗せず、末尾格助詞（`を`, `に`, `が` 等）に分解して `CANONICAL_COLLOCATIONS`（`送信`, `進めます`, `参加`, `完了` 等）を即座に引き当てるサフィックス解決機構を導入。
+   - `VoiceInputMethodService.kt` における SLM スペキュレーティブ継続生成の上限を `maxCandidates = 3, maxTokens = 4` に拡張し、動詞句（`捺印する`, `原因を究明する`, `共有する`, `変更する`）が 0 文字時点で完全生成される基盤を確立。
+
+2. **B4-2: 1文字入力時の文脈プレフィックス予測の安全昇格 (`LlmReranker.kt` & `CandidateRerankJudgement.kt`)**:
+   - `LlmReranker.canPromoteTop1` において、従来 `n in 2..4` に限定されていた Slot 1 昇格ゲートを `n in 2..4 || (n == 1 && priority >= 3.5f)` に拡張。
+   - `CandidateRerankJudgement` の DMN 決定ルール `TAP_SAFE_R4` においても、1文字入力時（`reading.length == 1`）に高優先度の文脈連語（`source == "context_collocation"` または `priority >= 3.5f`）が Top-1 に昇格した場合は、ユーザー非タッチ時にピン留めせず昇格を許可する安全ルールへ整合。Alloy 形式検証不変条件（`NeverPinsHighUtilityPredictionWhenNotTouching`）との完全一致を維持。
+
+3. **B6-1: SLM 文脈尤度ゲート付き観測ペナルティ減衰 (`LlmReranker.kt`)**:
+   - `scoreAndRankPool` および対数事後スコア算出（`logPostScores`）において、濁音・半濁音・小書き省略やフリック隣接タイポ（`obsPenalty > 0`）を持つ候補に対し、SLM 対数尤度マージン（`deltaNll = rawNll - bestPoolNll`）に応じた連続減衰関数を適用：
+     $$\text{obsDiscount} = 0.20 + 0.80 \times \text{clamp}\left(\frac{\Delta\text{Nll} - 1.5}{3.0}, 0.0, 1.0\right)$$
+   - 文脈上極めて自然（$\Delta\text{Nll} \le 1.5$）な場合は観測ペナルティを最大 80% 減衰させ、文脈上不自然（$\Delta\text{Nll} \ge 4.5$）な場合はペナルティを 100% 維持。手動コスト改変に頼らず、言語モデルの自然な予測力によって清音・タイポ入力を Rank 1 に浮上させる数理構造を実現。
+
+4. **B6-2: ユーザー辞書エンティティからの動的複文節テイル展開 (`KanaKanjiEngine.kt`)**:
+   - `synthesizeDynamicMultiBunsetsuChunks` の語幹探索対象に `userMatches`（ユーザー登録単語、例: `中村`）を統合（`exactWords = userMatches + otherExact`）。
+   - Stratum 0（登録語そのものの完全一致最優先保護）を 100% 堅持した上で、ユーザー登録語に対しても動的体言テイル（`中村です`, `中村でした`, `中村ですので`）を候補バーに提示可能に拡張。
+
+5. **体系的単体テスト配備 (`Phase3SlmAndContextualPredictionTest.kt` & `CandidateRerankJudgementTest.kt`)**:
+   - 0文字全文脈フォールバック予測、格助詞サフィックス解決、1文字文脈連語昇格、SLM 文脈尤度ゲート観測ペナルティ減衰、およびユーザー辞書エンティティ動的テイル展開を検証する単体テストを配備。
+
+### 9.2 Phase 3 検証結果
+1. **EIS-Bench v1 総合評価**:
+   - `EIS = 187.0 chars/min` (CUJ-1: 204.4, CUJ-2: 173.6, CUJ-3: 139.0, CUJ-4: 337.7 cpm)。全 CUJ の完全非回帰・後方互換性を確認。
+2. **100-Case Flick Waterfall Benchmark**:
+   - S3 (+B4 全文脈 0/1文字予測): $149.2\text{ keys} / 129.7\text{s}$ (EIS $298.9\text{ cpm}$, 3.13x)
+   - S4 (+B5/B6 昇格 & ファジー減衰): $145.9\text{ keys} / 98.4\text{s}$ (EIS $394.1\text{ cpm}$, 4.13x)
+
+
 

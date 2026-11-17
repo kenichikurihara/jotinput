@@ -148,9 +148,9 @@ object CandidateRerankJudgement {
                 val newTop = input.rerankedCandidates.firstOrNull()
                 val isHighUtilityPredictionPromotion = newTop != null &&
                     newTop.isPrediction &&
-                    input.reading.length in 2..4 &&
+                    (input.reading.length in 2..4 || (input.reading.length == 1 && (newTop.priority >= 3.5f || newTop.source == "context_collocation"))) &&
                     newTop.reading.length > input.reading.length &&
-                    (newTop.priority >= 3.5f || newTop.historyCount >= 2 || newTop.source == "history_bigram")
+                    (newTop.priority >= 3.5f || newTop.historyCount >= 2 || newTop.source == "history_bigram" || newTop.source == "context_collocation")
                 !input.isUserTouchingStrip && isHighUtilityPredictionPromotion
             }
             then { input ->

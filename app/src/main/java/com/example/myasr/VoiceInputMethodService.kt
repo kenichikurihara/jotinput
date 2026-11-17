@@ -1397,7 +1397,7 @@ class VoiceInputMethodService : InputMethodService() {
                     slm.warmContext(textBeforeCursor)
 
                     // Generate next-phrase continuations directly from on-device SLM with lightweight bounds
-                    val slmContinuations = slm.predictNextPhrases(textBeforeCursor, maxCandidates = 2, maxTokens = 2)
+                    val slmContinuations = slm.predictNextPhrases(textBeforeCursor, maxCandidates = 3, maxTokens = 4)
 
                     // Combine SLM continuations with fast predictions
                     val combined = mutableListOf<ConversionCandidate>()

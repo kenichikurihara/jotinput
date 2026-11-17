@@ -568,7 +568,13 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             }
         }
 
-        val cleanLast = lastPhrase.trim()
+        val cleanLast = if (lastPhrase.isNotBlank()) {
+            lastPhrase.trim()
+        } else if (textBeforeCursor.isNotEmpty()) {
+            JapaneseKanaUtils.extractLastWordOrParticle(textBeforeCursor)
+        } else {
+            ""
+        }
 
         // 1. User Bigram History Cache (Highest Priority)
         if (cleanLast.isNotEmpty()) {
@@ -595,7 +601,10 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
 
         // 2. Canonical Collocation Dictionary
         if (cleanLast.isNotEmpty()) {
-            val canonicalList = CANONICAL_COLLOCATIONS[cleanLast]
+            val canonicalList = CANONICAL_COLLOCATIONS[cleanLast] ?: run {
+                val trailing = JapaneseKanaUtils.extractLastWordOrParticle(cleanLast)
+                if (trailing.isNotEmpty() && trailing != cleanLast) CANONICAL_COLLOCATIONS[trailing] else null
+            }
             if (canonicalList != null) {
                 for (entry in canonicalList) {
                     addCandidate(
