@@ -26,6 +26,11 @@ import java.util.Calendar
  */
 class NextPhrasePredictor internal constructor(private val context: Context? = null) {
 
+    data class CollocationEntry(
+        val surface: String,
+        val reading: String = surface
+    )
+
     private val TAG = "NextPhrasePredictor"
     private val scope = CoroutineScope(Dispatchers.IO)
     private var saveHistoryJob: Job? = null
@@ -47,11 +52,6 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 instance ?: NextPhrasePredictor(context.applicationContext).also { instance = it }
             }
         }
-
-        data class CollocationEntry(
-            val surface: String,
-            val reading: String = surface
-        )
 
         internal val CANONICAL_STEM_READINGS: Map<String, String> = mapOf(
             "よろしく" to "よろしく",

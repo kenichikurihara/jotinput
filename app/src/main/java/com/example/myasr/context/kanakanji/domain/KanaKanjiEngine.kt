@@ -2081,7 +2081,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             val isVerb = isVerbStem(stemWord.lid, stemWord.rid, stemSurface)
             val isNoun = isGeneralNoun(stemWord.lid, stemWord.rid, stemSurface)
 
-            val applicableTails = when {
+            val applicableTails: List<NextPhrasePredictor.CollocationEntry> = when {
                 isSahen -> DYNAMIC_SAHEN_TAILS
                 isVerb -> DYNAMIC_VERB_TAILS
                 isNoun -> DYNAMIC_NOUN_TAILS
