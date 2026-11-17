@@ -148,7 +148,9 @@ object JapaneseKanaUtils {
 
         'た' to listOf('た', 'だ'),
         'ち' to listOf('ち', 'ぢ'),
-        'つ' to listOf('つ', 'づ'),
+        'つ' to listOf('つ', 'づ', 'っ'),
+        'っ' to listOf('っ', 'つ'),
+        'づ' to listOf('づ', 'つ'),
         'て' to listOf('て', 'で'),
         'と' to listOf('と', 'ど'),
 
@@ -158,12 +160,35 @@ object JapaneseKanaUtils {
         'へ' to listOf('へ', 'べ', 'ぺ'),
         'ほ' to listOf('ほ', 'ぼ', 'ぽ'),
 
-        'う' to listOf('う', 'ゔ')
+        // 小書き仮名（拗音・促音・小書き母音）双方向展開
+        'あ' to listOf('あ', 'ぁ'),
+        'ぁ' to listOf('ぁ', 'あ'),
+        'い' to listOf('い', 'ぃ'),
+        'ぃ' to listOf('ぃ', 'い'),
+        'う' to listOf('う', 'ゔ', 'ぅ'),
+        'ぅ' to listOf('ぅ', 'う'),
+        'ゔ' to listOf('ゔ', 'う'),
+        'え' to listOf('え', 'ぇ'),
+        'ぇ' to listOf('ぇ', 'え'),
+        'お' to listOf('お', 'ぉ'),
+        'ぉ' to listOf('ぉ', 'お'),
+
+        'や' to listOf('や', 'ゃ'),
+        'ゃ' to listOf('ゃ', 'や'),
+        'ゆ' to listOf('ゆ', 'ゅ'),
+        'ゅ' to listOf('ゅ', 'ゆ'),
+        'よ' to listOf('よ', 'ょ'),
+        'ょ' to listOf('ょ', 'よ'),
+
+        'わ' to listOf('わ', 'ゎ'),
+        'ゎ' to listOf('ゎ', 'わ')
     )
 
     /**
-     * Expands an unvoiced Hiragana character to its voiced (濁音) and semi-voiced (半濁音) variants.
-     * If the character is already voiced, semi-voiced, or does not support voicing, returns a singleton list containing the character itself.
+     * Expands a Hiragana character to its phonetically modified variants:
+     * 1. Voiced (濁音) and semi-voiced (半濁音) variants (e.g. 'か' -> ['か', 'が'], 'は' -> ['は', 'ば', 'ぱ']).
+     * 2. Small-kana / Youon / Sokuon variants (e.g. 'よ' -> ['よ', 'ょ'], 'つ' -> ['つ', 'づ', 'っ']).
+     * If the character does not support modifier expansion, returns a singleton list containing the character itself.
      */
     fun getVoicingExpansions(char: Char): List<Char> {
         return HIRAGANA_VOICING_EXPANSION_MAP[char] ?: listOf(char)

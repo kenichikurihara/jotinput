@@ -743,9 +743,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
 
-            // 3.8. Voiced & Semi-voiced Predictive Prefix Matches (e.g. "すーは" -> "スーパー", "は" -> "パン", "場合")
-            // Evaluated before Viterbi so natural unvoiced prefixes of single words (like "すーは" -> "スーパー")
-            // take precedence over artificial multi-word Viterbi chunk splits (like "すー葉").
+            // 3.8. Voiced, Semi-voiced & Small-Kana Predictive Prefix Matches (e.g. "とうきよ" -> "東京", "すーは" -> "スーパー", "は" -> "パン", "場合")
+            // Evaluated before Viterbi so natural unvoiced prefixes of single words (like "とうきよ" -> "東京", "すーは" -> "スーパー")
+            // take precedence over artificial multi-word Viterbi chunk splits (like "冬季よ", "すー葉").
             if (voicedPaths.isNotEmpty()) {
                 val voicedPrefixWords = mutableListOf<Triple<String, WordEntry, Int>>()
                 for (vPath in voicedPaths) {
@@ -766,8 +766,15 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                         costA.compareTo(costB)
                     }
                 }
-                for ((reading, entry, _) in voicedPrefixWords) {
-                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source))
+                for ((reading, entry, vDist) in voicedPrefixWords) {
+                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = 1.2f * vDist))
+                }
+                // Query Mmap predictive prefix matches for top modified readings (up to 2 readings)
+                for (vPath in voicedPaths.take(2)) {
+                    val mmapVoicedPrefix = queryAllMmapPrefixTokens(vPath.reading, maxCount = 10)
+                    for (cand in mmapVoicedPrefix) {
+                        addCandidate(ConversionCandidate(surface = cand.surface, reading = cand.reading, isPrediction = true, source = cand.source, obsPenalty = 1.2f * vPath.voicingDistance))
+                    }
                 }
             }
 

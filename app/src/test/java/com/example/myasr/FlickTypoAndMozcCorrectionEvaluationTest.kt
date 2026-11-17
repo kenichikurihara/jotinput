@@ -101,4 +101,34 @@ class FlickTypoAndMozcCorrectionEvaluationTest {
         assertTrue("Candidates for 'いえの' should not be empty", candidates.isNotEmpty())
         assertEquals("家の", candidates.first().surface)
     }
+
+    @Test
+    fun testFlickUnmodifiedToukiyoSuggestsTokyo() {
+        // User inputs "とうきよ" (unmodified flick: typed uppercase 'よ' instead of small 'ょ', and typed 4 chars of 'とうきょう')
+        val candidates = engine.getBaseCandidates("とうきよ")
+        val surfaces = candidates.map { it.surface }
+        assertTrue("Candidates for 'とうきよ' must include '東京', got: $surfaces",
+            surfaces.contains("東京"))
+        val tokyoIdx = surfaces.indexOf("東京")
+        assertTrue("東京 should be ranked in Top 3 for 'とうきよ', got index: $tokyoIdx in $surfaces",
+            tokyoIdx in 0..2)
+    }
+
+    @Test
+    fun testFlickUnmodifiedChiyotsutoSuggestsChotto() {
+        // User inputs "ちよつと" (unmodified flick: uppercase 'よ' and 'つ' instead of small 'ょ' and 'っ')
+        val candidates = engine.getBaseCandidates("ちよつと")
+        val surfaces = candidates.map { it.surface }
+        assertTrue("Candidates for 'ちよつと' must include 'ちょっと', got: $surfaces",
+            surfaces.contains("ちょっと"))
+    }
+
+    @Test
+    fun testFlickUnmodifiedKaikiSuggestsKaigi() {
+        // User inputs "かいき" (unmodified flick: unvoiced 'き' instead of voiced 'ぎ')
+        val candidates = engine.getBaseCandidates("かいき")
+        val surfaces = candidates.map { it.surface }
+        assertTrue("Candidates for 'かいき' must include '会議', got: $surfaces",
+            surfaces.contains("会議"))
+    }
 }
