@@ -199,6 +199,35 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
         }
+
+        private val DYNAMIC_SAHEN_TAILS = listOf(
+            NextPhrasePredictor.CollocationEntry("します", "します"),
+            NextPhrasePredictor.CollocationEntry("しました", "しました"),
+            NextPhrasePredictor.CollocationEntry("しています", "しています"),
+            NextPhrasePredictor.CollocationEntry("いたします", "いたします"),
+            NextPhrasePredictor.CollocationEntry("中ですので", "ちゅうですので"),
+            NextPhrasePredictor.CollocationEntry("中", "ちゅう"),
+            NextPhrasePredictor.CollocationEntry("お願いします", "おねがいします"),
+            NextPhrasePredictor.CollocationEntry("予定です", "よていです")
+        )
+
+        private val DYNAMIC_VERB_TAILS = listOf(
+            NextPhrasePredictor.CollocationEntry("ています", "ています"),
+            NextPhrasePredictor.CollocationEntry("ているのに", "ているのに"),
+            NextPhrasePredictor.CollocationEntry("ております", "ております"),
+            NextPhrasePredictor.CollocationEntry("ます", "ます"),
+            NextPhrasePredictor.CollocationEntry("ました", "ました"),
+            NextPhrasePredictor.CollocationEntry("てください", "てください")
+        )
+
+        private val DYNAMIC_NOUN_TAILS = listOf(
+            NextPhrasePredictor.CollocationEntry("です", "です"),
+            NextPhrasePredictor.CollocationEntry("でした", "でした"),
+            NextPhrasePredictor.CollocationEntry("ですので", "ですので"),
+            NextPhrasePredictor.CollocationEntry("ですが", "ですが"),
+            NextPhrasePredictor.CollocationEntry("でしょうか", "でしょうか"),
+            NextPhrasePredictor.CollocationEntry("中", "ちゅう")
+        )
     }
 
     @Synchronized
@@ -1970,37 +1999,6 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         }
 
         return results
-    }
-
-    companion object {
-        private val DYNAMIC_SAHEN_TAILS = listOf(
-            NextPhrasePredictor.CollocationEntry("します", "します"),
-            NextPhrasePredictor.CollocationEntry("しました", "しました"),
-            NextPhrasePredictor.CollocationEntry("しています", "しています"),
-            NextPhrasePredictor.CollocationEntry("いたします", "いたします"),
-            NextPhrasePredictor.CollocationEntry("中ですので", "ちゅうですので"),
-            NextPhrasePredictor.CollocationEntry("中", "ちゅう"),
-            NextPhrasePredictor.CollocationEntry("お願いします", "おねがいします"),
-            NextPhrasePredictor.CollocationEntry("予定です", "よていです")
-        )
-
-        private val DYNAMIC_VERB_TAILS = listOf(
-            NextPhrasePredictor.CollocationEntry("ています", "ています"),
-            NextPhrasePredictor.CollocationEntry("ているのに", "ているのに"),
-            NextPhrasePredictor.CollocationEntry("ております", "ております"),
-            NextPhrasePredictor.CollocationEntry("ます", "ます"),
-            NextPhrasePredictor.CollocationEntry("ました", "ました"),
-            NextPhrasePredictor.CollocationEntry("てください", "てください")
-        )
-
-        private val DYNAMIC_NOUN_TAILS = listOf(
-            NextPhrasePredictor.CollocationEntry("です", "です"),
-            NextPhrasePredictor.CollocationEntry("でした", "でした"),
-            NextPhrasePredictor.CollocationEntry("ですので", "ですので"),
-            NextPhrasePredictor.CollocationEntry("ですが", "ですが"),
-            NextPhrasePredictor.CollocationEntry("でしょうか", "でしょうか"),
-            NextPhrasePredictor.CollocationEntry("中", "ちゅう")
-        )
     }
 
     private fun isSahenNoun(lid: Int, rid: Int, surface: String): Boolean {
