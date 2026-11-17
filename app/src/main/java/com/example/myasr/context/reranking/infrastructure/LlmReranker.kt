@@ -104,7 +104,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     (firstCand.reading.isNotEmpty() && firstCand.reading.all { it.code < 128 && (it.isLetter() || it == '\'' || it == '-') })
 
             // 2. Compute effective target input length N
-            val n: Int = if (targetInputLength != null && targetInputLength > 0) {
+            val n: Int = if (targetInputLength != null && targetInputLength >= 0) {
                 targetInputLength
             } else if (isEnglishPool) {
                 val letters = firstCand.reading.filter { it.isLetter() }.length

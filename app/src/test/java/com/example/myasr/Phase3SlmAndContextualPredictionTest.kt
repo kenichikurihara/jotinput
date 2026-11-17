@@ -178,7 +178,7 @@ class Phase3SlmAndContextualPredictionTest {
             surface = "thr",
             reading = "thr",
             isPrediction = false,
-            source = "english_raw",
+            source = "raw",
             obsPenalty = 0.0f
         )
         val typoCandidate = ConversionCandidate(
@@ -199,8 +199,7 @@ class Phase3SlmAndContextualPredictionTest {
             weightAlpha = 0.0f,
             lambdaObs = 1.0f,
             gammaUser = 0.5f,
-            targetInputLength = 3,
-            isEnglishPool = true
+            targetInputLength = 3
         )
 
         assertTrue(ranked.isNotEmpty())
@@ -221,14 +220,12 @@ class Phase3SlmAndContextualPredictionTest {
             surface = "そ",
             reading = "そ",
             isPrediction = false,
-            consumedYomiLength = 1,
             source = "dict"
         )
         val histPred = ConversionCandidate(
             surface = "そうですね",
             reading = "そうですね",
             isPrediction = true,
-            consumedYomiLength = 5,
             historyCount = 3,
             priority = 0.0f,
             source = "history"
@@ -237,7 +234,6 @@ class Phase3SlmAndContextualPredictionTest {
             surface = "送信",
             reading = "そうしん",
             isPrediction = true,
-            consumedYomiLength = 4,
             priority = 5.0f,
             source = "context_collocation"
         )
@@ -251,8 +247,7 @@ class Phase3SlmAndContextualPredictionTest {
             weightAlpha = 0.0f,
             lambdaObs = 1.0f,
             gammaUser = 0.5f,
-            targetInputLength = 1,
-            isEnglishPool = false
+            targetInputLength = 1
         )
 
         assertTrue("Ranked candidates must not be empty", ranked.size >= 2)
@@ -275,21 +270,18 @@ class Phase3SlmAndContextualPredictionTest {
             surface = "確認",
             reading = "かくにん",
             isPrediction = true,
-            consumedYomiLength = 4,
             source = "slm"
         )
         val candB = ConversionCandidate(
             surface = "お願いいたします",
             reading = "おねがいいたします",
             isPrediction = true,
-            consumedYomiLength = 9,
             source = "slm"
         )
         val candC = ConversionCandidate(
             surface = "ありがとうございます",
             reading = "ありがとうございます",
             isPrediction = true,
-            consumedYomiLength = 10,
             source = "slm"
         )
         val pool = listOf(candA, candB, candC)
@@ -302,8 +294,7 @@ class Phase3SlmAndContextualPredictionTest {
             weightAlpha = 0.0f,
             lambdaObs = 1.0f,
             gammaUser = 0.5f,
-            targetInputLength = 0,
-            isEnglishPool = false
+            targetInputLength = 0
         )
 
         // All candidates must be preserved and ranked by utility (no dropped predictions)
