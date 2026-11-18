@@ -44,6 +44,8 @@ void LlmReranker::Release() {
   cached_context_logits_.clear();
   cached_candidate_nlls_.clear();
   cached_context_log_denom_ = 0.0f;
+  partial_seq_rm_supported_ = true;
+  has_checkpoint_ = false;
   abort_prediction_.store(true);
   abort_scoring_.store(true);
   {
@@ -103,6 +105,7 @@ bool LlmReranker::Initialize(const std::string& model_path, int n_threads) {
   llama_context_params cparams = llama_context_default_params();
   cparams.n_ctx = config_.n_ctx;
   cparams.n_batch = config_.n_ctx;
+  cparams.n_seq_max = 2;
   cparams.n_threads = config_.n_threads;
   cparams.n_threads_batch = config_.n_threads;
   cparams.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_ENABLED;
@@ -125,8 +128,8 @@ bool LlmReranker::Initialize(const std::string& model_path, int n_threads) {
   cached_context_hash_ = 0;
   cached_context_n_tokens_ = 0;
   cached_context_tokens_.clear();
-  cached_context_state_.clear();
   partial_seq_rm_supported_ = true;
+  has_checkpoint_ = false;
   cache_hits_ = 0;
   cache_misses_ = 0;
   abort_scoring_.store(false);
@@ -153,20 +156,6 @@ float LlmReranker::ComputeLogDenominator(const float* logits, int n_vocab) {
   return max_l + std::logf(sum_exp);
 }
 
-bool LlmReranker::SaveContextState() {
-  if (!ctx_) return false;
-  size_t sz = llama_state_seq_get_size(ctx_, 0);
-  if (sz == 0) return false;
-  cached_context_state_.resize(sz);
-  size_t got = llama_state_seq_get_data(ctx_, cached_context_state_.data(), sz, 0);
-  if (got == 0) {
-    cached_context_state_.clear();
-    return false;
-  }
-  cached_context_state_.resize(got);
-  return true;
-}
-
 bool LlmReranker::RollbackOrRestoreContextState() {
   if (!ctx_) return false;
   llama_memory_t mem = llama_get_memory(ctx_);
@@ -174,12 +163,12 @@ bool LlmReranker::RollbackOrRestoreContextState() {
     return true;
   }
   partial_seq_rm_supported_ = false;
-  if (!cached_context_state_.empty()) {
-    if (llama_state_seq_set_data(ctx_, cached_context_state_.data(), cached_context_state_.size(), 0) > 0) {
-      return true;
-    }
+  if (has_checkpoint_) {
+    llama_memory_seq_rm(mem, 0, -1, -1);
+    llama_memory_seq_cp(mem, 1, 0, -1, -1);
+    return true;
   }
-  // Fallback: clear memory and re-decode cached_context_tokens_, then snapshot state
+  // First-time fallback before seq 1 checkpoint was created: clear memory, re-decode, and checkpoint
   llama_memory_clear(mem, true);
   if (cached_context_tokens_.empty()) return false;
   int n_tokens = static_cast<int>(cached_context_tokens_.size());
@@ -195,7 +184,8 @@ bool LlmReranker::RollbackOrRestoreContextState() {
   int ret = llama_decode(ctx_, batch);
   llama_batch_free(batch);
   if (ret != 0) return false;
-  SaveContextState();
+  llama_memory_seq_cp(mem, 0, 1, -1, -1);
+  has_checkpoint_ = true;
   return true;
 }
 
@@ -209,7 +199,6 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
 
   cache_misses_++;
   cached_candidate_nlls_.clear();
-  cached_context_state_.clear();
   llama_memory_t mem = llama_get_memory(ctx_);
 
   std::vector<llama_token> context_tokens(config_.n_ctx);
@@ -221,6 +210,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     cached_context_hash_ = 0;
     cached_context_n_tokens_ = 0;
     cached_context_tokens_.clear();
+    has_checkpoint_ = false;
     return false;
   }
   context_tokens.resize(n_tokens);
@@ -237,6 +227,10 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
   int start_pos = common_prefix_len;
 
   if (common_prefix_len > 0 && n_new_tokens > 0) {
+    if (has_checkpoint_) {
+      llama_memory_seq_rm(mem, 1, -1, -1);
+      has_checkpoint_ = false;
+    }
     // Incremental update: roll back only tokens beyond the common prefix if supported
     if (!partial_seq_rm_supported_ || !llama_memory_seq_rm(mem, 0, common_prefix_len, -1)) {
       partial_seq_rm_supported_ = false;
@@ -246,9 +240,15 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     }
   } else if (common_prefix_len == 0) {
     // Zero common prefix: full reset
+    has_checkpoint_ = false;
     llama_memory_clear(mem, true);
   } else {
     // Exact match (common_prefix_len == n_tokens && cached_context_tokens_.size() == n_tokens)
+    if (!partial_seq_rm_supported_ && !has_checkpoint_) {
+      llama_memory_seq_rm(mem, 1, -1, -1);
+      llama_memory_seq_cp(mem, 0, 1, -1, -1);
+      has_checkpoint_ = true;
+    }
     cache_hits_++;
     return true;
   }
@@ -271,6 +271,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     cached_context_hash_ = 0;
     cached_context_n_tokens_ = 0;
     cached_context_tokens_.clear();
+    has_checkpoint_ = false;
     llama_memory_clear(mem, true);
     return false;
   }
@@ -282,6 +283,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     cached_context_n_tokens_ = 0;
     cached_context_tokens_.clear();
     cached_context_logits_.clear();
+    has_checkpoint_ = false;
     return false;
   }
 
@@ -293,7 +295,9 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
   cached_context_n_tokens_ = n_tokens;
   cached_context_tokens_ = std::move(context_tokens);
   if (!partial_seq_rm_supported_) {
-    SaveContextState();
+    llama_memory_seq_rm(mem, 1, -1, -1);
+    llama_memory_seq_cp(mem, 0, 1, -1, -1);
+    has_checkpoint_ = true;
   }
 
   // Update snapshot for lock-free 0ms candidate evaluation from UI thread
