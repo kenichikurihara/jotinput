@@ -130,14 +130,32 @@ $$D_{\text{mod}}(X, R_{1..m}) = \sum_{i=1}^{m} d_{\text{mod}}(x_i, r_i)$$
        }
    }
    ```
-2. **`obsPenalty` の伝播**:
-   - `voicedPrefixWords`（インメモリ Trie 由来）の `addCandidate` 呼び出しに `obsPenalty = 1.2f * vDist` を確実に付与し、SLM リランカーでの公平な Bayesian 競合を保証する。
+   ```
+2. **`obsPenalty` および `dictCost` の完全伝播**:
+   - `ConversionCandidate` に `dictCost: Int = 5000` を追加し、Mmap トークンや Trie ワードエントリのコストを SLM リランカーに伝播。
+
+### 4.3 アイデア 8: 事前確率 `dictCost` と $g_{\text{ext}}$ 劣線形減衰の統合
+1. **`logPostScores` への `dictCost` 反映**:
+   - $\text{dictCostNats} = \text{cand.dictCost} / 3000.0\text{f}$ を算出し、事後対数スコアから減算。超高頻度語（`東京` cost=0〜2000）と超低頻度固有名詞（`東京貯金事務センター` cost=8000+）の事前確率差を正確に反映。
+2. **$g_{\text{ext}}$ の劣線形・頻度減衰正規化**:
+   - 未入力文字数 $\Delta_{\text{ext}} > 3$ に対し $\Delta_{\text{ext}}^{\text{eff}} = 3.0 + \sqrt{\Delta_{\text{ext}} - 3}$ と劣線形化。
+   - 頻度減衰係数 $w_{\text{freq}} = \text{clamp}(1.0 - \text{dictCost} / 15000, 0.2, 1.0)$ を掛け合わせ、長大低頻度語の過剰な延長報酬暴走を抑止。
+
+### 4.4 アイデア 7, 9, 10: デッドエンドゲート、音韻先読み、および `topPool` 枠保護
+1. **アイデア 7 (Dead-End Reading Gate)**:
+   - 入力長 $n \in [2, 5]$ において、辞書上に自然な完全一致語（$\text{obsPenalty} = 0, \text{dictCost} \le 5500$）が存在しない場合、`isDeadEndReading = true` を発火。
+   - 音韻修飾ペナルティを $0.35\times$ に減衰し、Slot 1 昇格判定のマージン $\text{slot1MarginSec}$ を $0.0\text{s}$ に緩和。不自然な Viterbi 断片（「冬季よ」等）を退け、真の意図語（「東京」等）を Slot 1 に即座に繰り上げる。
+2. **アイデア 9 (長音・撥音 1-Mora 先読み)**:
+   - 拗音・小書き仮名（`ょ`, `ゃ`, `ゅ` 等）で終わるプレフィックスに対し、日本語音素配列規則で高頻度に後続する `う` および `ん` を 1-Mora 先読みし、Mmap 辞書から $O(1)$ で直接完全一致引き当てを実施。
+3. **アイデア 10 (`topPool` 枠保護)**:
+   - リランカーの 16 枠 `topPool` 構築時、短延長かつ高頻度な音韻修飾候補（$\text{obsPenalty} > 0, \text{dictCost} \le 6000$）を優先的に `balancedPrefix` に最低 2 枠保護し、長大プレフィックスによる押し出しを防止。
 
 ---
 
 ## 5. DDD / アーキテクチャ境界と Konsist 整合性
 
 - `JapaneseKanaUtils` および `KanaKanjiEngine` は純粋なドメイン層（`context.kanakanji.domain`）に位置し、Android UI（`android.view.*`）やインフラ層への不正依存は一切導入しない。
+- `LlmReranker` は `context.reranking.infrastructure` に位置し、ドメイン層の `CandidateRerankJudgement` および `ConversionCandidate` を尊重して数理モデルを実行する。
 - `DddArchitectureKonsistTest` のルールに完全準拠し、Shared Kernel / Domain の純粋性を担保する。
 
 ---
@@ -146,7 +164,8 @@ $$D_{\text{mod}}(X, R_{1..m}) = \sum_{i=1}^{m} d_{\text{mod}}(x_i, r_i)$$
 
 1. **`FlickTypoAndMozcCorrectionEvaluationTest`**:
    - `testFlickUnmodifiedToukiyoSuggestsTokyo()`: 「とうきよ」から「東京」が候補ストリップに存在し、上位にランクインすることを検証。
+   - `testFlickUnmodifiedToukiyoRerankingRanksTokyoAtTop1()`: SLM スコアリング環境下で、「東京」が「東京貯金事務センター」および Viterbi 断片を退けて Rank 1 に昇格することを検証。
    - `testFlickUnmodifiedChiyotsutoSuggestsChotto()`: 「ちよつと」から「ちょっと」が出現することを検証。
    - `testFlickUnmodifiedKaikiSuggestsKaigi()`: 「かいき」から「会議」が出現することを検証。
 2. **全スイート実行**:
-   - `./gradlew testDebugUnitTest` を実行し、既存の全単体テスト（特に `JapanesePunctuationEvaluationTest` 67+ 件、`LmFirstJointEvaluationTest`）が 100% 合格することを確認。
+   - GitHub Actions CI/CD (`Android CI`) を実行し、全単体テスト（特に `JapanesePunctuationEvaluationTest` 67+ 件、`SpanAwareBayesianRerankingEvaluationTest`、`LmFirstJointEvaluationTest`）が 100% 合格することを確認。

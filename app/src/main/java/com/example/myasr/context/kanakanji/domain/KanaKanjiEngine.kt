@@ -32,6 +32,7 @@ data class ConversionCandidate(
     val source: String = "dict",
     val priority: Float = 0.0f,
     val obsPenalty: Float = 0.0f,
+    val dictCost: Int = 5000,
     val firstBunsetsuSurface: String = "",
     val lastContentWordSurface: String = "",
     val completedSurface: String = "",
@@ -690,7 +691,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             // 2. Base in-memory Trie & MmapDictionary exact matches
             val mmapTokens = queryAllMmapExactTokens(normalized)
             for (tok in mmapTokens) {
-                addCandidate(ConversionCandidate(surface = tok.surface, reading = normalized, isPrediction = false, source = tok.source))
+                addCandidate(ConversionCandidate(surface = tok.surface, reading = normalized, isPrediction = false, source = tok.source, dictCost = tok.cost))
             }
 
             val contextRid = if (contextKey.isNotEmpty()) surfaceToRidMap[contextKey] ?: 0 else 0
@@ -708,7 +709,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
             for (w in otherExact) {
-                addCandidate(ConversionCandidate(surface = w.surface, reading = normalized, isPrediction = false, source = w.source))
+                addCandidate(ConversionCandidate(surface = w.surface, reading = normalized, isPrediction = false, source = w.source, dictCost = w.cost))
             }
 
             // 3.6. Voiced & Semi-voiced Exact Matches (e.g. "かいき" -> "会議" [かいぎ], "こはん" -> "ご飯" [ごはん])
@@ -732,13 +733,13 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     }
                 }
                 for ((reading, entry, vDist) in voicedExactWords) {
-                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = 1.2f * vDist))
+                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = 1.2f * vDist, dictCost = entry.cost))
                 }
                 // Query Mmap exact matches for top voiced readings (up to 2 readings)
                 for (vPath in voicedPaths.take(2)) {
                     val mmapVoicedExact = queryAllMmapExactTokens(vPath.reading)
                     for (tok in mmapVoicedExact) {
-                        addCandidate(ConversionCandidate(surface = tok.surface, reading = vPath.reading, isPrediction = true, source = tok.source, obsPenalty = 1.2f * vPath.voicingDistance))
+                        addCandidate(ConversionCandidate(surface = tok.surface, reading = vPath.reading, isPrediction = true, source = tok.source, obsPenalty = 1.2f * vPath.voicingDistance, dictCost = tok.cost))
                     }
                 }
             }
@@ -748,7 +749,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             // take precedence over artificial multi-word Viterbi chunk splits (like "冬季よ", "すー葉").
             if (voicedPaths.isNotEmpty()) {
                 val voicedPrefixWords = mutableListOf<Triple<String, WordEntry, Int>>()
-                for (vPath in voicedPaths) {
+                // Sort paths by modifier distance and subtree minimum cost to guarantee high-frequency paths come first
+                val sortedVoicedPaths = voicedPaths.sortedBy { it.voicingDistance * 1200 + it.node.minCostInSubtree }
+                for (vPath in sortedVoicedPaths) {
                     val prefixWords = mutableListOf<Pair<String, WordEntry>>()
                     collectPrefixWords(vPath.node, vPath.reading, prefixWords, maxCount = 80)
                     for ((fullReading, w) in prefixWords) {
@@ -767,13 +770,35 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     }
                 }
                 for ((reading, entry, vDist) in voicedPrefixWords) {
-                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = 1.2f * vDist))
+                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = 1.2f * vDist, dictCost = entry.cost))
                 }
-                // Query Mmap predictive prefix matches for top modified readings (up to 2 readings)
-                for (vPath in voicedPaths.take(2)) {
+                // Query Mmap predictive prefix matches for top modified readings (up to 4 readings)
+                for (vPath in sortedVoicedPaths.take(4)) {
                     val mmapVoicedPrefix = queryAllMmapPrefixTokens(vPath.reading, maxCount = 10)
                     for (cand in mmapVoicedPrefix) {
-                        addCandidate(ConversionCandidate(surface = cand.surface, reading = cand.reading, isPrediction = true, source = cand.source, obsPenalty = 1.2f * vPath.voicingDistance))
+                        addCandidate(ConversionCandidate(surface = cand.surface, reading = cand.reading, isPrediction = true, source = cand.source, obsPenalty = 1.2f * vPath.voicingDistance, dictCost = cand.dictCost))
+                    }
+
+                    // Phonetic 1-Mora Lookahead (長音・撥音先読み):
+                    // In Japanese phonotactics, youon (e.g. "きょ", "しょ", "りょ") are predominantly followed by "う" or "ん".
+                    // Look up exact matches for reading + "う" / "ん" directly in Mmap dictionaries (O(1)).
+                    if (vPath.reading.isNotEmpty() && vPath.reading.last() in listOf('ゃ', 'ゅ', 'ょ', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ')) {
+                        for (lookaheadMora in listOf("う", "ん")) {
+                            val fastReading = vPath.reading + lookaheadMora
+                            val exactTokens = queryAllMmapExactTokens(fastReading)
+                            for (tok in exactTokens) {
+                                addCandidate(
+                                    ConversionCandidate(
+                                        surface = tok.surface,
+                                        reading = fastReading,
+                                        isPrediction = true,
+                                        source = tok.source,
+                                        obsPenalty = 1.2f * vPath.voicingDistance,
+                                        dictCost = tok.cost
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -817,18 +842,20 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     }
                 }
                 for ((reading, entry, penalty) in flickExactWords.take(8)) {
-                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = penalty.toFloat() / 1000.0f))
+                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = penalty.toFloat() / 1000.0f, dictCost = entry.cost))
                 }
 
                 // If the typo-corrected reading represents a valid word in the lexicon,
                 // offer the corrected Hiragana surface itself (e.g. "わたさ" -> "わたし")
-                for ((flickReading, _) in validFlickReadings.take(3)) {
+                for ((flickReading, penalty) in validFlickReadings.take(3)) {
                     addCandidate(
                         ConversionCandidate(
                             surface = flickReading,
                             reading = flickReading,
                             isPrediction = true,
-                            source = "flick_correction"
+                            source = "flick_correction",
+                            obsPenalty = penalty.toFloat() / 1000.0f,
+                            dictCost = 4000
                         )
                     )
                 }
@@ -843,7 +870,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     entry.cost + connCost
                 }
                 for ((reading, entry) in prefixWords.take(40)) {
-                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source))
+                    addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, dictCost = entry.cost))
                 }
             }
 
@@ -1446,7 +1473,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                         surface = token.surface,
                         reading = reading,
                         isPrediction = true,
-                        source = entry.sourceId
+                        source = entry.sourceId,
+                        dictCost = token.cost
                     )
                 )
             }

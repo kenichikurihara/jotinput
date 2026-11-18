@@ -131,4 +131,46 @@ class FlickTypoAndMozcCorrectionEvaluationTest {
         assertTrue("Candidates for 'かいき' must include '会議', got: $surfaces",
             surfaces.contains("会議"))
     }
+
+    @Test
+    fun testFlickUnmodifiedToukiyoRerankingRanksTokyoAtTop1() {
+        val candTokyo = com.example.myasr.context.kanakanji.domain.ConversionCandidate(
+            surface = "東京",
+            reading = "とうきょう",
+            isPrediction = true,
+            source = "dict",
+            obsPenalty = 1.2f,
+            dictCost = 2100
+        )
+        val candPostal = com.example.myasr.context.kanakanji.domain.ConversionCandidate(
+            surface = "東京貯金事務センター",
+            reading = "とうきよちよきんじむせんたー",
+            isPrediction = true,
+            source = "dict",
+            obsPenalty = 0.0f,
+            dictCost = 8500
+        )
+        val candViterbiFragment = com.example.myasr.context.kanakanji.domain.ConversionCandidate(
+            surface = "冬季よ",
+            reading = "とうきよ",
+            isPrediction = false,
+            source = "viterbi",
+            obsPenalty = 0.0f,
+            dictCost = 7200
+        )
+        val pool = listOf(candViterbiFragment, candPostal, candTokyo)
+        val scores = floatArrayOf(12.50f, 13.00f, 9.80f)
+
+        val reranked = com.example.myasr.context.reranking.infrastructure.LlmReranker.scoreAndRankPool(
+            topPool = pool,
+            scores = scores,
+            currentShownTop1 = null,
+            weightAlpha = 0.20f,
+            lambdaObs = 0.50f,
+            gammaUser = 3.00f,
+            targetInputLength = 4
+        )
+
+        assertEquals("東京", reranked.first().surface)
+    }
 }

@@ -181,6 +181,16 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             }
 
+            // Dead-End Reading Gate (Idea 7): Detect if the input has no natural full-span word in lexicon
+            val hasNaturalFullWord = topPool.any { cand ->
+                cand.obsPenalty == 0.0f &&
+                !cand.isPrediction &&
+                cand.dictCost <= 5500 &&
+                (cand.source in listOf("dict", "user", "mozc") || cand.historyCount >= 1) &&
+                cand.reading.isNotEmpty() && cand.reading.length == n
+            }
+            val isDeadEndReading = !isEnglishPool && n in 2..5 && !hasNaturalFullWord
+
             val baseScores = FloatArray(topPool.size)
             for (index in topPool.indices) {
                 val candidate = topPool[index]
@@ -261,11 +271,13 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
                 val obsDiscount = if (!isEnglishPool && candidate.obsPenalty > 0f) {
                     val deltaNll = rawNll - bestPoolNll
-                    0.20f + 0.80f * ((deltaNll - 1.5f) / 3.0f).coerceIn(0.0f, 1.0f)
+                    val baseDisc = 0.20f + 0.80f * ((deltaNll - 1.5f) / 3.0f).coerceIn(0.0f, 1.0f)
+                    if (isDeadEndReading) baseDisc * 0.35f else baseDisc
                 } else {
                     1.0f
                 }
                 val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f * obsDiscount
+                val dictCostPenalty = if (!isEnglishPool) (candidate.dictCost.coerceIn(0, 15000) / 3000.0f) else 0.0f
                 val rankCost = (index * 1000.0f) / 1000.0f
 
                 val hysteresisBonus = if (currentShownTop1 != null && candidate.surface == currentShownTop1 && !isExactUser) {
@@ -274,7 +286,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     0.0f
                 }
 
-                baseScores[index] = (1.0f - weightAlpha) * (effectiveNll + effectiveObs + hysteresisBonus) + weightAlpha * rankCost
+                baseScores[index] = (1.0f - weightAlpha) * (effectiveNll + effectiveObs + dictCostPenalty + hysteresisBonus) + weightAlpha * rankCost
             }
 
             // Compute Softmax Probabilities and Expected EIS Utility for all candidates (B1)
@@ -291,14 +303,16 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     val normNll = scores[i] / tokens.toFloat().pow(0.85f)
                     val obsDiscount = if (cand.obsPenalty > 0f) {
                         val deltaNll = scores[i] - bestPoolNll
-                        0.20f + 0.80f * ((deltaNll - 1.5f) / 3.0f).coerceIn(0.0f, 1.0f)
+                        val baseDisc = 0.20f + 0.80f * ((deltaNll - 1.5f) / 3.0f).coerceIn(0.0f, 1.0f)
+                        if (isDeadEndReading) baseDisc * 0.35f else baseDisc
                     } else {
                         1.0f
                     }
                     val obsEff = lambdaObs * cand.obsPenalty * 5.0f * obsDiscount
+                    val dictCostNats = (cand.dictCost.coerceIn(0, 15000) / 3000.0f)
                     val priorHist = if (cand.historyCount > 0) minOf(3.0f, cand.historyCount.toFloat()) else 0.0f
                     val rankCost = (i * 0.15f)
-                    -(normNll + obsEff + rankCost - priorHist)
+                    -(normNll + obsEff + rankCost + dictCostNats - priorHist)
                 }
             }
             val maxLogPost = logPostScores.maxOrNull() ?: 0.0f
@@ -322,7 +336,10 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     } else {
                         keyCostSec * mLengths[i] - 0.60f * deltaUnc
                     }
-                    val gExt = extGainWeight * keyCostSec * deltaExt
+                    // Sublinear extension gain with frequency damping for long rare words (Idea 8)
+                    val effectiveExt = if (deltaExt <= 3) deltaExt.toFloat() else 3.0f + kotlin.math.sqrt((deltaExt - 3).toFloat())
+                    val extFreqWeight = (1.0f - cand.dictCost.coerceIn(0, 12000) / 15000.0f).coerceIn(0.2f, 1.0f)
+                    val gExt = extGainWeight * keyCostSec * effectiveExt * extFreqWeight
                     val lErr = 1.50f + 0.20f * cand.surface.length + keyCostSec * mLengths[i]
                     p * (gBase + gExt) - (1.0f - p) * riskWeight * lErr
                 }
@@ -469,6 +486,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             // Stratum 1: Top full candidates + Prediction / History Promotion (Slot-2 / Conditional Top-1)
             var fullIdx = 0
             var partialIdx = 0
+            val effectiveSlot1Margin = if (isDeadEndReading) 0.0f else slot1MarginSec
             val candidateToPromote = if (rankedFull.isNotEmpty() && n > 0) {
                 if (n == 1) {
                     topHighPriIdx ?: topHistPredIdx
@@ -476,8 +494,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     topHighPriIdx ?: topHistPredIdx ?: bestExtIdx?.takeIf { extIdx ->
                         val topFullIdx = topPool.indexOf(rankedFull[0])
                         topFullIdx >= 0 && (
-                            utilities[extIdx] > utilities[topFullIdx] + slot1MarginSec ||
-                            topPool[extIdx].priority >= 3.5f
+                            utilities[extIdx] > utilities[topFullIdx] + effectiveSlot1Margin ||
+                            topPool[extIdx].priority >= 3.5f ||
+                            (isDeadEndReading && utilities[extIdx] > 0.0f)
                         )
                     }
                 }
@@ -489,9 +508,10 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             if (candidateToPromote != null && rankedFull.isNotEmpty() && n > 0) {
                 val topFullIdx = topPool.indexOf(rankedFull[0])
                 val isStrictCoherent = topFullIdx >= 0 && (scores[candidateToPromote] - scores[topFullIdx] < 5.0f || topPool[candidateToPromote].priority >= 3.5f)
-                val canPromoteTop1 = !isEnglishPool && (n in 2..4 || (n == 1 && topPool[candidateToPromote].priority >= 3.5f)) && topFullIdx >= 0 && isStrictCoherent && (
-                    utilities[candidateToPromote] > utilities[topFullIdx] + slot1MarginSec ||
+                val canPromoteTop1 = !isEnglishPool && (n in 2..4 || (n == 1 && topPool[candidateToPromote].priority >= 3.5f)) && topFullIdx >= 0 && (isStrictCoherent || isDeadEndReading) && (
+                    utilities[candidateToPromote] > utilities[topFullIdx] + effectiveSlot1Margin ||
                     topPool[candidateToPromote].priority >= 3.5f ||
+                    (isDeadEndReading && utilities[candidateToPromote] > 0.0f) ||
                     (candidateToPromote == topHistPredIdx && baseScores[candidateToPromote] < baseScores[topFullIdx] - 0.50f)
                 )
                 if (canPromoteTop1) {
@@ -777,11 +797,20 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             }
             val singleWordPrefix = prefixCands.filter { it.source != "phrase_chunk" }
             val phraseChunkPrefix = prefixCands.filter { it.source == "phrase_chunk" }
+
+            // Idea 10: Protect at least 2 slots for short-extension high-frequency fuzzy/phonetic candidates
+            val fuzzyShort = singleWordPrefix.filter { it.obsPenalty > 0f && it.dictCost <= 6000 }
+            val regularSingle = singleWordPrefix.filter { it !in fuzzyShort }
+            val prioritizedSingle = mutableListOf<ConversionCandidate>()
+            prioritizedSingle.addAll(fuzzyShort.take(2))
+            prioritizedSingle.addAll(regularSingle)
+            if (fuzzyShort.size > 2) prioritizedSingle.addAll(fuzzyShort.drop(2))
+
             val balancedPrefix = mutableListOf<ConversionCandidate>()
-            balancedPrefix.addAll(singleWordPrefix.take(4))
+            balancedPrefix.addAll(prioritizedSingle.take(4))
             balancedPrefix.addAll(phraseChunkPrefix.take(4))
             if (balancedPrefix.size < 8) {
-                val remaining = singleWordPrefix.drop(4) + phraseChunkPrefix.drop(4)
+                val remaining = prioritizedSingle.drop(4) + phraseChunkPrefix.drop(4)
                 balancedPrefix.addAll(remaining.take(8 - balancedPrefix.size))
             }
             for (c in balancedPrefix) {
@@ -937,11 +966,20 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             }
             val singleWordPrefix = prefixCands.filter { it.source != "phrase_chunk" }
             val phraseChunkPrefix = prefixCands.filter { it.source == "phrase_chunk" }
+
+            // Idea 10: Protect at least 2 slots for short-extension high-frequency fuzzy/phonetic candidates
+            val fuzzyShort = singleWordPrefix.filter { it.obsPenalty > 0f && it.dictCost <= 6000 }
+            val regularSingle = singleWordPrefix.filter { it !in fuzzyShort }
+            val prioritizedSingle = mutableListOf<ConversionCandidate>()
+            prioritizedSingle.addAll(fuzzyShort.take(2))
+            prioritizedSingle.addAll(regularSingle)
+            if (fuzzyShort.size > 2) prioritizedSingle.addAll(fuzzyShort.drop(2))
+
             val balancedPrefix = mutableListOf<ConversionCandidate>()
-            balancedPrefix.addAll(singleWordPrefix.take(4))
+            balancedPrefix.addAll(prioritizedSingle.take(4))
             balancedPrefix.addAll(phraseChunkPrefix.take(4))
             if (balancedPrefix.size < 8) {
-                val remaining = singleWordPrefix.drop(4) + phraseChunkPrefix.drop(4)
+                val remaining = prioritizedSingle.drop(4) + phraseChunkPrefix.drop(4)
                 balancedPrefix.addAll(remaining.take(8 - balancedPrefix.size))
             }
             for (c in balancedPrefix) {

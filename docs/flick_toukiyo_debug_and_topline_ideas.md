@@ -211,3 +211,15 @@ flowchart TD
 - **EIS 向上メカニズム**:
   - `東京` のような最有力候補が、SLM スコアリング前のプール切り出し段階で長大固有名詞やカタカナ変換に押し出されて脱落する事故をゼロにする。
 
+---
+
+### 5.3 実装ステータス（完了）
+
+| アイデア | 実装箇所 | 主な実装内容 |
+|---|---|---|
+| **アイデア 1** | `JapaneseKanaUtils.kt`, `KanaKanjiEngine.kt` | `getPhoneticModifierExpansions` 新設による小書き仮名展開、ステップ 3.8 での Mmap プレフィックス検索呼び出し |
+| **アイデア 7** | `LlmReranker.kt` | `isDeadEndReading`（辞書自然語の完全一致欠如）検出による音韻ペナルティ緩和（$0.35\times$）および Slot 1 昇格ゲート緩和（マージン $0.0\text{s}$） |
+| **アイデア 8** | `KanaKanjiEngine.kt`, `LlmReranker.kt` | `ConversionCandidate.dictCost` の完全伝播、`logPostScores` への `dictCostNats` 減算、劣線形・頻度減衰 $g_{\text{ext}}$ の導入 |
+| **アイデア 9** | `KanaKanjiEngine.kt` | ステップ 3.8 での `minCostInSubtree` パスソート、および拗音に対する長音・撥音（`う`, `ん`）1-Mora 先読み Mmap 引き当て |
+| **アイデア 10** | `LlmReranker.kt` | `tryFastRerankWithStatus` および `rerankWithStatus` の `topPool` 構築時における短延長・高頻度ファジー枠（2枠）の保護 |
+
