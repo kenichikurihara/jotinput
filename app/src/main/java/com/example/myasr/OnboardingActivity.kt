@@ -13,6 +13,8 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -28,14 +30,17 @@ import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.StatusTone
 import com.example.myasr.context.ime.domain.OnboardingDecisionModel
 import com.example.myasr.context.ime.domain.OnboardingDecisionModel.DriveRestoreInput
 import com.example.myasr.context.ime.domain.OnboardingDecisionModel.OnboardingMode
+import com.example.myasr.context.ime.domain.OnboardingDecisionModel.OnboardingSlmProposalInput
 import com.example.myasr.context.ime.domain.OnboardingDecisionModel.OnboardingStep
 import com.example.myasr.context.ime.domain.OnboardingDecisionModel.StepGuidanceInput
 import com.example.myasr.context.ime.infrastructure.OnboardingStateStore
+import com.example.myasr.context.ime.presentation.KeyboardHeightManager
 import com.example.myasr.context.kanakanji.application.UserHistorySyncManager
 import com.example.myasr.context.provisioning.domain.DictUpdateState
 import com.example.myasr.context.provisioning.infrastructure.ProvisioningForegroundService
 import com.example.myasr.context.provisioning.infrastructure.ProvisioningTaskKind
 import com.example.myasr.context.provisioning.infrastructure.ProvisioningUiState
+import com.example.myasr.context.reranking.domain.RerankEngineType
 import com.example.myasr.context.speech.domain.AsrLanguage
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
@@ -92,9 +97,16 @@ class OnboardingActivity : AppCompatActivity() {
     // Step 1: Data Prep
     private lateinit var tvObAsrBadge: TextView
     private lateinit var tvObDictBadge: TextView
+    private lateinit var tvObSlmBadge: TextView
+    private lateinit var tvObSlmDesc: TextView
+    private lateinit var rgObSlmChoice: RadioGroup
+    private lateinit var rbObSlm35_08B: RadioButton
+    private lateinit var rbObSlm35_2B: RadioButton
+    private lateinit var rbObSlmNone: RadioButton
     private lateinit var btnObStartDownloads: MaterialButton
     private lateinit var layoutObDownloadError: LinearLayout
     private lateinit var tvObDownloadErrorMsg: TextView
+    private var selectedOnboardingSlm: RerankEngineType = RerankEngineType.LOCAL_SLM_3_5_0_8B
 
     // Step 2: Drive Restore
     private lateinit var tvObDriveBadge: TextView
@@ -256,6 +268,12 @@ class OnboardingActivity : AppCompatActivity() {
 
         tvObAsrBadge = findViewById(R.id.tvObAsrBadge)
         tvObDictBadge = findViewById(R.id.tvObDictBadge)
+        tvObSlmBadge = findViewById(R.id.tvObSlmBadge)
+        tvObSlmDesc = findViewById(R.id.tvObSlmDesc)
+        rgObSlmChoice = findViewById(R.id.rgObSlmChoice)
+        rbObSlm35_08B = findViewById(R.id.rbObSlm35_08B)
+        rbObSlm35_2B = findViewById(R.id.rbObSlm35_2B)
+        rbObSlmNone = findViewById(R.id.rbObSlmNone)
         btnObStartDownloads = findViewById(R.id.btnObStartDownloads)
         layoutObDownloadError = findViewById(R.id.layoutObDownloadError)
         tvObDownloadErrorMsg = findViewById(R.id.tvObDownloadErrorMsg)
@@ -303,6 +321,15 @@ class OnboardingActivity : AppCompatActivity() {
             currentMode = OnboardingMode.REINSTALL
             stateStore.saveProgress(currentMode, currentStep)
             renderModeSelectionCards()
+        }
+
+        rgObSlmChoice.setOnCheckedChangeListener { _, checkedId ->
+            selectedOnboardingSlm = when (checkedId) {
+                R.id.rbObSlm35_2B -> RerankEngineType.LOCAL_SLM_3_5_2B
+                R.id.rbObSlmNone -> RerankEngineType.NONE
+                else -> RerankEngineType.LOCAL_SLM_3_5_0_8B
+            }
+            renderCurrentStep()
         }
 
         btnObStartDownloads.setOnClickListener {
@@ -371,6 +398,17 @@ class OnboardingActivity : AppCompatActivity() {
         ) {
             ProvisioningForegroundService.enqueue(this, ProvisioningTaskKind.ALL_OR_OUTDATED_DICTIONARIES)
             enqueuedAny = true
+        }
+
+        if (selectedOnboardingSlm != RerankEngineType.NONE) {
+            KeyboardHeightManager.setSlmRerankEnabled(this, true)
+            KeyboardHeightManager.setRerankEngineType(this, selectedOnboardingSlm)
+            if (!app.llmReranker.isModelInstalled(selectedOnboardingSlm.modelFileName) &&
+                !provState.isTaskActiveOrQueued(ProvisioningTaskKind.SLM_MODEL, selectedOnboardingSlm.id)
+            ) {
+                ProvisioningForegroundService.enqueue(this, ProvisioningTaskKind.SLM_MODEL, selectedOnboardingSlm.id)
+                enqueuedAny = true
+            }
         }
 
         if (enqueuedAny) {
@@ -633,12 +671,29 @@ class OnboardingActivity : AppCompatActivity() {
             }
         }
 
-        val bothReady = asrReady && totalDictWords > 0
-        val bothQueued = asrQueued && dictQueued
-        btnObStartDownloads.isEnabled = !bothReady && !bothQueued && !(asrReady && dictQueued) && !(asrQueued && totalDictWords > 0)
+        val slmInstalled = selectedOnboardingSlm != RerankEngineType.NONE &&
+            AsrApp.instance.llmReranker.isModelInstalled(selectedOnboardingSlm.modelFileName)
+        val slmQueued = selectedOnboardingSlm != RerankEngineType.NONE &&
+            provState.isTaskActiveOrQueued(ProvisioningTaskKind.SLM_MODEL, selectedOnboardingSlm.id)
+        val slmProposal = OnboardingDecisionModel.evaluateSlmProposal(
+            OnboardingSlmProposalInput(
+                selectedEngine = selectedOnboardingSlm,
+                modelInstalled = slmInstalled,
+                isDownloading = slmQueued
+            )
+        )
+        tvObSlmBadge.text = slmProposal.badgeText
+        applyBadgeTone(tvObSlmBadge, slmProposal.tone)
+        tvObSlmDesc.text = slmProposal.descriptionText
+
+        val needAsrOrDict = (!asrReady && !asrQueued) || (totalDictWords <= 0 && !dictQueued)
+        val needSlm = slmProposal.shouldOfferDownload
+        val anyQueued = asrQueued || dictQueued || slmQueued
+        btnObStartDownloads.isEnabled = needAsrOrDict || needSlm
         btnObStartDownloads.text = when {
-            bothReady -> "必要なデータはすべて導入済みです ✓"
-            asrQueued || dictQueued -> "バックグラウンドで取得中..."
+            !needAsrOrDict && !needSlm && anyQueued -> "バックグラウンドで取得中..."
+            !needAsrOrDict && !needSlm -> "必要なデータはすべて導入済みです ✓"
+            !needAsrOrDict && needSlm -> "${selectedOnboardingSlm.displayName} をバックグラウンドで取得"
             else -> "バックグラウンドでまとめて取得"
         }
 

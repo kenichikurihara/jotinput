@@ -48,6 +48,7 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`RerankEnabledImpliesValidModel`**: AI リランクが ON のとき、モデルは必ず有効なモデル（0.5B または 1.5B）が選択されており、モデル未選択（NONE）のまま放置されないこと。
 - **`RerankDisabledImpliesEngineNone`**: AI リランクが OFF のとき、エンジンは必ず NONE に解決されること。
 - **`BottomNavHiddenWhenImeActive`**: IME 入力中（`imeInputActive = True`）のときは、ボトムナビゲーションバーが必ず非表示（`showBottomNav = False`）となり、キーボード上の縦領域を最大化してタブの押し上げと無駄なホワイトスペースを完全に抑止すること。
+- **`NeverPromptDownloadWhenInstalledOrDisabled` / `DownloadCtaOnlyWhenEnabledAndMissing`**: 導入済み・無効化済み・ダウンロード中の SLM モデルに対して重複ダウンロード確認やインライン取得 CTA を表示しないこと。
 
 
 ### 3.5 [`onboarding_flow.als`](app/src/test/resources/alloy/onboarding_flow.als)

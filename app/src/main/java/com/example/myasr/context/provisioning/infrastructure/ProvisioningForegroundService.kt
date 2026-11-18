@@ -22,9 +22,11 @@ import com.example.myasr.AsrApp
 import com.example.myasr.MainActivity
 import com.example.myasr.R
 import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
+import com.example.myasr.context.ime.presentation.KeyboardHeightManager
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
 import com.example.myasr.context.provisioning.domain.DictUpdateState
 import com.example.myasr.context.provisioning.domain.DictionaryUpdateTracker
+import com.example.myasr.context.reranking.domain.RerankEngineType
 import com.example.myasr.context.speech.domain.AsrLanguage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -45,7 +47,8 @@ enum class ProvisioningTaskKind {
     SINGLE_DICTIONARY,
     ALL_OR_OUTDATED_DICTIONARIES,
     ENGLISH_SPELLING_MODEL,
-    ENGLISH_ASR_MODEL
+    ENGLISH_ASR_MODEL,
+    SLM_MODEL
 }
 
 data class ProvisioningTaskRequest(
@@ -58,6 +61,10 @@ data class ProvisioningTaskRequest(
         ProvisioningTaskKind.ALL_OR_OUTDATED_DICTIONARIES -> "辞書の一括ダウンロード・コンパイル"
         ProvisioningTaskKind.ENGLISH_SPELLING_MODEL -> "英語スペル補正モデル"
         ProvisioningTaskKind.ENGLISH_ASR_MODEL -> "英語音声認識モデル"
+        ProvisioningTaskKind.SLM_MODEL -> {
+            val engine = RerankEngineType.fromId(dictId ?: "")
+            if (engine != RerankEngineType.NONE) "${engine.displayName} AIモデル" else "AI変換モデル"
+        }
     }
 }
 
@@ -256,6 +263,7 @@ class ProvisioningForegroundService : Service() {
                 ProvisioningTaskKind.ALL_OR_OUTDATED_DICTIONARIES -> runAllOrOutdatedDictionaries(task)
                 ProvisioningTaskKind.ENGLISH_SPELLING_MODEL -> runEnglishSpellingDownload(task)
                 ProvisioningTaskKind.ENGLISH_ASR_MODEL -> runEnglishAsrDownload(task)
+                ProvisioningTaskKind.SLM_MODEL -> runSlmModelDownload(task)
             }
         } catch (e: CancellationException) {
             throw e
@@ -468,6 +476,48 @@ class ProvisioningForegroundService : Service() {
                 task = task,
                 success = false,
                 message = "ダウンロードに失敗しました: ${result.exceptionOrNull()?.message}"
+            )
+        }
+    }
+
+    private suspend fun runSlmModelDownload(task: ProvisioningTaskRequest): ProvisioningEvent {
+        val engine = RerankEngineType.fromId(task.dictId ?: "")
+        if (engine == RerankEngineType.NONE || engine.downloadUrl.isBlank()) {
+            return ProvisioningEvent(
+                eventId = eventCounter.incrementAndGet(),
+                task = task,
+                success = false,
+                message = "不明な AI モデル ID です: ${task.dictId}"
+            )
+        }
+        val targetDir = SlmModelDownloader.getTargetModelsDir(this)
+        val downloader = SlmModelDownloader(targetDir, engine)
+        val result = downloader.download { statusText, pct ->
+            reportProgress(
+                task = task,
+                percent = pct,
+                statusText = "$statusText ($pct%)",
+                notifTitle = "${engine.displayName} をダウンロード中"
+            )
+        }
+        return if (result.isSuccess) {
+            if (KeyboardHeightManager.isSlmRerankEnabled(this) &&
+                KeyboardHeightManager.getRerankEngineType(this) == engine
+            ) {
+                AsrApp.instance.llmReranker.initializeIfAvailable(serviceScope, engine.modelFileName)
+            }
+            ProvisioningEvent(
+                eventId = eventCounter.incrementAndGet(),
+                task = task,
+                success = true,
+                message = "${engine.displayName} のダウンロードが完了しました"
+            )
+        } else {
+            ProvisioningEvent(
+                eventId = eventCounter.incrementAndGet(),
+                task = task,
+                success = false,
+                message = "${engine.displayName} のダウンロードに失敗しました: ${result.exceptionOrNull()?.message}"
             )
         }
     }

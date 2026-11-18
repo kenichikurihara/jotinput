@@ -200,4 +200,47 @@ class OnboardingDecisionModelTest {
         assertEquals(OnboardingStep.DATA_PREP, freshSteps[1])
         assertEquals(OnboardingStep.DRIVE_RESTORE, freshSteps[2])
     }
+
+    @Test
+    fun `onboardingSlmProposalDecisionTable recommends missing Qwen35 and respects installed or opted-out states`() {
+        val propose = OnboardingDecisionModel.evaluateSlmProposal(
+            OnboardingDecisionModel.OnboardingSlmProposalInput(
+                selectedEngine = com.example.myasr.context.reranking.domain.RerankEngineType.LOCAL_SLM_3_5_0_8B,
+                modelInstalled = false,
+                isDownloading = false
+            )
+        )
+        assertTrue(propose.shouldOfferDownload)
+        assertEquals("推奨・未取得", propose.badgeText)
+
+        val downloading = OnboardingDecisionModel.evaluateSlmProposal(
+            OnboardingDecisionModel.OnboardingSlmProposalInput(
+                selectedEngine = com.example.myasr.context.reranking.domain.RerankEngineType.LOCAL_SLM_3_5_0_8B,
+                modelInstalled = false,
+                isDownloading = true
+            )
+        )
+        assertFalse(downloading.shouldOfferDownload)
+        assertEquals("取得中...", downloading.badgeText)
+
+        val installed = OnboardingDecisionModel.evaluateSlmProposal(
+            OnboardingDecisionModel.OnboardingSlmProposalInput(
+                selectedEngine = com.example.myasr.context.reranking.domain.RerankEngineType.LOCAL_SLM_3_5_2B,
+                modelInstalled = true,
+                isDownloading = false
+            )
+        )
+        assertFalse(installed.shouldOfferDownload)
+        assertEquals("導入済 ✓", installed.badgeText)
+
+        val optOut = OnboardingDecisionModel.evaluateSlmProposal(
+            OnboardingDecisionModel.OnboardingSlmProposalInput(
+                selectedEngine = com.example.myasr.context.reranking.domain.RerankEngineType.NONE,
+                modelInstalled = false,
+                isDownloading = false
+            )
+        )
+        assertFalse(optOut.shouldOfferDownload)
+        assertEquals("スキップ", optOut.badgeText)
+    }
 }

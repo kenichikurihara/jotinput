@@ -43,12 +43,14 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-8: Clipboard** | `ClipboardSuggestionJudgement` | `ClipboardSuggestionEligibility` | `FIRST` | アイドル時のクリップボード提案チップ表示可否 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `HomeHeroActionDecisionTable` | `FIRST` | ホーム画面のスマートガイド（次の唯一アクション / 準備完了）決定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `ProvisioningBannerDecisionTable` | `FIRST` | タブ横断グローバル進捗バナーの表示・進捗状態決定 |
-| **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `AiEngineStatusDecisionTable` | `FIRST` | AI 変換エンジンのセレクタ表示・ステータスバッジ決定 |
+| **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `AiEngineStatusDecisionTable` | `FIRST` | AI 変換エンジンのセレクタ表示・ステータスバッジ・ダウンロードCTA表示決定 |
+| **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `SlmDownloadPromptDecisionTable` | `FIRST` | 未導入 SLM モデル選択時のダウンロード確認ダイアログ提案可否決定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `RerankEngineSelectionDecisionTable` | `FIRST` | リランクON/OFF切替時のモデル選定・0.5Bデフォルト選定・整合性不変条件保護 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `BottomNavVisibilityDecisionTable` | `FIRST` | IME 表示時のボトムナビゲーション非表示（キーボード連動・無駄なスクロール/ホワイトスペース排除）決定 |
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingLaunchDecisionTable` | `FIRST` | 起動時オンボーディング要否・再インストール/既存移行判定 |
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `DriveRestoreStatusDecisionTable` | `FIRST` | Google Drive 履歴復元・SAF権限失効検知と表示状態決定 |
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingStepGuidanceDecisionTable` | `FIRST` | 各ステップのCTA・非ブロッキング進行・スキップ制御決定 |
+| **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingSlmProposalDecisionTable` | `FIRST` | オンボーディング Step 1 における Qwen3.5 モデル取得提案状態決定 |
 | **BC-1: Kana-Kanji & Sync** | `HistorySyncDecisionModel` | `SyncScheduleDecisionTable` | `FIRST` | 定期バックグラウンド同期ジョブの登録・停止方針決定 |
 | **BC-1: Kana-Kanji & Sync** | `HistorySyncDecisionModel` | `SettingsSyncCardDecisionTable` | `FIRST` | 設定タブ Google Drive 同期カードのUI状態・操作可否決定 |
 | **BC-3: Speech Recognition** | `VoiceCorrectionDecisionModel` | `VoiceCorrectionEligibilityDecisionTable` | `FIRST` | 音声確定後編集の修正検知妥当性・意味的書き換え除外判定 |

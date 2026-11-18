@@ -1,6 +1,7 @@
 package com.example.myasr.context.ime.domain
 
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.StatusTone
+import com.example.myasr.context.reranking.domain.RerankEngineType
 import com.example.myasr.shared.domain.dmn.DecisionTable
 import com.example.myasr.shared.domain.dmn.DecisionTrace
 import com.example.myasr.shared.domain.dmn.HitPolicy
@@ -508,4 +509,74 @@ object OnboardingDecisionModel {
             OnboardingStep.COMPLETE_AND_TEST
         )
     }
+
+    // ------------------------------------------------------------------------
+    // 4. OnboardingSlmProposalDecisionTable
+    // ------------------------------------------------------------------------
+
+    data class OnboardingSlmProposalInput(
+        val selectedEngine: RerankEngineType,
+        val modelInstalled: Boolean,
+        val isDownloading: Boolean
+    )
+
+    data class OnboardingSlmProposalDecision(
+        val shouldOfferDownload: Boolean,
+        val badgeText: String,
+        val tone: StatusTone,
+        val descriptionText: String
+    )
+
+    val onboardingSlmProposalDecisionTable: DecisionTable<OnboardingSlmProposalInput, OnboardingSlmProposalDecision> =
+        decisionTable(
+            name = "OnboardingSlmProposalDecisionTable",
+            hitPolicy = HitPolicy.FIRST
+        ) {
+            rule(id = "OB_SLM_R1", description = "User opted out of SLM download in onboarding") {
+                `when` { it.selectedEngine == RerankEngineType.NONE }
+                thenValue(
+                    OnboardingSlmProposalDecision(
+                        shouldOfferDownload = false,
+                        badgeText = "スキップ",
+                        tone = StatusTone.NEUTRAL,
+                        descriptionText = "導入しない（後から「設定」や「データ」タブでいつでも追加できます）"
+                    )
+                )
+            }
+            rule(id = "OB_SLM_R2", description = "Selected SLM model is already installed") {
+                `when` { it.modelInstalled }
+                then { input ->
+                    OnboardingSlmProposalDecision(
+                        shouldOfferDownload = false,
+                        badgeText = "導入済 ✓",
+                        tone = StatusTone.SUCCESS,
+                        descriptionText = "${input.selectedEngine.displayName} はすでに端末に導入されています"
+                    )
+                }
+            }
+            rule(id = "OB_SLM_R3", description = "Selected SLM model is currently downloading") {
+                `when` { it.isDownloading }
+                then { input ->
+                    OnboardingSlmProposalDecision(
+                        shouldOfferDownload = false,
+                        badgeText = "取得中...",
+                        tone = StatusTone.INFO,
+                        descriptionText = "${input.selectedEngine.displayName} をバックグラウンドで取得しています"
+                    )
+                }
+            }
+            defaultValue(
+                id = "OB_SLM_PROPOSE",
+                description = "Recommend downloading the selected Qwen3.5 model in background",
+                value = OnboardingSlmProposalDecision(
+                    shouldOfferDownload = true,
+                    badgeText = "推奨・未取得",
+                    tone = StatusTone.INFO,
+                    descriptionText = "文脈に応じた高精度な漢字変換・英単語補正を有効化します（任意・バックグラウンド取得）"
+                )
+            )
+        }
+
+    fun evaluateSlmProposal(input: OnboardingSlmProposalInput): OnboardingSlmProposalDecision =
+        onboardingSlmProposalDecisionTable.evaluate(input)
 }

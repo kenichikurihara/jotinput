@@ -8,6 +8,7 @@ import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.HomeHeroInput
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.ProvisioningBannerInput
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.RerankEngineSelectionDecision
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.RerankEngineSelectionInput
+import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.SlmDownloadPromptInput
 import com.example.myasr.context.ime.domain.MainAppUiDecisionModel.StatusTone
 import com.example.myasr.context.ime.domain.OnboardingDecisionModel
 import com.example.myasr.context.ime.domain.OnboardingDecisionModel.LaunchAction
@@ -29,6 +30,7 @@ import com.example.myasr.context.provisioning.infrastructure.EnglishSpellDownloa
 import com.example.myasr.context.provisioning.infrastructure.ProvisioningForegroundService
 import com.example.myasr.context.provisioning.infrastructure.ProvisioningTaskKind
 import com.example.myasr.context.provisioning.infrastructure.ProvisioningUiState
+import com.example.myasr.context.provisioning.infrastructure.SlmModelDownloader
 import com.example.myasr.context.reranking.domain.RerankEngineType
 import com.example.myasr.context.reranking.infrastructure.LlmReranker
 import com.example.myasr.context.reranking.infrastructure.PowerBenchmarkRunner
@@ -168,6 +170,22 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnDownloadEnglishAsr: MaterialButton
     private lateinit var btnDeleteEnglishAsr: MaterialButton
 
+    private lateinit var btnSettingsDownloadSlm: MaterialButton
+    private lateinit var btnToggleLegacySlmModels: MaterialButton
+    private lateinit var layoutLegacySlmContainer: LinearLayout
+
+    private data class SlmModelRowViews(
+        val engine: RerankEngineType,
+        val badge: TextView,
+        val stats: TextView,
+        val progress: LinearProgressIndicator,
+        val status: TextView,
+        val btnDownload: MaterialButton,
+        val btnDelete: MaterialButton
+    )
+
+    private lateinit var slmModelRows: List<SlmModelRowViews>
+
     private lateinit var asrManager: AsrManager
     private val kanaKanjiEngine get() = AsrApp.instance.kanaKanjiEngine
     private lateinit var dictionaryRepository: DictionaryRepository
@@ -219,6 +237,8 @@ class MainActivity : AppCompatActivity() {
         updateImeStatusBadge()
         updateDictionaryBadge()
         refreshMultiDictionaryUI()
+        refreshSlmModelsUI()
+        updateSlmStatusBadge()
         checkAndInitializeModel()
         refreshHomeHeroCard()
     }
@@ -448,7 +468,40 @@ class MainActivity : AppCompatActivity() {
                 "AI 変換エンジン: 無効 (OFF: Mozc辞書・Viterbiのみ)"
             }
             Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show()
+            maybePromptSlmModelDownload(decision)
         }
+    }
+
+    private fun maybePromptSlmModelDownload(decision: RerankEngineSelectionDecision) {
+        val engine = decision.selectedEngine
+        val reranker = AsrApp.instance.llmReranker
+        val installed = engine != RerankEngineType.NONE && reranker.isModelInstalled(engine.modelFileName)
+        val isDownloading = ProvisioningForegroundService.state.value
+            .isTaskActiveOrQueued(ProvisioningTaskKind.SLM_MODEL, engine.id)
+
+        val promptDecision = MainAppUiDecisionModel.evaluateSlmDownloadPrompt(
+            SlmDownloadPromptInput(
+                isUserSelection = true,
+                slmEnabled = decision.effectiveRerankEnabled,
+                selectedEngine = engine,
+                modelInstalled = installed,
+                isDownloading = isDownloading
+            )
+        )
+        val target = promptDecision.targetEngine
+        if (!promptDecision.shouldPromptDownload || target == null) return
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("${target.displayName} をダウンロードしますか？")
+            .setMessage(
+                "選択した AI 変換モデル（${target.sizeLabel} • Apache-2.0）が端末にまだありません。\n" +
+                    "バックグラウンドでダウンロードを開始しますか？（完了後に自動で有効化されます）"
+            )
+            .setPositiveButton("ダウンロード開始") { _, _ ->
+                startDownloadSlmModel(target)
+            }
+            .setNegativeButton("あとで", null)
+            .show()
     }
 
 
@@ -464,13 +517,17 @@ class MainActivity : AppCompatActivity() {
         }
         val modelInstalled = selectedEngine != RerankEngineType.NONE &&
             reranker.isModelInstalled(selectedEngine.modelFileName)
+        val isDownloading = selectedEngine != RerankEngineType.NONE &&
+            ProvisioningForegroundService.state.value
+                .isTaskActiveOrQueued(ProvisioningTaskKind.SLM_MODEL, selectedEngine.id)
 
         val decision = MainAppUiDecisionModel.evaluateAiEngineStatus(
             AiEngineStatusInput(
                 slmEnabled = isRerankEnabled,
                 engineType = selectedEngine,
                 runtimeState = runtimeState,
-                modelInstalled = modelInstalled
+                modelInstalled = modelInstalled,
+                isDownloading = isDownloading
             )
         )
 
@@ -478,6 +535,14 @@ class MainActivity : AppCompatActivity() {
         tvSlmStatusBadge.text = decision.badgeText
         applyBadgeTone(tvSlmStatusBadge, decision.tone)
         tvSlmStatusDesc.text = decision.descriptionText
+
+        if (decision.showDownloadCta && selectedEngine != RerankEngineType.NONE) {
+            btnSettingsDownloadSlm.visibility = View.VISIBLE
+            btnSettingsDownloadSlm.isEnabled = !isDownloading
+            btnSettingsDownloadSlm.text = "${selectedEngine.displayName} をダウンロード (${selectedEngine.sizeLabel})"
+        } else {
+            btnSettingsDownloadSlm.visibility = View.GONE
+        }
 
         tvCard1AiStatusBadge.text = "AI: ${decision.badgeText}"
         applyBadgeTone(tvCard1AiStatusBadge, decision.tone)
@@ -527,6 +592,7 @@ class MainActivity : AppCompatActivity() {
         refreshJapaneseAsrUI()
         refreshEnglishSpellingUI()
         refreshEnglishAsrUI()
+        refreshSlmModelsUI()
         updateModelStatusBadge()
         updateKeyboardHeightUI()
         refreshHomeHeroCard()
@@ -707,6 +773,48 @@ class MainActivity : AppCompatActivity() {
         tvEnglishAsrStatus = findViewById(R.id.tvEnglishAsrStatus)
         btnDownloadEnglishAsr = findViewById(R.id.btnDownloadEnglishAsr)
         btnDeleteEnglishAsr = findViewById(R.id.btnDeleteEnglishAsr)
+
+        btnSettingsDownloadSlm = findViewById(R.id.btnSettingsDownloadSlm)
+        btnToggleLegacySlmModels = findViewById(R.id.btnToggleLegacySlmModels)
+        layoutLegacySlmContainer = findViewById(R.id.layoutLegacySlmContainer)
+        slmModelRows = listOf(
+            SlmModelRowViews(
+                engine = RerankEngineType.LOCAL_SLM_3_5_0_8B,
+                badge = findViewById(R.id.tvSlm35_08BStatusBadge),
+                stats = findViewById(R.id.tvSlm35_08BStats),
+                progress = findViewById(R.id.slm35_08BProgress),
+                status = findViewById(R.id.tvSlm35_08BStatus),
+                btnDownload = findViewById(R.id.btnDownloadSlm35_08B),
+                btnDelete = findViewById(R.id.btnDeleteSlm35_08B)
+            ),
+            SlmModelRowViews(
+                engine = RerankEngineType.LOCAL_SLM_3_5_2B,
+                badge = findViewById(R.id.tvSlm35_2BStatusBadge),
+                stats = findViewById(R.id.tvSlm35_2BStats),
+                progress = findViewById(R.id.slm35_2BProgress),
+                status = findViewById(R.id.tvSlm35_2BStatus),
+                btnDownload = findViewById(R.id.btnDownloadSlm35_2B),
+                btnDelete = findViewById(R.id.btnDeleteSlm35_2B)
+            ),
+            SlmModelRowViews(
+                engine = RerankEngineType.LOCAL_SLM,
+                badge = findViewById(R.id.tvSlm25_05BStatusBadge),
+                stats = findViewById(R.id.tvSlm25_05BStats),
+                progress = findViewById(R.id.slm25_05BProgress),
+                status = findViewById(R.id.tvSlm25_05BStatus),
+                btnDownload = findViewById(R.id.btnDownloadSlm25_05B),
+                btnDelete = findViewById(R.id.btnDeleteSlm25_05B)
+            ),
+            SlmModelRowViews(
+                engine = RerankEngineType.LOCAL_SLM_1_5B,
+                badge = findViewById(R.id.tvSlm25_15BStatusBadge),
+                stats = findViewById(R.id.tvSlm25_15BStats),
+                progress = findViewById(R.id.slm25_15BProgress),
+                status = findViewById(R.id.tvSlm25_15BStatus),
+                btnDownload = findViewById(R.id.btnDownloadSlm25_15B),
+                btnDelete = findViewById(R.id.btnDeleteSlm25_15B)
+            )
+        )
     }
 
     private fun switchToTab(itemId: Int) {
@@ -759,6 +867,13 @@ class MainActivity : AppCompatActivity() {
         setupJapaneseAsrUI()
         setupEnglishSpellingUI()
         setupEnglishAsrUI()
+        setupSlmModelsUI()
+        btnSettingsDownloadSlm.setOnClickListener {
+            val selected = KeyboardHeightManager.getRerankEngineType(this)
+            if (selected != RerankEngineType.NONE) {
+                startDownloadSlmModel(selected)
+            }
+        }
 
         btnToggleDictDetails.setOnClickListener {
             val isVisible = layoutDictDetailsContainer.visibility == View.VISIBLE
@@ -1268,7 +1383,30 @@ class MainActivity : AppCompatActivity() {
             tvEnglishAsrStatus.visibility = View.GONE
         }
 
-        // 5. Handle completion / error event once
+        // 5. SLM language models (Qwen3.5 / Qwen2.5)
+        for (row in slmModelRows) {
+            val slmActive = active?.kind == ProvisioningTaskKind.SLM_MODEL && active.dictId == row.engine.id
+            val slmQueued = state.isTaskActiveOrQueued(ProvisioningTaskKind.SLM_MODEL, row.engine.id)
+            row.btnDownload.isEnabled = !slmQueued
+            row.btnDelete.isEnabled = !slmQueued
+            if (slmActive) {
+                row.progress.visibility = View.VISIBLE
+                row.progress.progress = state.progress
+                row.status.visibility = View.VISIBLE
+                row.status.text = state.statusText.ifEmpty { "バックグラウンドで準備中..." }
+            } else if (slmQueued) {
+                row.progress.visibility = View.VISIBLE
+                row.progress.progress = 0
+                row.status.visibility = View.VISIBLE
+                row.status.text = "待機中..."
+            } else {
+                row.progress.visibility = View.GONE
+                row.status.visibility = View.GONE
+            }
+        }
+        updateSlmStatusBadge()
+
+        // 6. Handle completion / error event once
         val event = state.lastEvent
         if (event != null && event.eventId > lastHandledProvisioningEventId) {
             lastHandledProvisioningEventId = event.eventId
@@ -1291,6 +1429,23 @@ class MainActivity : AppCompatActivity() {
                 }
                 ProvisioningTaskKind.ENGLISH_ASR_MODEL -> {
                     refreshEnglishAsrUI()
+                }
+                ProvisioningTaskKind.SLM_MODEL -> {
+                    refreshSlmModelsUI()
+                    if (event.success) {
+                        val downloadedEngine = RerankEngineType.fromId(event.task.dictId ?: "")
+                        if (KeyboardHeightManager.isSlmRerankEnabled(this) &&
+                            KeyboardHeightManager.getRerankEngineType(this) == downloadedEngine
+                        ) {
+                            AsrApp.instance.llmReranker.initializeIfAvailable(
+                                lifecycleScope,
+                                downloadedEngine.modelFileName
+                            ) {
+                                runOnUiThread { updateSlmStatusBadge() }
+                            }
+                        }
+                    }
+                    updateSlmStatusBadge()
                 }
             }
             refreshHomeHeroCard()
@@ -1557,6 +1712,64 @@ class MainActivity : AppCompatActivity() {
 
     private fun startDownloadEnglishAsr() {
         startBackgroundProvisioning(ProvisioningTaskKind.ENGLISH_ASR_MODEL)
+    }
+
+    private fun setupSlmModelsUI() {
+        btnToggleLegacySlmModels.setOnClickListener {
+            val isVisible = layoutLegacySlmContainer.visibility == View.VISIBLE
+            layoutLegacySlmContainer.visibility = if (isVisible) View.GONE else View.VISIBLE
+            btnToggleLegacySlmModels.text = if (isVisible) {
+                "旧世代モデル (Qwen2.5) を表示 ▼"
+            } else {
+                "旧世代モデル (Qwen2.5) を閉じる ▲"
+            }
+        }
+
+        for (row in slmModelRows) {
+            row.btnDownload.setOnClickListener {
+                startDownloadSlmModel(row.engine)
+            }
+            row.btnDelete.setOnClickListener {
+                val reranker = AsrApp.instance.llmReranker
+                if (reranker.getTargetModelFileName() == row.engine.modelFileName &&
+                    reranker.state == LlmReranker.State.READY
+                ) {
+                    reranker.release()
+                }
+                SlmModelDownloader.deleteModel(this, row.engine)
+                Toast.makeText(this, "${row.engine.displayName} を削除しました", Toast.LENGTH_SHORT).show()
+                refreshSlmModelsUI()
+                updateSlmStatusBadge()
+            }
+        }
+        refreshSlmModelsUI()
+    }
+
+    private fun refreshSlmModelsUI() {
+        val reranker = AsrApp.instance.llmReranker
+        for (row in slmModelRows) {
+            val isInstalled = reranker.isModelInstalled(row.engine.modelFileName)
+            if (isInstalled) {
+                val modelFile = reranker.getModelFile(row.engine.modelFileName)
+                val sizeMb = String.format(java.util.Locale.US, "%.0f", modelFile.length() / (1024.0 * 1024.0))
+                row.badge.text = "導入済"
+                applyBadgeTone(row.badge, StatusTone.SUCCESS)
+                row.stats.text = "${row.engine.sizeLabel} (導入済: ${sizeMb} MB, Apache-2.0)"
+                row.btnDownload.text = "再取得"
+                row.btnDelete.visibility = View.VISIBLE
+            } else {
+                row.badge.text = "未取得"
+                applyBadgeTone(row.badge, StatusTone.NEUTRAL)
+                row.stats.text = "${row.engine.sizeLabel} (Apache-2.0)"
+                row.btnDownload.text = "取得"
+                row.btnDelete.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun startDownloadSlmModel(engine: RerankEngineType) {
+        if (engine == RerankEngineType.NONE) return
+        startBackgroundProvisioning(ProvisioningTaskKind.SLM_MODEL, engine.id)
     }
 
     private fun updateKeyboardHeightUI() {

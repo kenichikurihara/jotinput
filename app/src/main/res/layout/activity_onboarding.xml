@@ -399,11 +399,95 @@
                                 android:textStyle="bold" />
                         </LinearLayout>
 
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginTop="12dp"
+                            android:layout_marginBottom="12dp"
+                            android:background="@color/border" />
+
+                        <!-- Optional Qwen3.5 AI Conversion Model Proposal -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="AI 変換モデル (Qwen3.5・任意)"
+                                android:textColor="@color/text_primary"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvObSlmBadge"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/badge_background"
+                                android:backgroundTint="@color/badge_info_bg"
+                                android:paddingStart="8dp"
+                                android:paddingTop="3dp"
+                                android:paddingEnd="8dp"
+                                android:paddingBottom="3dp"
+                                android:text="推奨・未取得"
+                                android:textColor="@color/badge_info_text"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvObSlmDesc"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="文脈に応じた高精度な漢字変換・英単語補正を有効化します（任意・バックグラウンド取得）"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp" />
+
+                        <RadioGroup
+                            android:id="@+id/rgObSlmChoice"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:orientation="vertical">
+
+                            <RadioButton
+                                android:id="@+id/rbObSlm35_08B"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:checked="true"
+                                android:paddingVertical="3dp"
+                                android:text="Qwen3.5-0.8B (約508MB • おすすめ高速)"
+                                android:textColor="@color/text_primary"
+                                android:textSize="12sp" />
+
+                            <RadioButton
+                                android:id="@+id/rbObSlm35_2B"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:paddingVertical="3dp"
+                                android:text="Qwen3.5-2B (約1.19GB • 最高精度)"
+                                android:textColor="@color/text_primary"
+                                android:textSize="12sp" />
+
+                            <RadioButton
+                                android:id="@+id/rbObSlmNone"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:paddingVertical="3dp"
+                                android:text="今回は取得しない（後で設定可能）"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp" />
+                        </RadioGroup>
+
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnObStartDownloads"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
+                            android:layout_marginTop="14dp"
                             android:text="バックグラウンドでまとめて取得"
                             app:cornerRadius="10dp" />
 

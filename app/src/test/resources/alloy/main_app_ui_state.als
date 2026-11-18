@@ -44,11 +44,16 @@ sig State {
     slmEnabled: one Bool,
     selectedEngine: one EngineType,
     imeInputActive: one Bool,
+    selectedModelInstalled: one Bool,
+    slmDownloading: one Bool,
+    isUserSelection: one Bool,
     // Derived UI projections
     heroAction: one HeroAction,
     showGlobalBanner: one Bool,
     showSlmSelector: one Bool,
-    showBottomNav: one Bool
+    showBottomNav: one Bool,
+    showSlmDownloadCta: one Bool,
+    promptSlmDownload: one Bool
 }
 
 pred deriveUi[s: State] {
@@ -68,6 +73,12 @@ pred deriveUi[s: State] {
 
     // DMN BottomNavVisibilityDecisionTable
     (s.imeInputActive = True) implies (s.showBottomNav = False) else (s.showBottomNav = True)
+
+    // DMN AiEngineStatusDecisionTable (showDownloadCta) & SlmDownloadPromptDecisionTable
+    (s.slmEnabled = True and s.selectedEngine != EngineNone and s.selectedModelInstalled = False and s.slmDownloading = False)
+        implies (s.showSlmDownloadCta = True) else (s.showSlmDownloadCta = False)
+    (s.isUserSelection = True and s.showSlmDownloadCta = True)
+        implies (s.promptSlmDownload = True) else (s.promptSlmDownload = False)
 }
 
 pred init[s: State] {
@@ -81,6 +92,9 @@ pred init[s: State] {
     s.slmEnabled = True
     s.selectedEngine = Engine0_5B
     s.imeInputActive = False
+    s.selectedModelInstalled = False
+    s.slmDownloading = False
+    s.isUserSelection = False
     deriveUi[s]
 }
 
@@ -95,6 +109,9 @@ pred switchTab[s, sNext: State, t: Tab] {
     sNext.slmEnabled = s.slmEnabled
     sNext.selectedEngine = s.selectedEngine
     sNext.imeInputActive = s.imeInputActive
+    sNext.selectedModelInstalled = s.selectedModelInstalled
+    sNext.slmDownloading = s.slmDownloading
+    sNext.isUserSelection = False
     deriveUi[sNext]
 }
 
@@ -109,6 +126,9 @@ pred enableAndSelectIme[s, sNext: State] {
     sNext.slmEnabled = s.slmEnabled
     sNext.selectedEngine = s.selectedEngine
     sNext.imeInputActive = s.imeInputActive
+    sNext.selectedModelInstalled = s.selectedModelInstalled
+    sNext.slmDownloading = s.slmDownloading
+    sNext.isUserSelection = False
     deriveUi[sNext]
 }
 
@@ -123,6 +143,9 @@ pred startProvisioning[s, sNext: State] {
     sNext.slmEnabled = s.slmEnabled
     sNext.selectedEngine = s.selectedEngine
     sNext.imeInputActive = s.imeInputActive
+    sNext.selectedModelInstalled = s.selectedModelInstalled
+    sNext.slmDownloading = s.slmDownloading
+    sNext.isUserSelection = False
     deriveUi[sNext]
 }
 
@@ -138,6 +161,9 @@ pred completeProvisioning[s, sNext: State] {
     sNext.slmEnabled = s.slmEnabled
     sNext.selectedEngine = s.selectedEngine
     sNext.imeInputActive = s.imeInputActive
+    sNext.selectedModelInstalled = s.selectedModelInstalled
+    sNext.slmDownloading = False
+    sNext.isUserSelection = False
     deriveUi[sNext]
 }
 
@@ -158,6 +184,9 @@ pred toggleSlm[s, sNext: State] {
         sNext.selectedEngine = Engine0_5B
     }
     sNext.imeInputActive = s.imeInputActive
+    sNext.selectedModelInstalled = s.selectedModelInstalled
+    sNext.slmDownloading = s.slmDownloading
+    sNext.isUserSelection = False
     deriveUi[sNext]
 }
 
@@ -173,6 +202,9 @@ pred select15B[s, sNext: State] {
     sNext.slmEnabled = True
     sNext.selectedEngine = Engine1_5B
     sNext.imeInputActive = s.imeInputActive
+    sNext.selectedModelInstalled = s.selectedModelInstalled
+    sNext.slmDownloading = s.slmDownloading
+    sNext.isUserSelection = True
     deriveUi[sNext]
 }
 
@@ -187,6 +219,9 @@ pred startImeInput[s, sNext: State] {
     sNext.slmEnabled = s.slmEnabled
     sNext.selectedEngine = s.selectedEngine
     sNext.imeInputActive = True
+    sNext.selectedModelInstalled = s.selectedModelInstalled
+    sNext.slmDownloading = s.slmDownloading
+    sNext.isUserSelection = False
     deriveUi[sNext]
 }
 
@@ -201,6 +236,9 @@ pred closeImeInput[s, sNext: State] {
     sNext.slmEnabled = s.slmEnabled
     sNext.selectedEngine = s.selectedEngine
     sNext.imeInputActive = False
+    sNext.selectedModelInstalled = s.selectedModelInstalled
+    sNext.slmDownloading = s.slmDownloading
+    sNext.isUserSelection = False
     deriveUi[sNext]
 }
 
@@ -279,6 +317,24 @@ assert BottomNavHiddenWhenImeActive {
     all s: State | s.imeInputActive = True implies s.showBottomNav = False
 }
 
+assert NeverPromptDownloadWhenInstalledOrDisabled {
+    all s: State | (
+        s.slmEnabled = False or
+        s.selectedEngine = EngineNone or
+        s.selectedModelInstalled = True or
+        s.slmDownloading = True
+    ) implies s.promptSlmDownload = False
+}
+
+assert DownloadCtaOnlyWhenEnabledAndMissing {
+    all s: State | s.showSlmDownloadCta = True implies (
+        s.slmEnabled = True and
+        s.selectedEngine != EngineNone and
+        s.selectedModelInstalled = False and
+        s.slmDownloading = False
+    )
+}
+
 check ReadyImpliesAllPrerequisitesMet for 6 State
 check HeroEnableImeHighestPriority for 6 State
 check TabSwitchPreservesState for 6 State
@@ -287,6 +343,8 @@ check GlobalBannerVisibleDuringProvisioning for 6 State
 check RerankEnabledImpliesValidModel for 6 State
 check RerankDisabledImpliesEngineNone for 6 State
 check BottomNavHiddenWhenImeActive for 6 State
+check NeverPromptDownloadWhenInstalledOrDisabled for 6 State
+check DownloadCtaOnlyWhenEnabledAndMissing for 6 State
 
 // ============================================================================
 // Reachability (Non-Vacuity)

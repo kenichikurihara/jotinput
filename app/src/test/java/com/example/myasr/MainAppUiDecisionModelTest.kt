@@ -283,5 +283,84 @@ class MainAppUiDecisionModelTest {
         assertEquals(MainAppUiDecisionModel.NavigationVisibility.VISIBLE, hiddenTrace.result.visibility)
         assertEquals("show_on_ime_hidden", hiddenTrace.result.reason)
     }
+
+    @Test
+    fun `aiEngineStatusDecisionTable shows download CTA when missing and hides while downloading`() {
+        val missing = MainAppUiDecisionModel.evaluateAiEngineStatus(
+            MainAppUiDecisionModel.AiEngineStatusInput(
+                slmEnabled = true,
+                engineType = RerankEngineType.LOCAL_SLM_3_5_0_8B,
+                runtimeState = MainAppUiDecisionModel.AiRuntimeState.IDLE_OR_ERROR,
+                modelInstalled = false,
+                isDownloading = false
+            )
+        )
+        assertEquals("未導入", missing.badgeText)
+        assertTrue(missing.showDownloadCta)
+
+        val downloading = MainAppUiDecisionModel.evaluateAiEngineStatus(
+            MainAppUiDecisionModel.AiEngineStatusInput(
+                slmEnabled = true,
+                engineType = RerankEngineType.LOCAL_SLM_3_5_0_8B,
+                runtimeState = MainAppUiDecisionModel.AiRuntimeState.IDLE_OR_ERROR,
+                modelInstalled = false,
+                isDownloading = true
+            )
+        )
+        assertEquals("取得中...", downloading.badgeText)
+        assertFalse(downloading.showDownloadCta)
+    }
+
+    @Test
+    fun `slmDownloadPromptDecisionTable prompts only on user selection of missing idle model`() {
+        val prompt = MainAppUiDecisionModel.evaluateSlmDownloadPromptWithTrace(
+            MainAppUiDecisionModel.SlmDownloadPromptInput(
+                isUserSelection = true,
+                slmEnabled = true,
+                selectedEngine = RerankEngineType.LOCAL_SLM_3_5_0_8B,
+                modelInstalled = false,
+                isDownloading = false
+            )
+        )
+        assertEquals("SLM_PROMPT_ASK", prompt.selectedRuleId)
+        assertTrue(prompt.result.shouldPromptDownload)
+        assertEquals(RerankEngineType.LOCAL_SLM_3_5_0_8B, prompt.result.targetEngine)
+
+        val installed = MainAppUiDecisionModel.evaluateSlmDownloadPromptWithTrace(
+            MainAppUiDecisionModel.SlmDownloadPromptInput(
+                isUserSelection = true,
+                slmEnabled = true,
+                selectedEngine = RerankEngineType.LOCAL_SLM_3_5_2B,
+                modelInstalled = true,
+                isDownloading = false
+            )
+        )
+        assertEquals("SLM_PROMPT_R3", installed.selectedRuleId)
+        assertFalse(installed.result.shouldPromptDownload)
+
+        val downloading = MainAppUiDecisionModel.evaluateSlmDownloadPromptWithTrace(
+            MainAppUiDecisionModel.SlmDownloadPromptInput(
+                isUserSelection = true,
+                slmEnabled = true,
+                selectedEngine = RerankEngineType.LOCAL_SLM_3_5_0_8B,
+                modelInstalled = false,
+                isDownloading = true
+            )
+        )
+        assertEquals("SLM_PROMPT_R4", downloading.selectedRuleId)
+        assertFalse(downloading.result.shouldPromptDownload)
+
+        val nonUser = MainAppUiDecisionModel.evaluateSlmDownloadPromptWithTrace(
+            MainAppUiDecisionModel.SlmDownloadPromptInput(
+                isUserSelection = false,
+                slmEnabled = true,
+                selectedEngine = RerankEngineType.LOCAL_SLM_3_5_0_8B,
+                modelInstalled = false,
+                isDownloading = false
+            )
+        )
+        assertEquals("SLM_PROMPT_R1", nonUser.selectedRuleId)
+        assertFalse(nonUser.result.shouldPromptDownload)
+    }
 }
 

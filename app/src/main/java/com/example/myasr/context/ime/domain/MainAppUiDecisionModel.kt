@@ -206,14 +206,16 @@ object MainAppUiDecisionModel {
         val slmEnabled: Boolean,
         val engineType: RerankEngineType,
         val runtimeState: AiRuntimeState,
-        val modelInstalled: Boolean
+        val modelInstalled: Boolean,
+        val isDownloading: Boolean = false
     )
 
     data class AiEngineStatusDecision(
         val showEngineSelector: Boolean,
         val badgeText: String,
         val descriptionText: String,
-        val tone: StatusTone
+        val tone: StatusTone,
+        val showDownloadCta: Boolean = false
     )
 
     val aiEngineStatusDecisionTable: DecisionTable<AiEngineStatusInput, AiEngineStatusDecision> =
@@ -228,7 +230,8 @@ object MainAppUiDecisionModel {
                         showEngineSelector = false,
                         badgeText = "オフ",
                         descriptionText = "AI 変換エンジンは無効です (Mozc辞書・Viterbiのみ使用)",
-                        tone = StatusTone.NEUTRAL
+                        tone = StatusTone.NEUTRAL,
+                        showDownloadCta = false
                     )
                 )
             }
@@ -241,7 +244,8 @@ object MainAppUiDecisionModel {
                         showEngineSelector = true,
                         badgeText = "$label (Ready)",
                         descriptionText = "$full 稼働中 (文脈補正・かな漢字変換)",
-                        tone = StatusTone.SUCCESS
+                        tone = StatusTone.SUCCESS,
+                        showDownloadCta = false
                     )
                 }
             }
@@ -253,7 +257,21 @@ object MainAppUiDecisionModel {
                         showEngineSelector = true,
                         badgeText = "読込中...",
                         descriptionText = "$full モデルをメモリにロードしています...",
-                        tone = StatusTone.INFO
+                        tone = StatusTone.INFO,
+                        showDownloadCta = false
+                    )
+                }
+            }
+            rule(id = "AI_DOWNLOADING", description = "Selected AI engine is currently downloading") {
+                `when` { it.isDownloading }
+                then { input ->
+                    val full = input.engineType.displayName
+                    AiEngineStatusDecision(
+                        showEngineSelector = true,
+                        badgeText = "取得中...",
+                        descriptionText = "$full をバックグラウンドでダウンロードしています...",
+                        tone = StatusTone.INFO,
+                        showDownloadCta = false
                     )
                 }
             }
@@ -265,7 +283,8 @@ object MainAppUiDecisionModel {
                         showEngineSelector = true,
                         badgeText = "待機中",
                         descriptionText = "$full 検出済み。選択で初期化します",
-                        tone = StatusTone.NEUTRAL
+                        tone = StatusTone.NEUTRAL,
+                        showDownloadCta = false
                     )
                 }
             }
@@ -275,14 +294,105 @@ object MainAppUiDecisionModel {
                 value = AiEngineStatusDecision(
                     showEngineSelector = true,
                     badgeText = "未導入",
-                    descriptionText = "モデルファイルが端末に未配置です",
-                    tone = StatusTone.NEUTRAL
+                    descriptionText = "モデルファイルが端末に未配置です（ダウンロードして有効化できます）",
+                    tone = StatusTone.WARNING,
+                    showDownloadCta = true
                 )
             )
         }
 
     fun evaluateAiEngineStatus(input: AiEngineStatusInput): AiEngineStatusDecision =
         aiEngineStatusDecisionTable.evaluate(input)
+
+    // ------------------------------------------------------------------------
+
+    data class SlmDownloadPromptInput(
+        val isUserSelection: Boolean,
+        val slmEnabled: Boolean,
+        val selectedEngine: RerankEngineType,
+        val modelInstalled: Boolean,
+        val isDownloading: Boolean
+    )
+
+    data class SlmDownloadPromptDecision(
+        val shouldPromptDownload: Boolean,
+        val targetEngine: RerankEngineType?,
+        val reason: String
+    )
+
+    val slmDownloadPromptDecisionTable: DecisionTable<SlmDownloadPromptInput, SlmDownloadPromptDecision> =
+        decisionTable(
+            name = "SlmDownloadPromptDecisionTable",
+            hitPolicy = HitPolicy.FIRST
+        ) {
+            rule(id = "SLM_PROMPT_R1", description = "Do not prompt on programmatic/initial UI sync") {
+                `when` { !it.isUserSelection }
+                thenValue(
+                    SlmDownloadPromptDecision(
+                        shouldPromptDownload = false,
+                        targetEngine = null,
+                        reason = "not_user_selection"
+                    )
+                )
+            }
+            rule(id = "SLM_PROMPT_R2", description = "Do not prompt when SLM is disabled or NONE") {
+                `when` { !it.slmEnabled || it.selectedEngine == RerankEngineType.NONE }
+                thenValue(
+                    SlmDownloadPromptDecision(
+                        shouldPromptDownload = false,
+                        targetEngine = null,
+                        reason = "slm_disabled"
+                    )
+                )
+            }
+            rule(id = "SLM_PROMPT_R3", description = "Do not prompt when selected model is already installed") {
+                `when` { it.modelInstalled }
+                thenValue(
+                    SlmDownloadPromptDecision(
+                        shouldPromptDownload = false,
+                        targetEngine = null,
+                        reason = "already_installed"
+                    )
+                )
+            }
+            rule(id = "SLM_PROMPT_R4", description = "Do not prompt when selected model is already downloading") {
+                `when` { it.isDownloading }
+                thenValue(
+                    SlmDownloadPromptDecision(
+                        shouldPromptDownload = false,
+                        targetEngine = null,
+                        reason = "already_downloading"
+                    )
+                )
+            }
+            defaultValue(
+                id = "SLM_PROMPT_ASK",
+                description = "Prompt user to download missing SLM model on selection",
+                value = SlmDownloadPromptDecision(
+                    shouldPromptDownload = true,
+                    targetEngine = null,
+                    reason = "prompt_missing_model_download"
+                )
+            )
+        }
+
+    fun evaluateSlmDownloadPrompt(input: SlmDownloadPromptInput): SlmDownloadPromptDecision {
+        val raw = slmDownloadPromptDecisionTable.evaluate(input)
+        return if (raw.shouldPromptDownload) {
+            raw.copy(targetEngine = input.selectedEngine)
+        } else {
+            raw
+        }
+    }
+
+    fun evaluateSlmDownloadPromptWithTrace(input: SlmDownloadPromptInput): DecisionTrace<SlmDownloadPromptDecision> {
+        val trace = slmDownloadPromptDecisionTable.evaluateWithTrace(input)
+        return if (trace.result.shouldPromptDownload) {
+            trace.copy(result = trace.result.copy(targetEngine = input.selectedEngine))
+        } else {
+            trace
+        }
+    }
 
     // ------------------------------------------------------------------------
 

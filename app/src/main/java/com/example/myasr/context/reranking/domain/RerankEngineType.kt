@@ -8,42 +8,60 @@ enum class RerankEngineType(
     val displayName: String,
     val modelName: String,
     val badgeLabel: String,
-    val modelFileName: String = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+    val modelFileName: String = "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    val downloadUrl: String = "",
+    val estimatedSizeBytes: Long = 0L,
+    val sizeLabel: String = ""
 ) {
     LOCAL_SLM(
         id = "local_slm",
         displayName = "Qwen2.5-0.5B",
         modelName = "Qwen2.5-0.5B (469MB • 高速標準)",
         badgeLabel = "Qwen 0.5B",
-        modelFileName = "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+        modelFileName = "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        downloadUrl = "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+        estimatedSizeBytes = 491_400_032L,
+        sizeLabel = "約469MB"
     ),
     LOCAL_SLM_1_5B(
         id = "local_slm_1_5b",
         displayName = "Qwen2.5-1.5B",
-        modelName = "Qwen2.5-1.5B (1.1GB • 高精度)",
+        modelName = "Qwen2.5-1.5B (1.04GB • 高精度)",
         badgeLabel = "Qwen 1.5B",
-        modelFileName = "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+        modelFileName = "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        downloadUrl = "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+        estimatedSizeBytes = 1_117_320_736L,
+        sizeLabel = "約1.04GB"
     ),
     LOCAL_SLM_3_5_0_8B(
         id = "local_slm_3_5_0_8b",
         displayName = "Qwen3.5-0.8B",
-        modelName = "Qwen3.5-0.8B (580MB • 高速次世代)",
+        modelName = "Qwen3.5-0.8B (508MB • 高速次世代)",
         badgeLabel = "Qwen3.5 0.8B",
-        modelFileName = "qwen3.5-0.8b-instruct-q4_k_m.gguf"
+        modelFileName = "qwen3.5-0.8b-instruct-q4_k_m.gguf",
+        downloadUrl = "https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf",
+        estimatedSizeBytes = 532_517_120L,
+        sizeLabel = "約508MB"
     ),
     LOCAL_SLM_3_5_2B(
         id = "local_slm_3_5_2b",
         displayName = "Qwen3.5-2B",
-        modelName = "Qwen3.5-2B (1.4GB • 最高精度次世代)",
+        modelName = "Qwen3.5-2B (1.19GB • 最高精度次世代)",
         badgeLabel = "Qwen3.5 2B",
-        modelFileName = "qwen3.5-2b-instruct-q4_k_m.gguf"
+        modelFileName = "qwen3.5-2b-instruct-q4_k_m.gguf",
+        downloadUrl = "https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf",
+        estimatedSizeBytes = 1_280_835_840L,
+        sizeLabel = "約1.19GB"
     ),
     NONE(
         id = "none",
         displayName = "AI変換オフ (Mozc辞書・Viterbiのみ)",
         modelName = "AI変換無効 (Mozc辞書・Viterbiのみ)",
         badgeLabel = "",
-        modelFileName = ""
+        modelFileName = "",
+        downloadUrl = "",
+        estimatedSizeBytes = 0L,
+        sizeLabel = ""
     );
 
     companion object {
