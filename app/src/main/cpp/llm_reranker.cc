@@ -124,6 +124,9 @@ bool LlmReranker::Initialize(const std::string& model_path, int n_threads) {
   initialized_ = true;
   cached_context_hash_ = 0;
   cached_context_n_tokens_ = 0;
+  cached_context_tokens_.clear();
+  cached_context_state_.clear();
+  partial_seq_rm_supported_ = true;
   cache_hits_ = 0;
   cache_misses_ = 0;
   abort_scoring_.store(false);
@@ -150,6 +153,52 @@ float LlmReranker::ComputeLogDenominator(const float* logits, int n_vocab) {
   return max_l + std::logf(sum_exp);
 }
 
+bool LlmReranker::SaveContextState() {
+  if (!ctx_) return false;
+  size_t sz = llama_state_seq_get_size(ctx_, 0);
+  if (sz == 0) return false;
+  cached_context_state_.resize(sz);
+  size_t got = llama_state_seq_get_data(ctx_, cached_context_state_.data(), sz, 0);
+  if (got == 0) {
+    cached_context_state_.clear();
+    return false;
+  }
+  cached_context_state_.resize(got);
+  return true;
+}
+
+bool LlmReranker::RollbackOrRestoreContextState() {
+  if (!ctx_) return false;
+  llama_memory_t mem = llama_get_memory(ctx_);
+  if (partial_seq_rm_supported_ && llama_memory_seq_rm(mem, 0, cached_context_n_tokens_, -1)) {
+    return true;
+  }
+  partial_seq_rm_supported_ = false;
+  if (!cached_context_state_.empty()) {
+    if (llama_state_seq_set_data(ctx_, cached_context_state_.data(), cached_context_state_.size(), 0) > 0) {
+      return true;
+    }
+  }
+  // Fallback: clear memory and re-decode cached_context_tokens_, then snapshot state
+  llama_memory_clear(mem, true);
+  if (cached_context_tokens_.empty()) return false;
+  int n_tokens = static_cast<int>(cached_context_tokens_.size());
+  llama_batch batch = llama_batch_init(n_tokens, 0, 1);
+  for (int i = 0; i < n_tokens; ++i) {
+    batch.token[i] = cached_context_tokens_[i];
+    batch.pos[i] = i;
+    batch.n_seq_id[i] = 1;
+    batch.seq_id[i][0] = 0;
+    batch.logits[i] = (i == n_tokens - 1);
+  }
+  batch.n_tokens = n_tokens;
+  int ret = llama_decode(ctx_, batch);
+  llama_batch_free(batch);
+  if (ret != 0) return false;
+  SaveContextState();
+  return true;
+}
+
 bool LlmReranker::EnsureContextCached(const std::string& context) {
   std::string effective_context = context.empty() ? "<s>" : context;
   uint64_t current_hash = ComputeContextHash(effective_context);
@@ -160,6 +209,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
 
   cache_misses_++;
   cached_candidate_nlls_.clear();
+  cached_context_state_.clear();
   llama_memory_t mem = llama_get_memory(ctx_);
 
   std::vector<llama_token> context_tokens(config_.n_ctx);
@@ -187,8 +237,13 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
   int start_pos = common_prefix_len;
 
   if (common_prefix_len > 0 && n_new_tokens > 0) {
-    // Incremental update: roll back only tokens beyond the common prefix
-    llama_memory_seq_rm(mem, 0, common_prefix_len, -1);
+    // Incremental update: roll back only tokens beyond the common prefix if supported
+    if (!partial_seq_rm_supported_ || !llama_memory_seq_rm(mem, 0, common_prefix_len, -1)) {
+      partial_seq_rm_supported_ = false;
+      llama_memory_clear(mem, true);
+      start_pos = 0;
+      n_new_tokens = n_tokens;
+    }
   } else if (common_prefix_len == 0) {
     // Zero common prefix: full reset
     llama_memory_clear(mem, true);
@@ -237,6 +292,9 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
   cached_context_hash_ = current_hash;
   cached_context_n_tokens_ = n_tokens;
   cached_context_tokens_ = std::move(context_tokens);
+  if (!partial_seq_rm_supported_) {
+    SaveContextState();
+  }
 
   // Update snapshot for lock-free 0ms candidate evaluation from UI thread
   {
@@ -468,7 +526,7 @@ bool LlmReranker::ScoreCandidates(const std::string& context,
     llama_batch_free(b);
 
     // Roll back speculative tokens while retaining the cached context prefix KV
-    llama_memory_seq_rm(mem, 0, start_pos, -1);
+    RollbackOrRestoreContextState();
   }
 
   // Update snapshot cache with completed candidate NLLs
@@ -633,7 +691,7 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
       }
 
       // Roll back speculative tokens in KV cache
-      llama_memory_seq_rm(mem, 0, start_pos, -1);
+      RollbackOrRestoreContextState();
     }
 
     generated_text = trim_text(generated_text);

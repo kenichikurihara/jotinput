@@ -67,6 +67,8 @@ class LlmReranker {
 
   uint64_t ComputeContextHash(const std::string& context) const;
   bool EnsureContextCached(const std::string& context);
+  bool SaveContextState();
+  bool RollbackOrRestoreContextState();
   static float ComputeLogDenominator(const float* logits, int n_vocab);
 
   LlmRerankerConfig config_;
@@ -82,6 +84,8 @@ class LlmReranker {
   std::vector<float> cached_context_logits_;
   float cached_context_log_denom_ = 0.0f;
   std::unordered_map<std::string, float> cached_candidate_nlls_;
+  bool partial_seq_rm_supported_ = true;
+  std::vector<uint8_t> cached_context_state_;
   int cache_hits_ = 0;
   int cache_misses_ = 0;
 
