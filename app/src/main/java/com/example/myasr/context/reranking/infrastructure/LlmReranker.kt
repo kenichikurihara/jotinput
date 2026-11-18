@@ -337,8 +337,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                         keyCostSec * mLengths[i] - 0.60f * deltaUnc
                     }
                     // Sublinear extension gain with frequency damping for long rare words (Idea 8)
-                    val effectiveExt = if (deltaExt <= 3) deltaExt.toFloat() else 3.0f + kotlin.math.sqrt((deltaExt - 3).toFloat())
-                    val extFreqWeight = (1.0f - cand.dictCost.coerceIn(0, 12000) / 15000.0f).coerceIn(0.2f, 1.0f)
+                    val effectiveExt = if (n == 0 || deltaExt <= 4) deltaExt.toFloat() else 4.0f + kotlin.math.sqrt((deltaExt - 4).toFloat())
+                    val extFreqWeight = if (n == 0 || cand.dictCost <= 5000) 1.0f else (1.0f - (cand.dictCost - 5000).coerceIn(0, 10000) / 12000.0f).coerceIn(0.2f, 1.0f)
                     val gExt = extGainWeight * keyCostSec * effectiveExt * extFreqWeight
                     val lErr = 1.50f + 0.20f * cand.surface.length + keyCostSec * mLengths[i]
                     p * (gBase + gExt) - (1.0f - p) * riskWeight * lErr
