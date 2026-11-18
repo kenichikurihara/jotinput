@@ -65,6 +65,9 @@ Whenever any code, resource, or configuration change is pushed or tested:
 - **Mandatory CI/CD Completion & Success Verification**:
   - After pushing commits to remote, **always monitor and verify that GitHub Actions CI/CD (`Android CI`) completes with success (`gh run watch <run_id>` or `gh run list` / `gh run view`)**.
   - Never finish or conclude a task while CI/CD is failing or unresolved. If CI/CD fails, immediately investigate the failure logs, fix the root cause, and re-push until CI/CD is all green.
+- **CI/CD Failure Feedback & Local Test Enhancement (Prevent Remote Regression Escapes)**:
+  - Whenever CI/CD fails, **always enhance or add local unit/integration tests (`./gradlew testDebugUnitTest`, Konsist, or evaluation suites) so that the regression is reliably reproduced and caught locally in future test runs**.
+  - Never patch a CI failure superficially or push trial-and-error fixes without establishing corresponding local test coverage to detect the failure beforehand.
 
 ## 🏛️ DDD / DSL Boundary Review & Architecture Enforcement (Mandatory)
 - **Pre-Commit Review for DDD / DSL Boundary Changes**:
