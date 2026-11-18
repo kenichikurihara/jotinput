@@ -440,3 +440,1385 @@ xychart-beta
    - **Idea 3**: Prior-Aware Admissible Lower Bound（事前コスト込みの Stage 2 動的枝刈り）
    - **Idea 6**: `PredictNextPhrases` のマルチシーケンス並列ビーム化と言語語彙マスク
    - **Idea 4 & 8**: Sparse LM Head と KV Cache `Q8_0` 量子化
+
+
+---
+
+## 6. 全10アイデア完全実装のための詳細設計書 (Detailed Technical Design / DD)
+
+本セクションでは、セクション 3 で提案した **Idea 1 〜 Idea 10 のすべてを漏れなく実装するための詳細設計（C++ データ構造、関数シグネチャ、アルゴリズム擬似コード、JNI ブリッジ仕様、Kotlin ドメイン / インフラ / IME 統合、DMN / Alloy 形式検証仕様、および検証テスト計画）** を定義します。
+
+---
+
+### 6.1 全体アーキテクチャと変更対象ファイルマップ
+
+```mermaid
+flowchart TB
+    subgraph Presentation["BC-7: IME Session & Presentation (VoiceInputMethodService / FlickKeyboardView)"]
+        VIMS["VoiceInputMethodService.kt\n- commitComposingText() -> warmContextAsync()\n- onStartInputView() / onUpdateSelection() -> warmContextAsync()\n- decodeSpeechChunkAsync() -> parallel warmContextAsync()"]
+        FKV["FlickKeyboardView.kt / QwertyKeyboardView.kt\n- ACTION_DOWN -> onKeyTouchDownSpeculativeWarm()"]
+    end
+
+    subgraph Domain["BC-2: Neural Reranking Domain (Pure Kotlin)"]
+        CRJ["CandidateRerankJudgement.kt\n- SpeculativeWarmDecisionTable (DMN)\n- Stage2PruningDecisionTable (DMN)"]
+        CWT["ContextWindowTrimmer.kt\n- trimToOptimalContextWithAnchor()\n- High-Water Mark (24..64 tokens) sticky anchor"]
+        CRS["CandidateRerankingService.kt (OHS)"]
+    end
+
+    subgraph Infra["BC-2: Neural Reranking Infrastructure (Kotlin & JNI)"]
+        LR_KT["LlmReranker.kt\n- Prior penalty vector P_prior[i] calculation\n- Packed JNI or Prior-aware nativeScoreCandidatesWithPriors()"]
+        JNI["llm_reranker_jni.cc\n- nativeScoreCandidatesWithPriors()\n- Zero-copy primitive array / UTF-8 transfer"]
+    end
+
+    subgraph Native["Native C++ Engine (llm_reranker.h / llm_reranker.cc)"]
+        INIT["Initialize()\n- Idea 8: n_ctx=256, n_seq_max=16, KV Q8_0/F16\n- Idea 6: valid_target_token_mask_ (19KB bitset)\n- Idea 9: Performance core mask (sched_setaffinity)"]
+        CACHE["EnsureContextCached()\n- Idea 2: Subarray overlap & llama_memory_seq_add() RoPE shift\n- Idea 7: Prefix truncate seq_rm fix & 4-slot snapshot_ring_"]
+        STAGE1["Stage 1 & Token Cache\n- Idea 10: token_cache_ (4096-entry surface->tokens LRU)\n- Idea 3: Prior-Aware Lower Bound & Decisive Gap Early-Exit"]
+        STAGE2["Stage 2: Prefix-Tree Packed Single-Pass Decode\n- Idea 1: Build CandidatePrefixTrie -> 1x llama_decode()\n- Idea 4: Per-node shared log_denom & Sparse Anchor LSE"]
+        PRED["PredictNextPhrases()\n- Idea 6: Multi-Sequence (seq_id 1..K) parallel beam decode"]
+    end
+
+    VIMS --> CRJ
+    FKV --> VIMS
+    VIMS --> CWT
+    VIMS --> CRS
+    CRS --> LR_KT
+    LR_KT --> JNI
+    JNI --> INIT & CACHE & STAGE1 & STAGE2 & PRED
+```
+
+| レイヤー | 対象ファイル | 実装するアイデア | 主な変更内容 |
+| :--- | :--- | :--- | :--- |
+| **Native Header** | [`app/src/main/cpp/llm_reranker.h`](app/src/main/cpp/llm_reranker.h) | Idea 1, 2, 3, 4, 6, 7, 8, 9, 10 | `LlmRerankerConfig` 拡張、4スロット `snapshot_ring_`、`token_cache_`、`valid_token_mask_`、`perf_core_cpus_`、`CandidatePrefixTrie` 構造体と `ScoreCandidatesWithPriors` 宣言 |
+| **Native Core** | [`app/src/main/cpp/llm_reranker.cc`](app/src/main/cpp/llm_reranker.cc) | Idea 1, 2, 3, 4, 6, 7, 8, 9, 10 | Prefix-Tree 単一バッチ Stage 2、RoPE Position-Shift (`seq_add`)、Undo Prefix Truncate 修正、Prior-Aware 枝刈り、ノード共有 LSE + Sparse Anchor LSE、マルチシーケンス並列 `PredictNextPhrases`、Big.LITTLE アフィニティ制御 |
+| **JNI Bridge** | [`app/src/main/cpp/llm_reranker_jni.cc`](app/src/main/cpp/llm_reranker_jni.cc) | Idea 3, 10 | `nativeScoreCandidatesWithPriors` 追加、プリミティブ配列 (`jfloatArray priors`) 転送 |
+| **Domain** | [`ContextWindowTrimmer.kt`](app/src/main/java/com/example/myasr/context/reranking/domain/ContextWindowTrimmer.kt) | Idea 2 | High-Water Mark Sticky Anchor 方式（`anchorRawIndex` 保持、64トークン到達まで先頭カット位置を固定） |
+| **Domain (DMN)** | [`CandidateRerankJudgement.kt`](app/src/main/java/com/example/myasr/context/reranking/domain/CandidateRerankJudgement.kt) | Idea 3, 5 | 投機的 Context Warming 実行判定 DMN (`SpeculativeWarmExecution`) の追加 |
+| **Infrastructure** | [`LlmReranker.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt) | Idea 3, 5, 10 | 各候補の事前ペナルティ $P_{\text{prior}}(i)$ 算出と C++ への受け渡し、非同期 `warmContextAsync` デバウンスキュー |
+| **Presentation** | [`VoiceInputMethodService.kt`](app/src/main/java/com/example/myasr/VoiceInputMethodService.kt) | Idea 5 | `commitComposingText()`, `onStartInputView()`, `onUpdateSelection()`, `onKeyTouchDown()`, `decodeSpeechChunkAsync()` での投機的 `warmContextAsync()` 呼び出し |
+| **Formal Specs** | `app/src/test/resources/alloy/slm_kv_cache_lifecycle.als` | Idea 1, 2, 7 | Ring Snapshot・Prefix Truncate・RoPE Shift・Tree Rollback の状態不変条件を Alloy 6 で形式検証 |
+
+---
+
+### 6.2 Native C++ ヘッダ設計 (`app/src/main/cpp/llm_reranker.h`)
+
+[`llm_reranker.h`](app/src/main/cpp/llm_reranker.h) のデータ構造およびクラス定義を以下のように拡張します。
+
+```cpp
+#ifndef MYASR_LLM_RERANKER_H_
+#define MYASR_LLM_RERANKER_H_
+
+#include <array>
+#include <atomic>
+#include <cstdint>
+#include <memory>
+#include <mutex>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+struct llama_model;
+struct llama_context;
+struct llama_vocab;
+
+namespace myasr {
+
+struct LlmRerankerConfig {
+  std::string model_path;
+  int n_ctx = 256;                      // Idea 8: Tightened from 512 to 256 for L3/SLC cache residency
+  int n_seq_max = 16;                   // Idea 1 & 6: Support up to 16 parallel tree branches
+  int n_threads = 4;                    // Default decode threads (Mid/Prime cores)
+  int n_threads_batch = 6;              // Idea 9: Batch prefill / tree decode threads
+  bool use_q8_kv_cache = true;          // Idea 8: Q8_0 KV cache quantization (fallback to F16 if unsupported)
+  float alpha_weight = 0.20f;
+  float fast_path_threshold = 1.5f;
+  float decisive_top1_gap_nats = 3.5f;  // Idea 3: Early exit when Top-1 leads by >= 3.5 nats
+  float stage2_prune_margin_nats = 4.5f;// Idea 3: Admissible lower-bound pruning margin over best score
+  int max_tree_batch_tokens = 32;       // Idea 1: Cap total nodes in single-pass prefix tree batch
+};
+
+// Idea 7: Multi-Slot Context Snapshot for 0ms Undo / Backspace / Cursor bounce
+struct ContextLogitsSnapshot {
+  uint64_t context_hash = 0;
+  uint64_t last_access_seq = 0;
+  int n_tokens = 0;
+  std::vector<int32_t> tokens;
+  std::vector<float> logits;
+  float log_denom = 0.0f;
+  std::vector<int32_t> top_anchor_tokens; // Idea 4: Top-128 dynamic anchor tokens for sparse LSE
+  std::unordered_map<std::string, float> candidate_nlls;
+};
+
+// Idea 1: Prefix-Tree node for packed single-pass Stage 2 evaluation
+struct PrefixTreeNode {
+  int32_t token = -1;
+  int depth = 0;                        // 0-indexed depth relative to context end L_C
+  int parent_node_idx = -1;             // -1 for root children at pos = L_C
+  int batch_Order_idx = -1;             // Index inside llama_batch (for llama_get_logits_ith)
+  bool needs_logits = false;            // True if at least one candidate needs P(next_token | this_node)
+  float computed_log_denom = 0.0f;      // Idea 4: Computed once per node and shared across all child edges
+  bool log_denom_ready = false;
+  std::vector<int32_t> seq_ids;         // Active branch seq_ids (1 .. B) passing through this node
+  std::vector<int> child_node_indices;  // Indices into flat tree_nodes vector
+};
+
+class LlmReranker {
+ public:
+  static constexpr size_t kSnapshotRingSize = 4;      // Idea 7: 4-slot LRU ring buffer
+  static constexpr size_t kMaxTokenCacheEntries = 4096; // Idea 10: Pre-tokenized surface cache
+
+  static LlmReranker& GetInstance();
+
+  bool Initialize(const std::string& model_path, int n_threads = 4);
+  void Release();
+
+  // Idea 3: Prior-aware scoring entry point (backward-compatible overload preserved)
+  bool ScoreCandidates(const std::string& context,
+                       const std::vector<std::string>& candidates,
+                       std::vector<float>* out_neg_logprobs);
+
+  bool ScoreCandidatesWithPriors(const std::string& context,
+                                 const std::vector<std::string>& candidates,
+                                 const std::vector<float>& prior_penalties,
+                                 std::vector<float>* out_neg_logprobs);
+
+  bool TryFastScoreCandidates(const std::string& context,
+                              const std::vector<std::string>& candidates,
+                              std::vector<float>* out_neg_logprobs,
+                              std::vector<bool>* out_is_complete);
+
+  void RequestAbortScoring();
+  bool WarmContext(const std::string& context);
+
+  // Idea 6: Multi-sequence parallel beam prediction
+  bool PredictNextPhrases(const std::string& context,
+                          int max_candidates,
+                          int max_tokens,
+                          std::vector<std::string>* out_predictions);
+
+  bool IsReady() const { return initialized_; }
+
+ private:
+  LlmReranker() = default;
+  ~LlmReranker();
+  LlmReranker(const LlmReranker&) = delete;
+  LlmReranker& operator=(const LlmReranker&) = delete;
+
+  uint64_t ComputeContextHash(const std::string& context) const;
+  bool EnsureContextCached(const std::string& context);
+  bool RollbackOrRestoreContextState();
+
+  // Idea 4: Log-Sum-Exp denominator (Full & Sparse Anchor-Subset variants)
+  static float ComputeLogDenominator(const float* logits, int n_vocab);
+  float ComputeSparseLogDenominator(const float* logits,
+                                    int n_vocab,
+                                    const std::vector<int32_t>& target_tokens) const;
+
+  // Idea 6: Precompute bitmask of valid Japanese/English tokens to filter multilingual noise
+  void BuildValidTargetTokenBitmask();
+  inline bool IsTokenValidForPrediction(int32_t token_id) const {
+    if (token_id < 0 || static_cast<size_t>(token_id >> 6) >= valid_token_bitmask_.size()) return false;
+    return (valid_token_bitmask_[token_id >> 6] & (1ULL << (token_id & 63))) != 0;
+  }
+
+  // Idea 9: Big.LITTLE core topology discovery & thread pinning
+  void DetectPerformanceCores();
+  void ApplyThreadAffinityAndScaling(int batch_token_count);
+
+  // Idea 10: O(1) surface-to-BPE-tokens lookup with automatic cache management
+  const std::vector<int32_t>& GetOrTokenizeCandidate(const std::string& surface);
+
+  // Idea 7: Snapshot ring management
+  const ContextLogitsSnapshot* FindSnapshotByHash(uint64_t hash) const;
+  const ContextLogitsSnapshot* FindSnapshotByTokens(const std::vector<int32_t>& tokens) const;
+  void UpsertSnapshot(uint64_t hash,
+                      const std::vector<int32_t>& tokens,
+                      const std::vector<float>& logits,
+                      float log_denom,
+                      const std::unordered_map<std::string, float>& candidate_nlls);
+
+  LlmRerankerConfig config_;
+  llama_model* model_ = nullptr;
+  llama_context* ctx_ = nullptr;
+  const llama_vocab* vocab_ = nullptr;
+  bool initialized_ = false;
+
+  // KV cache state (seq_id = 0 holds active context prefix)
+  uint64_t cached_context_hash_ = 0;
+  int cached_context_n_tokens_ = 0;
+  std::vector<int32_t> cached_context_tokens_;
+  std::vector<float> cached_context_logits_;
+  float cached_context_log_denom_ = 0.0f;
+  std::unordered_map<std::string, float> cached_candidate_nlls_;
+  bool partial_seq_rm_supported_ = true;
+  bool seq_pos_add_supported_ = true;   // Idea 2: Whether llama_memory_seq_add is supported by model layers
+  bool has_checkpoint_ = false;         // Checkpoint stored in seq_id = 15 (reserved checkpoint slot)
+  static constexpr int kCheckpointSeqId = 15;
+
+  // Idea 6 & 4: Precomputed vocabulary tables
+  std::vector<uint64_t> valid_token_bitmask_; // 151,936 bits = 2,374 uint64_t (~19 KB)
+  std::vector<int32_t> static_anchor_tokens_; // Top-512 high-frequency JP/EN anchor tokens
+
+  // Idea 7: 4-slot LRU Snapshot Ring Buffer for lock-free UI fast path & 0ms Undo recovery
+  mutable std::mutex snapshot_mutex_;
+  std::array<ContextLogitsSnapshot, kSnapshotRingSize> snapshot_ring_;
+  uint64_t snapshot_access_counter_ = 0;
+
+  // Idea 9: Performance CPU core IDs (excluding Little cores like Cortex-A520)
+  std::vector<int> perf_core_cpus_;
+  bool affinity_applied_ = false;
+
+  // Idea 10: Tokenization cache (surface string -> BPE token sequence)
+  std::unordered_map<std::string, std::vector<int32_t>> token_cache_;
+
+  std::atomic<bool> abort_prediction_{false};
+  std::atomic<bool> abort_scoring_{false};
+  std::atomic<uint64_t> active_request_seq_{0};
+  mutable std::mutex mutex_;
+};
+
+}  // namespace myasr
+
+#endif  // MYASR_LLM_RERANKER_H_
+```
+
+---
+
+### 6.3 各アイデアの C++ コアアルゴリズム詳細設計 (`app/src/main/cpp/llm_reranker.cc`)
+
+#### 6.3.1 Idea 8, Idea 6, Idea 9: `Initialize()` における量子化 KV・語彙マスク・コアアフィニティ初期化
+
+1. **KV Cache 設定 (Idea 8)**:
+   `Qwen3.5`（Gated DeltaNet + Attention ハイブリッド）および `Qwen2.5` との互換性を保証するため、`cparams` を以下のように構成します：
+   ```cpp
+   llama_context_params cparams = llama_context_default_params();
+   cparams.n_ctx = config_.n_ctx;           // 256
+   cparams.n_batch = config_.n_ctx;         // 256
+   cparams.n_ubatch = config_.n_ctx;        // Physical batch = 256 so tree batch executes in 1 ubatch
+   cparams.n_seq_max = config_.n_seq_max;   // 16 (seq 0: base context, seq 1..14: tree branches, seq 15: checkpoint)
+   cparams.n_threads = config_.n_threads;
+   cparams.n_threads_batch = config_.n_threads_batch;
+   cparams.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_ENABLED;
+   if (config_.use_q8_kv_cache) {
+     cparams.type_k = GGML_TYPE_Q8_0;
+     cparams.type_v = GGML_TYPE_Q8_0;
+   }
+   ctx_ = llama_init_from_model(model_, cparams);
+   if (!ctx_ && config_.use_q8_kv_cache) {
+     // Fallback to F16 if a hybrid recurrent layer rejects Q8_0 state tensor
+     LOGW("Q8_0 KV cache rejected by model architecture, falling back to F16 KV cache.");
+     cparams.type_k = GGML_TYPE_F16;
+     cparams.type_v = GGML_TYPE_F16;
+     ctx_ = llama_init_from_model(model_, cparams);
+   }
+   ```
+
+2. **Big.LITTLE Performance Core 検出と Thread Affinity (Idea 9)**:
+   ```cpp
+   #if defined(__linux__) || defined(__ANDROID__)
+   #include <sched.h>
+   #include <fstream>
+   #endif
+
+   void LlmReranker::DetectPerformanceCores() {
+     perf_core_cpus_.clear();
+   #if defined(__linux__) || defined(__ANDROID__)
+     int num_cpus = sysconf(_SC_NPROCESSORS_CONF);
+     if (num_cpus <= 0) num_cpus = 8;
+     std::vector<std::pair<int, long>> cpu_freqs;
+     long min_freq = LONG_MAX;
+     long max_freq = 0;
+
+     for (int cpu = 0; cpu < num_cpus; ++cpu) {
+       std::string path = "/sys/devices/system/cpu/cpu" + std::to_string(cpu) + "/cpufreq/cpuinfo_max_freq";
+       std::ifstream ifs(path);
+       long freq = 0;
+       if (ifs >> freq && freq > 0) {
+         cpu_freqs.emplace_back(cpu, freq);
+         if (freq < min_freq) min_freq = freq;
+         if (freq > max_freq) max_freq = freq;
+       }
+     }
+     // Exclude Little cluster if heterogeneous topology exists (max_freq > min_freq * 1.15)
+     if (!cpu_freqs.empty() && max_freq > (min_freq * 115) / 100) {
+       for (const auto& kv : cpu_freqs) {
+         if (kv.second > min_freq) {
+           perf_core_cpus_.push_back(kv.first);
+         }
+       }
+     }
+   #endif
+     if (perf_core_cpus_.size() >= 2) {
+       config_.n_threads = std::min<int>(4, static_cast<int>(perf_core_cpus_.size()));
+       config_.n_threads_batch = std::min<int>(6, static_cast<int>(perf_core_cpus_.size()));
+     }
+   }
+
+   void LlmReranker::ApplyThreadAffinityAndScaling(int batch_token_count) {
+     if (!ctx_) return;
+   #if defined(__linux__) || defined(__ANDROID__)
+     if (!affinity_applied_ && !perf_core_cpus_.empty()) {
+       cpu_set_t cpuset;
+       CPU_ZERO(&cpuset);
+       for (int cpu : perf_core_cpus_) {
+         CPU_SET(cpu, &cpuset);
+       }
+       // Inherited by ggml worker threads or pins current calling worker thread to Mid/Prime cores
+       sched_setaffinity(0, sizeof(cpu_set_t), &cpuset);
+       affinity_applied_ = true;
+     }
+   #endif
+     int active_threads = (batch_token_count <= 2)
+         ? std::min(3, config_.n_threads)
+         : ((batch_token_count <= 8) ? config_.n_threads : config_.n_threads_batch);
+     llama_set_n_threads(ctx_, active_threads, active_threads);
+   }
+   ```
+
+3. **言語別有効トークン・ビットマスクと静的アンカートークンの事前構築 (Idea 6 & Idea 4)**:
+   ```cpp
+   void LlmReranker::BuildValidTargetTokenBitmask() {
+     int n_vocab = llama_vocab_n_tokens(vocab_);
+     valid_token_bitmask_.assign((n_vocab + 63) / 64, 0ULL);
+     static_anchor_tokens_.clear();
+     static_anchor_tokens_.reserve(512);
+
+     // Common high-frequency anchor surfaces for Sparse LSE baseline
+     static const char* kAnchorSurfaces[] = {
+       "の", "に", "は", "を", "た", "が", "で", "て", "と", "し", "れ", "さ",
+       "ある", "いる", "も", "する", "から", "な", "こと", "として", "い", "や",
+       "れる", "など", "なっ", "ない", "この", "ため", "その", "あっ", "よう",
+       "また", "もの", "という", "あり", "まで", "られ", "なる", "へ", "か",
+       "だ", "これ", "によって", "により", "おり", "より", "による", "ず", "なり",
+       "られる", "において", "ば", "なかっ", "なく", "しかし", "について", "せ",
+       "だっ", "その後", "できる", "それ", "う", "ので", "なお", "のみ", "でき",
+       "き", "つ", "における", "および", "いう", "さらに", "でも", "ら", "たり",
+       "その他", "に関する", "たち", "ます", "ん", "なら", "に対して", "特に",
+       "せる", "及び", "これら", "とき", "では", "にて", "ほか", "ながら", "うち",
+       "そして", "とともに", "ただし", "かつて", "それぞれ", "または", "お", "ほど",
+       "ものの", "に対する", "ほとんど", "と共に", "といった", "です", "でした",
+       "。", "、", "！", "？", "「", "」", "（", "）", "・", "\n", " ",
+       " the", " to", " of", " and", " in", " is", " for", " that", " on", " with",
+       " as", " are", " at", " be", " this", " have", " from", " or", " by", " not"
+     };
+     for (const char* surf : kAnchorSurfaces) {
+       int32_t tbuf[8];
+       int nt = llama_tokenize(vocab_, surf, std::strlen(surf), tbuf, 8, false, false);
+       if (nt == 1 && tbuf[0] >= 0) {
+         static_anchor_tokens_.push_back(tbuf[0]);
+       }
+     }
+
+     char buf[128];
+     for (int32_t v = 0; v < n_vocab; ++v) {
+       if (llama_vocab_is_eog(vocab_, v) || llama_vocab_is_control(vocab_, v)) continue;
+       int len = llama_token_to_piece(vocab_, v, buf, sizeof(buf), 0, false);
+       if (len <= 0) continue;
+
+       // Validate UTF-8 codepoints: allow Hiragana, Katakana, CJK Unified Ideographs, CJK Punct, and printable ASCII
+       bool valid = true;
+       bool has_content = false;
+       int i = 0;
+       while (i < len) {
+         unsigned char c = static_cast<unsigned char>(buf[i]);
+         if (c <= 0x7F) {
+           if (c < 0x20 && c != '\n') { valid = false; break; }
+           if (std::isalnum(c)) has_content = true;
+           i += 1;
+         } else if ((c & 0xF0) == 0xE0 && i + 2 < len) {
+           uint32_t cp = ((c & 0x0F) << 12) |
+                         ((static_cast<unsigned char>(buf[i + 1]) & 0x3F) << 6) |
+                         (static_cast<unsigned char>(buf[i + 2]) & 0x3F);
+           // Hiragana (3040-309F), Katakana (30A0-30FF), CJK Punct (3000-303F),
+           // CJK Ideographs (4E00-9FFF), Fullwidth ASCII/Kana (FF00-FFEF)
+           if ((cp >= 0x3000 && cp <= 0x30FF) ||
+               (cp >= 0x4E00 && cp <= 0x9FFF) ||
+               (cp >= 0xFF01 && cp <= 0xFF60)) {
+             has_content = true;
+           } else {
+             valid = false;
+             break;
+           }
+           i += 3;
+         } else {
+           // Reject 2-byte non-JP scripts (Cyrillic, Arabic, etc.) and 4-byte emoji/rare planes in NextPhrase prediction
+           valid = false;
+           break;
+         }
+       }
+       if (valid && has_content) {
+         valid_token_bitmask_[v >> 6] |= (1ULL << (v & 63));
+       }
+     }
+   }
+   ```
+
+---
+
+#### 6.3.2 Idea 2 & Idea 7: `EnsureContextCached()` の RoPE Position-Shift・Prefix Truncate 修正・4スロット Snapshot Ring
+
+現在の [`EnsureContextCached()`](app/src/main/cpp/llm_reranker.cc#L192-L313) を刷新し、以下の **4 つのキャッシュ遷移パターン** をすべてカバーします：
+
+```mermaid
+stateDiagram-v2
+    [*] --> CheckExactHash
+    CheckExactHash --> ExactHit: current_hash == cached_context_hash_ (0ms)
+    CheckExactHash --> TokenizeNewContext: hash mismatch
+
+    TokenizeNewContext --> Case1_PrefixAppend: common_prefix_len == old_len && new_len > old_len
+    TokenizeNewContext --> Case2_PrefixTruncate_Undo: common_prefix_len == new_len && new_len < old_len
+    TokenizeNewContext --> Case3_SlidingWindow_Shift: common_prefix_len <= 1 && Overlap(old[k..], new[1..]) >= 4
+    TokenizeNewContext --> Case4_DivergentSuffix: common_prefix_len > 1 && new_len >= common_prefix_len
+
+    Case1_PrefixAppend --> DecodeDeltaOnly: Decode only new_len - old_len tokens
+    Case2_PrefixTruncate_Undo --> SeqRmAndRestoreRing: llama_memory_seq_rm(0, new_len, -1)\nRestore logits from snapshot_ring_ (0ms decode!)
+    Case3_SlidingWindow_Shift --> RoPEPosShift: seq_rm(0, 1, k+1) + seq_add(0, k+1, -1, -k)\nDecode only trailing new tokens!
+    Case4_DivergentSuffix --> PartialRmAndDecode: seq_rm(0, common_prefix_len, -1)\nDecode remaining tokens
+```
+
+##### 詳細アルゴリズム実装（`EnsureContextCached`）
+```cpp
+bool LlmReranker::EnsureContextCached(const std::string& context) {
+  std::string effective_context = context.empty() ? "<s>" : context;
+  uint64_t current_hash = ComputeContextHash(effective_context);
+  if (current_hash == cached_context_hash_ && cached_context_n_tokens_ > 0 && !cached_context_tokens_.empty()) {
+    cache_hits_++;
+    return true;
+  }
+
+  llama_memory_t mem = llama_get_memory(ctx_);
+  std::vector<llama_token> context_tokens(config_.n_ctx);
+  int n_tokens = llama_tokenize(vocab_, effective_context.data(), effective_context.size(),
+                                context_tokens.data(), context_tokens.size(),
+                                true, false);
+  if (n_tokens <= 0) {
+    cached_context_hash_ = 0;
+    cached_context_n_tokens_ = 0;
+    cached_context_tokens_.clear();
+    has_checkpoint_ = false;
+    return false;
+  }
+  context_tokens.resize(n_tokens);
+
+  // 1. Compute standard Longest Common Prefix (LCP) from index 0
+  int old_n = static_cast<int>(cached_context_tokens_.size());
+  int common_prefix_len = 0;
+  int max_check = std::min(old_n, n_tokens);
+  while (common_prefix_len < max_check &&
+         cached_context_tokens_[common_prefix_len] == context_tokens[common_prefix_len]) {
+    common_prefix_len++;
+  }
+
+  // CASE A: Exact token sequence match
+  if (common_prefix_len == n_tokens && old_n == n_tokens) {
+    cached_context_hash_ = current_hash;
+    cache_hits_++;
+    return true;
+  }
+
+  // CASE B (Idea 7 Bugfix & Optimization): Prefix Truncation (Undo / Backspace)
+  // New context is a strict prefix of cached_context_tokens_ (common_prefix_len == n_tokens < old_n)
+  if (common_prefix_len == n_tokens && n_tokens < old_n && partial_seq_rm_supported_) {
+    const ContextLogitsSnapshot* ring_snap = nullptr;
+    {
+      std::lock_guard<std::mutex> s_lock(snapshot_mutex_);
+      ring_snap = FindSnapshotByHash(current_hash);
+      if (!ring_snap) ring_snap = FindSnapshotByTokens(context_tokens);
+    }
+    if (ring_snap != nullptr && llama_memory_seq_rm(mem, 0, n_tokens, -1)) {
+      cached_context_hash_ = current_hash;
+      cached_context_n_tokens_ = n_tokens;
+      cached_context_tokens_ = context_tokens;
+      cached_context_logits_ = ring_snap->logits;
+      cached_context_log_denom_ = ring_snap->log_denom;
+      cached_candidate_nlls_ = ring_snap->candidate_nlls;
+      has_checkpoint_ = false;
+      cache_hits_++;
+      return true; // 0ms instant recovery without calling llama_decode!
+    }
+    // If not in ring_snap, strip to n_tokens - 1 and re-decode just the last token (1 token decode)
+    if (n_tokens >= 1 && llama_memory_seq_rm(mem, 0, n_tokens - 1, -1)) {
+      common_prefix_len = n_tokens - 1;
+    }
+  }
+
+  // CASE C (Idea 2): Sliding Window Overlap Detection & RoPE Position-Shift (seq_add)
+  // When ContextWindowTrimmer trims k tokens from the front (after BOS token at index 0),
+  // common_prefix_len is 1 (only BOS matches), while cached_context_tokens_[1 + k .. old_n - 1]
+  // matches context_tokens[1 .. overlap_end].
+  if (common_prefix_len <= 1 && old_n >= 6 && n_tokens >= 6 &&
+      partial_seq_rm_supported_ && seq_pos_add_supported_ &&
+      cached_context_tokens_[0] == context_tokens[0]) {
+    int best_shift_k = 0;
+    int best_overlap = 0;
+    int max_shift = std::min(old_n - 4, 24);
+    for (int k = 1; k <= max_shift; ++k) {
+      int overlap = 0;
+      while (1 + k + overlap < old_n && 1 + overlap < n_tokens &&
+             cached_context_tokens_[1 + k + overlap] == context_tokens[1 + overlap]) {
+        overlap++;
+      }
+      if (overlap >= 4 && overlap > best_overlap) {
+        best_overlap = overlap;
+        best_shift_k = k;
+        if (1 + k + overlap == old_n) break; // Found exact suffix-prefix match
+      }
+    }
+
+    if (best_shift_k > 0 && best_overlap >= 4) {
+      // 1. Remove dropped head tokens [1 .. best_shift_k] and any unaligned tail beyond (1 + best_shift_k + best_overlap)
+      bool rm_head_ok = llama_memory_seq_rm(mem, 0, 1, 1 + best_shift_k);
+      int kept_old_end = 1 + best_shift_k + best_overlap;
+      bool rm_tail_ok = (kept_old_end >= old_n) || llama_memory_seq_rm(mem, 0, kept_old_end, -1);
+      if (rm_head_ok && rm_tail_ok) {
+        // 2. Shift RoPE positions of [1 + best_shift_k .. kept_old_end) by -best_shift_k
+        llama_memory_seq_add(mem, 0, 1 + best_shift_k, kept_old_end, -best_shift_k);
+        common_prefix_len = 1 + best_overlap;
+        // If common_prefix_len == n_tokens, step back 1 token so llama_decode produces the final token's logits
+        if (common_prefix_len == n_tokens) {
+          llama_memory_seq_rm(mem, 0, n_tokens - 1, -1);
+          common_prefix_len = n_tokens - 1;
+        }
+      } else {
+        seq_pos_add_supported_ = false;
+        llama_memory_clear(mem, true);
+        common_prefix_len = 0;
+      }
+    }
+  }
+
+  // Standard delta preparation for remaining tokens [common_prefix_len .. n_tokens - 1]
+  int n_new_tokens = n_tokens - common_prefix_len;
+  int start_pos = common_prefix_len;
+
+  if (common_prefix_len > 0 && n_new_tokens > 0) {
+    if (has_checkpoint_) {
+      llama_memory_seq_rm(mem, kCheckpointSeqId, -1, -1);
+      has_checkpoint_ = false;
+    }
+    if (common_prefix_len < old_n) {
+      if (!partial_seq_rm_supported_ || !llama_memory_seq_rm(mem, 0, common_prefix_len, -1)) {
+        partial_seq_rm_supported_ = false;
+        llama_memory_clear(mem, true);
+        start_pos = 0;
+        n_new_tokens = n_tokens;
+      }
+    }
+  } else if (common_prefix_len == 0) {
+    has_checkpoint_ = false;
+    llama_memory_clear(mem, true);
+  }
+
+  // Apply adaptive thread count for prefill batch size (Idea 9)
+  ApplyThreadAffinityAndScaling(n_new_tokens);
+
+  llama_batch batch = llama_batch_init(n_new_tokens, 0, 1);
+  for (int i = 0; i < n_new_tokens; ++i) {
+    batch.token[i]     = context_tokens[start_pos + i];
+    batch.pos[i]       = start_pos + i;
+    batch.n_seq_id[i]  = 1;
+    batch.seq_id[i][0] = 0;
+    batch.logits[i]    = (i == n_new_tokens - 1);
+  }
+  batch.n_tokens = n_new_tokens;
+
+  int ret = llama_decode(ctx_, batch);
+  llama_batch_free(batch);
+  if (ret != 0) {
+    cached_context_hash_ = 0;
+    cached_context_n_tokens_ = 0;
+    cached_context_tokens_.clear();
+    has_checkpoint_ = false;
+    llama_memory_clear(mem, true);
+    return false;
+  }
+
+  float* raw_logits = llama_get_logits_ith(ctx_, -1);
+  if (!raw_logits) return false;
+
+  int n_vocab = llama_vocab_n_tokens(vocab_);
+  cached_context_logits_.assign(raw_logits, raw_logits + n_vocab);
+  cached_context_log_denom_ = ComputeLogDenominator(cached_context_logits_.data(), n_vocab);
+  cached_context_hash_ = current_hash;
+  cached_context_n_tokens_ = n_tokens;
+  cached_context_tokens_ = std::move(context_tokens);
+  cached_candidate_nlls_.clear();
+
+  if (!partial_seq_rm_supported_) {
+    llama_memory_seq_rm(mem, kCheckpointSeqId, -1, -1);
+    llama_memory_seq_cp(mem, 0, kCheckpointSeqId, -1, -1);
+    has_checkpoint_ = true;
+  }
+
+  // Upsert into 4-slot LRU Snapshot Ring (Idea 7)
+  UpsertSnapshot(current_hash, cached_context_tokens_, cached_context_logits_,
+                 cached_context_log_denom_, cached_candidate_nlls_);
+  return true;
+}
+```
+
+---
+
+#### 6.3.3 Idea 10: `GetOrTokenizeCandidate()` による O(1) トークンキャッシュ
+
+[`TryFastScoreCandidates()`](app/src/main/cpp/llm_reranker.cc#L364) と [`ScoreCandidates()`](app/src/main/cpp/llm_reranker.cc#L440) の両方から共通利用できるトークナイズ・キャッシュを実装します：
+
+```cpp
+const std::vector<int32_t>& LlmReranker::GetOrTokenizeCandidate(const std::string& surface) {
+  auto it = token_cache_.find(surface);
+  if (it != token_cache_.end()) {
+    return it->second;
+  }
+  if (token_cache_.size() >= kMaxTokenCacheEntries) {
+    token_cache_.clear();
+  }
+  std::vector<int32_t> tokens(64);
+  int n = llama_tokenize(vocab_, surface.data(), surface.size(),
+                         tokens.data(), tokens.size(), false, false);
+  if (n > 0) {
+    tokens.resize(n);
+  } else {
+    tokens.clear();
+  }
+  auto inserted = token_cache_.emplace(surface, std::move(tokens));
+  return inserted.first->second;
+}
+```
+> **スレッド安全性**: `TryFastScoreCandidates`（UI スレッド）と `ScoreCandidates`（ワーカースレッド）の競合を避けるため、`TryFastScoreCandidates` 内では `snapshot_mutex_` 保護下の読み取りまたはスタック上の小バッファを使い、`mutex_` 保有下の `ScoreCandidates` では `token_cache_` を直接参照・更新します（さらに `UpsertSnapshot` 時に `token_cache_` をスナップショット側へも反映可能）。
+
+---
+
+#### 6.3.4 Idea 1, Idea 3, Idea 4: `ScoreCandidatesWithPriors()` — 事前コスト許容枝刈り ＋ Prefix-Tree 単一パス一括デコード ＋ ノード共有疎 LSE
+
+これが **Stage 2 のレイテンシを $25\sim 40\text{ms} \to 4.5\sim 8\text{ms}$ に短縮する中核エンジン** です。
+
+```mermaid
+flowchart TD
+    Start["ScoreCandidatesWithPriors(context, candidates, prior_penalties)"] --> Step1["1. EnsureContextCached(context)\ncached_context_logits_ & log_denom 取得"]
+    Step1 --> Step2["2. Stage 1: 全候補の Token-0 NLL と Prior 下界を計算\nlower_bound[i] = t0_nll[i] + prior_penalties[i]"]
+    Step2 --> Step3["3. Idea 3: Early-Exit & Best-First Pruning\n- 候補を lower_bound 昇順にソート\n- Top-1 が 1トークン (または既キャッシュ) で 2位の下界に >= 3.5 nats 差なら即座に Return!\n- lower_bound[i] > best_known_total_score + 4.5f の候補を Stage 2 から除外"]
+    Step3 --> Step4["4. Idea 1: 生き残った複数トークン候補の Prefix (t_0 .. t_{K-2}) から\nPrefixTreeNode トライ木を構築 (最大 14 ブランチ, seq_id = 1..14)"]
+    Step4 --> Step5["5. 単一 llama_batch に全トライ木ノードを Pack\n- llama_memory_seq_cp(mem, 0, s, 0, L_C) で文脈 KV を各 seq_id に論理共有\n- 1回だけ llama_decode(ctx_, tree_batch) を実行!"]
+    Step5 --> Step6["6. Idea 4: needs_logits == true の各ノードで 1回だけ log_denom を計算\n各候補のパスに沿って NLL を合算"]
+    Step6 --> Step7["7. 1回だけ Rollback (seq 1..14 クリア & seq 0 復元)\nSnapshot Ring に確定 NLL を保存して Return"]
+```
+
+##### 詳細アルゴリズム実装（`ScoreCandidatesWithPriors`）
+```cpp
+bool LlmReranker::ScoreCandidates(const std::string& context,
+                                  const std::vector<std::string>& candidates,
+                                  std::vector<float>* out_neg_logprobs) {
+  std::vector<float> zero_priors(candidates.size(), 0.0f);
+  return ScoreCandidatesWithPriors(context, candidates, zero_priors, out_neg_logprobs);
+}
+
+bool LlmReranker::ScoreCandidatesWithPriors(
+    const std::string& context,
+    const std::vector<std::string>& candidates,
+    const std::vector<float>& prior_penalties,
+    std::vector<float>* out_neg_logprobs) {
+  abort_prediction_.store(true);
+  abort_scoring_.store(false);
+
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!initialized_ || !ctx_ || !model_ || !vocab_) return false;
+  if (candidates.empty()) {
+    out_neg_logprobs->clear();
+    return true;
+  }
+  if (!EnsureContextCached(context) || cached_context_logits_.empty()) {
+    return false;
+  }
+
+  const int n_vocab = llama_vocab_n_tokens(vocab_);
+  const float* logits = cached_context_logits_.data();
+  const float log_denom = cached_context_log_denom_;
+  out_neg_logprobs->assign(candidates.size(), 20.0f);
+
+  struct CandidateInfo {
+    int index;
+    std::string surface;
+    std::vector<llama_token> tokens;
+    float token0_nll = 20.0f;
+    float prior_penalty = 0.0f;
+    float lower_bound_total = 20.0f;
+    bool is_complete = false;
+    std::vector<int> tree_node_path; // Node indices in PrefixTree for tokens[0 .. K-2]
+  };
+
+  std::vector<CandidateInfo> cand_infos;
+  cand_infos.reserve(candidates.size());
+  float best_completed_total_score = 999.0f;
+
+  // --- STAGE 1: Token-0 Evaluation & Memoized Cache Lookup ---
+  for (size_t i = 0; i < candidates.size(); ++i) {
+    CandidateInfo info;
+    info.index = static_cast<int>(i);
+    info.surface = candidates[i];
+    info.prior_penalty = (i < prior_penalties.size()) ? prior_penalties[i] : 0.0f;
+
+    auto it = cached_candidate_nlls_.find(info.surface);
+    if (it != cached_candidate_nlls_.end()) {
+      info.token0_nll = it->second;
+      info.lower_bound_total = it->second + info.prior_penalty;
+      info.is_complete = true;
+      (*out_neg_logprobs)[i] = it->second;
+      if (info.lower_bound_total < best_completed_total_score) {
+        best_completed_total_score = info.lower_bound_total;
+      }
+      cand_infos.push_back(std::move(info));
+      continue;
+    }
+
+    const auto& base_tokens = GetOrTokenizeCandidate(info.surface);
+    float best_t0_nll = 20.0f;
+    if (!base_tokens.empty()) {
+      info.tokens = base_tokens;
+      best_t0_nll = -(logits[info.tokens[0]] - log_denom);
+    }
+
+    // Space-adaptive BPE check for Latin/ASCII words
+    if (!context.empty() && !std::isspace(static_cast<unsigned char>(context.back())) &&
+        !info.surface.empty() && std::isalnum(static_cast<unsigned char>(info.surface.front()))) {
+      const auto& spaced_tokens = GetOrTokenizeCandidate(" " + info.surface);
+      if (!spaced_tokens.empty()) {
+        float s_nll = -(logits[spaced_tokens[0]] - log_denom);
+        if (s_nll < best_t0_nll) {
+          best_t0_nll = s_nll;
+          info.tokens = spaced_tokens;
+        }
+      }
+    }
+
+    info.token0_nll = best_t0_nll;
+    info.lower_bound_total = best_t0_nll + info.prior_penalty;
+    (*out_neg_logprobs)[i] = best_t0_nll;
+
+    if (info.tokens.size() <= 1) {
+      info.is_complete = true;
+      cached_candidate_nlls_[info.surface] = best_t0_nll;
+      if (info.lower_bound_total < best_completed_total_score) {
+        best_completed_total_score = info.lower_bound_total;
+      }
+    }
+    cand_infos.push_back(std::move(info));
+  }
+
+  // --- IDEA 3: Best-First Ordering & Decisive Top-1 Early Exit ---
+  std::vector<int> eval_order(cand_infos.size());
+  for (size_t i = 0; i < cand_infos.size(); ++i) eval_order[i] = static_cast<int>(i);
+  std::sort(eval_order.begin(), eval_order.end(), [&](int a, int b) {
+    return cand_infos[a].lower_bound_total < cand_infos[b].lower_bound_total;
+  });
+
+  // If the #1 candidate by lower bound is already complete (1-token or cached)
+  // and beats #2's admissible lower bound by >= decisive_top1_gap_nats (3.5 nats),
+  // no multi-token candidate can mathematically overtake #1!
+  if (eval_order.size() >= 2) {
+    const auto& top1 = cand_infos[eval_order[0]];
+    const auto& top2 = cand_infos[eval_order[1]];
+    if (top1.is_complete &&
+        (top2.lower_bound_total - top1.lower_bound_total) >= config_.decisive_top1_gap_nats) {
+      // Save snapshot and return immediately (0ms Stage 2!)
+      UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
+                     cached_context_log_denom_, cached_candidate_nlls_);
+      return true;
+    }
+  }
+
+  // Estimate tight upper bound on best total score even when all candidates have >= 2 tokens:
+  // A 2-token candidate's expected total NLL is bounded around lower_bound_total + 2.5f * (len - 1)
+  float dynamic_prune_cutoff = best_completed_total_score + config_.stage2_prune_margin_nats;
+  if (best_completed_total_score > 100.0f && !eval_order.empty()) {
+    const auto& best_cand = cand_infos[eval_order[0]];
+    float est_best_total = best_cand.lower_bound_total +
+        2.2f * static_cast<float>(std::min<size_t>(4, best_cand.tokens.size()) - 1);
+    dynamic_prune_cutoff = est_best_total + config_.stage2_prune_margin_nats;
+  }
+
+  // --- IDEA 1: Prefix-Tree (Trie) Construction for Surviving Multi-Token Candidates ---
+  std::vector<PrefixTreeNode> tree_nodes;
+  tree_nodes.reserve(config_.max_tree_batch_tokens);
+  std::vector<int> root_children;
+  std::vector<int> active_cand_indices;
+  int next_branch_seq_id = 1; // Available branch seq_ids: 1 .. (kCheckpointSeqId - 1) = 1..14
+  const int max_branch_seqs = kCheckpointSeqId - 1;
+
+  for (int ord_idx : eval_order) {
+    auto& info = cand_infos[ord_idx];
+    if (info.is_complete || info.tokens.size() <= 1) continue;
+
+    // Admissible Lower-Bound Pruning (Idea 3)
+    if (info.lower_bound_total > dynamic_prune_cutoff) {
+      cached_candidate_nlls_[info.surface] = info.token0_nll;
+      continue;
+    }
+    if (next_branch_seq_id > max_branch_seqs) break;
+
+    size_t max_toks = std::min<size_t>(8, info.tokens.size());
+    int n_prefix = static_cast<int>(max_toks) - 1; // Last-Token Elision: only decode tokens[0 .. max_toks-2]
+
+    // Insert prefix tokens[0 .. n_prefix-1] into PrefixTree
+    int curr_parent = -1;
+    info.tree_node_path.clear();
+    info.tree_node_path.reserve(n_prefix);
+    bool branch_created_new_leaf = false;
+
+    for (int d = 0; d < n_prefix; ++d) {
+      int32_t tok = info.tokens[d];
+      const std::vector<int>& siblings = (curr_parent == -1)
+          ? root_children
+          : tree_nodes[curr_parent].child_node_indices;
+
+      int found_node = -1;
+      for (int sib_idx : siblings) {
+        if (tree_nodes[sib_idx].token == tok) {
+          found_node = sib_idx;
+          break;
+        }
+      }
+
+      if (found_node == -1) {
+        if (static_cast<int>(tree_nodes.size()) >= config_.max_tree_batch_tokens) {
+          break; // Batch capacity reached
+        }
+        PrefixTreeNode new_node;
+        new_node.token = tok;
+        new_node.depth = d;
+        new_node.parent_node_idx = curr_parent;
+        new_node.needs_logits = true; // Every prefix node predicts token[d + 1]
+        found_node = static_cast<int>(tree_nodes.size());
+        tree_nodes.push_back(std::move(new_node));
+        if (curr_parent == -1) {
+          root_children.push_back(found_node);
+        } else {
+          tree_nodes[curr_parent].child_node_indices.push_back(found_node);
+        }
+        branch_created_new_leaf = true;
+      } else {
+        tree_nodes[found_node].needs_logits = true;
+      }
+
+      info.tree_node_path.push_back(found_node);
+      curr_parent = found_node;
+    }
+
+    if (static_cast<int>(info.tree_node_path.size()) == n_prefix) {
+      // If this candidate's prefix path is not already assigned a seq_id, assign one and propagate up to root
+      int leaf_node = info.tree_node_path.back();
+      if (tree_nodes[leaf_node].seq_ids.empty()) {
+        int assigned_seq = next_branch_seq_id++;
+        for (int node_idx : info.tree_node_path) {
+          tree_nodes[node_idx].seq_ids.push_back(assigned_seq);
+        }
+      }
+      active_cand_indices.push_back(ord_idx);
+    }
+  }
+
+  // --- STAGE 2 EXECUTION: Single-Pass Packed Prefix-Tree Decode ---
+  if (!tree_nodes.empty() && !active_cand_indices.empty() && !abort_scoring_.load()) {
+    llama_memory_t mem = llama_get_memory(ctx_);
+    const int start_pos = cached_context_n_tokens_;
+
+    // Check if multi-sequence logical KV sharing (seq_cp from seq 0 to branch seqs) is supported
+    int num_assigned_seqs = next_branch_seq_id - 1;
+    bool tree_seq_cp_ok = partial_seq_rm_supported_;
+    if (tree_seq_cp_ok && num_assigned_seqs > 1) {
+      for (int s = 1; s <= num_assigned_seqs; ++s) {
+        llama_memory_seq_rm(mem, s, -1, -1);
+        if (!llama_memory_seq_cp(mem, 0, s, 0, start_pos)) {
+          tree_seq_cp_ok = false;
+          break;
+        }
+      }
+    }
+
+    if (tree_seq_cp_ok) {
+      // SINGLE-PASS PACKED TREE DECODE! (All candidates evaluated in 1 llama_decode call)
+      int n_batch_nodes = static_cast<int>(tree_nodes.size());
+      ApplyThreadAffinityAndScaling(n_batch_nodes);
+
+      llama_batch tree_batch = llama_batch_init(n_batch_nodes, 0, max_branch_seqs + 1);
+      for (int idx = 0; idx < n_batch_nodes; ++idx) {
+        auto& node = tree_nodes[idx];
+        node.batch_Order_idx = idx;
+        tree_batch.token[idx] = node.token;
+        tree_batch.pos[idx] = start_pos + node.depth;
+        if (num_assigned_seqs == 1) {
+          // Single branch: use seq 0 directly without any seq_cp
+          tree_batch.n_seq_id[idx] = 1;
+          tree_batch.seq_id[idx][0] = 0;
+        } else {
+          tree_batch.n_seq_id[idx] = static_cast<int32_t>(node.seq_ids.size());
+          for (size_t s = 0; s < node.seq_ids.size(); ++s) {
+            tree_batch.seq_id[idx][s] = node.seq_ids[s];
+          }
+        }
+        tree_batch.logits[idx] = node.needs_logits;
+      }
+      tree_batch.n_tokens = n_batch_nodes;
+
+      if (llama_decode(ctx_, tree_batch) == 0 && !abort_scoring_.load()) {
+        // Idea 4: Compute log_denom AT MOST ONCE per internal tree node and share across all candidates!
+        for (int ord_idx : active_cand_indices) {
+          auto& info = cand_infos[ord_idx];
+          float total_nll = info.token0_nll;
+          int n_prefix = static_cast<int>(info.tree_node_path.size());
+          for (int d = 0; d < n_prefix; ++d) {
+            int node_idx = info.tree_node_path[d];
+            auto& node = tree_nodes[node_idx];
+            float* step_logits = llama_get_logits_ith(ctx_, node.batch_Order_idx);
+            if (!step_logits) continue;
+            if (!node.log_denom_ready) {
+              node.computed_log_denom = ComputeLogDenominator(step_logits, n_vocab);
+              node.log_denom_ready = true;
+            }
+            llama_token next_tok = info.tokens[d + 1];
+            float step_nll = -(step_logits[next_tok] - node.computed_log_denom);
+            total_nll += step_nll;
+          }
+          (*out_neg_logprobs)[info.index] = total_nll;
+          cached_candidate_nlls_[info.surface] = total_nll;
+        }
+      }
+      llama_batch_free(tree_batch);
+
+      // Clean up temporary branch sequences in 1 pass
+      if (num_assigned_seqs == 1) {
+        RollbackOrRestoreContextState();
+      } else {
+        for (int s = 1; s <= num_assigned_seqs; ++s) {
+          llama_memory_seq_rm(mem, s, -1, -1);
+        }
+      }
+    } else {
+      // Fallback for hybrid recurrent architectures where partial seq_rm is disabled:
+      // Still shares already-computed node NLLs and skips pruned candidates!
+      std::unordered_map<uint64_t, float> edge_nll_cache;
+      for (int ord_idx : active_cand_indices) {
+        if (abort_scoring_.load()) break;
+        auto& info = cand_infos[ord_idx];
+        int n_prefix = static_cast<int>(info.tree_node_path.size());
+        ApplyThreadAffinityAndScaling(n_prefix);
+
+        llama_batch b = llama_batch_init(n_prefix, 0, 1);
+        for (int d = 0; d < n_prefix; ++d) {
+          b.token[d]     = info.tokens[d];
+          b.pos[d]       = start_pos + d;
+          b.n_seq_id[d]  = 1;
+          b.seq_id[d][0] = 0;
+          b.logits[d]    = true;
+        }
+        b.n_tokens = n_prefix;
+
+        if (llama_decode(ctx_, b) == 0 && !abort_scoring_.load()) {
+          float total_nll = info.token0_nll;
+          for (int d = 0; d < n_prefix; ++d) {
+            float* step_logits = llama_get_logits_ith(ctx_, d);
+            if (!step_logits) continue;
+            float s_denom = ComputeLogDenominator(step_logits, n_vocab);
+            total_nll += -(step_logits[info.tokens[d + 1]] - s_denom);
+          }
+          (*out_neg_logprobs)[info.index] = total_nll;
+          cached_candidate_nlls_[info.surface] = total_nll;
+        }
+        llama_batch_free(b);
+        RollbackOrRestoreContextState();
+      }
+    }
+  }
+
+  // Update 4-slot Snapshot Ring with all newly completed candidate NLLs
+  UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
+                 cached_context_log_denom_, cached_candidate_nlls_);
+  return true;
+}
+```
+
+---
+
+#### 6.3.5 Idea 6: `PredictNextPhrases()` の Multi-Sequence 並列ビームデコードと言語マスク適用
+
+従来の `k`（候補ループ）$\times$ `step`（トークンループ）の 2 重直列 `llama_decode` を、**全候補ブランチを同じ `step` で1つの `llama_batch` に束ねて並列デコードするロックステップ方式**へ書き換えます。
+
+```cpp
+bool LlmReranker::PredictNextPhrases(const std::string& context,
+                                     int max_candidates,
+                                     int max_tokens,
+                                     std::vector<std::string>* out_predictions) {
+  abort_prediction_.store(false);
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (!initialized_ || !ctx_ || !model_ || !vocab_) return false;
+  out_predictions->clear();
+  if (!EnsureContextCached(context) || cached_context_logits_.empty()) return false;
+
+  const int n_vocab = llama_vocab_n_tokens(vocab_);
+  const float* logits = cached_context_logits_.data();
+
+  // 1. Filter initial tokens using precomputed valid_token_bitmask_ (Idea 6: 4x faster scan + zero garbage)
+  std::vector<std::pair<float, llama_token>> scored_tokens;
+  scored_tokens.reserve(4096);
+  for (llama_token v = 0; v < n_vocab; ++v) {
+    if (!IsTokenValidForPrediction(v)) continue;
+    scored_tokens.emplace_back(logits[v], v);
+  }
+  size_t top_k_init = std::min<size_t>(scored_tokens.size(), 16);
+  std::partial_sort(scored_tokens.begin(), scored_tokens.begin() + top_k_init, scored_tokens.end(),
+                    [](const auto& a, const auto& b) { return a.first > b.first; });
+
+  struct ActiveBeam {
+    int seq_id;
+    std::vector<llama_token> tokens;
+    std::string text;
+    bool finished = false;
+  };
+
+  const int target_beams = std::min(max_candidates, 6);
+  std::vector<ActiveBeam> beams;
+  beams.reserve(target_beams);
+
+  for (size_t k = 0; k < top_k_init && static_cast<int>(beams.size()) < target_beams; ++k) {
+    llama_token t0 = scored_tokens[k].second;
+    char piece_buf[256];
+    int piece_len = llama_token_to_piece(vocab_, t0, piece_buf, sizeof(piece_buf), 0, false);
+    if (piece_len <= 0) continue;
+    std::string piece = TrimWhitespace(std::string(piece_buf, piece_len));
+    if (piece.empty()) continue;
+
+    ActiveBeam beam;
+    beam.seq_id = static_cast<int>(beams.size()) + 1; // seq_id = 1 .. K
+    beam.tokens.push_back(t0);
+    beam.text = piece;
+    beam.finished = IsTerminalPunctuation(piece);
+    beams.push_back(std::move(beam));
+  }
+
+  if (beams.empty()) return false;
+
+  llama_memory_t mem = llama_get_memory(ctx_);
+  const int start_pos = cached_context_n_tokens_;
+
+  // Share context KV (0 .. start_pos) with all active beams seq_id = 1..K
+  bool multi_seq_ok = partial_seq_rm_supported_;
+  if (multi_seq_ok) {
+    for (const auto& beam : beams) {
+      llama_memory_seq_rm(mem, beam.seq_id, -1, -1);
+      if (!llama_memory_seq_cp(mem, 0, beam.seq_id, 0, start_pos)) {
+        multi_seq_ok = false;
+        break;
+      }
+    }
+  }
+
+  if (multi_seq_ok) {
+    // PARALLEL LOCKSTEP DECODING across all K beams! (At most max_tokens-1 llama_decode calls total)
+    for (int step = 1; step < max_tokens && !abort_prediction_.load(); ++step) {
+      std::vector<int> active_beam_indices;
+      for (size_t b_idx = 0; b_idx < beams.size(); ++b_idx) {
+        if (!beams[b_idx].finished) active_beam_indices.push_back(static_cast<int>(b_idx));
+      }
+      if (active_beam_indices.empty()) break;
+
+      int n_active = static_cast<int>(active_beam_indices.size());
+      ApplyThreadAffinityAndScaling(n_active);
+      llama_batch batch = llama_batch_init(n_active, 0, 1);
+      for (int i = 0; i < n_active; ++i) {
+        const auto& beam = beams[active_beam_indices[i]];
+        batch.token[i]     = beam.tokens.back();
+        batch.pos[i]       = start_pos + step - 1;
+        batch.n_seq_id[i]  = 1;
+        batch.seq_id[i][0] = beam.seq_id;
+        batch.logits[i]    = true;
+      }
+      batch.n_tokens = n_active;
+
+      int ret = llama_decode(ctx_, batch);
+      llama_batch_free(batch);
+      if (ret != 0 || abort_prediction_.load()) break;
+
+      for (int i = 0; i < n_active; ++i) {
+        auto& beam = beams[active_beam_indices[i]];
+        float* next_logits = llama_get_logits_ith(ctx_, i);
+        if (!next_logits) { beam.finished = true; continue; }
+
+        llama_token best_next = -1;
+        float best_next_l = -1e9f;
+        for (llama_token v = 0; v < n_vocab; ++v) {
+          if (!IsTokenValidForPrediction(v)) continue;
+          if (next_logits[v] > best_next_l) {
+            best_next_l = next_logits[v];
+            best_next = v;
+          }
+        }
+        if (best_next < 0 || llama_vocab_is_eog(vocab_, best_next)) {
+          beam.finished = true;
+          continue;
+        }
+        AppendTokenPieceAndCheckTermination(vocab_, best_next, &beam.tokens, &beam.text, &beam.finished);
+      }
+    }
+
+    for (const auto& beam : beams) {
+      llama_memory_seq_rm(mem, beam.seq_id, -1, -1);
+    }
+  }
+
+  for (auto& beam : beams) {
+    std::string cleaned = TrimWhitespace(beam.text);
+    if (!cleaned.empty() &&
+        std::find(out_predictions->begin(), out_predictions->end(), cleaned) == out_predictions->end()) {
+      out_predictions->push_back(std::move(cleaned));
+    }
+  }
+  return !out_predictions->empty();
+}
+```
+
+---
+
+### 6.4 Kotlin ドメイン・インフラ層の詳細設計
+
+#### 6.4.1 Idea 2: `ContextWindowTrimmer.kt` — High-Water Mark Sticky Anchor 方式
+
+現在 [`ContextWindowTrimmer.trimToOptimalContext()`](app/src/main/java/com/example/myasr/context/reranking/domain/ContextWindowTrimmer.kt#L121-L221) は、入力文字列が少し伸びるたびに毎回 `DEFAULT_TARGET_TOKENS = 24` 近辺へ先頭カット位置を移動させています。
+これに **Sticky High-Water Mark 機構** を追加します：
+
+```kotlin
+// ContextWindowTrimmer.kt に追加する定数・状態レス純粋関数
+const val STICKY_HIGH_WATER_MARK_TOKENS = 56 // n_ctx=256 に対して余裕を持ちつつ毎文節の先頭ズレを防止
+
+@Volatile
+private var lastAnchorPrefixSignature: String = ""
+
+/**
+ * High-Water Mark Sticky Anchor Trimming (Idea 2):
+ * 一度決定した文頭カット位置（たとえば「議論した新機能の…」の先頭 12 文字）を、
+ * そこからカーソルまでの推定トークン数が [highWaterMarkTokens] (56 tokens) を超えるまで固定維持する。
+ * これにより、文節を次々に確定してもトリミング後の文字列は常に前回の文字列の「純粋な末尾追記（100% LCP 前方一致）」となり、
+ * C++ 側の EnsureContextCached() が新規追加された 1〜3 トークンのみを ~3ms で差分デコードできる。
+ */
+fun trimToOptimalContextSticky(
+    rawText: String,
+    targetTokens: Int = DEFAULT_TARGET_TOKENS,
+    highWaterMarkTokens: Int = STICKY_HIGH_WATER_MARK_TOKENS
+): String {
+    if (rawText.isBlank() || targetTokens <= 0) {
+        lastAnchorPrefixSignature = ""
+        return ""
+    }
+    val totalEstimated = estimateTokenCount(rawText)
+    if (totalEstimated <= targetTokens) {
+        val norm = normalizeOutput(rawText)
+        if (norm.length >= 4) {
+            lastAnchorPrefixSignature = norm.take(minOf(12, norm.length))
+        }
+        return norm
+    }
+
+    // Check if the previous sticky anchor still exists inside rawText and its tail fits within highWaterMarkTokens
+    val anchorSig = lastAnchorPrefixSignature
+    if (anchorSig.isNotEmpty()) {
+        val anchorIdx = rawText.lastIndexOf(anchorSig)
+        if (anchorIdx >= 0) {
+            val anchoredTail = rawText.substring(anchorIdx)
+            val tailTokens = estimateTokenCount(anchoredTail)
+            if (tailTokens in (targetTokens * 0.35f)..highWaterMarkTokens.toFloat()) {
+                return normalizeOutput(anchoredTail)
+            }
+        }
+    }
+
+    // Re-anchor at targetTokens boundary when high-water mark is exceeded or context changed
+    val freshlyTrimmed = trimToOptimalContext(rawText, targetTokens)
+    if (freshlyTrimmed.length >= 4) {
+        lastAnchorPrefixSignature = freshlyTrimmed.take(minOf(12, freshlyTrimmed.length))
+    }
+    return freshlyTrimmed
+}
+```
+
+---
+
+#### 6.4.2 Idea 3: `LlmReranker.kt` — 事前ペナルティベクトル $P_{\text{prior}}(i)$ の算出と C++ 連携
+
+[`LlmReranker.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt#L995-L1023) の `rerankWithStatus()` において、`nativeScoreCandidatesWithPriors(effectiveContext, uniqueSurfaces, uniquePriors)` を呼び出す際に各候補の既知の事前コスト下界を渡します：
+
+```kotlin
+// LlmReranker.kt 内の rerankWithStatus() での事前コスト下界計算
+val n = targetInputLength ?: fullCands.maxOfOrNull { it.reading.length } ?: 0
+val isEnglishPool = topPool.first().let { c ->
+    c.source in listOf("user_english", "english_typo", "english_cap", "english_gec", "raw") ||
+        (c.reading.isNotEmpty() && c.reading.all { it.code < 128 && (it.isLetter() || it == '\'' || it == '-') })
+}
+val muSpan = if (isEnglishPool) 1.40f else 2.20f
+
+val surfaceMinPriorMap = HashMap<String, Float>()
+for (i in topPool.indices) {
+    val cand = topPool[i]
+    val evalSurf = evalSurfaces[i]
+    val isExactUser = (cand.source == "user" || cand.source == "user_english") && cand.obsPenalty == 0.0f
+    // User dictionary entries and history >= 2 entries receive 0.0f prior penalty so they are never pruned
+    val priorLowerBound = if (isExactUser || cand.historyCount >= 2 || cand.source == "history_bigram") {
+        0.0f
+    } else {
+        val dictPenalty = if (!isEnglishPool) (cand.dictCost.coerceIn(0, 15000) / 3000.0f) else 0.0f
+        // Minimum possible obsPenalty (with max discount 0.20 * 0.35 = 0.07)
+        val minObsPenalty = lambdaObs * cand.obsPenalty * 5.0f * 0.07f
+        val mLen = if (cand.reading.isNotEmpty()) cand.reading.length else cand.surface.length
+        val deltaUnc = maxOf(0, n - mLen)
+        val spanPenalty = if (deltaUnc > 0 && cand.completedSurface.isEmpty()) (muSpan * deltaUnc) else 0.0f
+        dictPenalty + minObsPenalty + spanPenalty
+    }
+    val prev = surfaceMinPriorMap[evalSurf]
+    if (prev == null || priorLowerBound < prev) {
+        surfaceMinPriorMap[evalSurf] = priorLowerBound
+    }
+    latentVariantsMap[evalSurf]?.forEach { variant ->
+        val vPrev = surfaceMinPriorMap[variant]
+        if (vPrev == null || priorLowerBound < vPrev) {
+            surfaceMinPriorMap[variant] = priorLowerBound
+        }
+    }
+}
+
+val uniqueSurfaces = surfacesToScore.distinct().toTypedArray()
+val uniquePriors = FloatArray(uniqueSurfaces.size) { idx ->
+    surfaceMinPriorMap[uniqueSurfaces[idx]] ?: 0.0f
+}
+val uniqueScores = nativeScoreCandidatesWithPriors(effectiveContext, uniqueSurfaces, uniquePriors)
+```
+
+---
+
+#### 6.4.3 Idea 5: `CandidateRerankJudgement.kt` & `VoiceInputMethodService.kt` — 投機的 Context Warming の DMN 決定表とイベントフック
+
+UI・IME の状態遷移やアクション調停に関わるルールは、プロジェクトの **Proactive DMN & Alloy Modeling Policy** に従い、[`CandidateRerankJudgement.kt`](app/src/main/java/com/example/myasr/context/reranking/domain/CandidateRerankJudgement.kt) に宣言的な `DecisionTable` として定義します。
+
+```kotlin
+// CandidateRerankJudgement.kt に追加する Speculative Context Warming DMN DecisionTable
+enum class WarmTrigger {
+    TEXT_COMMITTED,        // 文節確定直後 (commitComposingText)
+    INPUT_VIEW_STARTED,    // キーボード表示時 (onStartInputView)
+    CURSOR_MOVED_EXTERNAL, // 外部カーソル移動時 (onUpdateSelection while not composing)
+    KEY_TOUCH_DOWN,        // キー押下 ACTION_DOWN 時 (60-120ms before ACTION_UP)
+    VOICE_CHUNK_DECODING   // 音声チャンク ASR デコード開始時
+}
+
+data class SpeculativeWarmInput(
+    val isRerankEnabled: Boolean,
+    val isSlmReady: Boolean,
+    val isAlreadyComposing: Boolean,
+    val trigger: WarmTrigger,
+    val contextBeforeCursor: String
+)
+
+data class SpeculativeWarmDecision(
+    val shouldWarm: Boolean,
+    val reason: String
+)
+
+val speculativeWarmDecisionTable: DecisionTable<SpeculativeWarmInput, SpeculativeWarmDecision> = decisionTable(
+    name = "SpeculativeContextWarming",
+    hitPolicy = HitPolicy.FIRST
+) {
+    rule(id = "WARM_R1", description = "Skip warming when SLM rerank is disabled") {
+        `when` { !it.isRerankEnabled }
+        thenValue(SpeculativeWarmDecision(false, "slm_rerank_disabled"))
+    }
+    rule(id = "WARM_R2", description = "Skip warming when SLM engine is not ready") {
+        `when` { !it.isSlmReady }
+        thenValue(SpeculativeWarmDecision(false, "slm_not_ready"))
+    }
+    rule(id = "WARM_R3", description = "Skip external cursor warm while actively composing") {
+        `when` { it.trigger == WarmTrigger.CURSOR_MOVED_EXTERNAL && it.isAlreadyComposing }
+        thenValue(SpeculativeWarmDecision(false, "composing_in_progress"))
+    }
+    rule(id = "WARM_R4", description = "Skip touch-down warm when already composing (context already warm)") {
+        `when` { it.trigger == WarmTrigger.KEY_TOUCH_DOWN && it.isAlreadyComposing }
+        thenValue(SpeculativeWarmDecision(false, "touch_down_already_composing"))
+    }
+    defaultValue(
+        id = "WARM_DEFAULT",
+        description = "Execute speculative background KV cache warming",
+        value = SpeculativeWarmDecision(true, "execute_speculative_warm")
+    )
+}
+```
+
+##### `VoiceInputMethodService.kt` での非同期呼び出しフック
+```kotlin
+private var warmContextJob: Job? = null
+private var lastWarmedContextText: String? = null
+
+private fun triggerSpeculativeContextWarm(trigger: CandidateRerankJudgement.WarmTrigger, rawContext: String? = null) {
+    val slm = LlmReranker.getInstance(this)
+    val isEnabled = KeyboardHeightManager.isSlmRerankEnabled(this)
+    val isComposing = arbitrator.isKeyboardComposing() || arbitrator.isStreamingComposing()
+    val ctxText = rawContext ?: (currentInputConnection?.getTextBeforeCursor(250, 0)?.toString() ?: "")
+
+    val decision = CandidateRerankJudgement.judgeSpeculativeWarm(
+        CandidateRerankJudgement.SpeculativeWarmInput(
+            isRerankEnabled = isEnabled,
+            isSlmReady = slm.isReady(),
+            isAlreadyComposing = isComposing,
+            trigger = trigger,
+            contextBeforeCursor = ctxText
+        )
+    )
+    if (!decision.shouldWarm) return
+
+    val trimmed = ContextWindowTrimmer.trimToOptimalContextSticky(ctxText)
+    if (trimmed == lastWarmedContextText) return
+
+    warmContextJob?.cancel()
+    warmContextJob = serviceScope.launch(Dispatchers.Default) {
+        if (slm.warmContext(trimmed)) {
+            lastWarmedContextText = trimmed
+        }
+    }
+}
+```
+この `triggerSpeculativeContextWarm(...)` を以下の 4 箇所に配置します：
+1. `commitComposingText()` の末尾：`triggerSpeculativeContextWarm(WarmTrigger.TEXT_COMMITTED)`
+2. `onStartInputView()` の末尾：`triggerSpeculativeContextWarm(WarmTrigger.INPUT_VIEW_STARTED)`
+3. `onUpdateSelection()` で外部カーソル移動を検知したとき：`triggerSpeculativeContextWarm(WarmTrigger.CURSOR_MOVED_EXTERNAL)`
+4. `FlickKeyboardView` / `QwertyKeyboardView` の `ACTION_DOWN` コールバック（未 composing の 1 文字目タッチ開始時）：`triggerSpeculativeContextWarm(WarmTrigger.KEY_TOUCH_DOWN)`
+
+---
+
+### 6.5 形式検証（Alloy 6）とアーキテクチャ整合性設計
+
+[`AGENTS.md`](AGENTS.md) の **Spec-First & Alloy Synchronization** ルールに従い、以下を同期更新します：
+
+1. **DMN ドキュメント同期 ([`docs/ddd/dmn_decision_models.md`](docs/ddd/dmn_decision_models.md))**:
+   - セクション 3 の一覧表に `CandidateRerankJudgement` の `SpeculativeContextWarming` (`HitPolicy.FIRST`) を追加。
+2. **Alloy 6 形式検証モデル (`app/src/test/resources/alloy/slm_kv_cache_lifecycle.als`)**:
+   - `EnsureContextCached` における 4 遷移（`Append`, `PrefixTruncateUndo`, `RoPESlidingShift`, `Reset`）および Stage 2 の `TreeBatchDecodeAndRollback` を状態遷移機械としてモデル化し、以下の不変条件（Assertions）を `AlloyVerificationTest` で検証します：
+     - **`TreeRollbackRestoresExactContextLength`**: Stage 2 の Prefix-Tree 一括デコードとロールバック後、`seq_id = 0` の KV キャッシュ長と Logits が常に元の文脈長 $L_C$ と完全一致し、投機ブランチ（`seq_id = 1..14`）にゴミトークンが一切残留しないこと。
+     - **`UndoPrefixTruncateNeverReturnsStaleLogits`**: 文脈 $C_2 = C_1 \oplus W$ から $C_1$ へ短縮（Undo）した際、`cached_context_logits` が決して $C_2$ の古い Logits のまま残らず、必ず `snapshot_ring` 上の $C_1$ の Logits に一致すること。
+     - **`RoPEShiftPreservesRelativePositions`**: 先頭 $k$ トークン削除と `seq_add(-k)` シフト後、残存トークンの位置インデックスが $0 \dots L_{\text{kept}}-1$ の連続した単調増加列を成し、位置の歯抜けや重複が生じないこと。
+3. **Alloy ドキュメント同期 ([`docs/ddd/alloy_formal_verification.md`](docs/ddd/alloy_formal_verification.md))**:
+   - セクション 3 に `slm_kv_cache_lifecycle.als` の検証仕様を追記。
+
+---
+
+### 6.6 テスト・評価・検証計画 (Verification & Evaluation Matrix)
+
+実装時には以下の 4 層のテスト・ベンチマークを実行し、**機能等価性（リグレッションゼロ）** と **レイテンシ短縮** を定量実証します：
+
+1. **層1：数学的スコア等価性・非リグレッション単体テスト (`./gradlew testDebugUnitTest`)**:
+   - **Prefix-Tree Batch 等価性検証**: 同一の文脈・候補セット（単一トークン、複数トークン同音異義語 `決裁/決済/決定`、潜在格助詞バリアント `ジムに行けた/を行けた/が行けた`）に対し、従来の直列 Stage 2 と新しい `Prefix-Tree Packed Single-Pass Decoding` が計算する NLL ベクトルが浮動小数点誤差範囲（$|\Delta \text{NLL}| < 10^{-4}$）で完全一致することを検証。
+   - **Undo Prefix Truncate 検証**: 文脈 `"昨日の会議で"` $\to$ `"昨日の会議で結果を"` $\to$ Undo で `"昨日の会議で"` に戻した際、キャッシュから $0\text{ms}$ で復元された NLL が初回の `"昨日の会議で"` の NLL と 100% 一致することを検証。
+   - **Sticky Anchor & RoPE Shift 検証**: 文節を 10 回連続確定して文脈が伸び続けた際、56 トークン到達まで LCP Miss が 0 回であること、およびシフト発生時に `seq_add` によって再 Prefill なしで遷移することを検証。
+   - **必須テストスイート 100% パス**:
+     - [`JapanesePunctuationEvaluationTest.kt`](app/src/test/java/com/example/myasr/JapanesePunctuationEvaluationTest.kt)（67+ テスト）
+     - [`DddArchitectureKonsistTest.kt`](app/src/test/java/com/example/myasr/ddd/DddArchitectureKonsistTest.kt)（DDD / DMN / Alloy ドキュメント同期検証）
+     - [`AlloyVerificationTest.kt`](app/src/test/java/com/example/myasr/formal/AlloyVerificationTest.kt)
+2. **層2：変換精度ベンチマーク（1,612 ケース & 100 件フリック評価）**:
+   - 既存の SLM リランキング評価スイートで Top-1 / Top-3 変換精度が劣化ゼロ（$\Delta \text{Accuracy} \ge 0.0\%$）であることを確認。
+3. **層3：デュアルターゲット実機デプロイ & レイテンシ / 電力計測 (`./deploy.sh`)**:
+   - **ARCVM (`arc:5555`)** および **Pixel 10 Pro 実機** の両方にデプロイし、[`PowerBenchmarkRunner.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/PowerBenchmarkRunner.kt) で `hit` / `typing` / `miss` の Wall ms・CPU ms・消費 mAh を計測。
+   - **合格基準 (SLA)**:
+     - KV Hit (Stage 2 込み) 平均レイテンシ: `Qwen3.5-0.8B` で **$\le 8\text{ms}$**、`Qwen3.5-2B` で **$\le 15\text{ms}$**。
+     - 実タイピング時 UI Fast Path 完結率（または Tap-Safe 100ms 以内完了率）: **$\ge 99.5\%$**。
