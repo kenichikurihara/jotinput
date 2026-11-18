@@ -424,40 +424,7 @@ object MainAppUiDecisionModel {
                     )
                 )
             }
-            rule(id = "RERANK_SEL_R2", description = "Keep 1.5B model when rerank is enabled and 1.5B was active") {
-                `when` { it.currentEngine == RerankEngineType.LOCAL_SLM_1_5B }
-                thenValue(
-                    RerankEngineSelectionDecision(
-                        effectiveRerankEnabled = true,
-                        selectedEngine = RerankEngineType.LOCAL_SLM_1_5B,
-                        shouldInitializeModel = true,
-                        reason = "keep_1_5b"
-                    )
-                )
-            }
-            rule(id = "RERANK_SEL_R3", description = "Keep 0.5B model when rerank is enabled and 0.5B was active") {
-                `when` { it.currentEngine == RerankEngineType.LOCAL_SLM }
-                thenValue(
-                    RerankEngineSelectionDecision(
-                        effectiveRerankEnabled = true,
-                        selectedEngine = RerankEngineType.LOCAL_SLM,
-                        shouldInitializeModel = true,
-                        reason = "keep_0_5b"
-                    )
-                )
-            }
-            rule(id = "RERANK_SEL_R4", description = "Keep Qwen3.5 0.8B model when rerank is enabled and 0.8B was active") {
-                `when` { it.currentEngine == RerankEngineType.LOCAL_SLM_3_5_0_8B }
-                thenValue(
-                    RerankEngineSelectionDecision(
-                        effectiveRerankEnabled = true,
-                        selectedEngine = RerankEngineType.LOCAL_SLM_3_5_0_8B,
-                        shouldInitializeModel = true,
-                        reason = "keep_3_5_0_8b"
-                    )
-                )
-            }
-            rule(id = "RERANK_SEL_R5", description = "Keep Qwen3.5 2B model when rerank is enabled and 2B was active") {
+            rule(id = "RERANK_SEL_R2", description = "Keep Qwen3.5 2B model when rerank is enabled and 2B was active") {
                 `when` { it.currentEngine == RerankEngineType.LOCAL_SLM_3_5_2B }
                 thenValue(
                     RerankEngineSelectionDecision(
@@ -468,14 +435,25 @@ object MainAppUiDecisionModel {
                     )
                 )
             }
+            rule(id = "RERANK_SEL_R3", description = "Keep Qwen3.5 0.8B model when rerank is enabled and 0.8B was active") {
+                `when` { it.currentEngine == RerankEngineType.LOCAL_SLM_3_5_0_8B }
+                thenValue(
+                    RerankEngineSelectionDecision(
+                        effectiveRerankEnabled = true,
+                        selectedEngine = RerankEngineType.LOCAL_SLM_3_5_0_8B,
+                        shouldInitializeModel = true,
+                        reason = "keep_3_5_0_8b"
+                    )
+                )
+            }
             defaultValue(
                 id = "RERANK_SEL_DEFAULT",
-                description = "Default to 0.5B model when rerank is enabled without a valid active model (invariant: enabled rerank requires a selected model)",
+                description = "Default to Qwen3.5 0.8B model when rerank is enabled without a valid active model (invariant: enabled rerank requires a selected model)",
                 value = RerankEngineSelectionDecision(
                     effectiveRerankEnabled = true,
-                    selectedEngine = RerankEngineType.LOCAL_SLM,
+                    selectedEngine = RerankEngineType.LOCAL_SLM_3_5_0_8B,
                     shouldInitializeModel = true,
-                    reason = "default_to_0_5b_when_enabled"
+                    reason = "default_to_3_5_0_8b_when_enabled"
                 )
             )
         }

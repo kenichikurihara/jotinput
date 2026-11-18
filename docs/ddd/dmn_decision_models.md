@@ -45,7 +45,7 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `ProvisioningBannerDecisionTable` | `FIRST` | タブ横断グローバル進捗バナーの表示・進捗状態決定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `AiEngineStatusDecisionTable` | `FIRST` | AI 変換エンジンのセレクタ表示・ステータスバッジ・ダウンロードCTA表示決定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `SlmDownloadPromptDecisionTable` | `FIRST` | 未導入 SLM モデル選択時のダウンロード確認ダイアログ提案可否決定 |
-| **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `RerankEngineSelectionDecisionTable` | `FIRST` | リランクON/OFF切替時のモデル選定・0.5Bデフォルト選定・整合性不変条件保護 |
+| **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `RerankEngineSelectionDecisionTable` | `FIRST` | リランクON/OFF切替時のモデル選定・Qwen3.5-0.8Bデフォルト選定・整合性不変条件保護 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `BottomNavVisibilityDecisionTable` | `FIRST` | IME 表示時のボトムナビゲーション非表示（キーボード連動・無駄なスクロール/ホワイトスペース排除）決定 |
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingLaunchDecisionTable` | `FIRST` | 起動時オンボーディング要否・再インストール/既存移行判定 |
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `DriveRestoreStatusDecisionTable` | `FIRST` | Google Drive 履歴復元・SAF権限失効検知と表示状態決定 |

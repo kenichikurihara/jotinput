@@ -121,8 +121,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchSlmRerankEnabled: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var layoutRerankEngineSelector: LinearLayout
     private lateinit var rgRerankEngine: android.widget.RadioGroup
-    private lateinit var rbEngineLocalSlm: android.widget.RadioButton
-    private lateinit var rbEngineLocalSlm15B: android.widget.RadioButton
     private lateinit var rbEngineLocalSlm35_08B: android.widget.RadioButton
     private lateinit var rbEngineLocalSlm35_2B: android.widget.RadioButton
     private lateinit var rbEngineNone: android.widget.RadioButton
@@ -171,8 +169,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnDeleteEnglishAsr: MaterialButton
 
     private lateinit var btnSettingsDownloadSlm: MaterialButton
-    private lateinit var btnToggleLegacySlmModels: MaterialButton
-    private lateinit var layoutLegacySlmContainer: LinearLayout
 
     private data class SlmModelRowViews(
         val engine: RerankEngineType,
@@ -387,8 +383,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupRerankEngineUI() {
-        rbEngineLocalSlm.isEnabled = true
-        rbEngineLocalSlm15B.isEnabled = true
         rbEngineLocalSlm35_08B.isEnabled = true
         rbEngineLocalSlm35_2B.isEnabled = true
         rbEngineNone.isEnabled = true
@@ -406,11 +400,9 @@ class MainActivity : AppCompatActivity() {
         rgRerankEngine.setOnCheckedChangeListener { _, checkedId ->
             if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
             val selected = when (checkedId) {
-                R.id.rbEngineLocalSlm15B -> RerankEngineType.LOCAL_SLM_1_5B
-                R.id.rbEngineLocalSlm35_08B -> RerankEngineType.LOCAL_SLM_3_5_0_8B
                 R.id.rbEngineLocalSlm35_2B -> RerankEngineType.LOCAL_SLM_3_5_2B
                 R.id.rbEngineNone -> RerankEngineType.NONE
-                else -> RerankEngineType.LOCAL_SLM
+                else -> RerankEngineType.LOCAL_SLM_3_5_0_8B
             }
             val isEnabled = selected != RerankEngineType.NONE
             val decision = MainAppUiDecisionModel.evaluateRerankEngineSelection(
@@ -446,8 +438,6 @@ class MainActivity : AppCompatActivity() {
         try {
             switchSlmRerankEnabled.isChecked = decision.effectiveRerankEnabled
             when (decision.selectedEngine) {
-                RerankEngineType.LOCAL_SLM -> rbEngineLocalSlm.isChecked = true
-                RerankEngineType.LOCAL_SLM_1_5B -> rbEngineLocalSlm15B.isChecked = true
                 RerankEngineType.LOCAL_SLM_3_5_0_8B -> rbEngineLocalSlm35_08B.isChecked = true
                 RerankEngineType.LOCAL_SLM_3_5_2B -> rbEngineLocalSlm35_2B.isChecked = true
                 RerankEngineType.NONE -> rbEngineNone.isChecked = true
@@ -717,8 +707,6 @@ class MainActivity : AppCompatActivity() {
         switchSlmRerankEnabled = findViewById(R.id.switchSlmRerankEnabled)
         layoutRerankEngineSelector = findViewById(R.id.layoutRerankEngineSelector)
         rgRerankEngine = findViewById(R.id.rgRerankEngine)
-        rbEngineLocalSlm = findViewById(R.id.rbEngineLocalSlm)
-        rbEngineLocalSlm15B = findViewById(R.id.rbEngineLocalSlm15B)
         rbEngineLocalSlm35_08B = findViewById(R.id.rbEngineLocalSlm35_08B)
         rbEngineLocalSlm35_2B = findViewById(R.id.rbEngineLocalSlm35_2B)
         rbEngineNone = findViewById(R.id.rbEngineNone)
@@ -768,8 +756,6 @@ class MainActivity : AppCompatActivity() {
         btnDeleteEnglishAsr = findViewById(R.id.btnDeleteEnglishAsr)
 
         btnSettingsDownloadSlm = findViewById(R.id.btnSettingsDownloadSlm)
-        btnToggleLegacySlmModels = findViewById(R.id.btnToggleLegacySlmModels)
-        layoutLegacySlmContainer = findViewById(R.id.layoutLegacySlmContainer)
         slmModelRows = listOf(
             SlmModelRowViews(
                 engine = RerankEngineType.LOCAL_SLM_3_5_0_8B,
@@ -788,24 +774,6 @@ class MainActivity : AppCompatActivity() {
                 status = findViewById(R.id.tvSlm35_2BStatus),
                 btnDownload = findViewById(R.id.btnDownloadSlm35_2B),
                 btnDelete = findViewById(R.id.btnDeleteSlm35_2B)
-            ),
-            SlmModelRowViews(
-                engine = RerankEngineType.LOCAL_SLM,
-                badge = findViewById(R.id.tvSlm25_05BStatusBadge),
-                stats = findViewById(R.id.tvSlm25_05BStats),
-                progress = findViewById(R.id.slm25_05BProgress),
-                status = findViewById(R.id.tvSlm25_05BStatus),
-                btnDownload = findViewById(R.id.btnDownloadSlm25_05B),
-                btnDelete = findViewById(R.id.btnDeleteSlm25_05B)
-            ),
-            SlmModelRowViews(
-                engine = RerankEngineType.LOCAL_SLM_1_5B,
-                badge = findViewById(R.id.tvSlm25_15BStatusBadge),
-                stats = findViewById(R.id.tvSlm25_15BStats),
-                progress = findViewById(R.id.slm25_15BProgress),
-                status = findViewById(R.id.tvSlm25_15BStatus),
-                btnDownload = findViewById(R.id.btnDownloadSlm25_15B),
-                btnDelete = findViewById(R.id.btnDeleteSlm25_15B)
             )
         )
 
@@ -1718,15 +1686,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupSlmModelsUI() {
-        btnToggleLegacySlmModels.setOnClickListener {
-            val isVisible = layoutLegacySlmContainer.visibility == View.VISIBLE
-            layoutLegacySlmContainer.visibility = if (isVisible) View.GONE else View.VISIBLE
-            btnToggleLegacySlmModels.text = if (isVisible) {
-                "旧世代モデル (Qwen2.5) を表示 ▼"
-            } else {
-                "旧世代モデル (Qwen2.5) を閉じる ▲"
-            }
-        }
+        SlmModelDownloader.cleanupLegacyModels(this)
 
         for (row in slmModelRows) {
             row.btnDownload.setOnClickListener {
@@ -1879,7 +1839,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkBenchmarkIntent(intent: Intent?) {
         val action = intent?.getStringExtra("bench_action") ?: return
-        val engine = intent.getStringExtra("bench_engine") ?: "local_slm"
+        val engine = intent.getStringExtra("bench_engine") ?: "local_slm_3_5_0_8b"
         val workload = intent.getStringExtra("bench_workload") ?: "miss"
         val iters = intent.getIntExtra("bench_iters", 200)
         PowerBenchmarkRunner.handleIntent(this, lifecycleScope, action, engine, workload, iters)

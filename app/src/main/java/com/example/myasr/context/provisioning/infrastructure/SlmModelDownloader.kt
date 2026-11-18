@@ -14,7 +14,7 @@ import java.net.URL
 import kotlin.coroutines.coroutineContext
 
 /**
- * Downloads quantized GGUF on-device SLM models (Qwen3.5-0.8B / 2B, Qwen2.5-0.5B / 1.5B)
+ * Downloads quantized GGUF on-device SLM models (Qwen3.5-0.8B / 2B)
  * from Hugging Face into app-specific external storage (`models/`), matching
  * `LlmReranker.getModelFile(...)` and `tools/push_model_to_device.sh`.
  *
@@ -28,6 +28,11 @@ class SlmModelDownloader(
 
     companion object {
         private const val MIN_VALID_MODEL_BYTES = 10L * 1024L * 1024L
+
+        private val LEGACY_QWEN25_FILES = listOf(
+            "qwen2.5-0.5b-instruct-q4_k_m.gguf",
+            "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+        )
 
         fun getTargetModelsDir(context: Context): File {
             val external = context.getExternalFilesDir("models")
@@ -56,6 +61,30 @@ class SlmModelDownloader(
                 }
             }
             return deleted
+        }
+
+        /**
+         * Removes deprecated Qwen2.5 GGUF model files from app storage to reclaim disk space.
+         */
+        fun cleanupLegacyModels(context: Context): Int {
+            var deletedCount = 0
+            val candidateDirs = listOfNotNull(
+                File(context.filesDir, "models"),
+                context.getExternalFilesDir("models")
+            )
+            for (dir in candidateDirs) {
+                for (legacyName in LEGACY_QWEN25_FILES) {
+                    val file = File(dir, legacyName)
+                    if (file.exists() && file.delete()) {
+                        deletedCount++
+                    }
+                    val tmp = File(dir, "$legacyName.tmp")
+                    if (tmp.exists()) {
+                        tmp.delete()
+                    }
+                }
+            }
+            return deletedCount
         }
     }
 

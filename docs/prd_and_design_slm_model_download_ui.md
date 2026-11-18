@@ -1,15 +1,13 @@
-# PRD, CUJ & Technical Design: SLM (Qwen3.5 / Qwen2.5) モデルダウンロード UI とスムーズな導入提案
+# PRD, CUJ & Technical Design: SLM (Qwen3.5) モデルダウンロード UI とスムーズな導入提案
 
 ## 1. 背景と課題 (Background & Problem Statement)
 
-JotInput はオンデバイス SLM (`llama.cpp` + GGUF) による文脈リランキング機能を備えており、[`RerankEngineType`](app/src/main/java/com/example/myasr/context/reranking/domain/RerankEngineType.kt) として以下の 4 モデルをサポートしている：
-- **Qwen3.5-0.8B** (`qwen3.5-0.8b-instruct-q4_k_m.gguf`, 約 508 MB, Apache-2.0) — 次世代高速・推奨
-- **Qwen3.5-2B** (`qwen3.5-2b-instruct-q4_k_m.gguf`, 約 1.19 GB, Apache-2.0) — 次世代最高精度
-- **Qwen2.5-0.5B** (`qwen2.5-0.5b-instruct-q4_k_m.gguf`, 約 469 MB, Apache-2.0) — 軽量標準
-- **Qwen2.5-1.5B** (`qwen2.5-1.5b-instruct-q4_k_m.gguf`, 約 1.04 GB, Apache-2.0) — 高精度
+JotInput はオンデバイス SLM (`llama.cpp` + GGUF) による文脈リランキング機能を備えており、[`RerankEngineType`](app/src/main/java/com/example/myasr/context/reranking/domain/RerankEngineType.kt) として以下の Qwen3.5 世代 2 モデルをサポートしている（※旧世代 Qwen2.5-0.5B / 1.5B は [`docs/prd_and_design_qwen25_deprecation.md`](docs/prd_and_design_qwen25_deprecation.md) に基づき廃止・自動移行）：
+- **Qwen3.5-0.8B** (`qwen3.5-0.8b-instruct-q4_k_m.gguf`, 約 508 MB, Apache-2.0) — 高速標準・推奨（デフォルト）
+- **Qwen3.5-2B** (`qwen3.5-2b-instruct-q4_k_m.gguf`, 約 1.19 GB, Apache-2.0) — 最高精度
 
-しかし現状では以下のギャップが存在する：
-1. **アプリ内ダウンロード UI の欠如**: 音声認識モデル (ReazonSpeech / Parakeet) や拡張辞書には「データ」タブでのアプリ内 HTTPS ダウンロード UI がある一方、SLM (Qwen3.5 / Qwen2.5) にはアプリ内ダウンローダも「データ」タブの取得・削除 UI も存在せず、ADB (`tools/push_model_to_device.sh`) 経由でしか配置できない。
+しかし以前は、以下のギャップが存在していた：
+1. **アプリ内ダウンロード UI の欠如**: 音声認識モデル (ReazonSpeech / Parakeet) や拡張辞書には「データ」タブでのアプリ内 HTTPS ダウンロード UI がある一方、SLM (Qwen3.5) にはアプリ内ダウンローダも「データ」タブの取得・削除 UI も存在せず、ADB (`tools/push_model_to_device.sh`) 経由でしか配置できない。
 2. **モデル選択時の導入導線不足**: 「設定」タブで未導入のモデル（例: Qwen3.5-0.8B や Qwen3.5-2B）を選択しても「未導入」と表示されるだけで、その場からワンタップでダウンロードを開始する導線がない。
 3. **オンボーディングでの提案欠如**: 初期セットアップ (`OnboardingActivity`) のデータ準備ステップで、音声モデルと辞書に加えて次世代 AI 変換モデル (Qwen3.5-0.8B) のバックグラウンド取得をスムーズに提案できていない。
 
@@ -19,7 +17,7 @@ JotInput はオンデバイス SLM (`llama.cpp` + GGUF) による文脈リラン
 
 - **JTBD-1 (「データ」タブでのモデル一元管理)**:
   - **When** 端末ストレージの容量や精度要件に合わせて AI 変換モデルを導入・削除したいとき、
-  - **I want to** 「データ」タブ上で Qwen3.5-0.8B / 2B（および Qwen2.5-0.5B / 1.5B）の導入状態・容量・ライセンスを確認し、バックグラウンドで取得・削除したい、
+  - **I want to** 「データ」タブ上で Qwen3.5-0.8B / 2B の導入状態・容量・ライセンスを確認し、バックグラウンドで取得・削除したい、
   - **So that** PC や ADB なしで完結にオンデバイス AI 変換を利用・管理できる。
 
 - **JTBD-2 (設定でモデルを選んだ瞬間のスムーズなダウンロード)**:
@@ -38,7 +36,7 @@ JotInput はオンデバイス SLM (`llama.cpp` + GGUF) による文脈リラン
 
 ### CUJ-1: 「設定」タブで未導入の Qwen3.5 モデルを選択した際のダウンロード提案
 1. ユーザーが「設定」タブを開く。
-2. AI 変換エンジンのラジオボタンから `Qwen3.5-0.8B (508MB • 次世代高速)`（または `Qwen3.5-2B` 等）をタップする。
+2. AI 変換エンジンのラジオボタンから `Qwen3.5-0.8B (508MB • 高速標準・推奨)`（または `Qwen3.5-2B`）をタップする。
 3. `RerankEngineSelectionDecisionTable` が選択エンジンを `LOCAL_SLM_3_5_0_8B` に更新する。
 4. `SlmDownloadPromptDecisionTable` が `(isUserSelection=true, slmEnabled=true, modelInstalled=false, isDownloading=false)` を評価し、`shouldPromptDownload = true` を返す。
 5. 確認ダイアログが表示される：
@@ -51,7 +49,7 @@ JotInput はオンデバイス SLM (`llama.cpp` + GGUF) による文脈リラン
 
 ### CUJ-2: 「データ」タブでの SLM モデル一覧・取得・削除
 1. ユーザーが「データ」タブを開く。
-2. 「AI 変換言語モデル (SLM / Qwen)」カードに、推奨の **Qwen3.5-0.8B** と **Qwen3.5-2B** が表示され、「旧世代モデル (Qwen2.5) を表示 ▼」から **Qwen2.5-0.5B** / **Qwen2.5-1.5B** も展開できる（Progressive Disclosure）。
+2. 「AI 変換言語モデル (SLM / Qwen3.5)」カードに、**Qwen3.5-0.8B (高速標準・推奨)** と **Qwen3.5-2B (最高精度)** の 2 モデルが表示される。
 3. 各モデル行にステータスバッジ (`導入済` / `未取得` / `取得中...`)、サイズ・ライセンス (`Apache-2.0`)、進捗バー、`取得` / `再取得`、`削除` ボタンを配置する。
 4. `削除` をタップすると、現在ロード中のモデルであれば `LlmReranker.release()` を行ってからファイルを削除し、「設定」タブのステータスバッジも即時同期する。
 
@@ -74,8 +72,6 @@ JotInput はオンデバイス SLM (`llama.cpp` + GGUF) による文脈リラン
 |---|---|---|---|
 | `LOCAL_SLM_3_5_0_8B` | `qwen3.5-0.8b-instruct-q4_k_m.gguf` | `https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf` | 532,517,120 B (~508MB) |
 | `LOCAL_SLM_3_5_2B` | `qwen3.5-2b-instruct-q4_k_m.gguf` | `https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q4_K_M.gguf` | 1,280,835,840 B (~1.19GB) |
-| `LOCAL_SLM` | `qwen2.5-0.5b-instruct-q4_k_m.gguf` | `https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf` | 491,400,032 B (~469MB) |
-| `LOCAL_SLM_1_5B` | `qwen2.5-1.5b-instruct-q4_k_m.gguf` | `https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf` | 1,117,320,736 B (~1.04GB) |
 
 - **保存先**: `context.getExternalFilesDir("models") ?: File(context.filesDir, "models")`（既存の [`LlmReranker.getModelFile`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt) および `tools/push_model_to_device.sh` と完全互換）。
 - **原子性・安全性**: `<fileName>.tmp` へストリーミング書込し、リダイレクト（HTTP 301/302/303/307/308）追従、`coroutineContext.ensureActive()` によるキャンセル対応、サイズ検証（> 10MB）の後に `renameTo` で確定する。

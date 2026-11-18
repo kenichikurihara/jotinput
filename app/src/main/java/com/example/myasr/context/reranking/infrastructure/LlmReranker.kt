@@ -16,7 +16,7 @@ import java.io.File
 import kotlin.math.pow
 
 /**
- * High-performance on-device SLM candidate re-ranking engine using llama.cpp and Qwen2.5-0.5B.
+ * High-performance on-device SLM candidate re-ranking engine using llama.cpp and Qwen3.5.
  * Computes causal token log-likelihood conditioned on the preceding context prefix.
  */
 class LlmReranker private constructor(private val context: Context) : CandidateRerankingService {
@@ -570,9 +570,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
     /**
      * Checks if the SLM model file is installed in the app's internal or external storage.
-     * @param fileName Optional filename. Defaults to the configured engine model or 0.5B.
+     * @param fileName Optional filename. Defaults to the configured engine model or Qwen3.5-0.8B.
      */
-    fun getModelFile(fileName: String = "qwen2.5-0.5b-instruct-q4_k_m.gguf"): File {
+    fun getModelFile(fileName: String = RerankEngineType.DEFAULT.modelFileName): File {
         // 1. Internal app files directory
         val internalFile = File(File(context.filesDir, "models"), fileName)
         if (internalFile.exists() && internalFile.length() > 10 * 1024 * 1024) {
@@ -602,7 +602,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
         return internalFile
     }
 
-    fun isModelInstalled(fileName: String = "qwen2.5-0.5b-instruct-q4_k_m.gguf"): Boolean {
+    fun isModelInstalled(fileName: String = RerankEngineType.DEFAULT.modelFileName): Boolean {
         val file = getModelFile(fileName)
         return file.exists() && file.length() > 10 * 1024 * 1024 // > 10MB
     }
@@ -612,7 +612,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
         return if (selected.modelFileName.isNotEmpty()) {
             selected.modelFileName
         } else {
-            "qwen2.5-0.5b-instruct-q4_k_m.gguf"
+            RerankEngineType.DEFAULT.modelFileName
         }
     }
 

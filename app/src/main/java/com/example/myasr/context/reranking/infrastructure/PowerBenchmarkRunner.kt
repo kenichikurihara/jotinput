@@ -21,7 +21,7 @@ import org.json.JSONObject
  *
  * Triggered via ADB intent extras on MainActivity:
  *   --es bench_action "prepare" | "run"
- *   --es bench_engine "none" | "local_slm" | "local_slm_1_5b"
+ *   --es bench_engine "none" | "local_slm_3_5_0_8b" | "local_slm_3_5_2b"
  *   --es bench_workload "miss" | "hit" | "typing"
  *   --ei bench_iters 200
  */
@@ -71,11 +71,7 @@ object PowerBenchmarkRunner {
         iters: Int
     ) {
         scope.launch(Dispatchers.Default) {
-            val engineType = when (engineStr.lowercase()) {
-                "none" -> RerankEngineType.NONE
-                "local_slm_1_5b", "1.5b" -> RerankEngineType.LOCAL_SLM_1_5B
-                else -> RerankEngineType.LOCAL_SLM
-            }
+            val engineType = RerankEngineType.fromId(engineStr)
 
             if (action == "prepare") {
                 Log.i(TAG, "BENCH_PREPARE_START engine=${engineType.id}")

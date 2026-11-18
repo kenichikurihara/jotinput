@@ -44,7 +44,7 @@ object KeyboardHeightManager {
 
     fun getRerankEngineType(context: Context): RerankEngineType {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val defaultType = RerankEngineType.LOCAL_SLM
+        val defaultType = RerankEngineType.LOCAL_SLM_3_5_0_8B
         val saved = prefs.getString(KEY_RERANK_ENGINE_TYPE, defaultType.id) ?: defaultType.id
         return RerankEngineType.fromId(saved)
     }

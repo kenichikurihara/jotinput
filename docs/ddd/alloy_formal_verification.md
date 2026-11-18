@@ -45,7 +45,7 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`TabSwitchPreservesState`**: タブ切替がプロビジョニングやセットアップ状態・AI設定を破壊しないこと。
 - **`SlmSelectorHiddenWhenDisabled`**: AI エンジン OFF 時はエンジン選択 UI が必ず非表示であること。
 - **`GlobalBannerVisibleDuringProvisioning`**: バックグラウンド処理中はタブを問わず進捗バナーが表示されること。
-- **`RerankEnabledImpliesValidModel`**: AI リランクが ON のとき、モデルは必ず有効なモデル（0.5B または 1.5B）が選択されており、モデル未選択（NONE）のまま放置されないこと。
+- **`RerankEnabledImpliesValidModel`**: AI リランクが ON のとき、モデルは必ず有効なモデル（Qwen3.5-0.8B または Qwen3.5-2B）が選択されており、モデル未選択（NONE）のまま放置されないこと。
 - **`RerankDisabledImpliesEngineNone`**: AI リランクが OFF のとき、エンジンは必ず NONE に解決されること。
 - **`BottomNavHiddenWhenImeActive`**: IME 入力中（`imeInputActive = True`）のときは、ボトムナビゲーションバーが必ず非表示（`showBottomNav = False`）となり、キーボード上の縦領域を最大化してタブの押し上げと無駄なホワイトスペースを完全に抑止すること。
 - **`NeverPromptDownloadWhenInstalledOrDisabled` / `DownloadCtaOnlyWhenEnabledAndMissing`**: 導入済み・無効化済み・ダウンロード中の SLM モデルに対して重複ダウンロード確認やインライン取得 CTA を表示しないこと。

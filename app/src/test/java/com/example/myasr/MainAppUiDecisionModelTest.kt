@@ -88,17 +88,10 @@ class MainAppUiDecisionModelTest {
     @Test
     fun `aiEngineStatusDecisionTable hides selector when disabled and reflects runtime state when enabled`() {
         val disabled = MainAppUiDecisionModel.evaluateAiEngineStatus(
-            AiEngineStatusInput(false, RerankEngineType.LOCAL_SLM, AiRuntimeState.READY, true)
+            AiEngineStatusInput(false, RerankEngineType.LOCAL_SLM_3_5_0_8B, AiRuntimeState.READY, true)
         )
         assertFalse(disabled.showEngineSelector)
         assertEquals("オフ", disabled.badgeText)
-
-        val ready15b = MainAppUiDecisionModel.evaluateAiEngineStatus(
-            AiEngineStatusInput(true, RerankEngineType.LOCAL_SLM_1_5B, AiRuntimeState.READY, true)
-        )
-        assertTrue(ready15b.showEngineSelector)
-        assertEquals("Qwen 1.5B (Ready)", ready15b.badgeText)
-        assertEquals(StatusTone.SUCCESS, ready15b.tone)
 
         val ready35_08b = MainAppUiDecisionModel.evaluateAiEngineStatus(
             AiEngineStatusInput(true, RerankEngineType.LOCAL_SLM_3_5_0_8B, AiRuntimeState.READY, true)
@@ -116,7 +109,7 @@ class MainAppUiDecisionModelTest {
     }
 
     @Test
-    fun `rerankEngineSelectionDecisionTable defaults to 0_5B when enabled with NONE or null engine`() {
+    fun `rerankEngineSelectionDecisionTable defaults to Qwen3_5_0_8B when enabled with NONE or null engine`() {
         val traceNone = MainAppUiDecisionModel.evaluateRerankEngineSelectionWithTrace(
             MainAppUiDecisionModel.RerankEngineSelectionInput(
                 rerankEnabled = true,
@@ -125,9 +118,9 @@ class MainAppUiDecisionModelTest {
         )
         assertEquals("RERANK_SEL_DEFAULT", traceNone.selectedRuleId)
         assertTrue(traceNone.result.effectiveRerankEnabled)
-        assertEquals(RerankEngineType.LOCAL_SLM, traceNone.result.selectedEngine)
+        assertEquals(RerankEngineType.LOCAL_SLM_3_5_0_8B, traceNone.result.selectedEngine)
         assertTrue(traceNone.result.shouldInitializeModel)
-        assertEquals("default_to_0_5b_when_enabled", traceNone.result.reason)
+        assertEquals("default_to_3_5_0_8b_when_enabled", traceNone.result.reason)
 
         val traceNull = MainAppUiDecisionModel.evaluateRerankEngineSelectionWithTrace(
             MainAppUiDecisionModel.RerankEngineSelectionInput(
@@ -137,33 +130,22 @@ class MainAppUiDecisionModelTest {
         )
         assertEquals("RERANK_SEL_DEFAULT", traceNull.selectedRuleId)
         assertTrue(traceNull.result.effectiveRerankEnabled)
-        assertEquals(RerankEngineType.LOCAL_SLM, traceNull.result.selectedEngine)
+        assertEquals(RerankEngineType.LOCAL_SLM_3_5_0_8B, traceNull.result.selectedEngine)
         assertTrue(traceNull.result.shouldInitializeModel)
     }
 
     @Test
     fun `rerankEngineSelectionDecisionTable preserves existing engines when rerank is enabled`() {
-        val trace15b = MainAppUiDecisionModel.evaluateRerankEngineSelectionWithTrace(
+        val trace35_2b = MainAppUiDecisionModel.evaluateRerankEngineSelectionWithTrace(
             MainAppUiDecisionModel.RerankEngineSelectionInput(
                 rerankEnabled = true,
-                currentEngine = RerankEngineType.LOCAL_SLM_1_5B
+                currentEngine = RerankEngineType.LOCAL_SLM_3_5_2B
             )
         )
-        assertEquals("RERANK_SEL_R2", trace15b.selectedRuleId)
-        assertTrue(trace15b.result.effectiveRerankEnabled)
-        assertEquals(RerankEngineType.LOCAL_SLM_1_5B, trace15b.result.selectedEngine)
-        assertTrue(trace15b.result.shouldInitializeModel)
-
-        val trace05b = MainAppUiDecisionModel.evaluateRerankEngineSelectionWithTrace(
-            MainAppUiDecisionModel.RerankEngineSelectionInput(
-                rerankEnabled = true,
-                currentEngine = RerankEngineType.LOCAL_SLM
-            )
-        )
-        assertEquals("RERANK_SEL_R3", trace05b.selectedRuleId)
-        assertTrue(trace05b.result.effectiveRerankEnabled)
-        assertEquals(RerankEngineType.LOCAL_SLM, trace05b.result.selectedEngine)
-        assertTrue(trace05b.result.shouldInitializeModel)
+        assertEquals("RERANK_SEL_R2", trace35_2b.selectedRuleId)
+        assertTrue(trace35_2b.result.effectiveRerankEnabled)
+        assertEquals(RerankEngineType.LOCAL_SLM_3_5_2B, trace35_2b.result.selectedEngine)
+        assertTrue(trace35_2b.result.shouldInitializeModel)
 
         val trace35_08b = MainAppUiDecisionModel.evaluateRerankEngineSelectionWithTrace(
             MainAppUiDecisionModel.RerankEngineSelectionInput(
@@ -171,28 +153,15 @@ class MainAppUiDecisionModelTest {
                 currentEngine = RerankEngineType.LOCAL_SLM_3_5_0_8B
             )
         )
-        assertEquals("RERANK_SEL_R4", trace35_08b.selectedRuleId)
+        assertEquals("RERANK_SEL_R3", trace35_08b.selectedRuleId)
         assertTrue(trace35_08b.result.effectiveRerankEnabled)
         assertEquals(RerankEngineType.LOCAL_SLM_3_5_0_8B, trace35_08b.result.selectedEngine)
         assertTrue(trace35_08b.result.shouldInitializeModel)
-
-        val trace35_2b = MainAppUiDecisionModel.evaluateRerankEngineSelectionWithTrace(
-            MainAppUiDecisionModel.RerankEngineSelectionInput(
-                rerankEnabled = true,
-                currentEngine = RerankEngineType.LOCAL_SLM_3_5_2B
-            )
-        )
-        assertEquals("RERANK_SEL_R5", trace35_2b.selectedRuleId)
-        assertTrue(trace35_2b.result.effectiveRerankEnabled)
-        assertEquals(RerankEngineType.LOCAL_SLM_3_5_2B, trace35_2b.result.selectedEngine)
-        assertTrue(trace35_2b.result.shouldInitializeModel)
     }
 
     @Test
     fun `rerankEngineSelectionDecisionTable enforces invariant that rerank ON requires a valid selected model`() {
         val testEngines = listOf(
-            RerankEngineType.LOCAL_SLM,
-            RerankEngineType.LOCAL_SLM_1_5B,
             RerankEngineType.LOCAL_SLM_3_5_0_8B,
             RerankEngineType.LOCAL_SLM_3_5_2B,
             RerankEngineType.NONE,
@@ -215,10 +184,8 @@ class MainAppUiDecisionModelTest {
                 decision.selectedEngine
             )
             assertTrue(
-                "When rerank is enabled, selected model must be a valid SLM engine (0.5B, 1.5B, 0.8B, or 2B)",
-                decision.selectedEngine == RerankEngineType.LOCAL_SLM ||
-                    decision.selectedEngine == RerankEngineType.LOCAL_SLM_1_5B ||
-                    decision.selectedEngine == RerankEngineType.LOCAL_SLM_3_5_0_8B ||
+                "When rerank is enabled, selected model must be a valid Qwen3.5 SLM engine (0.8B or 2B)",
+                decision.selectedEngine == RerankEngineType.LOCAL_SLM_3_5_0_8B ||
                     decision.selectedEngine == RerankEngineType.LOCAL_SLM_3_5_2B
             )
         }
@@ -226,26 +193,6 @@ class MainAppUiDecisionModelTest {
 
     @Test
     fun `rerankEngineSelectionDecisionTable selects NONE and disables rerank when switch is turned off`() {
-        val from05b = MainAppUiDecisionModel.evaluateRerankEngineSelection(
-            MainAppUiDecisionModel.RerankEngineSelectionInput(
-                rerankEnabled = false,
-                currentEngine = RerankEngineType.LOCAL_SLM
-            )
-        )
-        assertFalse(from05b.effectiveRerankEnabled)
-        assertEquals(RerankEngineType.NONE, from05b.selectedEngine)
-        assertFalse(from05b.shouldInitializeModel)
-
-        val from15b = MainAppUiDecisionModel.evaluateRerankEngineSelection(
-            MainAppUiDecisionModel.RerankEngineSelectionInput(
-                rerankEnabled = false,
-                currentEngine = RerankEngineType.LOCAL_SLM_1_5B
-            )
-        )
-        assertFalse(from15b.effectiveRerankEnabled)
-        assertEquals(RerankEngineType.NONE, from15b.selectedEngine)
-        assertFalse(from15b.shouldInitializeModel)
-
         val from35_08b = MainAppUiDecisionModel.evaluateRerankEngineSelection(
             MainAppUiDecisionModel.RerankEngineSelectionInput(
                 rerankEnabled = false,

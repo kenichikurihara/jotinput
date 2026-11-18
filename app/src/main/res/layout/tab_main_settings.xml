@@ -383,29 +383,11 @@
                         android:orientation="vertical">
 
                         <RadioButton
-                            android:id="@+id/rbEngineLocalSlm"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:paddingVertical="4dp"
-                            android:text="Qwen2.5-0.5B (469MB • 高速標準)"
-                            android:textColor="@color/text_primary"
-                            android:textSize="12sp" />
-
-                        <RadioButton
-                            android:id="@+id/rbEngineLocalSlm15B"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:paddingVertical="4dp"
-                            android:text="Qwen2.5-1.5B (1.04GB • 高精度)"
-                            android:textColor="@color/text_primary"
-                            android:textSize="12sp" />
-
-                        <RadioButton
                             android:id="@+id/rbEngineLocalSlm35_08B"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:paddingVertical="4dp"
-                            android:text="Qwen3.5-0.8B (508MB • 次世代高速)"
+                            android:text="Qwen3.5-0.8B (508MB • 高速標準・推奨)"
                             android:textColor="@color/text_primary"
                             android:textSize="12sp" />
 
@@ -414,7 +396,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:paddingVertical="4dp"
-                            android:text="Qwen3.5-2B (1.19GB • 次世代最高精度)"
+                            android:text="Qwen3.5-2B (1.19GB • 最高精度)"
                             android:textColor="@color/text_primary"
                             android:textSize="12sp" />
 

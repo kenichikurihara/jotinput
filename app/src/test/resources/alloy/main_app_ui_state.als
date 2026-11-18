@@ -31,7 +31,7 @@ one sig
 extends HeroAction {}
 
 abstract sig EngineType {}
-one sig Engine0_5B, Engine1_5B, Engine3_5_0_8B, Engine3_5_2B, EngineNone extends EngineType {}
+one sig Engine3_5_0_8B, Engine3_5_2B, EngineNone extends EngineType {}
 
 sig State {
     activeTab: one Tab,
@@ -90,7 +90,7 @@ pred init[s: State] {
     s.outdatedDicts = False
     s.provisioningActive = False
     s.slmEnabled = True
-    s.selectedEngine = Engine0_5B
+    s.selectedEngine = Engine3_5_0_8B
     s.imeInputActive = False
     s.selectedModelInstalled = False
     s.slmDownloading = False
@@ -180,8 +180,8 @@ pred toggleSlm[s, sNext: State] {
         sNext.selectedEngine = EngineNone
     } else {
         sNext.slmEnabled = True
-        // DMN RerankEngineSelectionDecisionTable defaults to 0.5B when previously NONE
-        sNext.selectedEngine = Engine0_5B
+        // DMN RerankEngineSelectionDecisionTable defaults to Qwen3.5 0.8B when previously NONE
+        sNext.selectedEngine = Engine3_5_0_8B
     }
     sNext.imeInputActive = s.imeInputActive
     sNext.selectedModelInstalled = s.selectedModelInstalled
@@ -190,7 +190,7 @@ pred toggleSlm[s, sNext: State] {
     deriveUi[sNext]
 }
 
-pred select15B[s, sNext: State] {
+pred select2B[s, sNext: State] {
     s.slmEnabled = True
     sNext.activeTab = s.activeTab
     sNext.imeEnabled = s.imeEnabled
@@ -200,7 +200,7 @@ pred select15B[s, sNext: State] {
     sNext.outdatedDicts = s.outdatedDicts
     sNext.provisioningActive = s.provisioningActive
     sNext.slmEnabled = True
-    sNext.selectedEngine = Engine1_5B
+    sNext.selectedEngine = Engine3_5_2B
     sNext.imeInputActive = s.imeInputActive
     sNext.selectedModelInstalled = s.selectedModelInstalled
     sNext.slmDownloading = s.slmDownloading
@@ -250,7 +250,7 @@ fact Traces {
         startProvisioning[s, sNext] or
         completeProvisioning[s, sNext] or
         toggleSlm[s, sNext] or
-        select15B[s, sNext] or
+        select2B[s, sNext] or
         startImeInput[s, sNext] or
         closeImeInput[s, sNext]
 }
@@ -302,8 +302,6 @@ assert GlobalBannerVisibleDuringProvisioning {
 
 assert RerankEnabledImpliesValidModel {
     all s: State | s.slmEnabled = True implies (
-        s.selectedEngine = Engine0_5B or
-        s.selectedEngine = Engine1_5B or
         s.selectedEngine = Engine3_5_0_8B or
         s.selectedEngine = Engine3_5_2B
     )
