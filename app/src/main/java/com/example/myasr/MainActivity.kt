@@ -121,6 +121,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var rgRerankEngine: android.widget.RadioGroup
     private lateinit var rbEngineLocalSlm: android.widget.RadioButton
     private lateinit var rbEngineLocalSlm15B: android.widget.RadioButton
+    private lateinit var rbEngineLocalSlm35_08B: android.widget.RadioButton
+    private lateinit var rbEngineLocalSlm35_2B: android.widget.RadioButton
     private lateinit var rbEngineNone: android.widget.RadioButton
 
     private lateinit var layoutAdvancedHeader: LinearLayout
@@ -367,6 +369,8 @@ class MainActivity : AppCompatActivity() {
     private fun setupRerankEngineUI() {
         rbEngineLocalSlm.isEnabled = true
         rbEngineLocalSlm15B.isEnabled = true
+        rbEngineLocalSlm35_08B.isEnabled = true
+        rbEngineLocalSlm35_2B.isEnabled = true
         rbEngineNone.isEnabled = true
 
         val initialEnabled = KeyboardHeightManager.isSlmRerankEnabled(this)
@@ -383,6 +387,8 @@ class MainActivity : AppCompatActivity() {
             if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
             val selected = when (checkedId) {
                 R.id.rbEngineLocalSlm15B -> RerankEngineType.LOCAL_SLM_1_5B
+                R.id.rbEngineLocalSlm35_08B -> RerankEngineType.LOCAL_SLM_3_5_0_8B
+                R.id.rbEngineLocalSlm35_2B -> RerankEngineType.LOCAL_SLM_3_5_2B
                 R.id.rbEngineNone -> RerankEngineType.NONE
                 else -> RerankEngineType.LOCAL_SLM
             }
@@ -422,6 +428,8 @@ class MainActivity : AppCompatActivity() {
             when (decision.selectedEngine) {
                 RerankEngineType.LOCAL_SLM -> rbEngineLocalSlm.isChecked = true
                 RerankEngineType.LOCAL_SLM_1_5B -> rbEngineLocalSlm15B.isChecked = true
+                RerankEngineType.LOCAL_SLM_3_5_0_8B -> rbEngineLocalSlm35_08B.isChecked = true
+                RerankEngineType.LOCAL_SLM_3_5_2B -> rbEngineLocalSlm35_2B.isChecked = true
                 RerankEngineType.NONE -> rbEngineNone.isChecked = true
             }
             if (decision.shouldInitializeModel) {
@@ -645,6 +653,8 @@ class MainActivity : AppCompatActivity() {
         rgRerankEngine = findViewById(R.id.rgRerankEngine)
         rbEngineLocalSlm = findViewById(R.id.rbEngineLocalSlm)
         rbEngineLocalSlm15B = findViewById(R.id.rbEngineLocalSlm15B)
+        rbEngineLocalSlm35_08B = findViewById(R.id.rbEngineLocalSlm35_08B)
+        rbEngineLocalSlm35_2B = findViewById(R.id.rbEngineLocalSlm35_2B)
         rbEngineNone = findViewById(R.id.rbEngineNone)
         setupRerankEngineUI()
 

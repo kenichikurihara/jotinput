@@ -235,8 +235,8 @@ object MainAppUiDecisionModel {
             rule(id = "AI_R2", description = "Selected AI engine is ready") {
                 `when` { it.runtimeState == AiRuntimeState.READY }
                 then { input ->
-                    val label = if (input.engineType == RerankEngineType.LOCAL_SLM_1_5B) "Qwen 1.5B" else "Qwen 0.5B"
-                    val full = if (input.engineType == RerankEngineType.LOCAL_SLM_1_5B) "Qwen2.5-1.5B" else "Qwen2.5-0.5B"
+                    val label = input.engineType.badgeLabel
+                    val full = input.engineType.displayName
                     AiEngineStatusDecision(
                         showEngineSelector = true,
                         badgeText = "$label (Ready)",
@@ -248,7 +248,7 @@ object MainAppUiDecisionModel {
             rule(id = "AI_R3", description = "Selected AI engine is initializing") {
                 `when` { it.runtimeState == AiRuntimeState.INITIALIZING }
                 then { input ->
-                    val full = if (input.engineType == RerankEngineType.LOCAL_SLM_1_5B) "Qwen2.5-1.5B" else "Qwen2.5-0.5B"
+                    val full = input.engineType.displayName
                     AiEngineStatusDecision(
                         showEngineSelector = true,
                         badgeText = "読込中...",
@@ -260,7 +260,7 @@ object MainAppUiDecisionModel {
             rule(id = "AI_R4", description = "Selected AI engine installed on disk and idle") {
                 `when` { it.modelInstalled }
                 then { input ->
-                    val full = if (input.engineType == RerankEngineType.LOCAL_SLM_1_5B) "Qwen2.5-1.5B" else "Qwen2.5-0.5B"
+                    val full = input.engineType.displayName
                     AiEngineStatusDecision(
                         showEngineSelector = true,
                         badgeText = "待機中",
@@ -333,6 +333,28 @@ object MainAppUiDecisionModel {
                         selectedEngine = RerankEngineType.LOCAL_SLM,
                         shouldInitializeModel = true,
                         reason = "keep_0_5b"
+                    )
+                )
+            }
+            rule(id = "RERANK_SEL_R4", description = "Keep Qwen3.5 0.8B model when rerank is enabled and 0.8B was active") {
+                `when` { it.currentEngine == RerankEngineType.LOCAL_SLM_3_5_0_8B }
+                thenValue(
+                    RerankEngineSelectionDecision(
+                        effectiveRerankEnabled = true,
+                        selectedEngine = RerankEngineType.LOCAL_SLM_3_5_0_8B,
+                        shouldInitializeModel = true,
+                        reason = "keep_3_5_0_8b"
+                    )
+                )
+            }
+            rule(id = "RERANK_SEL_R5", description = "Keep Qwen3.5 2B model when rerank is enabled and 2B was active") {
+                `when` { it.currentEngine == RerankEngineType.LOCAL_SLM_3_5_2B }
+                thenValue(
+                    RerankEngineSelectionDecision(
+                        effectiveRerankEnabled = true,
+                        selectedEngine = RerankEngineType.LOCAL_SLM_3_5_2B,
+                        shouldInitializeModel = true,
+                        reason = "keep_3_5_2b"
                     )
                 )
             }

@@ -31,7 +31,7 @@ one sig
 extends HeroAction {}
 
 abstract sig EngineType {}
-one sig Engine0_5B, Engine1_5B, EngineNone extends EngineType {}
+one sig Engine0_5B, Engine1_5B, Engine3_5_0_8B, Engine3_5_2B, EngineNone extends EngineType {}
 
 sig State {
     activeTab: one Tab,
@@ -263,7 +263,12 @@ assert GlobalBannerVisibleDuringProvisioning {
 }
 
 assert RerankEnabledImpliesValidModel {
-    all s: State | s.slmEnabled = True implies (s.selectedEngine = Engine0_5B or s.selectedEngine = Engine1_5B)
+    all s: State | s.slmEnabled = True implies (
+        s.selectedEngine = Engine0_5B or
+        s.selectedEngine = Engine1_5B or
+        s.selectedEngine = Engine3_5_0_8B or
+        s.selectedEngine = Engine3_5_2B
+    )
 }
 
 assert RerankDisabledImpliesEngineNone {

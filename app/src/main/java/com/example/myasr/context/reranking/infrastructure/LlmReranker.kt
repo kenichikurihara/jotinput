@@ -609,8 +609,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
     fun getTargetModelFileName(): String {
         val selected = KeyboardHeightManager.getRerankEngineType(context)
-        return if (selected == RerankEngineType.LOCAL_SLM_1_5B) {
-            "qwen2.5-1.5b-instruct-q4_k_m.gguf"
+        return if (selected.modelFileName.isNotEmpty()) {
+            selected.modelFileName
         } else {
             "qwen2.5-0.5b-instruct-q4_k_m.gguf"
         }

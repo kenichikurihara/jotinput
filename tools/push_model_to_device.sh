@@ -19,10 +19,20 @@ if [ "$TARGET_MODEL" == "0.5b" ]; then
     MODELS_TO_PUSH+=("qwen2.5-0.5b-instruct-q4_k_m.gguf")
 elif [ "$TARGET_MODEL" == "1.5b" ]; then
     MODELS_TO_PUSH+=("qwen2.5-1.5b-instruct-q4_k_m.gguf")
+elif [ "$TARGET_MODEL" == "0.8b" ] || [ "$TARGET_MODEL" == "3.5-0.8b" ]; then
+    MODELS_TO_PUSH+=("qwen3.5-0.8b-instruct-q4_k_m.gguf")
+elif [ "$TARGET_MODEL" == "2b" ] || [ "$TARGET_MODEL" == "3.5-2b" ]; then
+    MODELS_TO_PUSH+=("qwen3.5-2b-instruct-q4_k_m.gguf")
 else
     MODELS_TO_PUSH+=("qwen2.5-0.5b-instruct-q4_k_m.gguf")
     if [ -f "$REPO_DIR/tools/models/qwen2.5-1.5b-instruct-q4_k_m.gguf" ]; then
         MODELS_TO_PUSH+=("qwen2.5-1.5b-instruct-q4_k_m.gguf")
+    fi
+    if [ -f "$REPO_DIR/tools/models/qwen3.5-0.8b-instruct-q4_k_m.gguf" ]; then
+        MODELS_TO_PUSH+=("qwen3.5-0.8b-instruct-q4_k_m.gguf")
+    fi
+    if [ -f "$REPO_DIR/tools/models/qwen3.5-2b-instruct-q4_k_m.gguf" ]; then
+        MODELS_TO_PUSH+=("qwen3.5-2b-instruct-q4_k_m.gguf")
     fi
 fi
 

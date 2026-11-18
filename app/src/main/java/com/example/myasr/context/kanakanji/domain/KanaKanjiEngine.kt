@@ -1041,7 +1041,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             return null
         }
         val engineType = KeyboardHeightManager.getRerankEngineType(ctx)
-        if (engineType != RerankEngineType.LOCAL_SLM && engineType != RerankEngineType.LOCAL_SLM_1_5B) {
+        if (engineType == RerankEngineType.NONE) {
             return null
         }
 
@@ -1065,7 +1065,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     /**
-     * Contextual candidate re-ranking using on-device SLM (Qwen2.5-0.5B / 1.5B).
+     * Contextual candidate re-ranking using on-device SLM (Qwen2.5 / Qwen3.5).
      * Designed to be executed asynchronously on Dispatchers.Default.
      * Returns a pair of (reranked candidates, whether scoring was successfully applied).
      */
@@ -1101,7 +1101,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
         return when (engineType) {
             RerankEngineType.NONE -> Pair(filtered, false)
-            RerankEngineType.LOCAL_SLM, RerankEngineType.LOCAL_SLM_1_5B -> {
+            else -> {
                 LlmReranker.getInstance(ctx).rerankWithStatus(
                     contextPrefix,
                     filtered,

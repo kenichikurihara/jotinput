@@ -36,9 +36,13 @@ class DebugDisplayTest {
     fun testRerankEngineTypeBadgeLabels() {
         assertEquals("Qwen 0.5B", RerankEngineType.LOCAL_SLM.badgeLabel)
         assertEquals("Qwen 1.5B", RerankEngineType.LOCAL_SLM_1_5B.badgeLabel)
+        assertEquals("Qwen3.5 0.8B", RerankEngineType.LOCAL_SLM_3_5_0_8B.badgeLabel)
+        assertEquals("Qwen3.5 2B", RerankEngineType.LOCAL_SLM_3_5_2B.badgeLabel)
         assertEquals("", RerankEngineType.NONE.badgeLabel)
         assertEquals(RerankEngineType.NONE, RerankEngineType.fromId("none"))
         assertEquals(RerankEngineType.LOCAL_SLM, RerankEngineType.fromId("aicore_nano_2"))
+        assertEquals(RerankEngineType.LOCAL_SLM_3_5_0_8B, RerankEngineType.fromId("local_slm_3_5_0_8b"))
+        assertEquals(RerankEngineType.LOCAL_SLM_3_5_2B, RerankEngineType.fromId("local_slm_3_5_2b"))
     }
 
     @Test

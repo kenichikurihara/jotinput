@@ -387,7 +387,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:paddingVertical="4dp"
-                            android:text="Qwen2.5-0.5B"
+                            android:text="Qwen2.5-0.5B (469MB • 高速標準)"
                             android:textColor="@color/text_primary"
                             android:textSize="12sp" />
 
@@ -396,7 +396,25 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:paddingVertical="4dp"
-                            android:text="Qwen2.5-1.5B"
+                            android:text="Qwen2.5-1.5B (1.1GB • 高精度)"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rbEngineLocalSlm35_08B"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingVertical="4dp"
+                            android:text="Qwen3.5-0.8B (580MB • 次世代高速)"
+                            android:textColor="@color/text_primary"
+                            android:textSize="12sp" />
+
+                        <RadioButton
+                            android:id="@+id/rbEngineLocalSlm35_2B"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingVertical="4dp"
+                            android:text="Qwen3.5-2B (1.4GB • 次世代最高精度)"
                             android:textColor="@color/text_primary"
                             android:textSize="12sp" />
 
