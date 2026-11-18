@@ -342,6 +342,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 65. [デバッグ報告書：「デザインドキュメントを描いて」→「書いて」の修正が次回音声入力に反映されない原因分析](docs/debug_voice_correction_kaite_root_cause.md)
     - 音声修正学習が「描いて」→「書いて」で機能しない5つの根本原因（RC-1: ストリーミング経路で `VoiceCorrectionScoring` 未呼出、RC-2: `readingResolver == null` による `fallbackJapaneseSurfaceDistance("描","書") == 1.0f` 棄却、RC-3: ストリーミング凍結による `VoiceCommitAnchor` 分断、RC-4: 送り仮名を含まない1文字スパン抽出、RC-5: 同音動詞の SLM ゲート未保護）のトレースと修正方針。
 
+66. [オンデバイスLLM/SLM レイテンシ・ヘッドルーム分析と高速化アイデア設計書 (SLM Latency Headroom Analysis & Optimization Ideas)](docs/slm_latency_headroom_and_optimization_ideas.md)
+    - `LlmReranker.kt` / `llm_reranker.cc` (`llama.cpp` バックエンド) における5大レイテンシボトルネック（Stage 2 の候補ごと直列 `llama_decode` による DRAM 帯域浪費、潜在格助詞バリアント重複デコード、`ContextWindowTrimmer` 先頭シフトによる LCP=0 キャッシュ全破棄、15.2万語彙 LM Head 射影、Little コア混入によるバリア同期ストラグラー遅延）の解剖と、レイテンシを $1/3 \sim 1/10$（平均 $25\sim 105\text{ms} \to 1\sim 12\text{ms}$）へ短縮する10個の改善アイデア（Prefix-Tree Packed Single-Pass Decoding、RoPE Position-Shift Ring KV Cache、Prior-Aware Admissible Lower Bound、Sparse LM Head、In-Flight Speculative Context Warming 等）の設計仕様。
+
 ---
 
 ## 📂 Source Code Layout
