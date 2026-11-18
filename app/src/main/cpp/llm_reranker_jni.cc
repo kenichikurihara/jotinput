@@ -120,6 +120,65 @@ Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeScoreC
   return result;
 }
 
+JNIEXPORT jfloatArray JNICALL
+Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeScoreCandidatesWithPriors(
+    JNIEnv* env,
+    jobject /* thiz */,
+    jstring jContext,
+    jobjectArray jCandidates,
+    jfloatArray jPriorPenalties) {
+  if (jCandidates == nullptr) {
+    return nullptr;
+  }
+
+  std::string context_str = "";
+  if (jContext != nullptr) {
+    const char* c_str = env->GetStringUTFChars(jContext, nullptr);
+    context_str = c_str;
+    env->ReleaseStringUTFChars(jContext, c_str);
+  }
+
+  jsize num_candidates = env->GetArrayLength(jCandidates);
+  std::vector<std::string> candidates;
+  candidates.reserve(num_candidates);
+
+  for (jsize i = 0; i < num_candidates; ++i) {
+    jstring cand_str = (jstring)env->GetObjectArrayElement(jCandidates, i);
+    if (cand_str != nullptr) {
+      const char* utf = env->GetStringUTFChars(cand_str, nullptr);
+      candidates.emplace_back(utf);
+      env->ReleaseStringUTFChars(cand_str, utf);
+      env->DeleteLocalRef(cand_str);
+    } else {
+      candidates.emplace_back("");
+    }
+  }
+
+  std::vector<float> priors(num_candidates, 0.0f);
+  if (jPriorPenalties != nullptr) {
+    jsize num_priors = env->GetArrayLength(jPriorPenalties);
+    jsize copy_len = (num_priors < num_candidates) ? num_priors : num_candidates;
+    if (copy_len > 0) {
+      env->GetFloatArrayRegion(jPriorPenalties, 0, copy_len, priors.data());
+    }
+  }
+
+  std::vector<float> neg_logprobs;
+  bool success = myasr::LlmReranker::GetInstance().ScoreCandidatesWithPriors(
+      context_str, candidates, priors, &neg_logprobs);
+  if (!success || neg_logprobs.size() != static_cast<size_t>(num_candidates)) {
+    return nullptr;
+  }
+
+  jfloatArray result = env->NewFloatArray(num_candidates);
+  if (result == nullptr) {
+    return nullptr;
+  }
+
+  env->SetFloatArrayRegion(result, 0, num_candidates, neg_logprobs.data());
+  return result;
+}
+
 JNIEXPORT jboolean JNICALL
 Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeWarmContext(JNIEnv* env, jobject /* thiz */,
                                                      jstring jContext) {

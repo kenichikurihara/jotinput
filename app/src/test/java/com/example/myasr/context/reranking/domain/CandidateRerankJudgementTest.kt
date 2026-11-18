@@ -256,4 +256,40 @@ class CandidateRerankJudgementTest {
         assertFalse(notTouchingTrace.result.pinnedInitialTop1)
         assertEquals("送信", notTouchingTrace.result.finalCandidates.first().surface)
     }
+
+    @Test
+    fun `speculativeWarmDecisionTable guards disabled, not ready, and active composing states`() {
+        val disabled = CandidateRerankJudgement.judgeSpeculativeWarmWithTrace(
+            CandidateRerankJudgement.SpeculativeWarmInput(
+                isRerankEnabled = false,
+                isSlmReady = true,
+                isAlreadyComposing = false,
+                trigger = CandidateRerankJudgement.WarmTrigger.TEXT_COMMITTED
+            )
+        )
+        assertEquals("WARM_R1", disabled.selectedRuleId)
+        assertFalse(disabled.result.shouldWarm)
+
+        val touchWhileComposing = CandidateRerankJudgement.judgeSpeculativeWarmWithTrace(
+            CandidateRerankJudgement.SpeculativeWarmInput(
+                isRerankEnabled = true,
+                isSlmReady = true,
+                isAlreadyComposing = true,
+                trigger = CandidateRerankJudgement.WarmTrigger.KEY_TOUCH_DOWN
+            )
+        )
+        assertEquals("WARM_R4", touchWhileComposing.selectedRuleId)
+        assertFalse(touchWhileComposing.result.shouldWarm)
+
+        val touchBeforeFirstChar = CandidateRerankJudgement.judgeSpeculativeWarmWithTrace(
+            CandidateRerankJudgement.SpeculativeWarmInput(
+                isRerankEnabled = true,
+                isSlmReady = true,
+                isAlreadyComposing = false,
+                trigger = CandidateRerankJudgement.WarmTrigger.KEY_TOUCH_DOWN
+            )
+        )
+        assertEquals("WARM_DEFAULT", touchBeforeFirstChar.selectedRuleId)
+        assertTrue(touchBeforeFirstChar.result.shouldWarm)
+    }
 }

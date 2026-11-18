@@ -137,4 +137,58 @@ class ContextWindowTrimmerTest {
         assertTrue(trimmed.isNotEmpty())
         assertTrue(trimmed.endsWith("報告ですが、"))
     }
+
+    @Test
+    fun testStickyAnchorPreservesLcpUntilHighWaterMark() {
+        ContextWindowTrimmer.resetStickyAnchor()
+
+        // First call establishes an anchor
+        val step1 = "昨日の会議で決定した新しいプロジェクトの計画について、"
+        val trimmed1 = ContextWindowTrimmer.trimToOptimalContextSticky(
+            step1,
+            targetTokens = 16,
+            highWaterMarkTokens = 40
+        )
+        assertTrue(trimmed1.isNotEmpty())
+
+        // Extending the text should preserve the exact starting prefix (100% LCP)
+        val step2 = step1 + "来週から開発を始める"
+        val trimmed2 = ContextWindowTrimmer.trimToOptimalContextSticky(
+            step2,
+            targetTokens = 16,
+            highWaterMarkTokens = 40
+        )
+        assertTrue(
+            "Sticky anchor should keep prefix '$trimmed1', got '$trimmed2'",
+            trimmed2.startsWith(trimmed1)
+        )
+
+        // Extending far past highWaterMarkTokens (40 tokens ≈ 52 Japanese chars) triggers re-anchor
+        val step3 = step2 + "予定です。さらに詳細なデザインレビューとパフォーマンステストをチーム全体で実施してリリースに備えます。"
+        val trimmed3 = ContextWindowTrimmer.trimToOptimalContextSticky(
+            step3,
+            targetTokens = 16,
+            highWaterMarkTokens = 40
+        )
+        assertTrue(
+            "After exceeding high-water mark, trimmed3 should be shorter than step3 and re-anchored, got '$trimmed3'",
+            trimmed3.length < step3.length && ContextWindowTrimmer.estimateTokenCount(trimmed3) <= 36f
+        )
+
+        ContextWindowTrimmer.resetStickyAnchor()
+    }
+
+    @Test
+    fun testResetStickyAnchorClearsAnchorState() {
+        ContextWindowTrimmer.resetStickyAnchor()
+        val text1 = "明日の朝一番に資料を送付します。"
+        val trimmed1 = ContextWindowTrimmer.trimToOptimalContextSticky(text1, targetTokens = 10)
+        assertTrue(trimmed1.isNotEmpty())
+
+        ContextWindowTrimmer.resetStickyAnchor()
+        val text2 = "全く別の会話のコンテキストで、新しいトピックについて議論を始めます。"
+        val trimmed2 = ContextWindowTrimmer.trimToOptimalContextSticky(text2, targetTokens = 10)
+        assertTrue(trimmed2.isNotEmpty())
+        assertTrue(trimmed2.endsWith("議論を始めます。"))
+    }
 }

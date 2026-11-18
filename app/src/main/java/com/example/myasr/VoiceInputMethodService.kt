@@ -81,6 +81,8 @@ class VoiceInputMethodService : InputMethodService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var rerankJob: Job? = null
     private var englishCandidateJob: Job? = null
+    private var warmContextJob: Job? = null
+    private var lastWarmedContextText: String? = null
     private var isCurrentCandidatesReranked: Boolean = false
     private val audioRecorder = AudioRecorder()
     private val asrDecodingMutex = Mutex()
@@ -278,6 +280,9 @@ class VoiceInputMethodService : InputMethodService() {
                 Log.w(TAG, "IME user dictionary sync error: ${e.message}")
             }
         }
+        ContextWindowTrimmer.resetStickyAnchor()
+        lastWarmedContextText = null
+        triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.INPUT_VIEW_STARTED)
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
@@ -422,8 +427,12 @@ class VoiceInputMethodService : InputMethodService() {
             updateDebugSlmBadge(null)
             syncKeyboardState()
             candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+            triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.CURSOR_MOVED_EXTERNAL)
         } else {
             updateContextBar()
+            if (!arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing()) {
+                triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.CURSOR_MOVED_EXTERNAL)
+            }
         }
     }
 
@@ -744,8 +753,10 @@ class VoiceInputMethodService : InputMethodService() {
                     updateCandidates()
                 } else if (candidate.source == "futo_swipe") {
                     candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                    triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.TEXT_COMMITTED)
                 } else {
                     showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+                    triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.TEXT_COMMITTED)
                 }
             }
         }
@@ -1061,6 +1072,10 @@ class VoiceInputMethodService : InputMethodService() {
                 }
             }
 
+            override fun onKeyTouchDown() {
+                triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.KEY_TOUCH_DOWN)
+            }
+
             override fun onModeChanged(mode: JapaneseKanaUtils.KeyboardMode) {
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
                 arbitrator.onBeforeNavigationOrAction(
@@ -1200,6 +1215,35 @@ class VoiceInputMethodService : InputMethodService() {
         }
     }
 
+    private fun triggerSpeculativeContextWarm(
+        trigger: CandidateRerankJudgement.WarmTrigger,
+        rawContext: String? = null
+    ) {
+        val slm = LlmReranker.getInstance(this)
+        val isEnabled = KeyboardHeightManager.isSlmRerankEnabled(this)
+        val isComposing = arbitrator.isKeyboardComposing() || arbitrator.isStreamingComposing()
+        val decision = CandidateRerankJudgement.judgeSpeculativeWarm(
+            CandidateRerankJudgement.SpeculativeWarmInput(
+                isRerankEnabled = isEnabled,
+                isSlmReady = slm.isReady(),
+                isAlreadyComposing = isComposing,
+                trigger = trigger
+            )
+        )
+        if (!decision.shouldWarm) return
+
+        val ctxText = rawContext ?: (currentInputConnection?.getTextBeforeCursor(250, 0)?.toString() ?: "")
+        val trimmed = ContextWindowTrimmer.trimToOptimalContextSticky(ctxText)
+        if (trimmed == lastWarmedContextText) return
+
+        warmContextJob?.cancel()
+        warmContextJob = serviceScope.launch(Dispatchers.Default) {
+            if (slm.warmContext(trimmed)) {
+                lastWarmedContextText = trimmed
+            }
+        }
+    }
+
     private fun commitComposingText() {
         rerankJob?.cancel()
         LlmReranker.getInstance(this).requestAbortScoring()
@@ -1212,6 +1256,7 @@ class VoiceInputMethodService : InputMethodService() {
                 formatFn = { formatVoiceText(it) }
             )
             syncKeyboardState()
+            triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.TEXT_COMMITTED)
         }
         if (arbitrator.isKeyboardComposing()) {
             val prevPhrase = arbitrator.previousCommittedPhrase
@@ -1221,6 +1266,7 @@ class VoiceInputMethodService : InputMethodService() {
             }
             syncKeyboardState()
             showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+            triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.TEXT_COMMITTED)
         }
     }
 
@@ -1236,6 +1282,22 @@ class VoiceInputMethodService : InputMethodService() {
                         currentInputConnection?.getTextBeforeCursor(500, 0)?.toString() ?: "",
                         resolveCurrentAsrLanguage()
                     )
+                }
+                if (CandidateRerankJudgement.judgeSpeculativeWarm(
+                        CandidateRerankJudgement.SpeculativeWarmInput(
+                            isRerankEnabled = KeyboardHeightManager.isSlmRerankEnabled(this@VoiceInputMethodService),
+                            isSlmReady = LlmReranker.getInstance(this@VoiceInputMethodService).isReady(),
+                            isAlreadyComposing = false,
+                            trigger = CandidateRerankJudgement.WarmTrigger.VOICE_CHUNK_DECODING
+                        )
+                    ).shouldWarm
+                ) {
+                    launch(Dispatchers.Default) {
+                        val trimmed = ContextWindowTrimmer.trimToOptimalContextSticky(textBeforeCursor)
+                        if (trimmed != lastWarmedContextText && LlmReranker.getInstance(this@VoiceInputMethodService).warmContext(trimmed)) {
+                            lastWarmedContextText = trimmed
+                        }
+                    }
                 }
                 var recognizedText = ""
                 var deletePreceding = 0

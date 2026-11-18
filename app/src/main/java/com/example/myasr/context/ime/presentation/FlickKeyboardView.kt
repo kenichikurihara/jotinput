@@ -36,6 +36,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         fun onCursorRight() {}
         fun onUndoPressed() {}
         fun onSwipeInput(trajectory: List<FutoSwipeEngine.SwipePoint>) {}
+        fun onKeyTouchDown() {}
         fun onModeChanged(mode: JapaneseKanaUtils.KeyboardMode)
     }
 
@@ -1069,6 +1070,14 @@ class FlickKeyboardView @JvmOverloads constructor(
                     activeKey = hitKey
                     hitKey.isPressed = true
                     performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+
+                    if (hitKey.type == KeyType.KANA_FLICK ||
+                        hitKey.type == KeyType.QWERTY_CHAR ||
+                        hitKey.type == KeyType.MODIFIER_FLICK ||
+                        hitKey.type == KeyType.PUNCTUATION_FLICK
+                    ) {
+                        listener?.onKeyTouchDown()
+                    }
 
                     if (isSpacebarSwipeEnabledForCurrentMode() && hitKey.type == KeyType.SPACE) {
                         spacebarSwipeTracker.start(x, y)

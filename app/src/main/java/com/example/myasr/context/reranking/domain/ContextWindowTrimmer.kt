@@ -25,6 +25,10 @@ object ContextWindowTrimmer {
     const val DEFAULT_TARGET_TOKENS = 24
     const val DEFAULT_MIN_TOKENS = 10
     const val DEFAULT_MAX_TOKENS = 36
+    const val STICKY_HIGH_WATER_MARK_TOKENS = 56
+
+    @Volatile
+    private var lastAnchorPrefixSignature: String = ""
 
     private val SENTENCE_TERMINALS = charArrayOf('。', '．', '.', '！', '!', '？', '?', '\n', '\r')
     private val CLAUSE_DELIMITERS = charArrayOf('、', '，', ',', '；', ';', ':', '：', '—', '—', ')', '）', ']', '」', '』', '】', '"', '\'')
@@ -218,6 +222,57 @@ object ContextWindowTrimmer {
         candidates.sortWith(compareBy({ it.tier }, { it.tokenDistance }))
         val bestCut = candidates[0].cutIndex
         return normalizeOutput(rawText.substring(bestCut))
+    }
+
+    fun resetStickyAnchor() {
+        lastAnchorPrefixSignature = ""
+    }
+
+    /**
+     * High-Water Mark Sticky Anchor Trimming (Idea 2):
+     * Keeps the starting boundary fixed until the estimated token count from the anchor
+     * to the cursor exceeds [highWaterMarkTokens] (56 tokens), guaranteeing 100% LCP prefix
+     * match across consecutive clause commits.
+     */
+    fun trimToOptimalContextSticky(
+        rawText: String,
+        targetTokens: Int = DEFAULT_TARGET_TOKENS,
+        highWaterMarkTokens: Int = STICKY_HIGH_WATER_MARK_TOKENS
+    ): String {
+        if (rawText.isBlank() || targetTokens <= 0) {
+            lastAnchorPrefixSignature = ""
+            return ""
+        }
+
+        val totalEstimated = estimateTokenCount(rawText)
+        if (totalEstimated <= targetTokens) {
+            val norm = normalizeOutput(rawText)
+            if (norm.length >= 4) {
+                lastAnchorPrefixSignature = norm.take(minOf(12, norm.length))
+            }
+            return norm
+        }
+
+        val anchorSig = lastAnchorPrefixSignature
+        if (anchorSig.isNotEmpty()) {
+            val anchorIdx = rawText.lastIndexOf(anchorSig)
+            if (anchorIdx >= 0) {
+                val anchoredTail = rawText.substring(anchorIdx)
+                val tailTokens = estimateTokenCount(anchoredTail)
+                val minAcceptable = maxOf(1.0f, targetTokens * 0.35f)
+                if (tailTokens >= minAcceptable && tailTokens <= highWaterMarkTokens.toFloat()) {
+                    return normalizeOutput(anchoredTail)
+                }
+            }
+        }
+
+        val freshlyTrimmed = trimToOptimalContext(rawText, targetTokens)
+        if (freshlyTrimmed.length >= 4) {
+            lastAnchorPrefixSignature = freshlyTrimmed.take(minOf(12, freshlyTrimmed.length))
+        } else {
+            lastAnchorPrefixSignature = ""
+        }
+        return freshlyTrimmed
     }
 
     /**

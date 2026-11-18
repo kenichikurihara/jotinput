@@ -59,6 +59,26 @@ object CandidateRerankJudgement {
         val textBeforeCursor: String
     )
 
+    enum class WarmTrigger {
+        TEXT_COMMITTED,
+        INPUT_VIEW_STARTED,
+        CURSOR_MOVED_EXTERNAL,
+        KEY_TOUCH_DOWN,
+        VOICE_CHUNK_DECODING
+    }
+
+    data class SpeculativeWarmInput(
+        val isRerankEnabled: Boolean,
+        val isSlmReady: Boolean,
+        val isAlreadyComposing: Boolean,
+        val trigger: WarmTrigger
+    )
+
+    data class SpeculativeWarmDecision(
+        val shouldWarm: Boolean,
+        val reason: String
+    )
+
     val executionDecisionTable: DecisionTable<ExecutionInput, ExecutionDecision> = decisionTable(
         name = "CandidateRerankExecution",
         hitPolicy = HitPolicy.FIRST
@@ -197,9 +217,37 @@ object CandidateRerankJudgement {
         )
     }
 
+    val speculativeWarmDecisionTable: DecisionTable<SpeculativeWarmInput, SpeculativeWarmDecision> = decisionTable(
+        name = "SpeculativeContextWarming",
+        hitPolicy = HitPolicy.FIRST
+    ) {
+        rule(id = "WARM_R1", description = "Skip warming when SLM rerank is disabled") {
+            `when` { !it.isRerankEnabled }
+            thenValue(SpeculativeWarmDecision(shouldWarm = false, reason = "slm_rerank_disabled"))
+        }
+        rule(id = "WARM_R2", description = "Skip warming when SLM engine is not ready") {
+            `when` { !it.isSlmReady }
+            thenValue(SpeculativeWarmDecision(shouldWarm = false, reason = "slm_not_ready"))
+        }
+        rule(id = "WARM_R3", description = "Skip external cursor warm while actively composing") {
+            `when` { it.trigger == WarmTrigger.CURSOR_MOVED_EXTERNAL && it.isAlreadyComposing }
+            thenValue(SpeculativeWarmDecision(shouldWarm = false, reason = "composing_in_progress"))
+        }
+        rule(id = "WARM_R4", description = "Skip touch-down warm when already composing") {
+            `when` { it.trigger == WarmTrigger.KEY_TOUCH_DOWN && it.isAlreadyComposing }
+            thenValue(SpeculativeWarmDecision(shouldWarm = false, reason = "touch_down_already_composing"))
+        }
+        defaultValue(
+            id = "WARM_DEFAULT",
+            description = "Execute speculative background KV cache warming",
+            value = SpeculativeWarmDecision(shouldWarm = true, reason = "execute_speculative_warm")
+        )
+    }
+
     val executionJudgement: Judgement<ExecutionInput, ExecutionDecision> = executionDecisionTable
     val tapSafeOrderingJudgement: Judgement<TapSafeOrderingInput, TapSafeOrderingDecision> = tapSafeOrderingDecisionTable
     val nextPhraseRerankJudgement: Judgement<NextPhraseRerankInput, JudgementResult<Boolean>> = nextPhraseRerankDecisionTable
+    val speculativeWarmJudgement: Judgement<SpeculativeWarmInput, SpeculativeWarmDecision> = speculativeWarmDecisionTable
 
     fun judgeExecution(input: ExecutionInput): ExecutionDecision = executionJudgement.judge(input)
 
@@ -217,4 +265,10 @@ object CandidateRerankJudgement {
 
     fun judgeNextPhraseRerankWithTrace(input: NextPhraseRerankInput): DecisionTrace<JudgementResult<Boolean>> =
         nextPhraseRerankDecisionTable.evaluateWithTrace(input)
+
+    fun judgeSpeculativeWarm(input: SpeculativeWarmInput): SpeculativeWarmDecision =
+        speculativeWarmJudgement.judge(input)
+
+    fun judgeSpeculativeWarmWithTrace(input: SpeculativeWarmInput): DecisionTrace<SpeculativeWarmDecision> =
+        speculativeWarmDecisionTable.evaluateWithTrace(input)
 }

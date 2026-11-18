@@ -77,6 +77,12 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`AmbiguousHomophoneGateSafety`**: 同音異義語・近音語において SLM 文脈整合性ゲートが棄却した場合は決して自動置換せず提案チップに留めること。
 - **`CustomDictionaryIsolationInvariant`**: 学習履歴の追加・削除・クリアがいかなる場合も `custom_dictionary.json`（ユーザー辞書）を変更・消去しないこと。
 
+### 3.9 [`slm_kv_cache_lifecycle.als`](app/src/test/resources/alloy/slm_kv_cache_lifecycle.als)
+オンデバイス SLM（[`LlmReranker`](app/src/main/cpp/llm_reranker.cc)）の KV キャッシュ・Prefix-Tree ロールバック・Undo 短縮・RoPE 位置シフトの整合性をモデル化し、以下を検証する：
+- **`TreeRollbackRestoresExactContextLength`**: Prefix-Tree Stage 2 一括デコードとロールバック後、常に `kvCacheLen = contextLen` に戻り投機ブランチトークンが残留しないこと。
+- **`UndoPrefixTruncateNeverReturnsStaleLogits`**: Undo による文脈短縮時、`SnapshotRing` からの復元により古い文脈の Logits を返さないこと。
+- **`RoPEShiftPreservesRelativePositions`**: 先頭トリミング時の RoPE 位置シフト（`seq_add`）後も位置インデックスの連続性が保たれること。
+
 ---
 
 ## 4. 自動同期ルール

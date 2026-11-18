@@ -823,7 +823,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             }
             val restPool = nonHiraganaCandidates.filter { cand -> topPool.none { it.surface == cand.surface } }
 
-            val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
+            val trimmedContext = ContextWindowTrimmer.trimToOptimalContextSticky(contextPrefix)
             val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
 
             val evalSurfaces = Array(topPool.size) { i ->
@@ -1009,10 +1009,46 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             }
 
+            val n = targetInputLength ?: fullCands.maxOfOrNull { it.reading.length } ?: 0
+            val isEnglishPool = topPool.first().let { c ->
+                c.source in listOf("user_english", "english_typo", "english_cap", "english_gec", "raw") ||
+                    (c.reading.isNotEmpty() && c.reading.all { it.code < 128 && (it.isLetter() || it == '\'' || it == '-') })
+            }
+            val muSpan = if (isEnglishPool) 1.40f else 2.20f
+            val surfaceMinPriorMap = HashMap<String, Float>()
+            for (i in topPool.indices) {
+                val cand = topPool[i]
+                val evalSurf = evalSurfaces[i]
+                val isExactUser = (cand.source == "user" || cand.source == "user_english") && cand.obsPenalty == 0.0f
+                val priorLowerBound = if (isExactUser || cand.historyCount >= 2 || cand.source == "history_bigram") {
+                    0.0f
+                } else {
+                    val dictPenalty = if (!isEnglishPool) (cand.dictCost.coerceIn(0, 15000) / 3000.0f) else 0.0f
+                    val minObsPenalty = lambdaObs * cand.obsPenalty * 5.0f * 0.07f
+                    val mLen = if (cand.reading.isNotEmpty()) cand.reading.length else cand.surface.length
+                    val deltaUnc = maxOf(0, n - mLen)
+                    val spanPenalty = if (deltaUnc > 0 && cand.completedSurface.isEmpty()) (muSpan * deltaUnc) else 0.0f
+                    dictPenalty + minObsPenalty + spanPenalty
+                }
+                val prev = surfaceMinPriorMap[evalSurf]
+                if (prev == null || priorLowerBound < prev) {
+                    surfaceMinPriorMap[evalSurf] = priorLowerBound
+                }
+                latentVariantsMap[evalSurf]?.forEach { variant ->
+                    val vPrev = surfaceMinPriorMap[variant]
+                    if (vPrev == null || priorLowerBound < vPrev) {
+                        surfaceMinPriorMap[variant] = priorLowerBound
+                    }
+                }
+            }
+
             val uniqueSurfaces = surfacesToScore.distinct().toTypedArray()
-            val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
+            val uniquePriors = FloatArray(uniqueSurfaces.size) { idx ->
+                surfaceMinPriorMap[uniqueSurfaces[idx]] ?: 0.0f
+            }
+            val trimmedContext = ContextWindowTrimmer.trimToOptimalContextSticky(contextPrefix)
             val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
-            val uniqueScores = nativeScoreCandidates(effectiveContext, uniqueSurfaces)
+            val uniqueScores = nativeScoreCandidatesWithPriors(effectiveContext, uniqueSurfaces, uniquePriors)
 
             if (uniqueScores == null || uniqueScores.size != uniqueSurfaces.size) {
                 // Safe fallback: user entries first
@@ -1077,7 +1113,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             return null
         }
         return try {
-            val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
+            val trimmedContext = ContextWindowTrimmer.trimToOptimalContextSticky(contextPrefix)
             val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
             val scores = nativeScoreCandidates(effectiveContext, arrayOf(origText, corrText))
             if (scores != null && scores.size == 2) {
@@ -1111,7 +1147,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             return emptyList()
         }
         try {
-            val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
+            val trimmedContext = ContextWindowTrimmer.trimToOptimalContextSticky(contextPrefix)
             val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
             val surfaces = nativePredictNextPhrases(effectiveContext, maxCandidates, maxTokens) ?: return emptyList()
             return surfaces
@@ -1141,7 +1177,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             return false
         }
         return try {
-            val trimmed = ContextWindowTrimmer.trimToOptimalContext(contextPrefix)
+            val trimmed = ContextWindowTrimmer.trimToOptimalContextSticky(contextPrefix)
             val effective = if (trimmed.isBlank()) "<s>" else trimmed
             nativeWarmContext(effective)
         } catch (e: Exception) {
@@ -1166,6 +1202,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
     // Native JNI functions implemented in libmyasr_llm.so
     private external fun nativeInit(modelPath: String, nThreads: Int): Boolean
     private external fun nativeScoreCandidates(context: String, candidates: Array<String>): FloatArray?
+    private external fun nativeScoreCandidatesWithPriors(context: String, candidates: Array<String>, priorPenalties: FloatArray): FloatArray?
     private external fun nativeTryFastScoreCandidates(context: String, candidates: Array<String>, outIsComplete: BooleanArray): FloatArray?
     private external fun nativeRequestAbortScoring()
     private external fun nativeWarmContext(context: String): Boolean
