@@ -173,4 +173,45 @@ class FlickTypoAndMozcCorrectionEvaluationTest {
 
         assertEquals("東京", reranked.first().surface)
     }
+
+    @Test
+    fun testMmapOnlyUnmodifiedToukiyoSuggestsTokyoInTop3() {
+        val binFile = listOf(
+            File("tools/mozc_dict/system_dictionary.bin"),
+            File("app/src/test/resources/mozc/system_dictionary.bin"),
+            File("src/test/resources/mozc/system_dictionary.bin"),
+            File("../app/src/test/resources/mozc/system_dictionary.bin"),
+            File("../tools/mozc_dict/system_dictionary.bin")
+        ).firstOrNull { it.exists() && it.length() > 64 }
+        requireNotNull(binFile) { "system_dictionary.bin not found for Mmap-only test" }
+
+        val mmapDict = com.example.myasr.context.kanakanji.domain.MmapDictionary.loadFromFile(binFile)
+        requireNotNull(mmapDict) { "Failed to load system_dictionary.bin" }
+
+        try {
+            // Production-equivalent engine: NO TSV loaded into in-memory root Trie, ONLY MmapDictionary
+            val mmapOnlyEngine = KanaKanjiEngine(null)
+            mmapOnlyEngine.attachMmapDictionaryForTesting("mozc_general", mmapDict)
+
+            val candidates = mmapOnlyEngine.getBaseCandidates("とうきよ")
+            val surfaces = candidates.map { it.surface }
+            assertTrue(
+                "Mmap-only candidates for 'とうきよ' must include '東京', got: $surfaces",
+                surfaces.contains("東京")
+            )
+            val tokyoIdx = surfaces.indexOf("東京")
+            assertTrue(
+                "Mmap-only '東京' should be ranked in Top 3 for 'とうきよ', got index: $tokyoIdx in $surfaces",
+                tokyoIdx in 0..2
+            )
+
+            val kaikiCands = mmapOnlyEngine.getBaseCandidates("かいき").map { it.surface }
+            assertTrue(
+                "Mmap-only candidates for 'かいき' must include '会議', got: $kaikiCands",
+                kaikiCands.contains("会議")
+            )
+        } finally {
+            mmapDict.close()
+        }
+    }
 }

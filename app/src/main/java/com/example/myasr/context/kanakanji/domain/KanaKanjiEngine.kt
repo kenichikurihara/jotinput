@@ -141,6 +141,15 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
     fun getActiveMmapDictionaries(): List<MmapEntry> = activeMmapDictionaries
 
+    internal fun attachMmapDictionaryForTesting(sourceId: String, dict: MmapDictionary) {
+        activeMmapDictionaries.add(MmapEntry(sourceId, dict))
+        if (mmapDictionary == null || sourceId == "mozc_general") {
+            mmapDictionary = dict
+        }
+        isInitialized = true
+        clearMemoryCache()
+    }
+
     fun getMozcDir(): File {
         val ext = context?.getExternalFilesDir(null)
         val extDir = if (ext != null) File(ext, "mozc") else null
@@ -717,7 +726,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             if (voicedPaths.isNotEmpty()) {
                 val voicedExactWords = mutableListOf<Triple<String, WordEntry, Int>>()
                 for (vPath in voicedPaths) {
-                    for (w in vPath.node.words) {
+                    val vNode = vPath.node ?: continue
+                    for (w in vNode.words) {
                         voicedExactWords.add(Triple(vPath.reading, w, vPath.voicingDistance))
                     }
                 }
@@ -735,8 +745,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 for ((reading, entry, vDist) in voicedExactWords) {
                     addCandidate(ConversionCandidate(surface = entry.surface, reading = reading, isPrediction = true, source = entry.source, priority = entry.priority, obsPenalty = 1.2f * vDist, dictCost = entry.cost))
                 }
-                // Query Mmap exact matches for top voiced readings (up to 2 readings)
-                for (vPath in voicedPaths.take(2)) {
+                // Query Mmap exact matches for top voiced readings (up to 4 readings)
+                val sortedExactVoicedPaths = voicedPaths.sortedBy { it.voicingDistance * 1200 + (it.node?.minCostInSubtree ?: 3000) }
+                for (vPath in sortedExactVoicedPaths.take(4)) {
                     val mmapVoicedExact = queryAllMmapExactTokens(vPath.reading)
                     for (tok in mmapVoicedExact) {
                         addCandidate(ConversionCandidate(surface = tok.surface, reading = vPath.reading, isPrediction = true, source = tok.source, obsPenalty = 1.2f * vPath.voicingDistance, dictCost = tok.cost))
@@ -750,10 +761,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             if (voicedPaths.isNotEmpty()) {
                 val voicedPrefixWords = mutableListOf<Triple<String, WordEntry, Int>>()
                 // Sort paths by modifier distance and subtree minimum cost to guarantee high-frequency paths come first
-                val sortedVoicedPaths = voicedPaths.sortedBy { it.voicingDistance * 1200 + it.node.minCostInSubtree }
+                val sortedVoicedPaths = voicedPaths.sortedBy { it.voicingDistance * 1200 + (it.node?.minCostInSubtree ?: 3000) }
                 for (vPath in sortedVoicedPaths) {
+                    val vNode = vPath.node ?: continue
                     val prefixWords = mutableListOf<Pair<String, WordEntry>>()
-                    collectPrefixWords(vPath.node, vPath.reading, prefixWords, maxCount = 80)
+                    collectPrefixWords(vNode, vPath.reading, prefixWords, maxCount = 80)
                     for ((fullReading, w) in prefixWords) {
                         voicedPrefixWords.add(Triple(fullReading, w, vPath.voicingDistance))
                     }
@@ -774,14 +786,14 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
                 // Query Mmap predictive prefix matches for top modified readings (up to 4 readings)
                 for (vPath in sortedVoicedPaths.take(4)) {
-                    val mmapVoicedPrefix = queryAllMmapPrefixTokens(vPath.reading, maxCount = 10)
+                    val mmapVoicedPrefix = queryAllMmapPrefixTokens(vPath.reading, maxCount = 12)
                     for (cand in mmapVoicedPrefix) {
                         addCandidate(ConversionCandidate(surface = cand.surface, reading = cand.reading, isPrediction = true, source = cand.source, obsPenalty = 1.2f * vPath.voicingDistance, dictCost = cand.dictCost))
                     }
 
-                    // Phonetic 1-Mora Lookahead (長音・撥音先読み):
+                    // Phonetic 1-Mora Lookahead (長音・撥音・促音先読み):
                     // In Japanese phonotactics, youon (e.g. "きょ", "しょ", "りょ") are predominantly followed by "う" or "ん".
-                    // Look up exact matches for reading + "う" / "ん" directly in Mmap dictionaries (O(1)).
+                    // Look up exact matches for reading + "う" / "ん" directly in Mmap dictionaries (O(log N)).
                     if (vPath.reading.isNotEmpty() && vPath.reading.last() in listOf('ゃ', 'ゅ', 'ょ', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ')) {
                         for (lookaheadMora in listOf("う", "ん")) {
                             val fastReading = vPath.reading + lookaheadMora
@@ -823,10 +835,13 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 val flickExactWords = mutableListOf<Triple<String, WordEntry, Int>>()
                 val validFlickReadings = LinkedHashSet<Pair<String, Int>>()
                 for (fPath in flickPaths) {
-                    if (fPath.reading.isNotBlank() && fPath.reading != normalized && fPath.node.words.isNotEmpty()) {
+                    val fWords = fPath.node?.words ?: emptyList()
+                    val mmapWords = if (fWords.isEmpty()) queryAllMmapExactTokens(fPath.reading) else emptyList()
+                    val combined = if (fWords.isNotEmpty()) fWords else mmapWords
+                    if (fPath.reading.isNotBlank() && fPath.reading != normalized && combined.isNotEmpty()) {
                         validFlickReadings.add(Pair(fPath.reading, fPath.typoCostPenalty))
                     }
-                    for (w in fPath.node.words) {
+                    for (w in combined) {
                         flickExactWords.add(Triple(fPath.reading, w, fPath.typoCostPenalty))
                     }
                 }
@@ -937,8 +952,18 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             return candidates
         }
 
-        // Prioritize intentional phrase chunks (priority 3.5f) over unvoiced/distant prefix tokens
-        futurePredCands.sortByDescending { it.priority }
+        // Prioritize history, intentional phrase chunks (priority >= 3.0f), and then low-cost/short-extension predictions
+        futurePredCands.sortWith { a, b ->
+            val histCmp = b.historyCount.compareTo(a.historyCount)
+            if (histCmp != 0) return@sortWith histCmp
+            val priA = if (a.priority >= 3.0f) a.priority else 0.0f
+            val priB = if (b.priority >= 3.0f) b.priority else 0.0f
+            val priCmp = priB.compareTo(priA)
+            if (priCmp != 0) return@sortWith priCmp
+            val scoreA = a.dictCost + (a.obsPenalty * 1500.0f).toInt() + maxOf(0, a.reading.length - normalized.length) * 600
+            val scoreB = b.dictCost + (b.obsPenalty * 1500.0f).toInt() + maxOf(0, b.reading.length - normalized.length) * 600
+            scoreA.compareTo(scoreB)
+        }
 
         val interleaved = mutableListOf<ConversionCandidate>()
         val seen = HashSet<String>()
@@ -1129,17 +1154,26 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     private data class MatchedTrieNode(
-        val node: TrieNode,
+        val node: TrieNode?,
         val reading: String,
         val voicingDistance: Int,
         val typoCostPenalty: Int = 0
     )
 
+    private fun hasAnyMmapPrefix(prefix: String): Boolean {
+        val dicts = activeMmapDictionaries
+        if (dicts.isEmpty()) return false
+        for (entry in dicts) {
+            if (entry.dict.hasAnyPrefix(prefix)) return true
+        }
+        return false
+    }
+
     /**
-     * Traverses the in-memory Trie with dynamic branching for:
-     * 1. Voiced (濁音) and semi-voiced (半濁音) expansions.
+     * Traverses both the in-memory Trie and Mmap dictionaries (via O(log N) prefix oracle) with dynamic branching for:
+     * 1. Voiced (濁音), semi-voiced (半濁音), and small-kana (小書き仮名) expansions.
      * 2. Flick typing error expansions (incomplete flick / "a"-row fallback and adjacent 12-keys).
-     * Pruning is performed on-the-fly: non-existent branches in the Japanese lexicon are immediately discarded (O(1)).
+     * Pruning is performed on-the-fly: non-existent branches in the Japanese lexicon are immediately discarded.
      */
     private fun findMatchingTrieNodes(normalized: String, maxVoicingDistance: Int = 2): List<MatchedTrieNode> {
         if (normalized.isEmpty()) return emptyList()
@@ -1153,27 +1187,33 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             val nextPaths = ArrayList<MatchedTrieNode>(currentPaths.size * (voicingExpansions.size + flickExpansions.size))
 
             for (path in currentPaths) {
-                // 1. Voicing expansions (including exact original char)
+                // 1. Phonetic modifier expansions (including exact original char)
                 for (candidateChar in voicingExpansions) {
                     val isVoicingChange = (candidateChar != originalChar)
                     val newDistance = path.voicingDistance + (if (isVoicingChange) 1 else 0)
                     if (newDistance > maxVoicingDistance) continue
 
-                    val childNode = path.node.children[candidateChar] ?: continue
-                    nextPaths.add(MatchedTrieNode(childNode, path.reading + candidateChar, newDistance, path.typoCostPenalty))
+                    val nextReading = path.reading + candidateChar
+                    val childNode = path.node?.children?.get(candidateChar)
+                    if (childNode != null || hasAnyMmapPrefix(nextReading)) {
+                        nextPaths.add(MatchedTrieNode(childNode, nextReading, newDistance, path.typoCostPenalty))
+                    }
                 }
 
                 // 2. Flick typing error expansions (only if path hasn't accumulated heavy penalties already)
                 if (path.voicingDistance == 0 && path.typoCostPenalty == 0) {
                     for (flick in flickExpansions) {
-                        val childNode = path.node.children[flick.char] ?: continue
-                        nextPaths.add(MatchedTrieNode(childNode, path.reading + flick.char, 0, flick.costPenalty))
+                        val nextReading = path.reading + flick.char
+                        val childNode = path.node?.children?.get(flick.char)
+                        if (childNode != null || hasAnyMmapPrefix(nextReading)) {
+                            nextPaths.add(MatchedTrieNode(childNode, nextReading, 0, flick.costPenalty))
+                        }
                     }
                 }
             }
             if (nextPaths.isEmpty()) return emptyList()
             currentPaths = if (nextPaths.size > 28) {
-                nextPaths.sortBy { it.voicingDistance * 1200 + it.typoCostPenalty }
+                nextPaths.sortBy { it.voicingDistance * 1200 + it.typoCostPenalty + (it.node?.minCostInSubtree ?: 3000) }
                 nextPaths.subList(0, 28)
             } else {
                 nextPaths

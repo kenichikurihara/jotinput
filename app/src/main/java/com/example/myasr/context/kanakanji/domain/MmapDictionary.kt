@@ -214,9 +214,10 @@ class MmapDictionary private constructor(
 
         if (startIdx >= numReadings) return emptyList()
 
+        val scanLimit = maxOf(maxCount * 5, 60)
         val results = mutableListOf<Pair<String, Token>>()
         var curr = startIdx
-        while (curr < numReadings && results.size < maxCount) {
+        while (curr < numReadings && results.size < scanLimit) {
             val midRecordOffset = readingTableOffset + curr * READING_ENTRY_SIZE
             val rStrOffset = buffer.getInt(midRecordOffset)
             val rStrLen = buffer.getShort(midRecordOffset + 4).toInt() and 0xFFFF
@@ -235,7 +236,7 @@ class MmapDictionary private constructor(
             val tokenCount = buffer.getShort(midRecordOffset + 6).toInt() and 0xFFFF
             val tokenStartIdx = buffer.getInt(midRecordOffset + 8)
 
-            for (i in 0 until minOf(2, tokenCount)) {
+            for (i in 0 until minOf(3, tokenCount)) {
                 val tokOffset = tokenTableOffset + (tokenStartIdx + i) * TOKEN_ENTRY_SIZE
                 val sStrOffset = buffer.getInt(tokOffset)
                 val sStrLen = buffer.getShort(tokOffset + 4).toInt() and 0xFFFF
@@ -250,11 +251,16 @@ class MmapDictionary private constructor(
                 }
                 val surface = String(surfaceBytes, Charsets.UTF_8)
                 results.add(Pair(readingStr, Token(surface, cost, lid, rid)))
-                if (results.size >= maxCount) break
+                if (results.size >= scanLimit) break
             }
             curr++
         }
-        return results
+        if (results.size <= 1) return results
+        val prefixLen = prefixReading.length
+        results.sortBy { (r, tok) ->
+            tok.cost + maxOf(0, r.length - prefixLen) * 800
+        }
+        return if (results.size > maxCount) results.subList(0, maxCount) else results
     }
 
     private fun compareBytes(query: ByteArray, queryLen: Int, targetOffset: Int, targetLen: Int): Int {
