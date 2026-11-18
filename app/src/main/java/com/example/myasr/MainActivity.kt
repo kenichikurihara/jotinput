@@ -57,6 +57,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -71,7 +73,9 @@ import java.io.File
 class MainActivity : AppCompatActivity() {
 
     // Shell Navigation & Global Provisioning Banner
+    private lateinit var coordinatorRoot: View
     private lateinit var bottomNav: BottomNavigationView
+    private lateinit var dividerBottomNav: View
     private lateinit var tabHome: View
     private lateinit var tabSettings: View
     private lateinit var tabData: View
@@ -579,7 +583,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
+        coordinatorRoot = findViewById(R.id.coordinatorRoot)
         bottomNav = findViewById(R.id.bottomNav)
+        dividerBottomNav = findViewById(R.id.dividerBottomNav)
         tabHome = findViewById(R.id.tabHome)
         tabSettings = findViewById(R.id.tabSettings)
         tabData = findViewById(R.id.tabData)
@@ -700,6 +706,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
+        ViewCompat.setOnApplyWindowInsetsListener(coordinatorRoot) { _, insets ->
+            val imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val isImeVisible = insets.isVisible(WindowInsetsCompat.Type.ime()) || imeInsets.bottom > 0
+            val navDecision = MainAppUiDecisionModel.evaluateBottomNavVisibility(
+                MainAppUiDecisionModel.BottomNavVisibilityInput(isImeVisible = isImeVisible)
+            )
+            val vis = if (navDecision.visibility == MainAppUiDecisionModel.NavigationVisibility.VISIBLE) {
+                View.VISIBLE
+            } else {
+                View.GONE
+            }
+            bottomNav.visibility = vis
+            dividerBottomNav.visibility = vis
+            insets
+        }
+
         bottomNav.setOnItemSelectedListener { item ->
             switchToTab(item.itemId)
             true

@@ -43,10 +43,12 @@ sig State {
     provisioningActive: one Bool,
     slmEnabled: one Bool,
     selectedEngine: one EngineType,
+    imeInputActive: one Bool,
     // Derived UI projections
     heroAction: one HeroAction,
     showGlobalBanner: one Bool,
-    showSlmSelector: one Bool
+    showSlmSelector: one Bool,
+    showBottomNav: one Bool
 }
 
 pred deriveUi[s: State] {
@@ -63,6 +65,9 @@ pred deriveUi[s: State] {
 
     // SLM Engine Selector visibility
     s.showSlmSelector = s.slmEnabled
+
+    // DMN BottomNavVisibilityDecisionTable
+    (s.imeInputActive = True) implies (s.showBottomNav = False) else (s.showBottomNav = True)
 }
 
 pred init[s: State] {
@@ -75,6 +80,7 @@ pred init[s: State] {
     s.provisioningActive = False
     s.slmEnabled = True
     s.selectedEngine = Engine0_5B
+    s.imeInputActive = False
     deriveUi[s]
 }
 
@@ -88,6 +94,7 @@ pred switchTab[s, sNext: State, t: Tab] {
     sNext.provisioningActive = s.provisioningActive
     sNext.slmEnabled = s.slmEnabled
     sNext.selectedEngine = s.selectedEngine
+    sNext.imeInputActive = s.imeInputActive
     deriveUi[sNext]
 }
 
@@ -101,6 +108,7 @@ pred enableAndSelectIme[s, sNext: State] {
     sNext.provisioningActive = s.provisioningActive
     sNext.slmEnabled = s.slmEnabled
     sNext.selectedEngine = s.selectedEngine
+    sNext.imeInputActive = s.imeInputActive
     deriveUi[sNext]
 }
 
@@ -114,6 +122,7 @@ pred startProvisioning[s, sNext: State] {
     sNext.provisioningActive = True
     sNext.slmEnabled = s.slmEnabled
     sNext.selectedEngine = s.selectedEngine
+    sNext.imeInputActive = s.imeInputActive
     deriveUi[sNext]
 }
 
@@ -128,6 +137,7 @@ pred completeProvisioning[s, sNext: State] {
     sNext.provisioningActive = False
     sNext.slmEnabled = s.slmEnabled
     sNext.selectedEngine = s.selectedEngine
+    sNext.imeInputActive = s.imeInputActive
     deriveUi[sNext]
 }
 
@@ -147,6 +157,7 @@ pred toggleSlm[s, sNext: State] {
         // DMN RerankEngineSelectionDecisionTable defaults to 0.5B when previously NONE
         sNext.selectedEngine = Engine0_5B
     }
+    sNext.imeInputActive = s.imeInputActive
     deriveUi[sNext]
 }
 
@@ -161,6 +172,35 @@ pred select15B[s, sNext: State] {
     sNext.provisioningActive = s.provisioningActive
     sNext.slmEnabled = True
     sNext.selectedEngine = Engine1_5B
+    sNext.imeInputActive = s.imeInputActive
+    deriveUi[sNext]
+}
+
+pred startImeInput[s, sNext: State] {
+    sNext.activeTab = s.activeTab
+    sNext.imeEnabled = s.imeEnabled
+    sNext.imeSelected = s.imeSelected
+    sNext.jaAsrReady = s.jaAsrReady
+    sNext.baseDictReady = s.baseDictReady
+    sNext.outdatedDicts = s.outdatedDicts
+    sNext.provisioningActive = s.provisioningActive
+    sNext.slmEnabled = s.slmEnabled
+    sNext.selectedEngine = s.selectedEngine
+    sNext.imeInputActive = True
+    deriveUi[sNext]
+}
+
+pred closeImeInput[s, sNext: State] {
+    sNext.activeTab = s.activeTab
+    sNext.imeEnabled = s.imeEnabled
+    sNext.imeSelected = s.imeSelected
+    sNext.jaAsrReady = s.jaAsrReady
+    sNext.baseDictReady = s.baseDictReady
+    sNext.outdatedDicts = s.outdatedDicts
+    sNext.provisioningActive = s.provisioningActive
+    sNext.slmEnabled = s.slmEnabled
+    sNext.selectedEngine = s.selectedEngine
+    sNext.imeInputActive = False
     deriveUi[sNext]
 }
 
@@ -172,7 +212,9 @@ fact Traces {
         startProvisioning[s, sNext] or
         completeProvisioning[s, sNext] or
         toggleSlm[s, sNext] or
-        select15B[s, sNext]
+        select15B[s, sNext] or
+        startImeInput[s, sNext] or
+        closeImeInput[s, sNext]
 }
 
 // ============================================================================
@@ -228,6 +270,10 @@ assert RerankDisabledImpliesEngineNone {
     all s: State | s.slmEnabled = False implies s.selectedEngine = EngineNone
 }
 
+assert BottomNavHiddenWhenImeActive {
+    all s: State | s.imeInputActive = True implies s.showBottomNav = False
+}
+
 check ReadyImpliesAllPrerequisitesMet for 6 State
 check HeroEnableImeHighestPriority for 6 State
 check TabSwitchPreservesState for 6 State
@@ -235,6 +281,7 @@ check SlmSelectorHiddenWhenDisabled for 6 State
 check GlobalBannerVisibleDuringProvisioning for 6 State
 check RerankEnabledImpliesValidModel for 6 State
 check RerankDisabledImpliesEngineNone for 6 State
+check BottomNavHiddenWhenImeActive for 6 State
 
 // ============================================================================
 // Reachability (Non-Vacuity)
@@ -253,5 +300,16 @@ pred canSwitchTabsWhileProvisioning {
         s2.showGlobalBanner = True
 }
 
+pred canEnterAndExitImeInput {
+    some s1, s2: State |
+        s2 = s1.next and
+        s1.imeInputActive = True and
+        s1.showBottomNav = False and
+        s2.imeInputActive = False and
+        s2.showBottomNav = True
+}
+
 run canReachReadyAfterSetup for 5 State
 run canSwitchTabsWhileProvisioning for 5 State
+run canEnterAndExitImeInput for 5 State
+

@@ -22,6 +22,7 @@
 | **JTBD-M3** | **入力体験のカスタマイズ**: 自分の好みに合わせて**キーボード高さ、QWERTY数字行、スワイプ入力、音声ストリーミング、AI変換エンジン（0.5B/1.5B/OFF）を迷わず切り替えたい**。 | **設定** |
 | **JTBD-M4** | **オフライン資産の一元管理**: Wi-Fi 環境などで**音声認識モデル（日/英）・スペル補正・拡張辞書（SudachiDict等）の導入・更新・削除・進捗確認を整理された一覧から安心して行いたい**。 | **データ** |
 | **JTBD-M5** | **高度な実験とチューニング**: 開発・検証時には、**$\alpha$ / $\lambda$ パラメータやデバッグ表示を通常の操作を邪魔しない場所から調整したい**。 | **設定 (折りたたみ)** |
+| **JTBD-M6** | **キーボード入力時の広々としたテスト環境**: アプリ内の入力テスト欄をタップしたとき、**ボトムナビゲーションバー（ホーム、設定、データ）がキーボードの上に押し上げられたり画面が必要以上にスクロールして不要なホワイトスペースが生じたりせず、入力テスト欄が自然な位置で広々と操作できること**。 | **ホーム (IME連動)** |
 
 ---
 
@@ -54,6 +55,14 @@
 2. ダウンロードやコンパイルがバックグラウンド（[`ProvisioningForegroundService`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/ProvisioningForegroundService.kt)）で実行中の場合、**グローバル進捗バナー**がタブを跨いで上部に表示され、ホームや設定にいても進捗を把握できる。
 3. データタブ内では、① **推奨データ一括セットアップ / 更新カード**、② **音声・AIモデル（日本語ASR / 英語ASR / 英語スペル補正）**、③ **日本語拡張辞書（7種 ＋ 連接コスト行列ステータス）** が明確に分かれて表示される。
 
+#### CUJ-M5: 入力テスト時のボトムナビゲーション自動退避とホワイトスペース排除
+1. ホームタブでユーザーが「入力テスト」欄（`etKeyboardTest`）をタップする。
+2. `android:windowSoftInputMode="adjustResize"` と `WindowInsetsCompat` により IME（ソフトウェアキーボード）の出現が検知される。
+3. DMN 決定表（`BottomNavVisibilityDecisionTable`）により、IME 表示中はボトムナビゲーションバー（ホーム、設定、データ）および境界線が即座に `View.GONE` へ遷移する。
+4. ボトムナビゲーションバーがキーボードの上に押し上げられて貴重な画面縦領域を圧迫することがなくなり、入力エリアが広々と確保される。
+5. `ScrollView` が過剰に上方向へスクロールして巨大な無駄ホワイトスペースが発生する現象が根本的に解消される。
+6. ユーザーがキーボードを閉じる（戻るキーまたは外部タップ）と、ボトムナビゲーションバーがスムーズに `View.VISIBLE` に復帰する。
+
 ---
 
 ### 4. 情報設計 (Information Architecture)
@@ -74,7 +83,7 @@ flowchart TD
 
 ## Part 2: DMN 決定表設計 (Decision Model and Notation)
 
-[`MainAppUiDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/MainAppUiDecisionModel.kt) に以下の 4 つの純粋な DMN `DecisionTable` を定義し、`MainActivity` の表示状態・CTA・バッジ・AIモデル選択を宣言的に決定する。
+[`MainAppUiDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/MainAppUiDecisionModel.kt) に以下の 5 つの純粋な DMN `DecisionTable` を定義し、`MainActivity` の表示状態・CTA・バッジ・AIモデル選択・IME連動ナビゲーション表示を宣言的に決定する。
 
 1. **`HomeHeroActionDecisionTable` (`HitPolicy.FIRST`)**:
    - 入力: `imeEnabled`, `imeSelected`, `japaneseAsrReady`, `totalDictWords`, `outdatedDictCount`
@@ -89,6 +98,10 @@ flowchart TD
    - 入力: `rerankEnabled`, `currentEngine`
    - 出力 (`RerankEngineSelectionDecision`): `effectiveRerankEnabled`, `selectedEngine`, `shouldInitializeModel`, `reason`
    - 不変条件: `rerankEnabled == true` のとき `selectedEngine` は絶対に `NONE` にならず、未選択/NONEの場合は `LOCAL_SLM` (0.5B) がデフォルト選択される。
+5. **`BottomNavVisibilityDecisionTable` (`HitPolicy.FIRST`)**:
+   - 入力: `isImeVisible` (Boolean)
+   - 出力 (`BottomNavVisibilityDecision`): `visibility` (`VISIBLE` / `GONE`), `reason`
+   - 不変条件: IME 表示中 (`isImeVisible == true`) はボトムナビゲーションバーを必ず非表示 (`GONE`) とし、キーボード上の縦領域を最大化してタブの押し上げと無駄なホワイトスペースを排除する。
 
 ---
 
@@ -102,4 +115,6 @@ flowchart TD
 - **`SlmSelectorHiddenWhenDisabled`**: AI 変換エンジンが OFF のときは、サブモデル選択パネルが必ず非表示であること。
 - **`GlobalBannerVisibleDuringProvisioning`**: バックグラウンドでダウンロード/コンパイルが進行中または待機中のときは、どのタブを表示していてもグローバル進捗バナーが表示されること。
 - **`RerankEnabledImpliesValidModel`**: AI リランクが ON のとき、モデルは必ず有効なモデル（0.5B または 1.5B）が選択されており、モデル未選択（NONE）のまま放置されないこと。
+- **`BottomNavHiddenWhenImeActive`**: IME 入力中（`imeInputActive = True`）のときは、ボトムナビゲーションバーが必ず非表示（`showBottomNav = False`）となり、タブの押し上げ・不要なホワイトスペースを完全に抑止すること。
+
 

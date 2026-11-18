@@ -206,4 +206,22 @@ class MainAppUiDecisionModelTest {
         assertEquals(RerankEngineType.NONE, from15b.selectedEngine)
         assertFalse(from15b.shouldInitializeModel)
     }
+
+    @Test
+    fun `bottomNavVisibilityDecisionTable hides navigation when IME is visible to prevent upward scroll displacement`() {
+        val visibleTrace = MainAppUiDecisionModel.evaluateBottomNavVisibilityWithTrace(
+            MainAppUiDecisionModel.BottomNavVisibilityInput(isImeVisible = true)
+        )
+        assertEquals("NAV_VIS_R1", visibleTrace.selectedRuleId)
+        assertEquals(MainAppUiDecisionModel.NavigationVisibility.GONE, visibleTrace.result.visibility)
+        assertEquals("hide_on_ime_visible", visibleTrace.result.reason)
+
+        val hiddenTrace = MainAppUiDecisionModel.evaluateBottomNavVisibilityWithTrace(
+            MainAppUiDecisionModel.BottomNavVisibilityInput(isImeVisible = false)
+        )
+        assertEquals("NAV_VIS_DEFAULT", hiddenTrace.selectedRuleId)
+        assertEquals(MainAppUiDecisionModel.NavigationVisibility.VISIBLE, hiddenTrace.result.visibility)
+        assertEquals("show_on_ime_hidden", hiddenTrace.result.reason)
+    }
 }
+

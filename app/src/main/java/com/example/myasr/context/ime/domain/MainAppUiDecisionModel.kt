@@ -353,5 +353,50 @@ object MainAppUiDecisionModel {
 
     fun evaluateRerankEngineSelectionWithTrace(input: RerankEngineSelectionInput): DecisionTrace<RerankEngineSelectionDecision> =
         rerankEngineSelectionDecisionTable.evaluateWithTrace(input)
+
+    enum class NavigationVisibility {
+        VISIBLE,
+        GONE
+    }
+
+    data class BottomNavVisibilityInput(
+        val isImeVisible: Boolean
+    )
+
+    data class BottomNavVisibilityDecision(
+        val visibility: NavigationVisibility,
+        val reason: String
+    )
+
+    val bottomNavVisibilityDecisionTable: DecisionTable<BottomNavVisibilityInput, BottomNavVisibilityDecision> =
+        decisionTable(
+            name = "BottomNavVisibilityDecisionTable",
+            hitPolicy = HitPolicy.FIRST
+        ) {
+            rule(id = "NAV_VIS_R1", description = "Hide bottom navigation bar when IME is visible to prevent upward scroll displacement and eliminate whitespace") {
+                `when` { it.isImeVisible }
+                thenValue(
+                    BottomNavVisibilityDecision(
+                        visibility = NavigationVisibility.GONE,
+                        reason = "hide_on_ime_visible"
+                    )
+                )
+            }
+            defaultValue(
+                id = "NAV_VIS_DEFAULT",
+                description = "Show bottom navigation bar when IME is hidden",
+                value = BottomNavVisibilityDecision(
+                    visibility = NavigationVisibility.VISIBLE,
+                    reason = "show_on_ime_hidden"
+                )
+            )
+        }
+
+    fun evaluateBottomNavVisibility(input: BottomNavVisibilityInput): BottomNavVisibilityDecision =
+        bottomNavVisibilityDecisionTable.evaluate(input)
+
+    fun evaluateBottomNavVisibilityWithTrace(input: BottomNavVisibilityInput): DecisionTrace<BottomNavVisibilityDecision> =
+        bottomNavVisibilityDecisionTable.evaluateWithTrace(input)
 }
+
 
