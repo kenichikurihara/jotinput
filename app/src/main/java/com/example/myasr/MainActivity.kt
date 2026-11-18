@@ -722,21 +722,14 @@ class MainActivity : AppCompatActivity() {
         rbEngineLocalSlm35_08B = findViewById(R.id.rbEngineLocalSlm35_08B)
         rbEngineLocalSlm35_2B = findViewById(R.id.rbEngineLocalSlm35_2B)
         rbEngineNone = findViewById(R.id.rbEngineNone)
-        setupRerankEngineUI()
 
         sliderSlmAlpha = findViewById(R.id.sliderSlmAlpha)
         tvSlmAlphaValue = findViewById(R.id.tvSlmAlphaValue)
         tvSlmAlphaDesc = findViewById(R.id.tvSlmAlphaDesc)
-        val currentAlpha = KeyboardHeightManager.getSlmWeightAlpha(this)
-        sliderSlmAlpha.value = currentAlpha.coerceIn(0.00f, 1.00f)
-        updateAlphaDisplay(currentAlpha)
 
         sliderSlmLambda = findViewById(R.id.sliderSlmLambda)
         tvSlmLambdaValue = findViewById(R.id.tvSlmLambdaValue)
         tvSlmLambdaDesc = findViewById(R.id.tvSlmLambdaDesc)
-        val currentLambda = KeyboardHeightManager.getSlmLambdaObs(this)
-        sliderSlmLambda.value = currentLambda.coerceIn(0.10f, 2.00f)
-        updateLambdaDisplay(currentLambda)
 
         multiDictProgress = findViewById(R.id.multiDictProgress)
         tvMultiDictStatus = findViewById(R.id.tvMultiDictStatus)
@@ -815,6 +808,16 @@ class MainActivity : AppCompatActivity() {
                 btnDelete = findViewById(R.id.btnDeleteSlm25_15B)
             )
         )
+
+        setupRerankEngineUI()
+
+        val currentAlpha = KeyboardHeightManager.getSlmWeightAlpha(this)
+        sliderSlmAlpha.value = currentAlpha.coerceIn(0.00f, 1.00f)
+        updateAlphaDisplay(currentAlpha)
+
+        val currentLambda = KeyboardHeightManager.getSlmLambdaObs(this)
+        sliderSlmLambda.value = currentLambda.coerceIn(0.10f, 2.00f)
+        updateLambdaDisplay(currentLambda)
     }
 
     private fun switchToTab(itemId: Int) {
