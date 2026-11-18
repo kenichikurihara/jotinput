@@ -157,3 +157,57 @@ flowchart TD
    - `LmFirstJointEvaluationTest` および `JapanesePunctuationEvaluationTest`（100% パス必須）の非退行を確認。
 2. **EIS / Top-K ベンチマーク**:
    - `eval/eis` および `eval/lm_first_eval_dataset.json` を拡張し、小書き・濁音省略ケースを含めた KSR・Top-1/Top-3・CUJ-2 EIS の改善幅を定量測定する。
+
+---
+
+## 5. 追補デバッグ（実機 SLM リランク下で依然「東京」がランクしない原因と追加のアルゴリズミック解決策）
+
+アイデア 1（小書き仮名展開 ＋ §3.8 の Mmap 接続）を実装し、`getBaseCandidates("とうきよ")` の段階では「東京」が候補プールに入るようになったものの、**実機環境（`LlmReranker` 有効時）で依然として「東京」が上位（特に「東京貯金事務センター」や Viterbi 断片より上）にランクしない** 構造的原因がコード精査から特定されました。
+
+### 5.1 追加で特定された 3 つの構造的ボトルネック (`LlmReranker.kt` / `KanaKanjiEngine.kt`)
+
+1. **`LlmReranker` Expected EIS Utility の「トークン数除算バイアス」と「延長報酬 (`gExt`) の暴走」**
+   - `LlmReranker.kt` 291行目（予測候補の対数事後確率 `logPostScores`）では、`normNll = scores[i] / tokens.toFloat().pow(0.85f)`（`tokens = (mLengths[i] + 1) / 2`）を計算しています。
+     - **「東京貯金事務センター」**（10文字 $\approx 5$ トークン）は総 NLL が **$5^{0.85} \approx 3.93$ で割られる** ため、`normNll` が見かけ上「東京」（2文字 $\approx 1$ トークン）より小さくなります。
+   - さらに 325行目の Expected EIS Utility `utilities[i]` では、`gExt = extGainWeight * keyCostSec * deltaExt` により、未入力延長文字数 `deltaExt` に比例した報酬を与えています。
+     - 「東京貯金事務センター」（$\Delta_{\text{ext}} = 10$）は「東京」（$\Delta_{\text{ext}} = 1$）の **10 倍の延長利得** を得る一方、`place_names.bin` の非小書き読みに完全前方一致したため `obsPenalty = 0.0f` となります。
+   - 対して「東京」は `obsPenalty = 1.2f` により `obsEff = lambdaObs * 1.2 * 5.0 * obsDiscount`（最大 `3.0 nats`）のペナルティを受け、`rankedExtIndices`（435行目）で「東京貯金事務センター」に負けます。
+
+2. **`LlmReranker` に辞書事前確率 (`dictCost`) が渡っていない**
+   - `ConversionCandidate` は Mozc 単語コスト（対数事前確率 $-\log P_{\text{lex}}(W)$）を `LlmReranker` に渡しておらず、リスト順位 `i * 0.15f` しか参照されていません。そのため、コーパス上ほぼ出現しない固有名詞（`cost = 8000+`）と最頻出語「東京」（`cost = 0`）を事前確率で区別できていません。
+
+3. **「希少読み（Dead-End Reading）」に対するベイズ的棄却（Exact-Nullity Gate）の欠如**
+   - 「とうきよ」のように、辞書内にまともな単一完全一致語が存在せず、Viterbi 分割も高コスト・高パープレキシティな断片（「冬季よ」「投棄よ」「登記よ」）しか作れない入力では、本来 **「入力文字列 $X$ を文字通りに意図した確率 $P(\text{exact} \mid X)$」が激減し、音韻修飾・タイポ解釈の事後確率へ質量が移るべき** です。
+   - 現状は `obsPenalty` が入力の「完全一致のまともさ」に関係なく一律に課されるため、無意味な Viterbi 断片（`rankedFull`）が Slot 1 を占有し、また `LlmReranker` の `topPool`（16枠）の `singleWordPrefix` 枠（最大4枠）が長大固有名詞に圧迫されます。
+
+---
+
+### 5.2 アルゴリズミックに「東京」をランクさせ、フリック EIS を向上させる 4 つの追加アイデア
+
+#### アイデア 7：希少読み検出（Exact-Nullity / Dead-End Gate）によるベイズ観測ペナルティの動的緩和
+- **アルゴリズム**:
+  - `getBaseCandidates` / `LlmReranker` において、完全一致の単一語および最良 Viterbi 分割の品質 $\mathcal{Q}_{\text{exact}}(X) = \min_{W \in \text{Full}(X)} [\text{NLL}_{\text{SLM}}(W \mid C) + \beta \cdot \text{Cost}_{\text{Viterbi}}(W)]$ を評価する。
+  - $\mathcal{Q}_{\text{exact}}(X)$ が閾値を超過する（＝「とうきよ」「ちよつと」のようにまともな完全一致語・自然な文節が存在しない）場合、**無修飾入力が意図通りである確率は低い** と判定し、音韻修飾ペナルティ $\lambda_{\text{obs}}$ を動的に減衰（例：$0.5 \to 0.1$）させるとともに、`rankedFull` の Slot 1 固定優先を解除して `rankedExt` の最良候補を Slot 1 に昇格可能にする。
+- **EIS 向上メカニズム**:
+  - 通常の意味のある入力（例：「きよ」「たいき」）の精度を一切落とさず、希少読み・修飾省略入力（「とうきよ」→「東京」、「ちよつと」→「ちょっと」）でのみ自動的に修飾補完を 1 位に引き上げる。これにより小書き・濁音キー省略時の Top-1 確定率と KSR が劇的に向上する。
+
+#### アイデア 8：`ConversionCandidate` への辞書事前確率 (`dictCost`) 伝播と `normNll` / `gExt` の確率的正規化
+- **アルゴリズム**:
+  1. `ConversionCandidate` に `dictCost: Int`（Mozc unigram コスト）を持たせ、`LlmReranker` の `logPostScores` に $\gamma_{\text{dict}} \cdot (\text{dictCost} / 1000.0)$ を加算する（`東京` cost=0 vs `東京貯金事務センター` cost=8000+ を確率的に分離）。
+  2. `logPostScores` の `tokens^0.85` 除算による長大固有名詞の過大優遇を是正し、未入力延長 $\Delta_{\text{ext}}$ に対してはコーパス頻度 $P_{\text{lex}}(W)$ で重み付けした期待利得 $P_{\text{lex}}(W) \cdot g_{\text{Ext}}$ を用いる（低頻度な長大固有名詞ほど $\Delta_{\text{ext}}$ の期待利得を減衰）。
+- **EIS 向上メカニズム**:
+  - 長大・低頻度な固有名詞による予測枠の汚染（および誤タップ時の大きな削除リスク $L_{\text{err}}$）を根絶し、日常頻出語の予測 Top-1/Top-3 的中率を向上させる。
+
+#### アイデア 9：`KanaKanjiEngine` §3.8 のパス優先度ソートと「音韻統計・長音/撥音 1-Mora 先読み」
+- **アルゴリズム**:
+  1. `KanaKanjiEngine` §3.8 において、`voicedPaths` を無秩序に `.take(2)` するのではなく、**ノード配下の最小単語コスト（`minCostInSubtree`）＋修飾距離ペナルティ** の昇順にソートしてから `.take(4)` で `MmapDictionary` を検索する（`どうきよ` 等の低頻度パスに `とうきょ` が押し出されるのを防ぐ）。
+  2. さらに、日本語の音韻統計上、拗音（`きょ`, `しょ`, `ちょう` 等）の直後は極めて高確率で **長音「う」・撥音「ん」** が続くため、希少読み判定時には展開パス（`とうきょ`）＋ `{う, ん}` の 1 モーラ先読み（`とうきょう`）を優先的に `MmapDictionary` の完全一致（`queryAllMmapExactTokens`）で引く。
+- **EIS 向上メカニズム**:
+  - `MmapDictionary.getPrefixTokens` の辞書順バイアスの影響を受けず、$O(1)$ の完全一致検索で `東京`（`とうきょう`）を直接引き当てられる。また「小書き省略＋長音省略」の同時適用により 1 語あたり 2 打鍵以上の削減が可能になる。
+
+#### アイデア 10：`LlmReranker` `topPool` の「短延長ファジー候補」枠保護
+- **アルゴリズム**:
+  - `LlmReranker.kt`（778〜794行目）の `topPool`（最大 16 件）構築時、予測候補枠（`singleWordPrefix` 4枠）を単純先着順にするのではなく、**「短延長（$\Delta_{\text{ext}} \le 2$）かつ低辞書コスト」枠** を最低 2 枠確保する。
+- **EIS 向上メカニズム**:
+  - `東京` のような最有力候補が、SLM スコアリング前のプール切り出し段階で長大固有名詞やカタカナ変換に押し出されて脱落する事故をゼロにする。
+
