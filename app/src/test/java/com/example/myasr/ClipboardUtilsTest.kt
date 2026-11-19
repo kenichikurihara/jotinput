@@ -35,4 +35,25 @@ class ClipboardUtilsTest {
         assertEquals("📋 改行あ…", ClipboardUtils.formatClipboardPreview("\n  改行ありテキスト"))
         assertEquals("📋 ABC…", ClipboardUtils.formatClipboardPreview("   ABC DEF GHI  "))
     }
+
+    @Test
+    fun testSensitiveMaskingHelpers() {
+        assertEquals("🔒 ••••••", ClipboardUtils.formatSensitiveCandidateChipPreview())
+        assertEquals("••••••••（タップして貼り付け）", ClipboardUtils.formatSensitiveHistoryPreview())
+        assertEquals("🔒 現在の機密クリップ（履歴には保存されません）", ClipboardUtils.formatSensitiveBadge())
+    }
+
+    @Test
+    fun testIsPasswordInputType() {
+        // Standard text & 0
+        org.junit.Assert.assertFalse(ClipboardUtils.isPasswordInputType(0))
+        org.junit.Assert.assertFalse(ClipboardUtils.isPasswordInputType(0x00000001)) // TYPE_CLASS_TEXT
+        org.junit.Assert.assertFalse(ClipboardUtils.isPasswordInputType(0x00000001 or 0x00000020)) // EMAIL_ADDRESS
+
+        // Password variations
+        org.junit.Assert.assertTrue(ClipboardUtils.isPasswordInputType(0x00000001 or 0x00000080)) // TEXT_VARIATION_PASSWORD
+        org.junit.Assert.assertTrue(ClipboardUtils.isPasswordInputType(0x00000001 or 0x00000090)) // TEXT_VARIATION_VISIBLE_PASSWORD
+        org.junit.Assert.assertTrue(ClipboardUtils.isPasswordInputType(0x00000001 or 0x000000e0)) // TEXT_VARIATION_WEB_PASSWORD
+        org.junit.Assert.assertTrue(ClipboardUtils.isPasswordInputType(0x00000002 or 0x00000010)) // NUMBER_VARIATION_PASSWORD
+    }
 }

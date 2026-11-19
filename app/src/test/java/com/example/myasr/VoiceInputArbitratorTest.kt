@@ -563,6 +563,22 @@ class VoiceInputArbitratorTest {
     }
 
     @Test
+    fun testSensitiveClipboardPasteClearsPreviousCommittedPhrase() {
+        val editor = RealisticMockEditorBridge()
+        val arbitrator = VoiceTouchInputArbitrator()
+        arbitrator.previousCommittedPhrase = "前の文節"
+
+        arbitrator.onClipboardPaste(
+            editor = editor,
+            clipText = "My\$ecretP@ssw0rd!",
+            isSensitiveOrPasswordContext = true
+        )
+
+        assertEquals("My\$ecretP@ssw0rd!", editor.committedText)
+        assertEquals("", arbitrator.previousCommittedPhrase)
+    }
+
+    @Test
     fun testCaseG1_ExternalCursorTapFinalizesComposingAndPreventsDuplication() {
         val editor = RealisticMockEditorBridge()
         val arbitrator = VoiceTouchInputArbitrator()

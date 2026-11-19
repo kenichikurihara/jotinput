@@ -69,4 +69,43 @@ object ClipboardUtils {
         val hours = minutes / 60L
         return "${hours}時間前"
     }
+
+    /**
+     * Masked preview for sensitive clipboard candidate chip (never exposes plaintext password).
+     */
+    fun formatSensitiveCandidateChipPreview(): String {
+        return "🔒 ••••••"
+    }
+
+    /**
+     * Masked preview for sensitive clipboard item in history sheet (never exposes plaintext password).
+     */
+    fun formatSensitiveHistoryPreview(): String {
+        return "••••••••（タップして貼り付け）"
+    }
+
+    /**
+     * Badge text for ephemeral sensitive clipboard card in history sheet.
+     */
+    fun formatSensitiveBadge(): String {
+        return "🔒 現在の機密クリップ（履歴には保存されません）"
+    }
+
+    /**
+     * Pure JVM-safe check for Android password InputType variations without android.view.* dependencies.
+     */
+    fun isPasswordInputType(inputType: Int): Boolean {
+        if (inputType == 0) return false
+        val inputClass = inputType and 0x0000000f // TYPE_MASK_CLASS
+        val variation = inputType and 0x00000ff0  // TYPE_MASK_VARIATION
+        if (inputClass == 0x00000001) { // TYPE_CLASS_TEXT
+            return variation == 0x00000080 || // TYPE_TEXT_VARIATION_PASSWORD
+                variation == 0x00000090 ||    // TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                variation == 0x000000e0       // TYPE_TEXT_VARIATION_WEB_PASSWORD
+        }
+        if (inputClass == 0x00000002) { // TYPE_CLASS_NUMBER
+            return variation == 0x00000010    // TYPE_NUMBER_VARIATION_PASSWORD
+        }
+        return false
+    }
 }

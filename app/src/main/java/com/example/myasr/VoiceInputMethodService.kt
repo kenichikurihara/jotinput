@@ -1,8 +1,11 @@
 package com.example.myasr
 
 import com.example.myasr.context.clipboard.domain.ClipboardSuggestionPolicy
+import com.example.myasr.context.clipboard.domain.ClipboardUtils
 import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryItem
 import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryRepository
+import com.example.myasr.context.clipboard.infrastructure.RecentSuggestion
+import com.example.myasr.context.clipboard.infrastructure.SensitiveClipMetadata
 import com.example.myasr.context.clipboard.presentation.ClipboardHistoryView
 import com.example.myasr.context.english.domain.BayesianCaseRanker
 import com.example.myasr.context.english.domain.EnglishAssistJudgement
@@ -236,8 +239,21 @@ class VoiceInputMethodService : InputMethodService() {
         clipboardHistoryView = view.findViewById(R.id.clipboardHistoryView)
         clipboardHistoryView?.listener = object : ClipboardHistoryView.Listener {
             override fun onHistoryItemClicked(item: ClipboardHistoryItem) {
-                pasteTextFromHistory(item.text)
+                pasteTextFromHistory(item.text, isSensitive = false)
                 hideClipboardHistoryView()
+            }
+
+            override fun onSensitiveClipClicked(meta: SensitiveClipMetadata) {
+                serviceScope.launch(Dispatchers.Main) {
+                    val repo = ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService)
+                    val secret = kotlinx.coroutines.withContext(Dispatchers.Default) {
+                        repo.consumeSensitiveClipTextForPaste(meta.id)
+                    }
+                    if (!secret.isNullOrEmpty()) {
+                        pasteTextFromHistory(secret, isSensitive = true)
+                    }
+                    hideClipboardHistoryView()
+                }
             }
 
             override fun onCloseClicked() {
@@ -693,8 +709,23 @@ class VoiceInputMethodService : InputMethodService() {
                     return
                 }
 
+                if (candidate.source == "clipboard_sensitive") {
+                    val expectedId = candidate.reading
+                    serviceScope.launch(Dispatchers.Main) {
+                        val repo = ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService)
+                        val secret = kotlinx.coroutines.withContext(Dispatchers.Default) {
+                            repo.consumeSensitiveClipTextForPaste(expectedId)
+                        }
+                        if (!secret.isNullOrEmpty()) {
+                            pasteTextFromHistory(secret, isSensitive = true)
+                        }
+                    }
+                    candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                    return
+                }
+
                 if (candidate.source == "clipboard_recent") {
-                    pasteTextFromHistory(committedSurface)
+                    pasteTextFromHistory(committedSurface, isSensitive = false)
                     serviceScope.launch {
                         val repo = ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService)
                         val item = repo.getRecentSuggestionCandidate()
@@ -2359,8 +2390,12 @@ class VoiceInputMethodService : InputMethodService() {
         }
     }
 
+    private fun isClipboardChipSource(source: String?): Boolean {
+        return source == "clipboard_recent" || source == "clipboard_sensitive"
+    }
+
     private fun canShowClipboardSuggestion(): Boolean {
-        val hasNonClipboardCandidates = candidateStripView?.getCandidates()?.any { it.source != "clipboard_recent" } == true
+        val hasNonClipboardCandidates = candidateStripView?.getCandidates()?.any { !isClipboardChipSource(it.source) } == true
         return clipboardSuggestionPolicy.shouldShowSuggestion(
             isVoiceIdle = (currentState == State.IDLE),
             isClipboardHistoryShowing = isClipboardHistoryShowing(),
@@ -2371,7 +2406,7 @@ class VoiceInputMethodService : InputMethodService() {
     }
 
     private fun checkAndRenderClipboardSuggestion() {
-        val currentlyShowingClipboard = candidateStripView?.getCandidates()?.any { it.source == "clipboard_recent" } == true
+        val currentlyShowingClipboard = candidateStripView?.getCandidates()?.any { isClipboardChipSource(it.source) } == true
         if (!canShowClipboardSuggestion() && !currentlyShowingClipboard) {
             return
         }
@@ -2379,25 +2414,37 @@ class VoiceInputMethodService : InputMethodService() {
         serviceScope.launch(Dispatchers.Main) {
             val repo = ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService)
             val nowMs = System.currentTimeMillis()
-            val candidateItem = repo.getRecentSuggestionCandidate(nowMs)
-            if (candidateItem != null && canShowClipboardSuggestion()) {
-                val clipCandidate = ConversionCandidate(
-                    surface = candidateItem.text,
-                    reading = candidateItem.text,
-                    isPrediction = true,
-                    source = "clipboard_recent"
-                )
+            val suggestion = repo.getRecentSuggestionCandidateWithSensitivity(nowMs)
+            if (suggestion != null && canShowClipboardSuggestion()) {
+                val (clipCandidate, discoveredAtMs) = when (suggestion) {
+                    is RecentSuggestion.Sensitive -> {
+                        ConversionCandidate(
+                            surface = ClipboardUtils.formatSensitiveCandidateChipPreview(),
+                            reading = suggestion.metadata.id,
+                            isPrediction = true,
+                            source = "clipboard_sensitive"
+                        ) to suggestion.metadata.discoveredAtMs
+                    }
+                    is RecentSuggestion.Regular -> {
+                        ConversionCandidate(
+                            surface = suggestion.item.text,
+                            reading = suggestion.item.text,
+                            isPrediction = true,
+                            source = "clipboard_recent"
+                        ) to suggestion.item.discoveredAtMs
+                    }
+                }
                 candidateStripView?.setCandidates(listOf(clipCandidate))
 
                 // Schedule auto-dismiss when 60s expires
-                val remainingMs = (ClipboardHistoryRepository.CANDIDATE_SUGGEST_TTL_MS - (nowMs - candidateItem.discoveredAtMs)).coerceAtLeast(0L)
+                val remainingMs = (ClipboardHistoryRepository.CANDIDATE_SUGGEST_TTL_MS - (nowMs - discoveredAtMs)).coerceAtLeast(0L)
                 clipboardExpirationJob = serviceScope.launch {
                     delay(remainingMs + 50L)
-                    if (candidateStripView?.getCandidates()?.any { it.source == "clipboard_recent" } == true) {
+                    if (candidateStripView?.getCandidates()?.any { isClipboardChipSource(it.source) } == true) {
                         candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                     }
                 }
-            } else if (candidateStripView?.getCandidates()?.any { it.source == "clipboard_recent" } == true) {
+            } else if (candidateStripView?.getCandidates()?.any { isClipboardChipSource(it.source) } == true) {
                 candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
             }
         }
@@ -2407,9 +2454,12 @@ class VoiceInputMethodService : InputMethodService() {
         toggleClipboardHistoryView()
     }
 
-    private fun pasteTextFromHistory(text: String) {
+    private fun pasteTextFromHistory(text: String, isSensitive: Boolean = false) {
         if (text.isNotEmpty()) {
             clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
+            val isPasswordField = ClipboardUtils.isPasswordInputType(currentInputEditorInfo?.inputType ?: 0)
+            val suppressLearning = isSensitive || isPasswordField
+
             val prevPhrase = arbitrator.previousCommittedPhrase
             val hadKeyboardComposing = arbitrator.isKeyboardComposing()
             val readingBefore = arbitrator.composingText.toString()
@@ -2419,6 +2469,7 @@ class VoiceInputMethodService : InputMethodService() {
                 editor = editorBridge,
                 clipText = text,
                 hasUnflushedSpeech = hadUnflushed,
+                isSensitiveOrPasswordContext = suppressLearning,
                 onFlushPreTypingSpeech = { flushPreTypingSpeechIfNeeded() },
                 onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() },
                 formatStreamingFn = { formatVoiceText(it) }
@@ -2428,19 +2479,25 @@ class VoiceInputMethodService : InputMethodService() {
             rerankJob?.cancel()
             isCurrentCandidatesReranked = false
 
-            serviceScope.launch {
-                val repo = ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService)
-                val recent = repo.getRecentSuggestionCandidate()
-                if (recent != null && recent.text == text) {
-                    repo.markDismissedFromStrip(recent.id)
+            if (!isSensitive) {
+                serviceScope.launch {
+                    val repo = ClipboardHistoryRepository.getInstance(this@VoiceInputMethodService)
+                    val recent = repo.getRecentSuggestionCandidate()
+                    if (recent != null && recent.text == text) {
+                        repo.markDismissedFromStrip(recent.id)
+                    }
                 }
             }
 
-            if (hadKeyboardComposing && prevPhrase.isNotEmpty() && readingBefore.isNotEmpty()) {
+            if (!suppressLearning && hadKeyboardComposing && prevPhrase.isNotEmpty() && readingBefore.isNotEmpty()) {
                 nextPhrasePredictor.recordTransition(prevPhrase, readingBefore)
             }
             syncKeyboardState()
-            showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+            if (!suppressLearning) {
+                showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+            } else {
+                candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+            }
         }
     }
 

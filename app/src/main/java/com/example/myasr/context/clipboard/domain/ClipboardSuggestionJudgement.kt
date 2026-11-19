@@ -71,4 +71,108 @@ object ClipboardSuggestionJudgement {
 
     fun judgeEligibilityWithTrace(input: SuggestionEligibilityInput): DecisionTrace<JudgementResult<Boolean>> =
         suggestionEligibilityDecisionTable.evaluateWithTrace(input)
+
+    enum class ClipboardDisplayMode {
+        PLAIN_TEXT,
+        MASKED_SENSITIVE,
+        HIDDEN
+    }
+
+    data class SafeClipboardHandlingInput(
+        val isSensitiveClip: Boolean,
+        val isPasswordInputField: Boolean,
+        val isVolatileExpired: Boolean,
+        val isDismissedFromStrip: Boolean,
+        val isDismissedFromSheet: Boolean
+    )
+
+    data class SafeClipboardHandlingDecision(
+        val allowDiskPersistence: Boolean,
+        val allowLearningAndPrediction: Boolean,
+        val stripDisplayMode: ClipboardDisplayMode,
+        val sheetDisplayMode: ClipboardDisplayMode,
+        val reason: String
+    )
+
+    val safeClipboardHandlingDecisionTable: DecisionTable<SafeClipboardHandlingInput, SafeClipboardHandlingDecision> =
+        decisionTable(
+            name = "SafeClipboardHandling",
+            hitPolicy = HitPolicy.FIRST
+        ) {
+            rule(id = "SAFE_CLIP_R1", description = "Hide expired sensitive clip and forbid persistence/learning") {
+                `when` { it.isSensitiveClip && it.isVolatileExpired }
+                thenValue(
+                    SafeClipboardHandlingDecision(
+                        allowDiskPersistence = false,
+                        allowLearningAndPrediction = false,
+                        stripDisplayMode = ClipboardDisplayMode.HIDDEN,
+                        sheetDisplayMode = ClipboardDisplayMode.HIDDEN,
+                        reason = "sensitive_clip_expired"
+                    )
+                )
+            }
+            rule(id = "SAFE_CLIP_R2", description = "Hide sensitive clip dismissed from sheet and forbid persistence/learning") {
+                `when` { it.isSensitiveClip && it.isDismissedFromSheet }
+                thenValue(
+                    SafeClipboardHandlingDecision(
+                        allowDiskPersistence = false,
+                        allowLearningAndPrediction = false,
+                        stripDisplayMode = ClipboardDisplayMode.HIDDEN,
+                        sheetDisplayMode = ClipboardDisplayMode.HIDDEN,
+                        reason = "sensitive_clip_dismissed_from_sheet"
+                    )
+                )
+            }
+            rule(id = "SAFE_CLIP_R3", description = "Mask sensitive clip in sheet when dismissed from strip") {
+                `when` { it.isSensitiveClip && it.isDismissedFromStrip }
+                thenValue(
+                    SafeClipboardHandlingDecision(
+                        allowDiskPersistence = false,
+                        allowLearningAndPrediction = false,
+                        stripDisplayMode = ClipboardDisplayMode.HIDDEN,
+                        sheetDisplayMode = ClipboardDisplayMode.MASKED_SENSITIVE,
+                        reason = "sensitive_clip_strip_dismissed_sheet_masked"
+                    )
+                )
+            }
+            rule(id = "SAFE_CLIP_R4", description = "Mask active sensitive clip on both strip and sheet without persistence or learning") {
+                `when` { it.isSensitiveClip }
+                thenValue(
+                    SafeClipboardHandlingDecision(
+                        allowDiskPersistence = false,
+                        allowLearningAndPrediction = false,
+                        stripDisplayMode = ClipboardDisplayMode.MASKED_SENSITIVE,
+                        sheetDisplayMode = ClipboardDisplayMode.MASKED_SENSITIVE,
+                        reason = "sensitive_clip_masked_volatile"
+                    )
+                )
+            }
+            rule(id = "SAFE_CLIP_R5", description = "Forbid learning/prediction when pasting into a password input field") {
+                `when` { !it.isSensitiveClip && it.isPasswordInputField }
+                then {
+                    SafeClipboardHandlingDecision(
+                        allowDiskPersistence = true,
+                        allowLearningAndPrediction = false,
+                        stripDisplayMode = if (it.isDismissedFromStrip) ClipboardDisplayMode.HIDDEN else ClipboardDisplayMode.PLAIN_TEXT,
+                        sheetDisplayMode = if (it.isDismissedFromSheet) ClipboardDisplayMode.HIDDEN else ClipboardDisplayMode.PLAIN_TEXT,
+                        reason = "password_field_no_learning"
+                    )
+                }
+            }
+            default {
+                SafeClipboardHandlingDecision(
+                    allowDiskPersistence = true,
+                    allowLearningAndPrediction = true,
+                    stripDisplayMode = if (it.isDismissedFromStrip) ClipboardDisplayMode.HIDDEN else ClipboardDisplayMode.PLAIN_TEXT,
+                    sheetDisplayMode = if (it.isDismissedFromSheet) ClipboardDisplayMode.HIDDEN else ClipboardDisplayMode.PLAIN_TEXT,
+                    reason = "standard_clip_allowed"
+                )
+            }
+        }
+
+    fun judgeSafeHandling(input: SafeClipboardHandlingInput): SafeClipboardHandlingDecision =
+        safeClipboardHandlingDecisionTable.evaluate(input)
+
+    fun judgeSafeHandlingWithTrace(input: SafeClipboardHandlingInput): DecisionTrace<SafeClipboardHandlingDecision> =
+        safeClipboardHandlingDecisionTable.evaluateWithTrace(input)
 }

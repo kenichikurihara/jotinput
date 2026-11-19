@@ -189,6 +189,7 @@ class CandidateStripView @JvmOverloads constructor(
         for ((index, candidate) in displayCandidates.withIndex()) {
             val isAiHighlight = highlightFirstAsAi && index == 0 &&
                 candidate.source != "clipboard_recent" &&
+                candidate.source != "clipboard_sensitive" &&
                 candidate.source != "voice_correction_suggest"
             container.addView(createCandidatePillView(candidate, isAiHighlight = isAiHighlight))
         }
@@ -315,8 +316,10 @@ class CandidateStripView @JvmOverloads constructor(
 
         return TextView(context).apply {
             val isClipboardRecent = candidate.source == "clipboard_recent"
+            val isClipboardSensitive = candidate.source == "clipboard_sensitive"
             val isVoiceCorrectionSuggest = candidate.source == "voice_correction_suggest"
             val displayText = when {
+                isClipboardSensitive -> ClipboardUtils.formatSensitiveCandidateChipPreview()
                 isClipboardRecent -> ClipboardUtils.formatCandidateChipPreview(candidate.surface, maxChars = 14)
                 isVoiceCorrectionSuggest -> "🔄 ${candidate.surface}"
                 isAiHighlight -> "✨ ${candidate.surface}"
@@ -328,7 +331,7 @@ class CandidateStripView @JvmOverloads constructor(
             gravity = Gravity.CENTER
 
             val charCount = candidate.surface.length
-            val minW = if (isClipboardRecent || isVoiceCorrectionSuggest) {
+            val minW = if (isClipboardRecent || isClipboardSensitive || isVoiceCorrectionSuggest) {
                 0
             } else {
                 quantizedMinWidthPx(charCount, density)

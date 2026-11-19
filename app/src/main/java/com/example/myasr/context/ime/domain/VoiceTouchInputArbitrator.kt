@@ -946,6 +946,7 @@ class VoiceTouchInputArbitrator {
         editor: EditorBridge?,
         clipText: String,
         hasUnflushedSpeech: Boolean = false,
+        isSensitiveOrPasswordContext: Boolean = false,
         onFlushPreTypingSpeech: () -> Unit = {},
         onResetStreamingUtterance: () -> Unit = {},
         formatStreamingFn: (String) -> String = { it }
@@ -960,8 +961,12 @@ class VoiceTouchInputArbitrator {
             formatStreamingFn = formatStreamingFn
         )
         editor?.commitText(clipText, 1)
-        recordDirectCommitForInFlightDecodes(clipText)
-        previousCommittedPhrase = clipText.takeLast(6)
+        if (isSensitiveOrPasswordContext) {
+            previousCommittedPhrase = ""
+        } else {
+            recordDirectCommitForInFlightDecodes(clipText)
+            previousCommittedPhrase = clipText.takeLast(6)
+        }
     }
 
     /**

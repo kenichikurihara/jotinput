@@ -91,6 +91,14 @@ IME ヘッダーバーのユーティリティアイコン表示裁定（[`ImeHe
 - **`IconsHiddenDuringComposingOrFlickWhenVoiceIdle`**: 音声待機時かつクリップボード非表示時に、フリックタッチ中または未確定文字列存在時は 3 アイコン（マイク・辞書・クリップボード）がすべて非表示になること。
 - **`AllIconsVisibleWhenFullyIdle` / `ClipboardOpenKeepsAllIconsVisible`**: 完全待機時およびクリップボード履歴パネル表示時は 3 アイコンすべてが表示されること。
 
+### 3.11 [`safe_password_clipboard.als`](app/src/test/resources/alloy/safe_password_clipboard.als)
+機密クリップボード（パスワードマネージャー等からの `EXTRA_IS_SENSITIVE` コピー）およびパスワード入力欄の安全裁定（[`ClipboardSuggestionJudgement`](app/src/main/java/com/example/myasr/context/clipboard/domain/ClipboardSuggestionJudgement.kt) / `SafeClipboardHandling`）をモデル化し、以下を検証する：
+- **`SafeClipboardTableIsTotal`**: 全入力組み合わせに対して一意のルールへ解決されること。
+- **`SensitiveClipNeverPersistedToDisk`**: 機密クリップはディスク永続化（`clipboard_history.json`）を一切許可しないこと。
+- **`SensitiveClipNeverDisplayedPlaintext`**: 機密クリップは候補ストリップ・履歴シートのいずれにも平文表示しないこと。
+- **`SensitiveOrPasswordFieldNeverLearns`**: 機密クリップまたはパスワード入力欄では次文節予測・学習履歴への記録を一切許可しないこと。
+- **`FreshSensitiveClipIsMaskedAndAccessible`**: 有効期限内で未解除の機密クリップはマスク表示（`ModeMaskedSensitive`）で利用可能であること。
+
 ---
 
 ## 4. 自動同期ルール

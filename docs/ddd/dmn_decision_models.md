@@ -43,6 +43,7 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishGecClauseEligibility` | `FIRST` | GEC（文法/文脈修正）対象節の抽出と適格性判定 |
 | **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishCandidateBadge` | `PRIORITY` | 候補バッジ選択（`SLM`(100) > `USER`(80) > `CAPS`(60) > `SPELL`） |
 | **BC-8: Clipboard** | `ClipboardSuggestionJudgement` | `ClipboardSuggestionEligibility` | `FIRST` | アイドル時のクリップボード提案チップ表示可否 |
+| **BC-8: Clipboard** | `ClipboardSuggestionJudgement` | `SafeClipboardHandling` | `FIRST` | 機密クリップ（`EXTRA_IS_SENSITIVE`）・パスワード欄での非永続化・マスク表示・非学習裁定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `HomeHeroActionDecisionTable` | `FIRST` | ホーム画面のスマートガイド（次の唯一アクション / 準備完了）決定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `ProvisioningBannerDecisionTable` | `FIRST` | タブ横断グローバル進捗バナーの表示・進捗状態決定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `AiEngineStatusDecisionTable` | `FIRST` | AI 変換エンジンのセレクタ表示・ステータスバッジ・ダウンロードCTA表示決定 |

@@ -4,6 +4,7 @@ import com.example.myasr.R
 import com.example.myasr.context.clipboard.domain.ClipboardUtils
 import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryItem
 import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryRepository
+import com.example.myasr.context.clipboard.infrastructure.SensitiveClipMetadata
 
 import android.content.Context
 import android.graphics.Color
@@ -34,6 +35,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
 
     interface Listener {
         fun onHistoryItemClicked(item: ClipboardHistoryItem)
+        fun onSensitiveClipClicked(meta: SensitiveClipMetadata)
         fun onCloseClicked()
     }
 
@@ -155,21 +157,27 @@ class ClipboardHistoryView @JvmOverloads constructor(
         loadJob = scope.launch {
             val repo = ClipboardHistoryRepository.getInstance(context)
             val nowMs = System.currentTimeMillis()
-            val items = withContext(Dispatchers.Default) {
-                repo.getActiveHistory(nowMs)
+            val (items, sensitiveClip, osClipText) = withContext(Dispatchers.Default) {
+                repo.syncWithOsClipboard(nowMs)
+                val activeItems = repo.getActiveHistory(nowMs)
+                val activeSensitive = repo.getActiveSensitiveClipForSheet(nowMs)
+                val osText = if (activeSensitive != null) null else repo.getCurrentOsClipText()
+                Triple(activeItems, activeSensitive, osText)
             }
-            val osClipText = withContext(Dispatchers.Default) {
-                repo.getCurrentOsClipText()
-            }
-            renderItems(items, nowMs, osClipText)
+            renderItems(items, sensitiveClip, nowMs, osClipText)
         }
     }
 
-    private fun renderItems(items: List<ClipboardHistoryItem>, nowMs: Long, osClipText: String?) {
+    private fun renderItems(
+        items: List<ClipboardHistoryItem>,
+        sensitiveClip: SensitiveClipMetadata?,
+        nowMs: Long,
+        osClipText: String?
+    ) {
         listContainer.removeAllViews()
         val density = resources.displayMetrics.density
 
-        if (items.isEmpty()) {
+        if (items.isEmpty() && sensitiveClip == null) {
             emptyView.visibility = View.VISIBLE
             scrollView.visibility = View.GONE
             btnClearAll.visibility = View.GONE
@@ -179,6 +187,77 @@ class ClipboardHistoryView @JvmOverloads constructor(
         emptyView.visibility = View.GONE
         scrollView.visibility = View.VISIBLE
         btnClearAll.visibility = View.VISIBLE
+
+        if (sensitiveClip != null) {
+            val sensitiveCard = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundResource(R.drawable.bg_candidate_pill)
+                val cardLp = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = (6 * density).toInt()
+                }
+                layoutParams = cardLp
+                setPadding((10 * density).toInt(), (8 * density).toInt(), (10 * density).toInt(), (8 * density).toInt())
+                isClickable = true
+                isFocusable = true
+                setOnClickListener {
+                    listener?.onSensitiveClipClicked(sensitiveClip)
+                }
+            }
+
+            val metaLayout = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val tvBadge = TextView(context).apply {
+                text = ClipboardUtils.formatSensitiveBadge()
+                textSize = 10f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(ContextCompat.getColor(context, R.color.badge_success_text))
+                setBackgroundResource(R.drawable.badge_background)
+                setPadding((4 * density).toInt(), (1 * density).toInt(), (4 * density).toInt(), (1 * density).toInt())
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f)
+            }
+            metaLayout.addView(tvBadge)
+
+            val btnDelete = Button(context, null, android.R.attr.borderlessButtonStyle).apply {
+                text = "✕"
+                textSize = 11f
+                setTextColor(ContextCompat.getColor(context, R.color.text_muted))
+                layoutParams = LinearLayout.LayoutParams((28 * density).toInt(), (24 * density).toInt())
+                setPadding(0, 0, 0, 0)
+                setOnClickListener {
+                    scope.launch {
+                        ClipboardHistoryRepository.getInstance(context).dismissSensitiveFromSheet(sensitiveClip.id)
+                        refreshHistory()
+                    }
+                }
+            }
+            metaLayout.addView(btnDelete)
+            sensitiveCard.addView(metaLayout)
+
+            val tvContent = TextView(context).apply {
+                text = ClipboardUtils.formatSensitiveHistoryPreview()
+                textSize = 13.5f
+                setTextColor(ContextCompat.getColor(context, R.color.text_primary))
+                maxLines = 1
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    topMargin = (2 * density).toInt()
+                }
+            }
+            sensitiveCard.addView(tvContent)
+            listContainer.addView(sensitiveCard)
+        }
 
         for (item in items) {
             val isCurrentOsClip = !osClipText.isNullOrEmpty() && item.text == osClipText
