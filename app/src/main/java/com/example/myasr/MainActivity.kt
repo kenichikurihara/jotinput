@@ -115,6 +115,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var switchQwertySwipeTyping: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var switchStreamingVoiceInput: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var switchDebugDisplay: com.google.android.material.switchmaterial.SwitchMaterial
+    private lateinit var switchAntiJitterCandidateUi: com.google.android.material.switchmaterial.SwitchMaterial
 
     private lateinit var tvSlmStatusBadge: TextView
     private lateinit var tvSlmStatusDesc: TextView
@@ -590,6 +591,7 @@ class MainActivity : AppCompatActivity() {
         try {
             switchStreamingVoiceInput.isChecked = KeyboardHeightManager.isStreamingVoiceInputEnabled(this)
             switchDebugDisplay.isChecked = KeyboardHeightManager.isDebugDisplayEnabled(this)
+            switchAntiJitterCandidateUi.isChecked = KeyboardHeightManager.isAntiJitterCandidateUiEnabled(this)
             switchSlmRerankEnabled.isChecked = KeyboardHeightManager.isSlmRerankEnabled(this)
             val alpha = KeyboardHeightManager.getSlmWeightAlpha(this)
             sliderSlmAlpha.value = alpha.coerceIn(0.00f, 1.00f)
@@ -700,6 +702,7 @@ class MainActivity : AppCompatActivity() {
         switchQwertySwipeTyping = findViewById(R.id.switchQwertySwipeTyping)
         switchStreamingVoiceInput = findViewById(R.id.switchStreamingVoiceInput)
         switchDebugDisplay = findViewById(R.id.switchDebugDisplay)
+        switchAntiJitterCandidateUi = findViewById(R.id.switchAntiJitterCandidateUi)
 
         tvTotalDictWordsBadge = findViewById(R.id.tvTotalDictWordsBadge)
         tvSlmStatusBadge = findViewById(R.id.tvSlmStatusBadge)
@@ -915,6 +918,14 @@ class MainActivity : AppCompatActivity() {
             KeyboardHeightManager.setDebugDisplayEnabled(this, isChecked)
             val status = if (isChecked) "有効 (ON: SLMリランク時にデバッグバーにバッジ表示)" else "無効 (OFF)"
             Toast.makeText(this, "デバッグ表示: $status", Toast.LENGTH_SHORT).show()
+        }
+
+        switchAntiJitterCandidateUi.isChecked = KeyboardHeightManager.isAntiJitterCandidateUiEnabled(this)
+        switchAntiJitterCandidateUi.setOnCheckedChangeListener { _, isChecked ->
+            if (isUpdatingUiFromPrefs) return@setOnCheckedChangeListener
+            KeyboardHeightManager.setAntiJitterCandidateUiEnabled(this, isChecked)
+            val status = if (isChecked) "有効 (ON: 50ms待機+AI予約枠+画面外リランク)" else "無効 (OFF: 従来方式)"
+            Toast.makeText(this, "ゼロ・ジッター候補UI: $status", Toast.LENGTH_SHORT).show()
         }
 
         sliderSlmAlpha.addOnChangeListener { _, value, fromUser ->
@@ -1754,6 +1765,7 @@ class MainActivity : AppCompatActivity() {
             switchQwertySwipeTyping.isChecked = KeyboardHeightManager.isQwertySwipeTypingEnabled(this)
             switchStreamingVoiceInput.isChecked = KeyboardHeightManager.isStreamingVoiceInputEnabled(this)
             switchDebugDisplay.isChecked = KeyboardHeightManager.isDebugDisplayEnabled(this)
+            switchAntiJitterCandidateUi.isChecked = KeyboardHeightManager.isAntiJitterCandidateUiEnabled(this)
         } finally {
             isUpdatingUiFromPrefs = false
         }

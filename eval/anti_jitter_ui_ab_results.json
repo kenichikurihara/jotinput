@@ -1,0 +1,66 @@
+{
+  "dataset": "eval/slm_mandatory_rerank_eval_results.json",
+  "num_cases": 100,
+  "profiles": {
+    "fast_kv_hit": {
+      "OFF": {
+        "ai_1tap_reachability_pct": 60.0,
+        "visible_viewport_recall_pct": 81.0,
+        "mrr": 0.7138,
+        "viewport_shift_rate_pct": 77.0,
+        "late_swap_mistap_risk_pct": 6.0,
+        "two_phase_redraw_rate_pct": 99.0,
+        "offscreen_rescue_pct": 10.0
+      },
+      "ON": {
+        "ai_1tap_reachability_pct": 60.0,
+        "visible_viewport_recall_pct": 82.0,
+        "mrr": 0.6771,
+        "viewport_shift_rate_pct": 0.0,
+        "late_swap_mistap_risk_pct": 0.0,
+        "two_phase_redraw_rate_pct": 17.0,
+        "offscreen_rescue_pct": 40.0
+      }
+    },
+    "mixed_08b": {
+      "OFF": {
+        "ai_1tap_reachability_pct": 60.0,
+        "visible_viewport_recall_pct": 80.0,
+        "mrr": 0.7129,
+        "viewport_shift_rate_pct": 76.0,
+        "late_swap_mistap_risk_pct": 11.0,
+        "two_phase_redraw_rate_pct": 99.0,
+        "offscreen_rescue_pct": 10.0
+      },
+      "ON": {
+        "ai_1tap_reachability_pct": 60.0,
+        "visible_viewport_recall_pct": 85.0,
+        "mrr": 0.6354,
+        "viewport_shift_rate_pct": 0.0,
+        "late_swap_mistap_risk_pct": 0.0,
+        "two_phase_redraw_rate_pct": 39.0,
+        "offscreen_rescue_pct": 40.0
+      }
+    },
+    "heavy_cold_2b": {
+      "OFF": {
+        "ai_1tap_reachability_pct": 69.0,
+        "visible_viewport_recall_pct": 83.0,
+        "mrr": 0.7751,
+        "viewport_shift_rate_pct": 70.0,
+        "late_swap_mistap_risk_pct": 17.0,
+        "two_phase_redraw_rate_pct": 99.0,
+        "offscreen_rescue_pct": 10.0
+      },
+      "ON": {
+        "ai_1tap_reachability_pct": 60.0,
+        "visible_viewport_recall_pct": 91.0,
+        "mrr": 0.527,
+        "viewport_shift_rate_pct": 0.0,
+        "late_swap_mistap_risk_pct": 0.0,
+        "two_phase_redraw_rate_pct": 84.0,
+        "offscreen_rescue_pct": 40.0
+      }
+    }
+  }
+}

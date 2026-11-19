@@ -80,6 +80,7 @@ class VoiceInputMethodService : InputMethodService() {
     private var currentState = State.IDLE
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var rerankJob: Job? = null
+    private var phase1TimerJob: Job? = null
     private var englishCandidateJob: Job? = null
     private var warmContextJob: Job? = null
     private var lastWarmedContextText: String? = null
@@ -422,6 +423,7 @@ class VoiceInputMethodService : InputMethodService() {
             onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() }
         )
         if (resetTriggered) {
+            phase1TimerJob?.cancel()
             rerankJob?.cancel()
             isCurrentCandidatesReranked = false
             updateDebugSlmBadge(null)
@@ -651,7 +653,8 @@ class VoiceInputMethodService : InputMethodService() {
 
         candidateStripView?.listener = object : CandidateStripView.OnCandidateClickListener {
             override fun onCandidateClick(candidate: ConversionCandidate) {
-                rerankJob?.cancel()
+                phase1TimerJob?.cancel()
+            rerankJob?.cancel()
                 val prevPhrase = arbitrator.previousCommittedPhrase
                 val committedSurface = candidate.surface
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
@@ -775,7 +778,8 @@ class VoiceInputMethodService : InputMethodService() {
                     syncKeyboardState()
                     updateCandidates()
                 } else {
-                    rerankJob?.cancel()
+                    phase1TimerJob?.cancel()
+            rerankJob?.cancel()
                     isCurrentCandidatesReranked = false
                     val prevPhrase = arbitrator.previousCommittedPhrase
                     val hadKeyboardComposing = arbitrator.isKeyboardComposing()
@@ -848,7 +852,8 @@ class VoiceInputMethodService : InputMethodService() {
                         }
                     }
                     VoiceTouchInputArbitrator.DeleteOutcome.DELETED_SURROUNDING_TEXT -> {
-                        rerankJob?.cancel()
+                        phase1TimerJob?.cancel()
+            rerankJob?.cancel()
                         englishCandidateJob?.cancel()
                         isCurrentCandidatesReranked = false
                         if (count <= 1 && flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
@@ -859,7 +864,8 @@ class VoiceInputMethodService : InputMethodService() {
                     }
                     VoiceTouchInputArbitrator.DeleteOutcome.DELETED_FROM_KEYBOARD_COMPOSING_NOW_EMPTY,
                     VoiceTouchInputArbitrator.DeleteOutcome.DELETED_ENTIRE_SWIPE_WORD -> {
-                        rerankJob?.cancel()
+                        phase1TimerJob?.cancel()
+            rerankJob?.cancel()
                         englishCandidateJob?.cancel()
                         isCurrentCandidatesReranked = false
                         candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
@@ -888,7 +894,8 @@ class VoiceInputMethodService : InputMethodService() {
                     formatStreamingFn = { formatVoiceText(it) }
                 )
                 audioRecorder.notifyUserTyping(350L)
-                rerankJob?.cancel()
+                phase1TimerJob?.cancel()
+            rerankJob?.cancel()
                 isCurrentCandidatesReranked = false
                 syncKeyboardState()
 
@@ -921,7 +928,8 @@ class VoiceInputMethodService : InputMethodService() {
                     formatStreamingFn = { formatVoiceText(it) }
                 )
                 audioRecorder.notifyUserTyping(350L)
-                rerankJob?.cancel()
+                phase1TimerJob?.cancel()
+            rerankJob?.cancel()
                 LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
                 isCurrentCandidatesReranked = false
                 syncKeyboardState()
@@ -963,7 +971,8 @@ class VoiceInputMethodService : InputMethodService() {
                     formatStreamingFn = { formatVoiceText(it) }
                 )
                 audioRecorder.notifyUserTyping(350L)
-                rerankJob?.cancel()
+                phase1TimerJob?.cancel()
+            rerankJob?.cancel()
                 LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
                 isCurrentCandidatesReranked = false
                 syncKeyboardState()
@@ -983,7 +992,8 @@ class VoiceInputMethodService : InputMethodService() {
                     formatStreamingFn = { formatVoiceText(it) }
                 )
                 audioRecorder.notifyUserTyping(350L)
-                rerankJob?.cancel()
+                phase1TimerJob?.cancel()
+            rerankJob?.cancel()
                 LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
                 isCurrentCandidatesReranked = false
                 syncKeyboardState()
@@ -1087,6 +1097,7 @@ class VoiceInputMethodService : InputMethodService() {
                     formatStreamingFn = { formatVoiceText(it) }
                 )
                 audioRecorder.notifyUserTyping(350L)
+                phase1TimerJob?.cancel()
                 rerankJob?.cancel()
                 LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
                 isCurrentCandidatesReranked = false
@@ -1098,6 +1109,7 @@ class VoiceInputMethodService : InputMethodService() {
 
     private fun updateCandidates() {
         if (!arbitrator.isKeyboardComposing()) {
+            phase1TimerJob?.cancel()
             rerankJob?.cancel()
             LlmReranker.getInstance(this).requestAbortScoring()
             isCurrentCandidatesReranked = false
@@ -1115,7 +1127,9 @@ class VoiceInputMethodService : InputMethodService() {
 
         // Signal any ongoing C++ score/decode pass to abort immediately (Policy ⑥)
         LlmReranker.getInstance(this).requestAbortScoring()
-        rerankJob?.cancel()
+        phase1TimerJob?.cancel()
+        phase1TimerJob?.cancel()
+            rerankJob?.cancel()
         isCurrentCandidatesReranked = false
         updateDebugSlmBadge(null)
 
@@ -1135,7 +1149,6 @@ class VoiceInputMethodService : InputMethodService() {
         val canRerank = execDecision.shouldRerank
 
         // 1. FAST ZERO-JITTER PATH (< 0.1ms synchronous on Main Thread, Policies ① & ②):
-        // If context logits or memoized NLLs are available, compute ranking instantly before first render.
         var renderedCandidates = baseCandidates
         var isFullyCompleteFromFastPath = false
         if (canRerank) {
@@ -1156,17 +1169,144 @@ class VoiceInputMethodService : InputMethodService() {
             }
         }
 
-        // Render immediately (< 1ms)
+        val isAntiJitterUiEnabled = KeyboardHeightManager.isAntiJitterCandidateUiEnabled(this)
+
+        // If Fast-Path is 100% complete or reranking is disabled, render once immediately and return
+        if (isFullyCompleteFromFastPath || !canRerank) {
+            initialRenderedTop1 = renderedCandidates.firstOrNull()?.surface
+            firstRenderUptimeMs = android.os.SystemClock.uptimeMillis()
+            candidateStripView?.setCandidatesSinglePass(
+                renderedCandidates,
+                highlightFirstAsAi = isAntiJitterUiEnabled && isFullyCompleteFromFastPath
+            )
+            return
+        }
+
+        if (isAntiJitterUiEnabled) {
+            // === NEW ANTI-JITTER PIPELINE (UI-Idea 1 + UI-Idea 2 + UI-Idea 8) ===
+            val holdBudgetMs = if (ikiMs < CandidateRerankJudgement.RAPID_TYPING_IKI_THRESHOLD_MS) {
+                CandidateRerankJudgement.RAPID_TYPING_HOLD_MS
+            } else {
+                CandidateRerankJudgement.MICRO_WAIT_HOLD_MS
+            }
+
+            var isPhase1Rendered = false
+            var phase1DisplayCandidates: List<ConversionCandidate> = emptyList()
+            val heroReservedCharCount = baseCandidates
+                .filter { !it.isPrediction && it.reading.length == reading.length }
+                .maxOfOrNull { it.surface.length }
+                ?.coerceIn(2, 4) ?: 2
+
+            phase1TimerJob = serviceScope.launch(Dispatchers.Main) {
+                delay(holdBudgetMs)
+                if (arbitrator.composingText.toString() == reading && !isCurrentCandidatesReranked) {
+                    isPhase1Rendered = true
+                    initialRenderedTop1 = renderedCandidates.firstOrNull()?.surface
+                    firstRenderUptimeMs = android.os.SystemClock.uptimeMillis()
+                    phase1DisplayCandidates = candidateStripView?.renderPhase1WithHeroPlaceholder(
+                        baseCandidates = renderedCandidates,
+                        reservedHeroCharCount = heroReservedCharCount
+                    ) ?: CandidateStripView.filterAndDeduplicateDisplayCandidates(renderedCandidates)
+                }
+            }
+
+            rerankJob = serviceScope.launch(Dispatchers.Default) {
+                try {
+                    val (reranked, slmUsed) = withTimeout(2500L) {
+                        kanaKanjiEngine.rerankCandidatesWithStatus(
+                            contextPrefix = textBeforeCursor,
+                            baseCandidates = baseCandidates,
+                            currentShownTop1 = null,
+                            targetInputLength = reading.length
+                        )
+                    }
+                    if (arbitrator.composingText.toString() == reading && reranked.isNotEmpty()) {
+                        withContext(Dispatchers.Main) {
+                            phase1TimerJob?.cancel()
+                            if (arbitrator.composingText.toString() != reading) return@withContext
+
+                            isCurrentCandidatesReranked = true
+                            val engineType = KeyboardHeightManager.getRerankEngineType(this@VoiceInputMethodService)
+                            updateDebugSlmBadge(if (slmUsed) engineType.badgeLabel else null)
+
+                            val filteredReranked = CandidateStripView.filterAndDeduplicateDisplayCandidates(reranked)
+                                .ifEmpty { reranked }
+
+                            val applyUpdate: (Boolean) -> Unit = { phase1Shown ->
+                                val frozenSource = if (phase1Shown && phase1DisplayCandidates.isNotEmpty()) {
+                                    phase1DisplayCandidates
+                                } else {
+                                    CandidateStripView.filterAndDeduplicateDisplayCandidates(renderedCandidates)
+                                        .ifEmpty { renderedCandidates }
+                                }
+                                val visibleCount = if (phase1Shown) {
+                                    candidateStripView?.computeVisibleCandidateCount(excludeHeroSlot = true)
+                                        ?: CandidateRerankJudgement.DEFAULT_VISIBLE_SLOT_FALLBACK
+                                } else {
+                                    0
+                                }
+                                val decision = CandidateRerankJudgement.judgeViewportAwareOrdering(
+                                    CandidateRerankJudgement.ViewportAwareOrderingInput(
+                                        baseCandidates = frozenSource,
+                                        rerankedCandidates = filteredReranked,
+                                        isPhase1AlreadyRendered = phase1Shown,
+                                        hasReservedHeroSlot = phase1Shown,
+                                        frozenVisibleCount = visibleCount,
+                                        isUserTouchingStrip = candidateStripView?.isUserInteracting == true
+                                    )
+                                )
+                                when (decision.strategy) {
+                                    CandidateRerankJudgement.UiRenderStrategy.DIRECT_SINGLE_PASS_SLM -> {
+                                        initialRenderedTop1 = decision.finalCandidates.firstOrNull()?.surface
+                                        firstRenderUptimeMs = android.os.SystemClock.uptimeMillis()
+                                        candidateStripView?.setCandidatesSinglePass(
+                                            decision.finalCandidates,
+                                            highlightFirstAsAi = slmUsed
+                                        )
+                                    }
+                                    CandidateRerankJudgement.UiRenderStrategy.PHASE2_POPULATE_HERO_AND_RERANK_OFFSCREEN_TAIL -> {
+                                        candidateStripView?.applyPhase2NonDisruptiveUpdate(decision)
+                                    }
+                                    CandidateRerankJudgement.UiRenderStrategy.DEFER_WHILE_USER_TOUCHING -> {
+                                        candidateStripView?.deferPhase2UpdateUntilTouchRelease {
+                                            if (arbitrator.composingText.toString() == reading) {
+                                                val newVisible = candidateStripView?.computeVisibleCandidateCount(excludeHeroSlot = true)
+                                                    ?: CandidateRerankJudgement.DEFAULT_VISIBLE_SLOT_FALLBACK
+                                                val deferredDecision = CandidateRerankJudgement.judgeViewportAwareOrdering(
+                                                    CandidateRerankJudgement.ViewportAwareOrderingInput(
+                                                        baseCandidates = frozenSource,
+                                                        rerankedCandidates = filteredReranked,
+                                                        isPhase1AlreadyRendered = true,
+                                                        hasReservedHeroSlot = true,
+                                                        frozenVisibleCount = newVisible,
+                                                        isUserTouchingStrip = false
+                                                    )
+                                                )
+                                                candidateStripView?.applyPhase2NonDisruptiveUpdate(deferredDecision)
+                                            }
+                                        }
+                                    }
+                                    else -> {}
+                                }
+                            }
+
+                            applyUpdate(isPhase1Rendered)
+                        }
+                    }
+                } catch (e: TimeoutCancellationException) {
+                    Log.w(TAG, "KanaKanji/SLM rerank timed out (>2500ms), fail-safe preserving base candidates")
+                } catch (e: Exception) {
+                    Log.w(TAG, "KanaKanji/SLM rerank error: ${e.message}")
+                }
+            }
+            return
+        }
+
+        // === LEGACY PIPELINE (Anti-Jitter UI OFF) ===
         initialRenderedTop1 = renderedCandidates.firstOrNull()?.surface
         firstRenderUptimeMs = android.os.SystemClock.uptimeMillis()
         candidateStripView?.setCandidates(renderedCandidates)
 
-        // If the synchronous fast path was 100% complete, skip background reranking completely (0ms Two-Phase Redraw Rate!)
-        if (isFullyCompleteFromFastPath || !canRerank) {
-            return
-        }
-
-        // 2. ADAPTIVE BACKGROUND RERANKING PATH (Policies ③, ④, ⑤, ⑥):
         val debounceMs = execDecision.debounceMs
         val currentTop1ToPreserve = initialRenderedTop1
 
@@ -1245,7 +1385,8 @@ class VoiceInputMethodService : InputMethodService() {
     }
 
     private fun commitComposingText() {
-        rerankJob?.cancel()
+        phase1TimerJob?.cancel()
+            rerankJob?.cancel()
         LlmReranker.getInstance(this).requestAbortScoring()
         isCurrentCandidatesReranked = false
         updateDebugSlmBadge(null)
@@ -1421,7 +1562,8 @@ class VoiceInputMethodService : InputMethodService() {
     }
 
     private fun showNextPhrasePredictions(committedPhrase: String) {
-        rerankJob?.cancel()
+        phase1TimerJob?.cancel()
+            rerankJob?.cancel()
         updateDebugSlmBadge(null)
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
         val suggestJpPeriod = KeyboardHeightManager.isJapanesePeriodSuggestionEnabled(this)
@@ -2263,6 +2405,7 @@ class VoiceInputMethodService : InputMethodService() {
                 formatStreamingFn = { formatVoiceText(it) }
             )
             audioRecorder.notifyUserTyping(350L)
+            phase1TimerJob?.cancel()
             rerankJob?.cancel()
             isCurrentCandidatesReranked = false
 
@@ -2355,7 +2498,8 @@ class VoiceInputMethodService : InputMethodService() {
 
     override fun onDestroy() {
         clipboardExpirationJob?.cancel()
-        rerankJob?.cancel()
+        phase1TimerJob?.cancel()
+            rerankJob?.cancel()
         englishCandidateJob?.cancel()
         streamingJob?.cancel()
         getSharedPreferences(KeyboardHeightManager.PREFS_NAME, Context.MODE_PRIVATE)

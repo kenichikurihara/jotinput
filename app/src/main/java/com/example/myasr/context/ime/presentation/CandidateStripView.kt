@@ -7,6 +7,7 @@ import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
 
 import android.content.Context
 import android.graphics.Typeface
+import android.text.TextUtils
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.View
@@ -14,6 +15,7 @@ import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import com.example.myasr.context.reranking.domain.CandidateRerankJudgement
 
 class CandidateStripView @JvmOverloads constructor(
     context: Context,
@@ -30,10 +32,17 @@ class CandidateStripView @JvmOverloads constructor(
     var isUserInteracting: Boolean = false
         private set
 
+    private var deferredPhase2Action: (() -> Unit)? = null
+    private var hasActiveHeroSlot: Boolean = false
+    private var reservedHeroWidthPx: Int = 0
+
     override fun onInterceptTouchEvent(ev: android.view.MotionEvent): Boolean {
         when (ev.actionMasked) {
             android.view.MotionEvent.ACTION_DOWN -> isUserInteracting = true
-            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> isUserInteracting = false
+            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                isUserInteracting = false
+                flushDeferredPhase2IfNeeded()
+            }
         }
         return super.onInterceptTouchEvent(ev)
     }
@@ -41,9 +50,22 @@ class CandidateStripView @JvmOverloads constructor(
     override fun onTouchEvent(ev: android.view.MotionEvent): Boolean {
         when (ev.actionMasked) {
             android.view.MotionEvent.ACTION_DOWN, android.view.MotionEvent.ACTION_MOVE -> isUserInteracting = true
-            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> isUserInteracting = false
+            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                isUserInteracting = false
+                flushDeferredPhase2IfNeeded()
+            }
         }
         return super.onTouchEvent(ev)
+    }
+
+    private fun flushDeferredPhase2IfNeeded() {
+        val pending = deferredPhase2Action ?: return
+        deferredPhase2Action = null
+        post { pending.invoke() }
+    }
+
+    fun deferPhase2UpdateUntilTouchRelease(action: () -> Unit) {
+        deferredPhase2Action = action
     }
 
     private val container = LinearLayout(context).apply {
@@ -74,6 +96,9 @@ class CandidateStripView @JvmOverloads constructor(
     var onEmptyStatusShown: (() -> Unit)? = null
 
     fun showEmptyStatus(text: String) {
+        deferredPhase2Action = null
+        hasActiveHeroSlot = false
+        reservedHeroWidthPx = 0
         currentCandidates = emptyList()
         container.removeAllViews()
         emptyStatusView.text = text
@@ -102,10 +127,48 @@ class CandidateStripView @JvmOverloads constructor(
             }
             return result
         }
+
+        internal fun quantizedMinWidthPx(charCount: Int, density: Float): Int {
+            return when (charCount) {
+                1 -> (42 * density).toInt()
+                2 -> (64 * density).toInt()
+                3 -> (86 * density).toInt()
+                4 -> (108 * density).toInt()
+                else -> 0
+            }
+        }
+    }
+
+    fun computeVisibleCandidateCount(excludeHeroSlot: Boolean = true): Int {
+        val viewportRightEdgePx = width + scrollX
+        if (width <= 0 || container.childCount == 0) {
+            return CandidateRerankJudgement.DEFAULT_VISIBLE_SLOT_FALLBACK
+        }
+        var visibleCount = 0
+        val startIndex = if (excludeHeroSlot && hasActiveHeroSlot) 1 else 0
+        for (i in startIndex until container.childCount) {
+            val child = container.getChildAt(i) ?: continue
+            if (child.left < viewportRightEdgePx) {
+                visibleCount++
+            } else {
+                break
+            }
+        }
+        return visibleCount.coerceAtLeast(1)
     }
 
     fun setCandidates(candidates: List<ConversionCandidate>) {
-        // Retain candidates from engine (redundant Hiragana matching composing text is already excluded by engine)
+        setCandidatesSinglePass(candidates, highlightFirstAsAi = false)
+    }
+
+    fun setCandidatesSinglePass(
+        candidates: List<ConversionCandidate>,
+        highlightFirstAsAi: Boolean = false
+    ) {
+        deferredPhase2Action = null
+        hasActiveHeroSlot = false
+        reservedHeroWidthPx = 0
+
         val displayCandidates = filterAndDeduplicateDisplayCandidates(candidates)
         if (displayCandidates.isEmpty()) {
             showEmptyStatus("話すか、フリックで入力")
@@ -115,7 +178,7 @@ class CandidateStripView @JvmOverloads constructor(
         // Zero-Jitter optimization: If surfaces are identical to current strip, skip DOM recreation
         val currentSurfaces = filterAndDeduplicateDisplayCandidates(currentCandidates).map { it.surface }
         val newSurfaces = displayCandidates.map { it.surface }
-        if (currentSurfaces == newSurfaces && container.childCount > 0) {
+        if (currentSurfaces == newSurfaces && container.childCount > 0 && !highlightFirstAsAi) {
             currentCandidates = candidates
             return
         }
@@ -123,6 +186,125 @@ class CandidateStripView @JvmOverloads constructor(
         currentCandidates = candidates
         container.removeAllViews()
 
+        for ((index, candidate) in displayCandidates.withIndex()) {
+            val isAiHighlight = highlightFirstAsAi && index == 0 &&
+                candidate.source != "clipboard_recent" &&
+                candidate.source != "voice_correction_suggest"
+            container.addView(createCandidatePillView(candidate, isAiHighlight = isAiHighlight))
+        }
+        post { fullScroll(View.FOCUS_LEFT) }
+    }
+
+    /**
+     * UI-Idea 1 + UI-Idea 8 Phase 1:
+     * Reserves a fixed-width AI Hero Slot at index 0 and renders baseCandidates to the right,
+     * locking the viewport coordinates for all visible candidates.
+     */
+    fun renderPhase1WithHeroPlaceholder(
+        baseCandidates: List<ConversionCandidate>,
+        reservedHeroCharCount: Int = 2
+    ): List<ConversionCandidate> {
+        deferredPhase2Action = null
+        val displayCandidates = filterAndDeduplicateDisplayCandidates(baseCandidates)
+        if (displayCandidates.isEmpty()) {
+            showEmptyStatus("話すか、フリックで入力")
+            return emptyList()
+        }
+
+        val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val density = resources.displayMetrics.density
+        val pillHeight = if (isLandscape) (26 * density).toInt() else (30 * density).toInt()
+        val textSizeSp = if (isLandscape) 13.5f else 15f
+        val marginH = (3 * density).toInt()
+
+        val clampedCharCount = reservedHeroCharCount.coerceIn(2, 4)
+        reservedHeroWidthPx = quantizedMinWidthPx(clampedCharCount, density)
+        hasActiveHeroSlot = true
+        currentCandidates = displayCandidates
+
+        container.removeAllViews()
+
+        val heroPlaceholder = TextView(context).apply {
+            text = "✨ …"
+            textSize = textSizeSp
+            typeface = Typeface.DEFAULT
+            gravity = Gravity.CENTER
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            setTextColor(ContextCompat.getColor(context, R.color.primary))
+            setBackgroundResource(R.drawable.bg_candidate_pill_hero_placeholder)
+            alpha = 0.78f
+            isClickable = false
+            layoutParams = LinearLayout.LayoutParams(reservedHeroWidthPx, pillHeight).apply {
+                setMargins(marginH, 0, marginH, 0)
+            }
+        }
+        container.addView(heroPlaceholder)
+
+        for (candidate in displayCandidates) {
+            container.addView(createCandidatePillView(candidate, isAiHighlight = false))
+        }
+        post { fullScroll(View.FOCUS_LEFT) }
+        return displayCandidates
+    }
+
+    /**
+     * UI-Idea 1 + UI-Idea 8 Phase 2:
+     * Non-disruptive DOM update that populates Slot 0 (fixed width), keeps Zone B (visible candidates)
+     * 100% untouched in position and View identity, and replaces only Zone C (off-screen tail).
+     */
+    fun applyPhase2NonDisruptiveUpdate(
+        decision: CandidateRerankJudgement.ViewportAwareOrderingDecision
+    ) {
+        deferredPhase2Action = null
+        if (decision.strategy != CandidateRerankJudgement.UiRenderStrategy.PHASE2_POPULATE_HERO_AND_RERANK_OFFSCREEN_TAIL) {
+            return
+        }
+
+        val hero = decision.heroSlotCandidate
+        if (hasActiveHeroSlot && container.childCount > 0 && hero != null) {
+            val heroView = container.getChildAt(0) as? TextView
+            if (heroView != null) {
+                heroView.text = "✨ ${hero.surface}"
+                heroView.setTextColor(ContextCompat.getColor(context, R.color.primary))
+                heroView.setBackgroundResource(R.drawable.bg_candidate_pill_ai_promoted)
+                heroView.isClickable = true
+                heroView.setOnClickListener {
+                    listener?.onCandidateClick(hero)
+                }
+                heroView.alpha = 0.55f
+                heroView.animate().alpha(1.0f).setDuration(150L).start()
+            }
+        }
+
+        val zoneBStart = if (hasActiveHeroSlot) 1 else 0
+        val zoneBCount = decision.frozenZoneBCandidates.size
+
+        val spotlightIdx = decision.spotlightIndexInViewport
+        if (spotlightIdx != null && spotlightIdx in 0 until zoneBCount) {
+            val spotlightView = container.getChildAt(zoneBStart + spotlightIdx) as? TextView
+            if (spotlightView != null) {
+                spotlightView.setBackgroundResource(R.drawable.bg_candidate_pill_ai_promoted)
+                spotlightView.setTextColor(ContextCompat.getColor(context, R.color.primary))
+            }
+        }
+
+        val zoneCStart = zoneBStart + zoneBCount
+        if (container.childCount > zoneCStart) {
+            container.removeViews(zoneCStart, container.childCount - zoneCStart)
+        }
+        for (tailCandidate in decision.offScreenZoneCCandidates) {
+            container.addView(createCandidatePillView(tailCandidate, isAiHighlight = false))
+        }
+
+        currentCandidates = decision.finalCandidates
+        // Intentionally do NOT call fullScroll(View.FOCUS_LEFT) so current scrollX is preserved
+    }
+
+    private fun createCandidatePillView(
+        candidate: ConversionCandidate,
+        isAiHighlight: Boolean
+    ): TextView {
         val isLandscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val density = resources.displayMetrics.density
         val pillHeight = if (isLandscape) (26 * density).toInt() else (30 * density).toInt()
@@ -131,56 +313,48 @@ class CandidateStripView @JvmOverloads constructor(
         val padV = (3 * density).toInt()
         val marginH = (3 * density).toInt()
 
-        for (candidate in displayCandidates) {
-            val tv = TextView(context).apply {
-                val isClipboardRecent = candidate.source == "clipboard_recent"
-                val isVoiceCorrectionSuggest = candidate.source == "voice_correction_suggest"
-                val displayText = when {
-                    isClipboardRecent -> ClipboardUtils.formatCandidateChipPreview(candidate.surface, maxChars = 14)
-                    isVoiceCorrectionSuggest -> "🔄 ${candidate.surface}"
-                    else -> candidate.surface
-                }
-                text = displayText
-                textSize = textSizeSp
-                typeface = Typeface.DEFAULT
-                gravity = Gravity.CENTER
+        return TextView(context).apply {
+            val isClipboardRecent = candidate.source == "clipboard_recent"
+            val isVoiceCorrectionSuggest = candidate.source == "voice_correction_suggest"
+            val displayText = when {
+                isClipboardRecent -> ClipboardUtils.formatCandidateChipPreview(candidate.surface, maxChars = 14)
+                isVoiceCorrectionSuggest -> "🔄 ${candidate.surface}"
+                isAiHighlight -> "✨ ${candidate.surface}"
+                else -> candidate.surface
+            }
+            text = displayText
+            textSize = textSizeSp
+            typeface = Typeface.DEFAULT
+            gravity = Gravity.CENTER
 
-                // Quantized minimum width by character count: eliminates cumulative layout shifts (CLS)
-                // when homophones of the same character count exchange positions.
-                val charCount = candidate.surface.length
-                val minW = if (isClipboardRecent || isVoiceCorrectionSuggest) {
-                    0
-                } else {
-                    when (charCount) {
-                        1 -> (42 * density).toInt()
-                        2 -> (64 * density).toInt()
-                        3 -> (86 * density).toInt()
-                        4 -> (108 * density).toInt()
-                        else -> 0
-                    }
-                }
-                minWidth = minW
+            val charCount = candidate.surface.length
+            val minW = if (isClipboardRecent || isVoiceCorrectionSuggest) {
+                0
+            } else {
+                quantizedMinWidthPx(charCount, density)
+            }
+            minWidth = minW
 
+            if (isAiHighlight) {
+                setTextColor(ContextCompat.getColor(context, R.color.primary))
+                setBackgroundResource(R.drawable.bg_candidate_pill_ai_promoted)
+            } else {
                 setTextColor(ContextCompat.getColor(context, R.color.candidate_text))
                 setBackgroundResource(R.drawable.bg_candidate_pill)
-
-                setPadding(padH, padV, padH, padV)
-
-                val lp = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    pillHeight
-                ).apply {
-                    setMargins(marginH, 0, marginH, 0)
-                }
-                layoutParams = lp
-
-                setOnClickListener {
-                    listener?.onCandidateClick(candidate)
-                }
             }
-            container.addView(tv)
+
+            setPadding(padH, padV, padH, padV)
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                pillHeight
+            ).apply {
+                setMargins(marginH, 0, marginH, 0)
+            }
+
+            setOnClickListener {
+                listener?.onCandidateClick(candidate)
+            }
         }
-        // Scroll to start
-        post { fullScroll(View.FOCUS_LEFT) }
     }
 }

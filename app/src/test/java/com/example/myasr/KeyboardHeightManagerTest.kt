@@ -50,4 +50,9 @@ class KeyboardHeightManagerTest {
     fun testSlmRerankEnabledPrefKey() {
         assertEquals("slm_rerank_enabled", KeyboardHeightManager.KEY_SLM_RERANK_ENABLED)
     }
+
+    @Test
+    fun testAntiJitterCandidateUiPrefKey() {
+        assertEquals("anti_jitter_candidate_ui_enabled", KeyboardHeightManager.KEY_ANTI_JITTER_CANDIDATE_UI)
+    }
 }

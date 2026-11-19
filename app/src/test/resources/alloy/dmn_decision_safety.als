@@ -139,6 +139,77 @@ pred canShowClipboardSuggestion {
     some c: ClipboardInput | evalClipboardEligible[c] = True
 }
 
+// --- Part 3: ViewportAwareCandidateOrdering (UI-Idea 1 + 2 + 8) ---
+
+abstract sig ViewportRule {}
+one sig VpSafeR1, VpSafeR2, VpSafeR3, VpSafeDefault extends ViewportRule {}
+
+abstract sig UiRenderStrategy {}
+one sig StrategyDirectSinglePass, StrategyPhase2HeroAndOffscreen, StrategyDeferWhileTouching extends UiRenderStrategy {}
+
+sig ViewportOrderingInput {
+    isPhase1AlreadyRendered: one Bool,
+    hasReservedHeroSlot: one Bool,
+    isUserTouchingStrip: one Bool
+}
+
+pred vpSafeR1Matches[i: ViewportOrderingInput] {
+    i.isUserTouchingStrip = True and i.isPhase1AlreadyRendered = True
+}
+
+pred vpSafeR2Matches[i: ViewportOrderingInput] {
+    not vpSafeR1Matches[i] and
+    i.isPhase1AlreadyRendered = False
+}
+
+pred vpSafeR3Matches[i: ViewportOrderingInput] {
+    not vpSafeR1Matches[i] and
+    not vpSafeR2Matches[i] and
+    i.isPhase1AlreadyRendered = True and i.hasReservedHeroSlot = True
+}
+
+fun evalViewportRule[i: ViewportOrderingInput]: one ViewportRule {
+    vpSafeR1Matches[i] => VpSafeR1 else
+    vpSafeR2Matches[i] => VpSafeR2 else
+    vpSafeR3Matches[i] => VpSafeR3 else
+    VpSafeDefault
+}
+
+fun evalViewportStrategy[i: ViewportOrderingInput]: one UiRenderStrategy {
+    vpSafeR1Matches[i] => StrategyDeferWhileTouching else
+    vpSafeR2Matches[i] => StrategyDirectSinglePass else
+    StrategyPhase2HeroAndOffscreen
+}
+
+// Assertion 6: ViewportAwareCandidateOrdering is total
+assert ViewportTableIsTotal {
+    all i: ViewportOrderingInput | one evalViewportRule[i]
+}
+
+// Assertion 7: Completing within 50ms Micro-Wait (Phase 1 not rendered) always uses Single-Pass SLM
+assert MicroWaitBypassesPlaceholder {
+    all i: ViewportOrderingInput |
+        i.isPhase1AlreadyRendered = False implies evalViewportStrategy[i] = StrategyDirectSinglePass
+}
+
+// Assertion 8: Active touch after Phase 1 always defers DOM mutation
+assert ActiveTouchDefersUpdate {
+    all i: ViewportOrderingInput |
+        (i.isUserTouchingStrip = True and i.isPhase1AlreadyRendered = True) implies
+            evalViewportStrategy[i] = StrategyDeferWhileTouching
+}
+
+// Assertion 9: Phase 2 never mutates frozen Zone B and only reranks off-screen Zone C
+assert Phase2PreservesViewportWhenNotTouching {
+    all i: ViewportOrderingInput |
+        (i.isPhase1AlreadyRendered = True and i.isUserTouchingStrip = False) implies
+            evalViewportStrategy[i] = StrategyPhase2HeroAndOffscreen
+}
+
+pred canApplyPhase2HeroAndOffscreen {
+    some i: ViewportOrderingInput | evalViewportRule[i] = VpSafeR3
+}
+
 check TapSafeTableIsTotal for 4
 check NeverPinsWhenTop1UnchangedOrAbsent for 4
 check NeverPinsWithinWindowUnlessTouching for 4
@@ -146,6 +217,12 @@ check NeverPinsPartialOverFullSpan for 4
 check NeverPinsHighUtilityPredictionWhenNotTouching for 4
 check PinsPredictionWhenUserTouchingAfterWindow for 4
 check ClipboardNeverIntrudesDuringActiveInput for 4
+check ViewportTableIsTotal for 4
+check MicroWaitBypassesPlaceholder for 4
+check ActiveTouchDefersUpdate for 4
+check Phase2PreservesViewportWhenNotTouching for 4
 run canPinTop1Safely for 3
 run canPromoteHighUtilityPrediction for 3
 run canShowClipboardSuggestion for 3
+run canApplyPhase2HeroAndOffscreen for 3
+

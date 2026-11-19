@@ -24,6 +24,37 @@ object CandidateRerankJudgement {
     const val NORMAL_DEBOUNCE_MS = 4L
     const val TAP_SAFE_WINDOW_MS = 100L
 
+    // Anti-Jitter UI (UI-Idea 1 + UI-Idea 2 + UI-Idea 8) constants
+    const val MICRO_WAIT_HOLD_MS = 50L
+    const val RAPID_TYPING_HOLD_MS = 85L
+    const val DEFAULT_VISIBLE_SLOT_FALLBACK = 3
+
+    enum class UiRenderStrategy {
+        DIRECT_SINGLE_PASS_SLM,
+        PHASE1_HERO_PLACEHOLDER_AND_FROZEN_VIEWPORT,
+        PHASE2_POPULATE_HERO_AND_RERANK_OFFSCREEN_TAIL,
+        DEFER_WHILE_USER_TOUCHING
+    }
+
+    data class ViewportAwareOrderingInput(
+        val baseCandidates: List<ConversionCandidate>,
+        val rerankedCandidates: List<ConversionCandidate>,
+        val isPhase1AlreadyRendered: Boolean,
+        val hasReservedHeroSlot: Boolean,
+        val frozenVisibleCount: Int,
+        val isUserTouchingStrip: Boolean
+    )
+
+    data class ViewportAwareOrderingDecision(
+        val strategy: UiRenderStrategy,
+        val heroSlotCandidate: ConversionCandidate?,
+        val frozenZoneBCandidates: List<ConversionCandidate>,
+        val offScreenZoneCCandidates: List<ConversionCandidate>,
+        val finalCandidates: List<ConversionCandidate>,
+        val spotlightIndexInViewport: Int?,
+        val reason: String
+    )
+
     data class ExecutionInput(
         val isRerankEnabled: Boolean,
         val candidateCount: Int,
@@ -244,10 +275,110 @@ object CandidateRerankJudgement {
         )
     }
 
+    val viewportAwareOrderingDecisionTable: DecisionTable<ViewportAwareOrderingInput, ViewportAwareOrderingDecision> = decisionTable(
+        name = "ViewportAwareCandidateOrdering",
+        hitPolicy = HitPolicy.FIRST
+    ) {
+        rule(id = "VP_SAFE_R1", description = "Defer DOM update while user is actively touching or scrolling strip after Phase 1") {
+            `when` { it.isUserTouchingStrip && it.isPhase1AlreadyRendered }
+            then { input ->
+                ViewportAwareOrderingDecision(
+                    strategy = UiRenderStrategy.DEFER_WHILE_USER_TOUCHING,
+                    heroSlotCandidate = null,
+                    frozenZoneBCandidates = emptyList(),
+                    offScreenZoneCCandidates = emptyList(),
+                    finalCandidates = input.baseCandidates,
+                    spotlightIndexInViewport = null,
+                    reason = "defer_while_user_touching"
+                )
+            }
+        }
+        rule(id = "VP_SAFE_R2", description = "UI-Idea 2: SLM completed within micro-wait hold before Phase 1 render") {
+            `when` { !it.isPhase1AlreadyRendered }
+            then { input ->
+                val list = input.rerankedCandidates.ifEmpty { input.baseCandidates }
+                ViewportAwareOrderingDecision(
+                    strategy = UiRenderStrategy.DIRECT_SINGLE_PASS_SLM,
+                    heroSlotCandidate = null,
+                    frozenZoneBCandidates = emptyList(),
+                    offScreenZoneCCandidates = list,
+                    finalCandidates = list,
+                    spotlightIndexInViewport = null,
+                    reason = "single_pass_within_micro_wait"
+                )
+            }
+        }
+        rule(id = "VP_SAFE_R3", description = "UI-Idea 1 + 8: Populate reserved Hero Slot, freeze Zone B, and rerank off-screen Zone C") {
+            `when` { it.isPhase1AlreadyRendered && it.hasReservedHeroSlot }
+            then { input ->
+                buildPhase2HeroAndOffscreenDecision(input, withHeroSlot = true, reason = "populate_hero_and_rerank_offscreen")
+            }
+        }
+        default(id = "VP_SAFE_DEFAULT", description = "UI-Idea 8: Freeze Zone B and rerank off-screen Zone C without Hero Slot") { input ->
+            buildPhase2HeroAndOffscreenDecision(input, withHeroSlot = false, reason = "freeze_viewport_and_rerank_offscreen")
+        }
+    }
+
+    private fun buildPhase2HeroAndOffscreenDecision(
+        input: ViewportAwareOrderingInput,
+        withHeroSlot: Boolean,
+        reason: String
+    ): ViewportAwareOrderingDecision {
+        val safeFrozenCount = input.frozenVisibleCount.coerceIn(0, input.baseCandidates.size)
+        val frozenZoneB = input.baseCandidates.take(safeFrozenCount)
+        val frozenSurfaces = frozenZoneB.mapTo(HashSet()) { it.surface.trim() }
+
+        val reranked = input.rerankedCandidates.ifEmpty { input.baseCandidates }
+        val slmTop1 = reranked.firstOrNull()
+        val spotlightIdx = if (slmTop1 != null) {
+            frozenZoneB.indexOfFirst { it.surface.trim() == slmTop1.surface.trim() }.takeIf { it >= 0 }
+        } else {
+            null
+        }
+
+        val heroCandidate = if (withHeroSlot) {
+            if (slmTop1 != null && slmTop1.surface.trim() !in frozenSurfaces) {
+                slmTop1
+            } else {
+                // SLM Top-1 is already visible in Zone B: spotlight it in-place and place best unseen SLM candidate in Hero
+                reranked.firstOrNull { it.surface.trim() !in frozenSurfaces } ?: slmTop1
+            }
+        } else {
+            null
+        }
+
+        val shownSurfaces = HashSet<String>(frozenSurfaces)
+        if (heroCandidate != null) {
+            shownSurfaces.add(heroCandidate.surface.trim())
+        }
+
+        val offScreenZoneC = reranked.filter { cand ->
+            val key = cand.surface.trim()
+            key.isNotEmpty() && shownSurfaces.add(key)
+        }
+
+        val finalList = buildList {
+            if (heroCandidate != null) add(heroCandidate)
+            addAll(frozenZoneB)
+            addAll(offScreenZoneC)
+        }
+
+        return ViewportAwareOrderingDecision(
+            strategy = UiRenderStrategy.PHASE2_POPULATE_HERO_AND_RERANK_OFFSCREEN_TAIL,
+            heroSlotCandidate = heroCandidate,
+            frozenZoneBCandidates = frozenZoneB,
+            offScreenZoneCCandidates = offScreenZoneC,
+            finalCandidates = finalList,
+            spotlightIndexInViewport = spotlightIdx,
+            reason = reason
+        )
+    }
+
     val executionJudgement: Judgement<ExecutionInput, ExecutionDecision> = executionDecisionTable
     val tapSafeOrderingJudgement: Judgement<TapSafeOrderingInput, TapSafeOrderingDecision> = tapSafeOrderingDecisionTable
     val nextPhraseRerankJudgement: Judgement<NextPhraseRerankInput, JudgementResult<Boolean>> = nextPhraseRerankDecisionTable
     val speculativeWarmJudgement: Judgement<SpeculativeWarmInput, SpeculativeWarmDecision> = speculativeWarmDecisionTable
+    val viewportAwareOrderingJudgement: Judgement<ViewportAwareOrderingInput, ViewportAwareOrderingDecision> = viewportAwareOrderingDecisionTable
 
     fun judgeExecution(input: ExecutionInput): ExecutionDecision = executionJudgement.judge(input)
 
@@ -259,6 +390,12 @@ object CandidateRerankJudgement {
 
     fun judgeTapSafeOrderingWithTrace(input: TapSafeOrderingInput): DecisionTrace<TapSafeOrderingDecision> =
         tapSafeOrderingDecisionTable.evaluateWithTrace(input)
+
+    fun judgeViewportAwareOrdering(input: ViewportAwareOrderingInput): ViewportAwareOrderingDecision =
+        viewportAwareOrderingJudgement.judge(input)
+
+    fun judgeViewportAwareOrderingWithTrace(input: ViewportAwareOrderingInput): DecisionTrace<ViewportAwareOrderingDecision> =
+        viewportAwareOrderingDecisionTable.evaluateWithTrace(input)
 
     fun judgeNextPhraseRerank(input: NextPhraseRerankInput): JudgementResult<Boolean> =
         nextPhraseRerankJudgement.judge(input)

@@ -28,6 +28,17 @@ object KeyboardHeightManager {
     const val KEY_RERANK_ENGINE_TYPE = "rerank_engine_type"
     const val KEY_SLM_RERANK_ENABLED = "slm_rerank_enabled"
     const val KEY_SPECULATIVE_PREFETCH = "speculative_prefetch_enabled"
+    const val KEY_ANTI_JITTER_CANDIDATE_UI = "anti_jitter_candidate_ui_enabled"
+
+    fun isAntiJitterCandidateUiEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_ANTI_JITTER_CANDIDATE_UI, true)
+    }
+
+    fun setAntiJitterCandidateUiEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_ANTI_JITTER_CANDIDATE_UI, enabled).apply()
+    }
 
     fun isSlmRerankEnabled(context: Context): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
