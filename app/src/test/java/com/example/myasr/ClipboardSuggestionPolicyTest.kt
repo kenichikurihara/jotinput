@@ -165,7 +165,7 @@ class ClipboardSuggestionPolicyTest {
 
         // Active sensitive clip: masked on strip & sheet, never persisted, never learned
         val activeSensitive = judgement.judgeSafeHandlingWithTrace(
-            judgement.SafeClipboardHandlingInput(
+            com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.SafeClipboardHandlingInput(
                 isSensitiveClip = true,
                 isPasswordInputField = true,
                 isVolatileExpired = false,
@@ -176,12 +176,12 @@ class ClipboardSuggestionPolicyTest {
         assertEquals("SAFE_CLIP_R4", activeSensitive.selectedRuleId)
         assertFalse(activeSensitive.result.allowDiskPersistence)
         assertFalse(activeSensitive.result.allowLearningAndPrediction)
-        assertEquals(judgement.ClipboardDisplayMode.MASKED_SENSITIVE, activeSensitive.result.stripDisplayMode)
-        assertEquals(judgement.ClipboardDisplayMode.MASKED_SENSITIVE, activeSensitive.result.sheetDisplayMode)
+        assertEquals(com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.ClipboardDisplayMode.MASKED_SENSITIVE, activeSensitive.result.stripDisplayMode)
+        assertEquals(com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.ClipboardDisplayMode.MASKED_SENSITIVE, activeSensitive.result.sheetDisplayMode)
 
         // Strip dismissed sensitive clip: hidden on strip, still masked in sheet
         val stripDismissed = judgement.judgeSafeHandlingWithTrace(
-            judgement.SafeClipboardHandlingInput(
+            com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.SafeClipboardHandlingInput(
                 isSensitiveClip = true,
                 isPasswordInputField = false,
                 isVolatileExpired = false,
@@ -191,12 +191,12 @@ class ClipboardSuggestionPolicyTest {
         )
         assertEquals("SAFE_CLIP_R3", stripDismissed.selectedRuleId)
         assertFalse(stripDismissed.result.allowDiskPersistence)
-        assertEquals(judgement.ClipboardDisplayMode.HIDDEN, stripDismissed.result.stripDisplayMode)
-        assertEquals(judgement.ClipboardDisplayMode.MASKED_SENSITIVE, stripDismissed.result.sheetDisplayMode)
+        assertEquals(com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.ClipboardDisplayMode.HIDDEN, stripDismissed.result.stripDisplayMode)
+        assertEquals(com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.ClipboardDisplayMode.MASKED_SENSITIVE, stripDismissed.result.sheetDisplayMode)
 
         // Expired sensitive clip: completely hidden
         val expiredSensitive = judgement.judgeSafeHandlingWithTrace(
-            judgement.SafeClipboardHandlingInput(
+            com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.SafeClipboardHandlingInput(
                 isSensitiveClip = true,
                 isPasswordInputField = false,
                 isVolatileExpired = true,
@@ -205,12 +205,12 @@ class ClipboardSuggestionPolicyTest {
             )
         )
         assertEquals("SAFE_CLIP_R1", expiredSensitive.selectedRuleId)
-        assertEquals(judgement.ClipboardDisplayMode.HIDDEN, expiredSensitive.result.stripDisplayMode)
-        assertEquals(judgement.ClipboardDisplayMode.HIDDEN, expiredSensitive.result.sheetDisplayMode)
+        assertEquals(com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.ClipboardDisplayMode.HIDDEN, expiredSensitive.result.stripDisplayMode)
+        assertEquals(com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.ClipboardDisplayMode.HIDDEN, expiredSensitive.result.sheetDisplayMode)
 
         // Non-sensitive clip in password field: no learning
         val passwordFieldRegular = judgement.judgeSafeHandlingWithTrace(
-            judgement.SafeClipboardHandlingInput(
+            com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.SafeClipboardHandlingInput(
                 isSensitiveClip = false,
                 isPasswordInputField = true,
                 isVolatileExpired = false,
@@ -221,6 +221,6 @@ class ClipboardSuggestionPolicyTest {
         assertEquals("SAFE_CLIP_R5", passwordFieldRegular.selectedRuleId)
         assertTrue(passwordFieldRegular.result.allowDiskPersistence)
         assertFalse(passwordFieldRegular.result.allowLearningAndPrediction)
-        assertEquals(judgement.ClipboardDisplayMode.PLAIN_TEXT, passwordFieldRegular.result.stripDisplayMode)
+        assertEquals(com.example.myasr.context.clipboard.domain.ClipboardSuggestionJudgement.ClipboardDisplayMode.PLAIN_TEXT, passwordFieldRegular.result.stripDisplayMode)
     }
 }
