@@ -71,6 +71,7 @@ android {
     // Assets are kept external to maintain lightweight APK (~86 MB vs ~261 MB)
     testOptions {
         unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
     }
 }
 
@@ -88,6 +89,7 @@ dependencies {
     testImplementation("org.json:json:20240303")
     testImplementation("com.lemonappdev:konsist:0.17.3")
     testImplementation("org.alloytools:org.alloytools.alloy.core:6.2.0")
+    testImplementation("org.robolectric:robolectric:4.13")
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
