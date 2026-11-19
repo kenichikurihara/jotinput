@@ -49,6 +49,7 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `SlmDownloadPromptDecisionTable` | `FIRST` | 未導入 SLM モデル選択時のダウンロード確認ダイアログ提案可否決定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `RerankEngineSelectionDecisionTable` | `FIRST` | リランクON/OFF切替時のモデル選定・Qwen3.5-0.8Bデフォルト選定・整合性不変条件保護 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `BottomNavVisibilityDecisionTable` | `FIRST` | IME 表示時のボトムナビゲーション非表示（キーボード連動・無駄なスクロール/ホワイトスペース排除）決定 |
+| **BC-7: IME Session & UI** | `ImeHeaderDecisionModel` | `ImeHeaderVisibilityDecisionTable` | `FIRST` | フリック入力（キー押下中）・未確定中におけるマイク・辞書・クリップボードアイコン非表示と候補表示幅最大化決定 |
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingLaunchDecisionTable` | `FIRST` | 起動時オンボーディング要否・再インストール/既存移行判定 |
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `DriveRestoreStatusDecisionTable` | `FIRST` | Google Drive 履歴復元・SAF権限失効検知と表示状態決定 |
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingStepGuidanceDecisionTable` | `FIRST` | 各ステップのCTA・非ブロッキング進行・スキップ制御決定 |

@@ -37,6 +37,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         fun onUndoPressed() {}
         fun onSwipeInput(trajectory: List<FutoSwipeEngine.SwipePoint>) {}
         fun onKeyTouchDown() {}
+        fun onKeyTouchUpOrCancel() {}
         fun onModeChanged(mode: JapaneseKanaUtils.KeyboardMode)
     }
 
@@ -76,6 +77,7 @@ class FlickKeyboardView @JvmOverloads constructor(
     private var isComposingState: Boolean = false
     private var canUndoState: Boolean = false
     private var hasVoiceComposingState: Boolean = false
+    private var isCharKeyTouchNotified: Boolean = false
     private var previousAlphaOrKanaMode = JapaneseKanaUtils.KeyboardMode.KANA
     private var lastShiftTapTimeMs: Long = 0L
 
@@ -992,6 +994,13 @@ class FlickKeyboardView @JvmOverloads constructor(
             key.type == KeyType.QWERTY_CHAR
     }
 
+    private fun notifyKeyTouchUpOrCancel() {
+        if (isCharKeyTouchNotified) {
+            isCharKeyTouchNotified = false
+            listener?.onKeyTouchUpOrCancel()
+        }
+    }
+
     fun dismissPopup() {
         handler.removeCallbacksAndMessages(null)
         deleteRepeatStartTimeMs = 0L
@@ -1004,6 +1013,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         activeKey?.isPressed = false
         activeKey = null
         activeDirection = JapaneseKanaUtils.FlickDirection.CENTER
+        notifyKeyTouchUpOrCancel()
         invalidate()
     }
 
@@ -1076,6 +1086,7 @@ class FlickKeyboardView @JvmOverloads constructor(
                         hitKey.type == KeyType.MODIFIER_FLICK ||
                         hitKey.type == KeyType.PUNCTUATION_FLICK
                     ) {
+                        isCharKeyTouchNotified = true
                         listener?.onKeyTouchDown()
                     }
 
@@ -1228,6 +1239,7 @@ class FlickKeyboardView @JvmOverloads constructor(
                     activeKey = null
                     longPressTriggered = false
                     activeDirection = JapaneseKanaUtils.FlickDirection.CENTER
+                    notifyKeyTouchUpOrCancel()
                     invalidate()
                     return true
                 }
@@ -1245,6 +1257,7 @@ class FlickKeyboardView @JvmOverloads constructor(
                     activeDirection = JapaneseKanaUtils.FlickDirection.CENTER
                     invalidate()
                     listener?.onSwipeInput(trajectoryCopy)
+                    notifyKeyTouchUpOrCancel()
                     return true
                 }
 
@@ -1259,6 +1272,7 @@ class FlickKeyboardView @JvmOverloads constructor(
                 longPressTriggered = false
                 activeKey = null
                 activeDirection = JapaneseKanaUtils.FlickDirection.CENTER
+                notifyKeyTouchUpOrCancel()
                 invalidate()
                 return true
             }

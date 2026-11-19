@@ -120,6 +120,7 @@ class VoiceInputMethodService : InputMethodService() {
     private var tvDebugSlmBadge: android.widget.TextView? = null
     private var tvContextContent: android.widget.TextView? = null
     private var keyboardHeader: View? = null
+    private var voiceToggleContainer: View? = null
     private var btnVoiceToggle: Button? = null
     private var btnHeaderDict: Button? = null
     private var btnHeaderClipboard: Button? = null
@@ -128,6 +129,7 @@ class VoiceInputMethodService : InputMethodService() {
     private var clipboardHistoryView: ClipboardHistoryView? = null
     private var progressDecoding: ProgressBar? = null
     private var recordingIndicator: View? = null
+    private var isKeyTouchActive: Boolean = false
 
     private var clipboardManager: android.content.ClipboardManager? = null
     private var clipboardExpirationJob: Job? = null
@@ -222,6 +224,7 @@ class VoiceInputMethodService : InputMethodService() {
         tvDebugSlmBadge = view.findViewById(R.id.tvDebugSlmBadge)
         tvContextContent = view.findViewById(R.id.tvContextContent)
         keyboardHeader = view.findViewById(R.id.keyboardHeader)
+        voiceToggleContainer = view.findViewById(R.id.voiceToggleContainer)
         btnVoiceToggle = view.findViewById(R.id.btnVoiceToggle)
         btnHeaderDict = view.findViewById(R.id.btnHeaderDict)
         btnHeaderClipboard = view.findViewById(R.id.btnHeaderClipboard)
@@ -293,10 +296,12 @@ class VoiceInputMethodService : InputMethodService() {
         clipboardSuggestionPolicy.onFinishInputView()
         ClipboardHistoryRepository.getInstance(this).setInputViewActive(false)
         flickKeyboardView?.dismissPopup()
+        isKeyTouchActive = false
         if (currentState == State.RECORDING) {
             cancelRecording()
         }
         commitComposingText()
+        updateHeaderVisibility()
     }
 
     private fun handleVoiceAnchorSettled(
@@ -531,6 +536,7 @@ class VoiceInputMethodService : InputMethodService() {
             canUndo = arbitrator.canUndo(),
             hasVoiceComposing = hasVoiceComposing
         )
+        updateHeaderVisibility()
     }
 
     private fun resolveCurrentAsrLanguage(): AsrLanguage {
@@ -1083,7 +1089,18 @@ class VoiceInputMethodService : InputMethodService() {
             }
 
             override fun onKeyTouchDown() {
+                if (!isKeyTouchActive) {
+                    isKeyTouchActive = true
+                    updateHeaderVisibility()
+                }
                 triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.KEY_TOUCH_DOWN)
+            }
+
+            override fun onKeyTouchUpOrCancel() {
+                if (isKeyTouchActive) {
+                    isKeyTouchActive = false
+                    updateHeaderVisibility()
+                }
             }
 
             override fun onModeChanged(mode: JapaneseKanaUtils.KeyboardMode) {
@@ -2322,6 +2339,7 @@ class VoiceInputMethodService : InputMethodService() {
         clipboardHistoryView?.visibility = View.VISIBLE
         flickKeyboardView?.visibility = View.GONE
         btnHeaderClipboard?.setBackgroundResource(R.drawable.badge_background)
+        updateHeaderVisibility()
     }
 
     private fun hideClipboardHistoryView() {
@@ -2329,6 +2347,7 @@ class VoiceInputMethodService : InputMethodService() {
             clipboardHistoryView?.visibility = View.GONE
             flickKeyboardView?.visibility = View.VISIBLE
             btnHeaderClipboard?.setBackgroundResource(0)
+            updateHeaderVisibility()
         }
     }
 
@@ -2464,6 +2483,26 @@ class VoiceInputMethodService : InputMethodService() {
         }
     }
 
+    private fun updateHeaderVisibility() {
+        val voiceState = when (currentState) {
+            State.IDLE -> com.example.myasr.context.ime.domain.ImeHeaderDecisionModel.VoiceState.IDLE
+            State.RECORDING -> com.example.myasr.context.ime.domain.ImeHeaderDecisionModel.VoiceState.RECORDING
+            State.DECODING -> com.example.myasr.context.ime.domain.ImeHeaderDecisionModel.VoiceState.DECODING
+        }
+        val decision = com.example.myasr.context.ime.domain.ImeHeaderDecisionModel.decideHeaderVisibility(
+            com.example.myasr.context.ime.domain.ImeHeaderDecisionModel.ImeHeaderVisibilityInput(
+                voiceState = voiceState,
+                isKeyboardComposing = arbitrator.isKeyboardComposing(),
+                isStreamingComposing = arbitrator.isStreamingComposing(),
+                isKeyTouchActive = isKeyTouchActive,
+                isClipboardHistoryShowing = isClipboardHistoryShowing()
+            )
+        )
+        voiceToggleContainer?.visibility = if (decision.showVoiceToggle) View.VISIBLE else View.GONE
+        btnHeaderDict?.visibility = if (decision.showDictionaryButton) View.VISIBLE else View.GONE
+        btnHeaderClipboard?.visibility = if (decision.showClipboardButton) View.VISIBLE else View.GONE
+    }
+
     private fun updateUiState(state: State) {
         currentState = state
         when (state) {
@@ -2494,6 +2533,7 @@ class VoiceInputMethodService : InputMethodService() {
                 recordingIndicator?.visibility = View.GONE
             }
         }
+        updateHeaderVisibility()
     }
 
     override fun onDestroy() {

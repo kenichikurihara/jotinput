@@ -84,6 +84,13 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`UndoPrefixTruncateNeverReturnsStaleLogits`**: Undo による文脈短縮時、`SnapshotRing` からの復元により古い文脈の Logits を返さないこと。
 - **`RoPEShiftPreservesRelativePositions`**: 先頭トリミング時の RoPE 位置シフト（`seq_add`）後も位置インデックスの連続性が保たれること。
 
+### 3.10 [`ime_header_visibility.als`](app/src/test/resources/alloy/ime_header_visibility.als)
+IME ヘッダーバーのユーティリティアイコン表示裁定（[`ImeHeaderDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/ImeHeaderDecisionModel.kt) / `ImeHeaderVisibilityDecisionTable`）をモデル化し、以下を検証する：
+- **`HeaderTableIsTotal`**: 全入力組み合わせに対して一意のルールへ解決されること。
+- **`VoiceToggleAlwaysVisibleWhenRecordingOrDecoding`**: 音声録音中・デコード中に停止ボタン／スピナーが隠れないこと。
+- **`IconsHiddenDuringComposingOrFlickWhenVoiceIdle`**: 音声待機時かつクリップボード非表示時に、フリックタッチ中または未確定文字列存在時は 3 アイコン（マイク・辞書・クリップボード）がすべて非表示になること。
+- **`AllIconsVisibleWhenFullyIdle` / `ClipboardOpenKeepsAllIconsVisible`**: 完全待機時およびクリップボード履歴パネル表示時は 3 アイコンすべてが表示されること。
+
 ---
 
 ## 4. 自動同期ルール
