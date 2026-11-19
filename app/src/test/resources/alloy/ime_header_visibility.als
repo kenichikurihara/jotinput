@@ -7,7 +7,7 @@ open util/boolean
  *
  * Verifies safety and reachability invariants for hiding mic, dictionary, and clipboard
  * header icons during flick input (active key touch) and uncommitted composing text:
- * 1. Totality: Every input combination resolves to exactly one valid rule output.
+ * 1. Totality: Every input combination resolves to exactly one valid DMN rule.
  * 2. Recording/Decoding Safety: Voice toggle (Stop / Progress) is never hidden when
  *    voiceState != VoiceIdle.
  * 3. Candidate Strip Expansion: When voiceState = VoiceIdle and clipboard overlay is closed,
@@ -20,6 +20,9 @@ open util/boolean
 abstract sig VoiceState {}
 one sig VoiceIdle, VoiceRecording, VoiceDecoding extends VoiceState {}
 
+abstract sig HeaderRule {}
+one sig HeaderR1, HeaderR2, HeaderR3, HeaderR4, HeaderR5 extends HeaderRule {}
+
 sig HeaderInput {
     voiceState: one VoiceState,
     keyboardComposing: one Bool,
@@ -28,99 +31,82 @@ sig HeaderInput {
     clipboardShowing: one Bool
 }
 
-sig HeaderOutput {
-    showVoiceToggle: one Bool,
-    showDictionary: one Bool,
-    showClipboard: one Bool
-}
-
 pred inputOrComposingActive[i: HeaderInput] {
     i.keyboardComposing = True or i.streamingComposing = True or i.keyTouchActive = True
 }
 
-pred evalHeaderVisibility[i: HeaderInput, o: HeaderOutput] {
-    // HEADER_R1: Clipboard overlay open
-    (i.clipboardShowing = True) implies (
-        o.showVoiceToggle = True and o.showDictionary = True and o.showClipboard = True
-    ) else (
-        // HEADER_R2: Voice active + composing/touch
-        (i.voiceState != VoiceIdle and inputOrComposingActive[i]) implies (
-            o.showVoiceToggle = True and o.showDictionary = False and o.showClipboard = False
-        ) else (
-            // HEADER_R3: Voice active without composing/touch
-            (i.voiceState != VoiceIdle) implies (
-                o.showVoiceToggle = True and o.showDictionary = True and o.showClipboard = True
-            ) else (
-                // HEADER_R4: Voice idle + flick touch or composing
-                (inputOrComposingActive[i]) implies (
-                    o.showVoiceToggle = False and o.showDictionary = False and o.showClipboard = False
-                ) else (
-                    // HEADER_R5: Default idle
-                    o.showVoiceToggle = True and o.showDictionary = True and o.showClipboard = True
-                )
-            )
-        )
-    )
+fun evalHeaderRule[i: HeaderInput]: one HeaderRule {
+    (i.clipboardShowing = True) => HeaderR1 else
+    (i.voiceState != VoiceIdle and inputOrComposingActive[i]) => HeaderR2 else
+    (i.voiceState != VoiceIdle) => HeaderR3 else
+    (inputOrComposingActive[i]) => HeaderR4 else
+    HeaderR5
+}
+
+fun showVoiceToggle[i: HeaderInput]: one Bool {
+    (evalHeaderRule[i] = HeaderR4) => False else True
+}
+
+fun showDictionary[i: HeaderInput]: one Bool {
+    (evalHeaderRule[i] = HeaderR2 or evalHeaderRule[i] = HeaderR4) => False else True
+}
+
+fun showClipboard[i: HeaderInput]: one Bool {
+    (evalHeaderRule[i] = HeaderR2 or evalHeaderRule[i] = HeaderR4) => False else True
 }
 
 assert HeaderTableIsTotal {
-    all i: HeaderInput | some o: HeaderOutput | evalHeaderVisibility[i, o]
+    all i: HeaderInput | one evalHeaderRule[i]
 }
 check HeaderTableIsTotal for 4
 
 assert VoiceToggleAlwaysVisibleWhenRecordingOrDecoding {
-    all i: HeaderInput, o: HeaderOutput |
-        (evalHeaderVisibility[i, o] and i.voiceState != VoiceIdle) implies
-            o.showVoiceToggle = True
+    all i: HeaderInput |
+        (i.voiceState != VoiceIdle) implies showVoiceToggle[i] = True
 }
 check VoiceToggleAlwaysVisibleWhenRecordingOrDecoding for 4
 
 assert IconsHiddenDuringComposingOrFlickWhenVoiceIdle {
-    all i: HeaderInput, o: HeaderOutput |
-        (evalHeaderVisibility[i, o] and
-            i.voiceState = VoiceIdle and
+    all i: HeaderInput |
+        (i.voiceState = VoiceIdle and
             i.clipboardShowing = False and
             inputOrComposingActive[i]) implies
-            (o.showVoiceToggle = False and o.showDictionary = False and o.showClipboard = False)
+            (showVoiceToggle[i] = False and showDictionary[i] = False and showClipboard[i] = False)
 }
 check IconsHiddenDuringComposingOrFlickWhenVoiceIdle for 4
 
 assert AllIconsVisibleWhenFullyIdle {
-    all i: HeaderInput, o: HeaderOutput |
-        (evalHeaderVisibility[i, o] and
-            i.voiceState = VoiceIdle and
-            not inputOrComposingActive[i]) implies
-            (o.showVoiceToggle = True and o.showDictionary = True and o.showClipboard = True)
+    all i: HeaderInput |
+        (i.voiceState = VoiceIdle and not inputOrComposingActive[i]) implies
+            (showVoiceToggle[i] = True and showDictionary[i] = True and showClipboard[i] = True)
 }
 check AllIconsVisibleWhenFullyIdle for 4
 
 assert ClipboardOpenKeepsAllIconsVisible {
-    all i: HeaderInput, o: HeaderOutput |
-        (evalHeaderVisibility[i, o] and i.clipboardShowing = True) implies
-            (o.showVoiceToggle = True and o.showDictionary = True and o.showClipboard = True)
+    all i: HeaderInput |
+        (i.clipboardShowing = True) implies
+            (showVoiceToggle[i] = True and showDictionary[i] = True and showClipboard[i] = True)
 }
 check ClipboardOpenKeepsAllIconsVisible for 4
 
 pred canHideAllIconsDuringFlickOrComposing {
-    some i: HeaderInput, o: HeaderOutput |
-        evalHeaderVisibility[i, o] and
+    some i: HeaderInput |
         i.voiceState = VoiceIdle and
         i.clipboardShowing = False and
         inputOrComposingActive[i] and
-        o.showVoiceToggle = False and
-        o.showDictionary = False and
-        o.showClipboard = False
+        showVoiceToggle[i] = False and
+        showDictionary[i] = False and
+        showClipboard[i] = False
 }
 run canHideAllIconsDuringFlickOrComposing for 4
 
 pred canKeepStopVisibleWhenRecordingWithComposing {
-    some i: HeaderInput, o: HeaderOutput |
-        evalHeaderVisibility[i, o] and
+    some i: HeaderInput |
         i.voiceState = VoiceRecording and
         i.clipboardShowing = False and
         i.keyboardComposing = True and
-        o.showVoiceToggle = True and
-        o.showDictionary = False and
-        o.showClipboard = False
+        showVoiceToggle[i] = True and
+        showDictionary[i] = False and
+        showClipboard[i] = False
 }
 run canKeepStopVisibleWhenRecordingWithComposing for 4
