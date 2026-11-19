@@ -955,7 +955,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
       if (num_assigned_seqs > 1) {
         for (int s = 1; s <= num_assigned_seqs; ++s) {
           llama_memory_seq_rm(mem, s, -1, -1);
-          llama_memory_seq_cp(mem, 0, s, 0, start_pos);
+          llama_memory_seq_cp(mem, 0, s, -1, -1);
         }
       }
 
@@ -1118,7 +1118,7 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
     // PARALLEL LOCKSTEP DECODING across all K beams (Idea 6)
     for (const auto& beam : beams) {
       llama_memory_seq_rm(mem, beam.seq_id, -1, -1);
-      llama_memory_seq_cp(mem, 0, beam.seq_id, 0, start_pos);
+      llama_memory_seq_cp(mem, 0, beam.seq_id, -1, -1);
     }
 
     for (int step = 1; step < max_tokens && !abort_prediction_.load(); ++step) {
