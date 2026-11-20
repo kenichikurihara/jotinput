@@ -401,8 +401,9 @@ class MultiDictionaryManager(private val context: Context) {
                     val reading = JapaneseKanaUtils.normalizeReading(parts[0])
                     val kanjiString = parts[1]
                     if (reading.isNotBlank()) {
-                        for (ch in kanjiString) {
-                            builder.addToken(reading, ch.toString(), 3000, 1851, 1851)
+                        kanjiString.forEachIndexed { idx, ch ->
+                            val kanjiCost = (7500 + idx * 120).coerceAtMost(14000)
+                            builder.addToken(reading, ch.toString(), kanjiCost, 1851, 1851)
                         }
                     }
                 }

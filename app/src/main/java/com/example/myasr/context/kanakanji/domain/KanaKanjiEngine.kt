@@ -1515,17 +1515,22 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return lid in 1917..1940
     }
 
-    private fun queryAllMmapExactTokens(reading: String): List<WordEntry> {
+    private fun queryAllMmapExactTokens(reading: String, includeEmojiSymbols: Boolean = true): List<WordEntry> {
         val dicts = activeMmapDictionaries
         if (dicts.isEmpty()) return emptyList()
         val result = ArrayList<WordEntry>(16)
         for (entry in dicts) {
+            if (!includeEmojiSymbols && entry.sourceId == "emoji_symbols") continue
             val tokens = entry.dict.getExactTokens(reading) ?: continue
             for (tok in tokens) {
+                val isLegacySingleKanji = entry.sourceId == "emoji_symbols" &&
+                    tok.surface.length == 1 &&
+                    tok.surface[0] in '\u4E00'..'\u9FFF'
+                val effectiveCost = if (isLegacySingleKanji) maxOf(tok.cost, 7500) else tok.cost
                 result.add(
                     WordEntry(
                         surface = tok.surface,
-                        cost = tok.cost,
+                        cost = effectiveCost,
                         source = entry.sourceId,
                         lid = tok.lid,
                         rid = tok.rid
@@ -1659,7 +1664,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     node?.words?.let { subWords.addAll(it) }
 
                     // Also query zero-heap mmap dictionaries for subReading
-                    val mmapWords = queryAllMmapExactTokens(subReading)
+                    val mmapWords = queryAllMmapExactTokens(subReading, includeEmojiSymbols = false)
                     for (tok in mmapWords) {
                         if (subWords.none { it.surface == tok.surface && it.lid == tok.lid }) {
                             subWords.add(tok)
@@ -1943,7 +1948,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     val subReading = reading.substring(m, j)
                     val tokens = mutableListOf<WordEntry>()
                     node?.words?.let { tokens.addAll(it) }
-                    val mmapToks = queryAllMmapExactTokens(subReading)
+                    val mmapToks = queryAllMmapExactTokens(subReading, includeEmojiSymbols = false)
                     for (tok in mmapToks) {
                         if (tokens.none { it.surface == tok.surface && it.lid == tok.lid }) {
                             tokens.add(tok)
@@ -2042,7 +2047,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     if (node == null) break
                 }
                 node?.words?.let { directTokens.addAll(it) }
-                val mmapToks = queryAllMmapExactTokens(subReading)
+                val mmapToks = queryAllMmapExactTokens(subReading, includeEmojiSymbols = false)
                 for (tok in mmapToks) {
                     if (directTokens.none { it.surface == tok.surface && it.lid == tok.lid }) {
                         directTokens.add(tok)

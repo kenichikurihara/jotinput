@@ -5,6 +5,7 @@ import com.example.myasr.context.ime.domain.VoiceTouchInputArbitrator
 import com.example.myasr.context.kanakanji.domain.ConnectionMatrix
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
 import com.example.myasr.context.kanakanji.domain.MmapDictionary
+import com.example.myasr.context.kanakanji.infrastructure.MmapDictionaryCompiler
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -224,6 +225,51 @@ class KanaKanjiEngineDiversityTest {
             "Viterbi candidate 'オンとオフと' must propagate structured dictCost (< 6000), was: ${onToOfuTo.dictCost}",
             onToOfuTo.dictCost in 1..5999
         )
+    }
+
+    @Test
+    fun testOnToOfuTo_withLegacyEmojiSymbolsDictionary_stillRanksOnToOfuToFirst() {
+        val tempFile = File.createTempFile("dict_emoji_symbols_test", ".bin")
+        tempFile.deleteOnExit()
+        val builder = MmapDictionaryCompiler.StreamingBuilder()
+        // Reproduce legacy dict_emoji_symbols.bin where single_kanji.tsv entries were given cost=3000
+        builder.addToken("おん", "円", 3000, 1851, 1851)
+        builder.addToken("おん", "苑", 3000, 1851, 1851)
+        builder.addToken("とお", "通", 3000, 1851, 1851)
+        builder.addToken("とお", "悠", 3000, 1851, 1851)
+        builder.addToken("ふと", "太", 3000, 1851, 1851)
+        builder.addToken("ふと", "肥", 3000, 1851, 1851)
+        val compileRes = builder.compileToFile(tempFile)
+        assertTrue("Compile emoji_symbols test dict must succeed", compileRes.isSuccess)
+
+        val emojiDict = MmapDictionary.loadFromFile(tempFile)
+        assertNotNull("Loaded emoji_symbols test dict must not be null", emojiDict)
+        try {
+            engine.attachMmapDictionaryForTesting("emoji_symbols", emojiDict!!)
+
+            val candidates = engine.getBaseCandidates("おんとおふと")
+            val surfaces = candidates.map { it.surface }
+            assertEquals(
+                "Even with legacy emoji_symbols single-kanji dict attached, 'オンとオフと' must rank #1, but was: ${surfaces.take(8)}",
+                "オンとオフと",
+                surfaces.first()
+            )
+            val rareSingleKanjiChimeras = listOf("円悠太", "円通太", "円通肥", "円", "苑")
+            for (chimera in rareSingleKanjiChimeras) {
+                assertFalse(
+                    "Legacy single-kanji chimera '$chimera' must NOT appear in top 6, was: ${surfaces.take(6)}",
+                    surfaces.take(6).contains(chimera)
+                )
+            }
+
+            // Verify single-reading "おん" still ranks common words ahead of legacy single-kanji "円"/"苑"
+            val onSurfaces = engine.getBaseCandidates("おん").map { it.surface }
+            assertTrue("Expected '音' or 'オン' in top 3 for 'おん', was: ${onSurfaces.take(5)}",
+                onSurfaces.take(3).contains("音") || onSurfaces.take(3).contains("オン"))
+        } finally {
+            emojiDict?.close()
+            tempFile.delete()
+        }
     }
 
     private class MockEditorBridge : EditorBridge {
