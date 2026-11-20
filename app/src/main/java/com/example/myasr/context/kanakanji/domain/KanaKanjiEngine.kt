@@ -901,7 +901,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     normalized = normalized,
                     exactWords = userMatches + otherExact,
                     prefixWords = prefixWords,
-                    contextRid = contextRid
+                    contextRid = contextRid,
+                    contextPrefix = contextPrefix
                 )
                 for (cand in synthesizedChunks) {
                     addCandidate(cand)
@@ -2056,48 +2057,62 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     /**
-     * B3: Dynamic Multi-Bunsetsu Tail Rollout (動的複文節テイル合成).
+     * B3: Dynamic Multi-Bunsetsu Tail Rollout (動的複文節テイル合成) with Stem Round-Robin Diversification (Idea D3).
      * Synthesizes natural, high-affinity functional and predicate completions from top stem candidates
      * when typing short prefixes (2..8 characters), validated via Mozc connection costs.
+     * Uses breadth-first round-robin across distinct stems so topPool receives diverse stem hypotheses.
      */
     private fun synthesizeDynamicMultiBunsetsuChunks(
         normalized: String,
         exactWords: List<WordEntry>,
         prefixWords: List<Pair<String, WordEntry>>,
-        contextRid: Int
+        contextRid: Int,
+        contextPrefix: String = ""
     ): List<ConversionCandidate> {
         val results = mutableListOf<ConversionCandidate>()
         val seenSurfaces = HashSet<String>()
         val matrix = connectionMatrix
 
         // 1. Canonical Collocations from NextPhrasePredictor (Highest priority = 3.5f)
-        val canonicalChunks = mutableListOf<ConversionCandidate>()
+        // Collect up to 2 tails per matching stem, then flatten breadth-first (round-robin)
+        val canonicalPerStem = mutableListOf<List<ConversionCandidate>>()
         for ((stemSurface, stemReading) in NextPhrasePredictor.CANONICAL_STEM_READINGS) {
             if (stemReading.startsWith(normalized) || normalized.startsWith(stemReading)) {
                 val continuations = NextPhrasePredictor.CANONICAL_COLLOCATIONS[stemSurface] ?: continue
-                var countForStem = 0
+                val stemList = ArrayList<ConversionCandidate>(2)
                 for (entry in continuations) {
                     val fullSurface = stemSurface + entry.surface
                     val fullReading = stemReading + entry.reading
                     if (fullReading.startsWith(normalized) && fullSurface != normalized) {
-                        if (seenSurfaces.add(fullSurface)) {
-                            canonicalChunks.add(
-                                ConversionCandidate(
-                                    surface = fullSurface,
-                                    reading = fullReading,
-                                    isPrediction = true,
-                                    source = "phrase_chunk",
-                                    priority = 3.5f
-                                )
+                        stemList.add(
+                            ConversionCandidate(
+                                surface = fullSurface,
+                                reading = fullReading,
+                                isPrediction = true,
+                                source = "phrase_chunk",
+                                priority = 3.5f
                             )
-                            countForStem++
-                            if (countForStem >= 2) break
-                        }
+                        )
+                        if (stemList.size >= 2) break
+                    }
+                }
+                if (stemList.isNotEmpty()) {
+                    canonicalPerStem.add(stemList)
+                }
+            }
+        }
+        val canonicalChunks = mutableListOf<ConversionCandidate>()
+        for (pass in 0 until 2) {
+            for (stemList in canonicalPerStem) {
+                if (pass < stemList.size && canonicalChunks.size < 5) {
+                    val cand = stemList[pass]
+                    if (seenSurfaces.add(cand.surface)) {
+                        canonicalChunks.add(cand)
                     }
                 }
             }
         }
-        results.addAll(canonicalChunks.take(5))
+        results.addAll(canonicalChunks)
 
         // 2. Dynamic Functional & Auxiliary Tail Rollout for Content Stems (Priority = 3.3f)
         val candidateStems = mutableListOf<Pair<String, WordEntry>>()
@@ -2123,7 +2138,27 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             }
             .take(8)
 
-        val dynamicChunks = mutableListOf<ConversionCandidate>()
+        // Context-aware tail preference: after case particles (を/に/で/へ/から/と), action verbs are favored;
+        // at clause start or after topic/punctuation, modal/state tails (中ですので/予定です) are diversified upfront.
+        val trimmedCtx = contextPrefix.trimEnd()
+        val lastCtxChar = trimmedCtx.lastOrNull()
+        val isClauseStartOrTopic = lastCtxChar == null || lastCtxChar in listOf('、', '。', '！', '？', 'は', 'が', 'も', '\n')
+        val sahenTailsOrdered = if (isClauseStartOrTopic) {
+            listOf(
+                NextPhrasePredictor.CollocationEntry("します", "します"),
+                NextPhrasePredictor.CollocationEntry("中ですので", "ちゅうですので"),
+                NextPhrasePredictor.CollocationEntry("しました", "しました"),
+                NextPhrasePredictor.CollocationEntry("予定です", "よていです"),
+                NextPhrasePredictor.CollocationEntry("しています", "しています"),
+                NextPhrasePredictor.CollocationEntry("いたします", "いたします"),
+                NextPhrasePredictor.CollocationEntry("中", "ちゅう"),
+                NextPhrasePredictor.CollocationEntry("お願いします", "おねがいします")
+            )
+        } else {
+            DYNAMIC_SAHEN_TAILS
+        }
+
+        val dynamicPerStem = mutableListOf<List<ConversionCandidate>>()
         for ((stemReading, stemWord) in topStems) {
             val stemSurface = stemWord.surface
             if (NextPhrasePredictor.CANONICAL_STEM_READINGS.containsKey(stemSurface)) continue
@@ -2133,13 +2168,13 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             val isNoun = isGeneralNoun(stemWord.lid, stemWord.rid, stemSurface)
 
             val applicableTails: List<NextPhrasePredictor.CollocationEntry> = when {
-                isSahen -> DYNAMIC_SAHEN_TAILS
+                isSahen -> sahenTailsOrdered
                 isVerb -> DYNAMIC_VERB_TAILS
                 isNoun -> DYNAMIC_NOUN_TAILS
                 else -> emptyList()
             }
 
-            var countForStem = 0
+            val stemList = ArrayList<ConversionCandidate>(2)
             for (tail in applicableTails) {
                 val fullSurface = stemSurface + tail.surface
                 val fullReading = stemReading + tail.reading
@@ -2158,23 +2193,35 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                             }
                         }
                     }
-                    if (seenSurfaces.add(fullSurface)) {
-                        dynamicChunks.add(
-                            ConversionCandidate(
-                                surface = fullSurface,
-                                reading = fullReading,
-                                isPrediction = true,
-                                source = "phrase_chunk",
-                                priority = 3.3f
-                            )
+                    stemList.add(
+                        ConversionCandidate(
+                            surface = fullSurface,
+                            reading = fullReading,
+                            isPrediction = true,
+                            source = "phrase_chunk",
+                            priority = 3.3f
                         )
-                        countForStem++
-                        if (countForStem >= 2) break
+                    )
+                    if (stemList.size >= 2) break
+                }
+            }
+            if (stemList.isNotEmpty()) {
+                dynamicPerStem.add(stemList)
+            }
+        }
+
+        val dynamicChunks = mutableListOf<ConversionCandidate>()
+        for (pass in 0 until 2) {
+            for (stemList in dynamicPerStem) {
+                if (pass < stemList.size && dynamicChunks.size < 5) {
+                    val cand = stemList[pass]
+                    if (seenSurfaces.add(cand.surface)) {
+                        dynamicChunks.add(cand)
                     }
                 }
             }
         }
-        results.addAll(dynamicChunks.take(5))
+        results.addAll(dynamicChunks)
 
         return results.take(8)
     }

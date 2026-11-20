@@ -13,6 +13,7 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 >   - 🧪 [日本語フリック入力 100件ヘッドルーム評価レポート (`docs/flick_input_100_headroom_evaluation_report.md`)](flick_input_100_headroom_evaluation_report.md)
 >   - 📐 [効用スコア（Utility Score）導入による予測変換最適化 デザインドキュメント＆総合評価プラン (`docs/utility_score_algorithm_design.md`)](utility_score_algorithm_design.md)
 >   - 🌈 [フリック入力における候補多様性（Diversity）再設計とトップラインメトリック（EIS）改善提案書 (`docs/flick_diversity_topline_eis_improvement_ideas.md`)](flick_diversity_topline_eis_improvement_ideas.md)
+>   - 🛠️ [詳細設計書 (DD): フリック候補多様性 P0 改善 (Idea D1 + D2 + D3) (`docs/dd_flick_diversity_p0_ideas.md`)](dd_flick_diversity_p0_ideas.md)
 >
 > 🎯 **[評価セット・評価方法 統合ガイド (Master Evaluation Index)](docs/evaluation_suites_and_methods.md)** — リポジトリ内の全評価データセット・評価スクリプト・JVM単体テスト・C++ベンチマーク・形式検証の全体マップ
 

@@ -80,6 +80,96 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             EN_QWERTY(keyCostSec = 0.30f, riskWeight = 0.45f, extGainWeight = 0.85f, slot1MarginSec = 0.25f)
         }
 
+        internal enum class HorizonBucket {
+            PARTIAL,
+            EXACT,
+            SHORT_EXT,
+            CHUNK_EXT
+        }
+
+        internal fun classifyHorizon(
+            cand: ConversionCandidate,
+            deltaUnconsumed: Int,
+            deltaExt: Int
+        ): HorizonBucket {
+            return when {
+                deltaUnconsumed > 0 -> HorizonBucket.PARTIAL
+                deltaExt == 0 && !cand.isPrediction -> HorizonBucket.EXACT
+                deltaExt >= 3 || cand.source == "phrase_chunk" -> HorizonBucket.CHUNK_EXT
+                else -> HorizonBucket.SHORT_EXT
+            }
+        }
+
+        internal fun extractCanonicalStem(
+            cand: ConversionCandidate,
+            topPool: List<ConversionCandidate>,
+            isEnglishPool: Boolean
+        ): String {
+            if (cand.firstBunsetsuSurface.isNotEmpty()) {
+                return cand.firstBunsetsuSurface
+            }
+            val surf = cand.surface
+            if (surf.isEmpty()) return ""
+            if (isEnglishPool) {
+                val clean = surf.lowercase().filter { it.isLetter() }
+                return if (clean.length >= 4) clean.substring(0, 4) else clean
+            }
+            // Prefix stem canonicalization against shorter non-hiragana candidates in the same pool
+            var bestBase: String? = null
+            for (other in topPool) {
+                val oSurf = other.surface
+                if (oSurf.length in 2 until surf.length &&
+                    surf.startsWith(oSurf) &&
+                    !JapaneseKanaUtils.isAllHiragana(oSurf)
+                ) {
+                    if (bestBase == null || oSurf.length < bestBase.length) {
+                        bestBase = oSurf
+                    }
+                }
+            }
+            if (bestBase != null) return bestBase
+
+            // Morphological fallback: extract leading kanji or katakana block
+            val firstChar = surf[0]
+            val isKanji = firstChar in '\u4E00'..'\u9FFF' || firstChar == '々'
+            val isKatakana = firstChar in '\u30A0'..'\u30FF'
+            if (isKanji) {
+                var end = 1
+                while (end < surf.length && (surf[end] in '\u4E00'..'\u9FFF' || surf[end] == '々')) {
+                    end++
+                }
+                if (end >= 3 && surf[end - 1] in listOf('中', '的', '化', '後', '前')) {
+                    end--
+                }
+                return surf.substring(0, end)
+            }
+            if (isKatakana) {
+                var end = 1
+                while (end < surf.length && (surf[end] in '\u30A0'..'\u30FF' || surf[end] == 'ー')) {
+                    end++
+                }
+                return surf.substring(0, end)
+            }
+            return surf
+        }
+
+        internal fun computeIntentOverlapKappa(
+            stemA: String,
+            horizonA: HorizonBucket,
+            lastContentA: String,
+            stemB: String,
+            horizonB: HorizonBucket,
+            lastContentB: String
+        ): Float {
+            if (stemA.isNotEmpty() && stemA == stemB) {
+                return if (horizonA == horizonB) 0.80f else 0.35f
+            }
+            if (lastContentA.isNotEmpty() && lastContentA == lastContentB) {
+                return 0.50f
+            }
+            return 0.0f
+        }
+
         /**
          * Unified Span-Aware Bayesian Scoring & Subsumption Dominance Engine.
          * Evaluates candidates across full/partial/predictive spans with principled unconsumed penalties
@@ -322,10 +412,16 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 sumExp += e
                 e
             }
+            val probs = FloatArray(topPool.size)
+            val gTotals = FloatArray(topPool.size)
+            val lErrs = FloatArray(topPool.size)
             val utilities = FloatArray(topPool.size) { i ->
                 val cand = topPool[i]
                 val isExactUser = (cand.source == "user" || cand.source == "user_english") && cand.obsPenalty == 0.0f
                 if (isExactUser) {
+                    probs[i] = 1.0f
+                    gTotals[i] = 10.0f
+                    lErrs[i] = 0.0f
                     10.0f - (i * 0.01f)
                 } else {
                     val p = if (sumExp > 0.0) (expScores[i] / sumExp).toFloat() else (1.0f / topPool.size)
@@ -341,9 +437,14 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     val extFreqWeight = if (n == 0 || cand.dictCost <= 5000) 1.0f else (1.0f - (cand.dictCost - 5000).coerceIn(0, 10000) / 12000.0f).coerceIn(0.2f, 1.0f)
                     val gExt = extGainWeight * keyCostSec * effectiveExt * extFreqWeight
                     val lErr = 1.50f + 0.20f * cand.surface.length + keyCostSec * mLengths[i]
+                    probs[i] = p
+                    gTotals[i] = gBase + gExt
+                    lErrs[i] = lErr
                     p * (gBase + gExt) - (1.0f - p) * riskWeight * lErr
                 }
             }
+            val canonicalStems = Array(topPool.size) { i -> extractCanonicalStem(topPool[i], topPool, isEnglishPool) }
+            val horizons = Array(topPool.size) { i -> classifyHorizon(topPool[i], unconsumedDeltas[i], extDeltas[i]) }
 
             // 6. Strata Partitioning
             val exactUserIndices = topPool.indices.filter {
@@ -448,22 +549,76 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             }
 
-            // 9. Extensions / Predictions ranked by Expected EIS Utility (B1)
-            val rankedExtIndices = extIndices.sortedWith { a, b ->
-                val uA = utilities[a]
-                val uB = utilities[b]
-                if (kotlin.math.abs(uA - uB) > 0.05f) {
-                    uB.compareTo(uA) // higher utility first
-                } else {
-                    baseScores[a].compareTo(baseScores[b])
+            // 9. Extensions / Predictions ranked by Submodular Marginal Expected EIS Utility (Idea D1)
+            val residualMultiplier = FloatArray(topPool.size) { 1.0f }
+            // Condition on exactUser and top-2 full candidates to avoid redundant stem/horizon crowding
+            for (uIdx in exactUserIndices) {
+                for (eIdx in extIndices) {
+                    val kappa = computeIntentOverlapKappa(
+                        canonicalStems[eIdx], horizons[eIdx], topPool[eIdx].lastContentWordSurface,
+                        canonicalStems[uIdx], horizons[uIdx], topPool[uIdx].lastContentWordSurface
+                    )
+                    residualMultiplier[eIdx] *= (1.0f - kappa)
                 }
             }
+            for (fCand in rankedFull.take(2)) {
+                val fIdx = topPool.indexOf(fCand)
+                if (fIdx >= 0) {
+                    for (eIdx in extIndices) {
+                        val kappa = computeIntentOverlapKappa(
+                            canonicalStems[eIdx], horizons[eIdx], topPool[eIdx].lastContentWordSurface,
+                            canonicalStems[fIdx], horizons[fIdx], topPool[fIdx].lastContentWordSurface
+                        )
+                        residualMultiplier[eIdx] *= (1.0f - kappa)
+                    }
+                }
+            }
+
+            val rankedExtIndices = mutableListOf<Int>()
+            val remainingExtIndices = extIndices.toMutableList()
+            var rankPos = 0
+            while (remainingExtIndices.isNotEmpty()) {
+                val slotRiskWeight = riskWeight * 0.65f.pow(minOf(rankPos, 4))
+                var bestIdx = -1
+                var bestMarginalU = -Float.MAX_VALUE
+                for (idx in remainingExtIndices) {
+                    val effectiveP = probs[idx] * residualMultiplier[idx]
+                    val marginalU = effectiveP * gTotals[idx] - (1.0f - probs[idx]) * slotRiskWeight * lErrs[idx]
+                    val diff = marginalU - bestMarginalU
+                    if (bestIdx < 0 || diff > 0.03f || (kotlin.math.abs(diff) <= 0.03f && baseScores[idx] < baseScores[bestIdx])) {
+                        bestMarginalU = marginalU
+                        bestIdx = idx
+                    }
+                }
+                if (bestIdx >= 0) {
+                    rankedExtIndices.add(bestIdx)
+                    remainingExtIndices.remove(bestIdx)
+                    for (otherIdx in remainingExtIndices) {
+                        val kappa = computeIntentOverlapKappa(
+                            canonicalStems[otherIdx], horizons[otherIdx], topPool[otherIdx].lastContentWordSurface,
+                            canonicalStems[bestIdx], horizons[bestIdx], topPool[bestIdx].lastContentWordSurface
+                        )
+                        if (kappa > 0.0f) {
+                            residualMultiplier[otherIdx] *= (1.0f - kappa)
+                        }
+                    }
+                    rankPos++
+                } else {
+                    break
+                }
+            }
+
             val rankedExt = rankedExtIndices.map { topPool[it] }
             val topHighPriIdx = rankedExtIndices.firstOrNull { topPool[it].priority >= 3.5f }
             val topHistPredIdx = rankedExtIndices.firstOrNull {
                 topPool[it].historyCount >= 2 || topPool[it].source == "history_bigram"
             }
-            val bestExtIdx = rankedExtIndices.firstOrNull()
+            // Preserve best independent utility candidate for Slot-1 promotion safety
+            val bestExtIdx = extIndices.maxWithOrNull { a, b ->
+                val uA = utilities[a]
+                val uB = utilities[b]
+                if (kotlin.math.abs(uA - uB) > 0.05f) uA.compareTo(uB) else baseScores[b].compareTo(baseScores[a])
+            } ?: rankedExtIndices.firstOrNull()
 
             // 10. Adaptive Stratified Interleaving Schedule
             val maxBranch = prefixIndices.map { topPool[it].suffixBranchingFactor }.maxOrNull() ?: 1.0f
@@ -505,6 +660,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             }
 
             var promotedCandidateSurface: String? = null
+            var topChunkIdxForAnchor: Int? = null
             if (candidateToPromote != null && rankedFull.isNotEmpty() && n > 0) {
                 val topFullIdx = topPool.indexOf(rankedFull[0])
                 val isStrictCoherent = topFullIdx >= 0 && (scores[candidateToPromote] - scores[topFullIdx] < 5.0f || topPool[candidateToPromote].priority >= 3.5f)
@@ -517,6 +673,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 if (canPromoteTop1) {
                     val cand = topPool[candidateToPromote]
                     promotedCandidateSurface = cand.surface
+                    if (horizons[candidateToPromote] == HorizonBucket.CHUNK_EXT) {
+                        topChunkIdxForAnchor = candidateToPromote
+                    }
                     addCandidate(cand)
                     addCandidate(rankedFull[fullIdx++])
                 } else if (candidateToPromote == topHistPredIdx) {
@@ -529,7 +688,32 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             } else if (rankedFull.isNotEmpty()) {
                 addCandidate(rankedFull[fullIdx++])
+            } else if (rankedExtIndices.isNotEmpty() && n > 0 && horizons[rankedExtIndices[0]] == HorizonBucket.CHUNK_EXT) {
+                topChunkIdxForAnchor = rankedExtIndices[0]
+                promotedCandidateSurface = topPool[rankedExtIndices[0]].surface
+                addCandidate(topPool[rankedExtIndices[0]])
             }
+
+            // Idea D2: Dual-Horizon Pairing (Pair a short anchor stem in visible slots when a long chunk wins Slot 1)
+            if (!isEnglishPool && n > 0 && topChunkIdxForAnchor != null) {
+                val chunkStem = canonicalStems[topChunkIdxForAnchor]
+                val chunkLen = topPool[topChunkIdxForAnchor].surface.length
+                if (chunkStem.isNotEmpty()) {
+                    val anchorIdx = topPool.indices
+                        .filter { idx ->
+                            idx != topChunkIdxForAnchor &&
+                                canonicalStems[idx] == chunkStem &&
+                                (horizons[idx] == HorizonBucket.SHORT_EXT || horizons[idx] == HorizonBucket.EXACT) &&
+                                topPool[idx].surface.length < chunkLen &&
+                                !seenSurfaces.contains(topPool[idx].surface)
+                        }
+                        .maxByOrNull { utilities[it] }
+                    if (anchorIdx != null) {
+                        addCandidate(topPool[anchorIdx])
+                    }
+                }
+            }
+
             while (fullIdx < minOf(topFullQuota, rankedFull.size)) {
                 addCandidate(rankedFull[fullIdx++])
             }
