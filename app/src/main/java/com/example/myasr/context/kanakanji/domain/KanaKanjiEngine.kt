@@ -25,6 +25,30 @@ import java.io.InputStream
 import java.io.InputStreamReader
 import java.util.zip.GZIPInputStream
 
+/** Clause-start / topic context (affects B3 tail ordering); shared by cache key and chunk synthesis. */
+internal fun isClauseStartOrTopicContext(contextPrefix: String): Boolean {
+    val last = contextPrefix.trimEnd().lastOrNull()
+    return last == null || last in listOf('、', '。', '！', '？', 'は', 'が', 'も', '\n')
+}
+
+/**
+ * Stem round-robin: among phrase_chunk entries carrying a stem, the first occurrence of each stem
+ * comes first, then the remaining ones (stable). Other entries keep their positions.
+ */
+internal fun diversifyByFirstStem(cands: List<ConversionCandidate>): List<ConversionCandidate> {
+    val isChunk = { c: ConversionCandidate -> c.source == "phrase_chunk" && c.firstBunsetsuSurface.isNotEmpty() }
+    val chunks = cands.filter(isChunk)
+    if (chunks.size < 2) return cands
+    val seenStems = HashSet<String>()
+    val firsts = ArrayList<ConversionCandidate>()
+    val rest = ArrayList<ConversionCandidate>()
+    for (c in chunks) {
+        if (seenStems.add(c.firstBunsetsuSurface)) firsts.add(c) else rest.add(c)
+    }
+    val reordered = (firsts + rest).iterator()
+    return cands.map { if (isChunk(it)) reordered.next() else it }
+}
+
 data class ConversionCandidate(
     val surface: String,
     val reading: String,
@@ -618,7 +642,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
         val normalized = JapaneseKanaUtils.normalizeReading(rawReading)
         val contextKey = if (contextPrefix.isNotEmpty()) JapaneseKanaUtils.extractLastWordOrParticle(contextPrefix) else ""
-        val cacheKey = if (contextKey.isEmpty()) normalized else "$normalized|$contextKey"
+        val clauseMarker = if (isClauseStartOrTopicContext(contextPrefix)) "|c" else ""
+        val cacheKey = if (contextKey.isEmpty()) "$normalized$clauseMarker" else "$normalized|$contextKey$clauseMarker"
 
         // Retrieve base candidates from queryCache or generate them
         val cached = synchronized(queryCache) { queryCache[cacheKey] }
@@ -965,6 +990,10 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             val scoreB = b.dictCost + (b.obsPenalty * 1500.0f).toInt() + maxOf(0, b.reading.length - normalized.length) * 600
             scoreA.compareTo(scoreB)
         }
+        // R3: preserve stem round-robin diversity after the sort above
+        val diversifiedFuture = diversifyByFirstStem(futurePredCands)
+        futurePredCands.clear()
+        futurePredCands.addAll(diversifiedFuture)
 
         val interleaved = mutableListOf<ConversionCandidate>()
         val seen = HashSet<String>()
@@ -2090,7 +2119,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                 reading = fullReading,
                                 isPrediction = true,
                                 source = "phrase_chunk",
-                                priority = 3.5f
+                                priority = 3.5f,
+                                firstBunsetsuSurface = stemSurface
                             )
                         )
                         if (stemList.size >= 2) break
@@ -2140,9 +2170,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
         // Context-aware tail preference: after case particles (を/に/で/へ/から/と), action verbs are favored;
         // at clause start or after topic/punctuation, modal/state tails (中ですので/予定です) are diversified upfront.
-        val trimmedCtx = contextPrefix.trimEnd()
-        val lastCtxChar = trimmedCtx.lastOrNull()
-        val isClauseStartOrTopic = lastCtxChar == null || lastCtxChar in listOf('、', '。', '！', '？', 'は', 'が', 'も', '\n')
+        val isClauseStartOrTopic = isClauseStartOrTopicContext(contextPrefix)
         val sahenTailsOrdered = if (isClauseStartOrTopic) {
             listOf(
                 NextPhrasePredictor.CollocationEntry("します", "します"),
@@ -2199,7 +2227,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                             reading = fullReading,
                             isPrediction = true,
                             source = "phrase_chunk",
-                            priority = 3.3f
+                            priority = 3.3f,
+                            dictCost = stemWord.cost,
+                            firstBunsetsuSurface = stemSurface
                         )
                     )
                     if (stemList.size >= 2) break

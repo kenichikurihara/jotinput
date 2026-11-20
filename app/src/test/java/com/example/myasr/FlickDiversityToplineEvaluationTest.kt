@@ -144,4 +144,44 @@ class FlickDiversityToplineEvaluationTest {
         assertTrue("Expected 'implementation' in top 3: $top3", top3.contains("implementation"))
         assertTrue("Expected distinct-stem 'important' in top 3: $top3", top3.contains("important"))
     }
+
+    // ---- Review fixes R1-R5 ----
+
+    @Test
+    fun testR2R3_diversifyByFirstStemKeepsOneChunkPerStemFirst() {
+        fun c(surface: String, stem: String) = ConversionCandidate(
+            surface, surface, isPrediction = true, source = "phrase_chunk", priority = 3.3f, firstBunsetsuSurface = stem
+        )
+        val dict = ConversionCandidate("x", "x", isPrediction = false, source = "dict")
+        val input = listOf(c("作業中です", "作業"), c("作業します", "作業"), dict, c("先ほど送付した", "先ほど"))
+        val out = com.example.myasr.context.kanakanji.domain.diversifyByFirstStem(input)
+        assertEquals(listOf("作業中です", "先ほど送付した", "x", "作業します"), out.map { it.surface })
+    }
+
+    @Test
+    fun testR4_clauseStartContextHelper() {
+        val f = com.example.myasr.context.kanakanji.domain.isClauseStartOrTopicContext("")
+        assertTrue(f)
+        assertTrue(com.example.myasr.context.kanakanji.domain.isClauseStartOrTopicContext("昨日、"))
+        assertTrue(!com.example.myasr.context.kanakanji.domain.isClauseStartOrTopicContext("資料を"))
+    }
+
+    @Test
+    fun testR1_slot1PromotionUsesIndependentUtilityAndNoDuplicates() {
+        val pool = listOf(
+            ConversionCandidate("詐欺", "さぎ", isPrediction = false, source = "dict", dictCost = 3000),
+            ConversionCandidate("作業中ですので", "さぎょうちゅうですので", isPrediction = true, source = "phrase_chunk", priority = 3.5f, firstBunsetsuSurface = "作業"),
+            ConversionCandidate("作業します", "さぎょうします", isPrediction = true, source = "phrase_chunk", priority = 3.5f, firstBunsetsuSurface = "作業"),
+            ConversionCandidate("先ほど送付した", "さきほどそうふした", isPrediction = true, source = "phrase_chunk", priority = 3.5f, firstBunsetsuSurface = "先ほど")
+        )
+        val scores = floatArrayOf(12.0f, 6.0f, 6.1f, 6.5f)
+        val reranked = LlmReranker.scoreAndRankPool(
+            topPool = pool, scores = scores, currentShownTop1 = null,
+            weightAlpha = 0.20f, lambdaObs = 0.50f, gammaUser = 3.00f, targetInputLength = 2
+        )
+        // Slot 1 = best independent utility (lowest NLL among priority-3.5 chunks)
+        assertEquals("作業中ですので", reranked[0].surface)
+        assertEquals(reranked.size, reranked.map { it.surface }.distinct().size)
+        assertTrue(reranked.take(4).map { it.surface }.contains("先ほど送付した"))
+    }
 }

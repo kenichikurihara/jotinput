@@ -133,3 +133,13 @@ Step 10（Adaptive Stratified Interleaving Schedule）において、以下の�
 2. **Idea D2 検証**: Slot 1 に長文チャンク（`確認させていただきます`）が昇格した際、同一語幹のアンカー短単語（`確認`）が可視スロット（Slot 2〜3）に確実にペアリング配置されること。
 3. **Idea D3 検証**: `KanaKanjiEngine.getBaseCandidates("こう")` や `getBaseCandidates("かい")` 等において、B3 動的複文節ロールアウトが 1〜2 語幹に偏らず、3 種類以上の異なる語幹の `phrase_chunk` 候補を生成すること。
 4. **既存テスト非回帰**: `SpanAwareBayesianRerankingEvaluationTest`, `DynamicMultiBunsetsuTailRolloutTest`, `EisRegressionTest`, `KanaKanjiEngineDiversityTest`, `JapanesePunctuationEvaluationTest`, `DddArchitectureKonsistTest`, `AlloyVerificationTest` の全パス。
+
+## レビュー指摘への修正 (R1–R5)
+
+| ID | 修正 |
+|---|---|
+| R1 | Slot 1 昇格候補は独立 utility で選定。submodular greedy は Slot 1 確定後にそれを条件として実行 (`runExtGreedy(conditionOnIdx)`) |
+| R2 | `synthesizeDynamicMultiBunsetsuChunks` が `firstBunsetsuSurface = stem`、動的 chunk は `dictCost = stemWord.cost` を設定 (`extractCanonicalStem` の推測を排除) |
+| R3 | `diversifyByFirstStem` を `interleavePredictiveCandidates` のソート後と `LlmReranker` の `phraseChunkPrefix.take(4)` 前に適用し、stem ラウンドロビンを維持 |
+| R4 | `getBaseCandidates` の cacheKey に `isClauseStartOrTopicContext` (B3 テール順序の条件) を反映 |
+| R5 | `remainingExt` から既出 surface (ペアリングされたアンカー等) を除外 |

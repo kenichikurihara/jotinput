@@ -3,6 +3,7 @@ package com.example.myasr.context.reranking.infrastructure
 import com.example.myasr.context.ime.presentation.KeyboardHeightManager
 import com.example.myasr.context.kanakanji.domain.ConversionCandidate
 import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
+import com.example.myasr.context.kanakanji.domain.diversifyByFirstStem
 import com.example.myasr.context.reranking.domain.CandidateRerankingService
 import com.example.myasr.context.reranking.domain.ContextWindowTrimmer
 import com.example.myasr.context.reranking.domain.RerankEngineType
@@ -574,51 +575,64 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             }
 
-            val rankedExtIndices = mutableListOf<Int>()
-            val remainingExtIndices = extIndices.toMutableList()
-            var rankPos = 0
-            while (remainingExtIndices.isNotEmpty()) {
-                val slotRiskWeight = riskWeight * 0.65f.pow(minOf(rankPos, 4))
-                var bestIdx = -1
-                var bestMarginalU = -Float.MAX_VALUE
-                for (idx in remainingExtIndices) {
-                    val effectiveP = probs[idx] * residualMultiplier[idx]
-                    val marginalU = effectiveP * gTotals[idx] - (1.0f - probs[idx]) * slotRiskWeight * lErrs[idx]
-                    val diff = marginalU - bestMarginalU
-                    if (bestIdx < 0 || diff > 0.03f || (kotlin.math.abs(diff) <= 0.03f && baseScores[idx] < baseScores[bestIdx])) {
-                        bestMarginalU = marginalU
-                        bestIdx = idx
+            // Greedy submodular selection for Slot 2+; optionally conditioned on an already-decided Slot 1 candidate.
+            fun runExtGreedy(conditionOnIdx: Int?): List<Int> {
+                val residual = residualMultiplier.copyOf()
+                val ordered = mutableListOf<Int>()
+                val remaining = extIndices.toMutableList()
+                var rankPos = 0
+                if (conditionOnIdx != null && conditionOnIdx in remaining) {
+                    ordered.add(conditionOnIdx)
+                    remaining.remove(conditionOnIdx)
+                    for (otherIdx in remaining) {
+                        val kappa = computeIntentOverlapKappa(
+                            canonicalStems[otherIdx], horizons[otherIdx], topPool[otherIdx].lastContentWordSurface,
+                            canonicalStems[conditionOnIdx], horizons[conditionOnIdx], topPool[conditionOnIdx].lastContentWordSurface
+                        )
+                        if (kappa > 0.0f) residual[otherIdx] *= (1.0f - kappa)
                     }
+                    rankPos = 1
                 }
-                if (bestIdx >= 0) {
-                    rankedExtIndices.add(bestIdx)
-                    remainingExtIndices.remove(bestIdx)
-                    for (otherIdx in remainingExtIndices) {
+                while (remaining.isNotEmpty()) {
+                    val slotRiskWeight = riskWeight * 0.65f.pow(minOf(rankPos, 4))
+                    var bestIdx = -1
+                    var bestMarginalU = -Float.MAX_VALUE
+                    for (idx in remaining) {
+                        val effectiveP = probs[idx] * residual[idx]
+                        val marginalU = effectiveP * gTotals[idx] - (1.0f - probs[idx]) * slotRiskWeight * lErrs[idx]
+                        val diff = marginalU - bestMarginalU
+                        if (bestIdx < 0 || diff > 0.03f || (kotlin.math.abs(diff) <= 0.03f && baseScores[idx] < baseScores[bestIdx])) {
+                            bestMarginalU = marginalU
+                            bestIdx = idx
+                        }
+                    }
+                    if (bestIdx < 0) break
+                    ordered.add(bestIdx)
+                    remaining.remove(bestIdx)
+                    for (otherIdx in remaining) {
                         val kappa = computeIntentOverlapKappa(
                             canonicalStems[otherIdx], horizons[otherIdx], topPool[otherIdx].lastContentWordSurface,
                             canonicalStems[bestIdx], horizons[bestIdx], topPool[bestIdx].lastContentWordSurface
                         )
-                        if (kappa > 0.0f) {
-                            residualMultiplier[otherIdx] *= (1.0f - kappa)
-                        }
+                        if (kappa > 0.0f) residual[otherIdx] *= (1.0f - kappa)
                     }
                     rankPos++
-                } else {
-                    break
                 }
+                return ordered
             }
 
-            val rankedExt = rankedExtIndices.map { topPool[it] }
-            val topHighPriIdx = rankedExtIndices.firstOrNull { topPool[it].priority >= 3.5f }
-            val topHistPredIdx = rankedExtIndices.firstOrNull {
-                topPool[it].historyCount >= 2 || topPool[it].source == "history_bigram"
-            }
-            // Preserve best independent utility candidate for Slot-1 promotion safety
-            val bestExtIdx = extIndices.maxWithOrNull { a, b ->
+            // Slot 1 promotion candidates are chosen by INDEPENDENT utility (r = 1 has no prior selection to condition on)
+            val independentExtOrder = extIndices.sortedWith { a, b ->
                 val uA = utilities[a]
                 val uB = utilities[b]
-                if (kotlin.math.abs(uA - uB) > 0.05f) uA.compareTo(uB) else baseScores[b].compareTo(baseScores[a])
-            } ?: rankedExtIndices.firstOrNull()
+                if (kotlin.math.abs(uA - uB) > 0.05f) uB.compareTo(uA) else baseScores[a].compareTo(baseScores[b])
+            }
+            val topHighPriIdx = independentExtOrder.firstOrNull { topPool[it].priority >= 3.5f }
+            val topHistPredIdx = independentExtOrder.firstOrNull {
+                topPool[it].historyCount >= 2 || topPool[it].source == "history_bigram"
+            }
+            val bestExtIdx = independentExtOrder.firstOrNull()
+            val initialRankedExtIndices = runExtGreedy(null)
 
             // 10. Adaptive Stratified Interleaving Schedule
             val maxBranch = prefixIndices.map { topPool[it].suffixBranchingFactor }.maxOrNull() ?: 1.0f
@@ -660,6 +674,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             }
 
             var promotedCandidateSurface: String? = null
+            var promotedExtIdx: Int? = null
             var topChunkIdxForAnchor: Int? = null
             if (candidateToPromote != null && rankedFull.isNotEmpty() && n > 0) {
                 val topFullIdx = topPool.indexOf(rankedFull[0])
@@ -673,6 +688,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 if (canPromoteTop1) {
                     val cand = topPool[candidateToPromote]
                     promotedCandidateSurface = cand.surface
+                    promotedExtIdx = candidateToPromote
                     if (horizons[candidateToPromote] == HorizonBucket.CHUNK_EXT) {
                         topChunkIdxForAnchor = candidateToPromote
                     }
@@ -681,6 +697,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 } else if (candidateToPromote == topHistPredIdx) {
                     val cand = topPool[candidateToPromote]
                     promotedCandidateSurface = cand.surface
+                    promotedExtIdx = candidateToPromote
                     addCandidate(rankedFull[fullIdx++])
                     addCandidate(cand)
                 } else {
@@ -688,10 +705,11 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             } else if (rankedFull.isNotEmpty()) {
                 addCandidate(rankedFull[fullIdx++])
-            } else if (rankedExtIndices.isNotEmpty() && n > 0 && horizons[rankedExtIndices[0]] == HorizonBucket.CHUNK_EXT) {
-                topChunkIdxForAnchor = rankedExtIndices[0]
-                promotedCandidateSurface = topPool[rankedExtIndices[0]].surface
-                addCandidate(topPool[rankedExtIndices[0]])
+            } else if (initialRankedExtIndices.isNotEmpty() && n > 0 && horizons[initialRankedExtIndices[0]] == HorizonBucket.CHUNK_EXT) {
+                topChunkIdxForAnchor = initialRankedExtIndices[0]
+                promotedExtIdx = initialRankedExtIndices[0]
+                promotedCandidateSurface = topPool[initialRankedExtIndices[0]].surface
+                addCandidate(topPool[initialRankedExtIndices[0]])
             }
 
             // Idea D2: Dual-Horizon Pairing (Pair a short anchor stem in visible slots when a long chunk wins Slot 1)
@@ -718,7 +736,11 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 addCandidate(rankedFull[fullIdx++])
             }
             // Interleave remaining high-utility prediction candidate into Stratum 2/3 (B1: Eliminates Stratum 6 burial)
-            val remainingExt = rankedExt.filter { it.surface != promotedCandidateSurface }
+            // R1: Slot 2+ submodular greedy is conditioned on the already-decided Slot 1 promotion.
+            val rankedExtIndices = if (promotedExtIdx != null) runExtGreedy(promotedExtIdx) else initialRankedExtIndices
+            val rankedExt = rankedExtIndices.map { topPool[it] }
+            // R5: exclude surfaces already emitted (e.g. paired anchor) so slots aren't wasted.
+            val remainingExt = rankedExt.filter { it.surface != promotedCandidateSurface && it.surface !in seenSurfaces }
             var remExtIdx = 0
             if (remExtIdx < remainingExt.size && !isEnglishPool && (remainingExt[remExtIdx].priority >= 3.0f || utilities[topPool.indexOf(remainingExt[remExtIdx])] > 0.0f)) {
                 addCandidate(remainingExt[remExtIdx++])
@@ -992,9 +1014,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
             val balancedPrefix = mutableListOf<ConversionCandidate>()
             balancedPrefix.addAll(prioritizedSingle.take(4))
-            balancedPrefix.addAll(phraseChunkPrefix.take(4))
+            balancedPrefix.addAll(diversifyByFirstStem(phraseChunkPrefix).take(4))
             if (balancedPrefix.size < 8) {
-                val remaining = prioritizedSingle.drop(4) + phraseChunkPrefix.drop(4)
+                val remaining = prioritizedSingle.drop(4) + diversifyByFirstStem(phraseChunkPrefix).drop(4)
                 balancedPrefix.addAll(remaining.take(8 - balancedPrefix.size))
             }
             for (c in balancedPrefix) {
@@ -1161,9 +1183,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
             val balancedPrefix = mutableListOf<ConversionCandidate>()
             balancedPrefix.addAll(prioritizedSingle.take(4))
-            balancedPrefix.addAll(phraseChunkPrefix.take(4))
+            balancedPrefix.addAll(diversifyByFirstStem(phraseChunkPrefix).take(4))
             if (balancedPrefix.size < 8) {
-                val remaining = prioritizedSingle.drop(4) + phraseChunkPrefix.drop(4)
+                val remaining = prioritizedSingle.drop(4) + diversifyByFirstStem(phraseChunkPrefix).drop(4)
                 balancedPrefix.addAll(remaining.take(8 - balancedPrefix.size))
             }
             for (c in balancedPrefix) {
