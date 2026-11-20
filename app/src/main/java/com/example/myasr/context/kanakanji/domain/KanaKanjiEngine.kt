@@ -2228,7 +2228,6 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                             isPrediction = true,
                             source = "phrase_chunk",
                             priority = 3.3f,
-                            dictCost = stemWord.cost,
                             firstBunsetsuSurface = stemSurface
                         )
                     )
