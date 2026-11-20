@@ -48,6 +48,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
     private var currentModelPath: String? = null
 
+    @Volatile
+    private var speculativeZeroQueryCache: Pair<String, List<ConversionCandidate>>? = null
+
     companion object {
         private val CASE_PARTICLES = listOf("に", "を", "が")
 
@@ -91,8 +94,17 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
         internal fun classifyHorizon(
             cand: ConversionCandidate,
             deltaUnconsumed: Int,
-            deltaExt: Int
+            deltaExt: Int,
+            targetInputLength: Int = 1
         ): HorizonBucket {
+            if (targetInputLength == 0) {
+                val len = if (cand.reading.isNotEmpty()) cand.reading.length else cand.surface.length
+                return if (cand.source == "phrase_chunk" || len >= 5) {
+                    HorizonBucket.CHUNK_EXT
+                } else {
+                    HorizonBucket.SHORT_EXT
+                }
+            }
             return when {
                 deltaUnconsumed > 0 -> HorizonBucket.PARTIAL
                 deltaExt == 0 && !cand.isPrediction -> HorizonBucket.EXACT
@@ -332,14 +344,20 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                         val baseCompNll = subsumingFullNll ?: (rawNll + muSpan * deltaUnconsumed)
                         rawBaseNll = baseCompNll + kappaCommit
                     }
+                } else if (n == 0 && !isEnglishPool) {
+                    // (c-0) Zero-query prediction: length-normalized surprisal without uninputted penalty
+                    val tokens = maxOf(1, (mLengths[index] + 1) / 2)
+                    rawBaseNll = rawNll / tokens.toFloat().pow(0.85f)
                 } else {
                     // (c) Uninputted prefix extension cost (waive extension penalty for user history >= 2 or history_bigram)
-                    val waiveExt = candidate.historyCount >= 2 || candidate.source == "history_bigram"
+                    val waiveExt = candidate.historyCount >= 2 ||
+                        candidate.source == "history_bigram" ||
+                        candidate.source == "history_skip_bigram"
                     rawBaseNll = if (waiveExt) rawNll else rawNll + lambdaExt * maxOf(1, deltaExt)
                 }
 
                 // Hybrid-6b History x SLM Fusion (Contextual Bigram Cache + Time-Decay + Coherence Gate + Gated Soft-Clamping + c=1 Damping)
-                val isBigram = candidate.source == "history_bigram"
+                val isBigram = candidate.source == "history_bigram" || candidate.source == "history_skip_bigram"
                 val effectiveNll: Float = if (!isExactUser && (candidate.historyCount > 0 || isBigram) && !isChimeraFull[index]) {
                     val deltaNll = rawNll - bestPoolNll
                     val thetaGate = 4.6f + (if (deltaExt > 0) 0.25f * deltaExt else 0.0f)
@@ -451,10 +469,14 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                         keyCostSec * mLengths[i] - 0.60f * deltaUnc
                     }
                     // Sublinear extension gain with frequency damping for long rare words (Idea 8)
-                    val effectiveExt = if (n == 0 || deltaExt <= 4) deltaExt.toFloat() else 4.0f + kotlin.math.sqrt((deltaExt - 4).toFloat())
-                    val extFreqWeight = if (n == 0 || cand.dictCost <= 5000) 1.0f else (1.0f - (cand.dictCost - 5000).coerceIn(0, 10000) / 12000.0f).coerceIn(0.2f, 1.0f)
+                    val effectiveExt = if (deltaExt <= 4) deltaExt.toFloat() else 4.0f + kotlin.math.sqrt((deltaExt - 4).toFloat())
+                    val extFreqWeight = if (cand.dictCost <= 5000) 1.0f else (1.0f - (cand.dictCost - 5000).coerceIn(0, 10000) / 12000.0f).coerceIn(0.2f, 1.0f)
                     val gExt = extGainWeight * keyCostSec * effectiveExt * extFreqWeight
-                    val lErr = 1.50f + 0.20f * cand.surface.length + keyCostSec * mLengths[i]
+                    val lErr = if (n == 0 && !isEnglishPool) {
+                        keyCostSec
+                    } else {
+                        1.50f + 0.20f * cand.surface.length + keyCostSec * mLengths[i]
+                    }
                     probs[i] = p
                     gTotals[i] = gBase + gExt
                     lErrs[i] = lErr
@@ -462,7 +484,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             }
             val canonicalStems = Array(topPool.size) { i -> extractCanonicalStem(topPool[i], topPool, isEnglishPool) }
-            val horizons = Array(topPool.size) { i -> classifyHorizon(topPool[i], unconsumedDeltas[i], extDeltas[i]) }
+            val horizons = Array(topPool.size) { i -> classifyHorizon(topPool[i], unconsumedDeltas[i], extDeltas[i], n) }
 
             // 6. Strata Partitioning
             val exactUserIndices = topPool.indices.filter {
@@ -649,7 +671,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             }
             val topHighPriIdx = independentExtOrder.firstOrNull { topPool[it].priority >= 3.5f }
             val topHistPredIdx = independentExtOrder.firstOrNull {
-                topPool[it].historyCount >= 2 || topPool[it].source == "history_bigram"
+                topPool[it].historyCount >= 2 ||
+                    topPool[it].source == "history_bigram" ||
+                    topPool[it].source == "history_skip_bigram"
             }
             val bestExtIdx = independentExtOrder.firstOrNull()
 
@@ -724,20 +748,22 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             } else if (rankedFull.isNotEmpty()) {
                 addCandidate(rankedFull[fullIdx++])
-            } else if (bestExtIdx != null && n > 0 && horizons[bestExtIdx] == HorizonBucket.CHUNK_EXT) {
-                topChunkIdxForAnchor = bestExtIdx
+            } else if (bestExtIdx != null && (n == 0 || horizons[bestExtIdx] == HorizonBucket.CHUNK_EXT)) {
+                if (horizons[bestExtIdx] == HorizonBucket.CHUNK_EXT) {
+                    topChunkIdxForAnchor = bestExtIdx
+                }
                 promotedExtIdx = bestExtIdx
                 promotedCandidateSurface = topPool[bestExtIdx].surface
                 addCandidate(topPool[bestExtIdx])
             }
 
-            // Idea D2: Dual-Horizon Pairing (Pair a short anchor stem in visible slots when a long chunk wins Slot 1)
+            // Idea D2 / Z6: Dual-Horizon Pairing (Pair a short anchor stem or pivot particle in Slot 2 when a chunk wins Slot 1)
             var pairedAnchorIdx: Int? = null
-            if (!isEnglishPool && n > 0 && topChunkIdxForAnchor != null) {
+            if (!isEnglishPool && topChunkIdxForAnchor != null) {
                 val chunkStem = canonicalStems[topChunkIdxForAnchor]
                 val chunkLen = topPool[topChunkIdxForAnchor].surface.length
-                if (chunkStem.isNotEmpty()) {
-                    val anchorIdx = topPool.indices
+                val sameStemAnchor = if (chunkStem.isNotEmpty()) {
+                    topPool.indices
                         .filter { idx ->
                             idx != topChunkIdxForAnchor &&
                                 canonicalStems[idx] == chunkStem &&
@@ -746,10 +772,23 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                                 !seenSurfaces.contains(topPool[idx].surface)
                         }
                         .maxByOrNull { utilities[it] }
-                    if (anchorIdx != null) {
-                        pairedAnchorIdx = anchorIdx
-                        addCandidate(topPool[anchorIdx])
-                    }
+                } else {
+                    null
+                }
+                val anchorIdx = sameStemAnchor ?: if (n == 0) {
+                    topPool.indices
+                        .filter { idx ->
+                            idx != topChunkIdxForAnchor &&
+                                topPool[idx].source == "particle" &&
+                                !seenSurfaces.contains(topPool[idx].surface)
+                        }
+                        .maxByOrNull { utilities[it] }
+                } else {
+                    null
+                }
+                if (anchorIdx != null) {
+                    pairedAnchorIdx = anchorIdx
+                    addCandidate(topPool[anchorIdx])
                 }
             }
 
@@ -1374,7 +1413,12 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
      * Generates speculative continuation phrase suggestions directly from on-device SLM
      * conditioned on the preceding context. Safe to execute asynchronously on Dispatchers.Default.
      */
-    fun predictNextPhrases(contextPrefix: String, maxCandidates: Int = 3, maxTokens: Int = 5): List<ConversionCandidate> {
+    fun predictNextPhrases(
+        contextPrefix: String,
+        maxCandidates: Int = 3,
+        maxTokens: Int = 5,
+        readingResolver: ((String) -> String)? = null
+    ): List<ConversionCandidate> {
         if (state != State.READY || !nativeLibraryLoaded) {
             return emptyList()
         }
@@ -1387,9 +1431,10 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 .filter { it.isNotEmpty() }
                 .distinct()
                 .map { surface ->
+                    val resolvedReading = readingResolver?.invoke(surface)?.takeIf { it.isNotEmpty() } ?: surface
                     ConversionCandidate(
                         surface = surface,
-                        reading = surface,
+                        reading = resolvedReading,
                         isPrediction = true,
                         source = "slm"
                     )
@@ -1398,6 +1443,42 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             Log.w(TAG, "SLM predictNextPhrases failed: ${e.message}")
             return emptyList()
         }
+    }
+
+    /**
+     * Phase 3 (Z5): Speculatively pre-warms KV cache and next-phrase predictions for (context + Top-1)
+     * while the user is visually confirming candidates before tapping commit.
+     */
+    fun speculativePrepareNextPhrases(
+        contextPlusTop1: String,
+        maxCandidates: Int = 3,
+        maxTokens: Int = 5,
+        readingResolver: ((String) -> String)? = null
+    ) {
+        if (state != State.READY || !nativeLibraryLoaded || contextPlusTop1.isBlank()) return
+        val trimmed = ContextWindowTrimmer.trimToOptimalContextSticky(contextPlusTop1)
+        if (trimmed.isBlank()) return
+        val existing = speculativeZeroQueryCache
+        if (existing != null && existing.first == trimmed) return
+
+        val preds = predictNextPhrases(
+            contextPrefix = trimmed,
+            maxCandidates = maxCandidates,
+            maxTokens = maxTokens,
+            readingResolver = readingResolver
+        )
+        if (preds.isNotEmpty()) {
+            speculativeZeroQueryCache = Pair(trimmed, preds)
+        }
+    }
+
+    /**
+     * Returns pre-computed speculative next-phrase predictions if the committed context matches.
+     */
+    fun getSpeculativeNextPhrases(contextBeforeCursor: String): List<ConversionCandidate>? {
+        val trimmed = ContextWindowTrimmer.trimToOptimalContextSticky(contextBeforeCursor)
+        val cached = speculativeZeroQueryCache ?: return null
+        return if (cached.first == trimmed) cached.second else null
     }
 
     /**

@@ -126,6 +126,42 @@ object JapaneseKanaUtils {
     }
 
     /**
+     * Particle-bridged trailing context anchor for 2nd-order Skip-Bigram next-phrase prediction.
+     */
+    data class TrailingContextAnchor(
+        val lastToken: String,
+        val contentWord: String?,
+        val skipBigramKey: String?
+    )
+
+    /**
+     * Extracts both the immediate trailing token and, when that token is a case/topic particle,
+     * the preceding content word so `NextPhrasePredictor` can bridge across particles
+     * (e.g. "作業を" -> lastToken="を", contentWord="作業", skipBigramKey="作業|を").
+     */
+    fun extractTrailingContentAndParticle(contextPrefix: String): TrailingContextAnchor {
+        if (contextPrefix.isBlank()) return TrailingContextAnchor("", null, null)
+        val trimmed = contextPrefix.trimEnd()
+        if (trimmed.isEmpty()) return TrailingContextAnchor("", null, null)
+
+        val lastToken = extractLastWordOrParticle(trimmed)
+        if (lastToken.isEmpty()) return TrailingContextAnchor("", null, null)
+
+        if (isCommonParticle(lastToken) && trimmed.length > lastToken.length) {
+            val beforeParticle = trimmed.dropLast(lastToken.length).trimEnd()
+            val contentWord = extractLastWordOrParticle(beforeParticle)
+            if (contentWord.isNotEmpty() && !isCommonParticle(contentWord)) {
+                return TrailingContextAnchor(
+                    lastToken = lastToken,
+                    contentWord = contentWord,
+                    skipBigramKey = "$contentWord|$lastToken"
+                )
+            }
+        }
+        return TrailingContextAnchor(lastToken, null, null)
+    }
+
+    /**
      * Normalizes a user-inputted reading into canonical Hiragana.
      */
     fun normalizeReading(text: String): String {

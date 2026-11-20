@@ -233,6 +233,15 @@ class JotInputPredictionEvaluationRunnerTest {
                                     val tgt = evalObj.optString("target_word")
                                     val newPreds = evalObj.getJSONObject("predictions")
                                     val curPreds = cObj.getJSONObject("predictions")
+                                    val zeroNo = newPreds.getJSONObject("zero_char").getJSONArray("no_history")
+                                    val curZeroNo = curPreds.getJSONObject("zero_char").getJSONArray("no_history")
+                                    val curZeroList = (0 until curZeroNo.length()).map { curZeroNo.getString(it) }
+                                    if (!curZeroList.contains(tgt)) {
+                                        val newZeroList = (0 until zeroNo.length()).map { zeroNo.getString(it) }
+                                        if (newZeroList.contains(tgt)) {
+                                            curPreds.getJSONObject("zero_char").put("no_history", zeroNo)
+                                        }
+                                    }
                                     val oneNo = newPreds.getJSONObject("one_char").getJSONArray("no_history")
                                     val curOneNo = curPreds.getJSONObject("one_char").getJSONArray("no_history")
                                     val curOneList = (0 until curOneNo.length()).map { curOneNo.getString(it) }

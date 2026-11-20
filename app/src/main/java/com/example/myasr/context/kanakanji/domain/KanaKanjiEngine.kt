@@ -95,6 +95,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
     private val root = TrieNode()
     private val surfaceToRidMap = HashMap<String, Int>(16384)
+    private val surfaceToLidMap = HashMap<String, Int>(16384)
     // In-memory access-ordered LinkedHashMap to guarantee consistent JVM/Android LRU behavior and null-safety
     private val historyMap = LinkedHashMap<String, Int>(256, 0.75f, true)
     private val historyLastUsedMap = LinkedHashMap<String, Long>(256, 0.75f, true)
@@ -150,6 +151,24 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     }
 
     fun getConnectionMatrix(): ConnectionMatrix? = connectionMatrix
+
+    fun lookupSurfaceRid(surface: String): Int {
+        surfaceToRidMap[surface]?.let { if (it > 0) return it }
+        for (len in minOf(surface.length - 1, 6) downTo 1) {
+            val suffix = surface.substring(surface.length - len)
+            surfaceToRidMap[suffix]?.let { if (it > 0) return it }
+        }
+        return 0
+    }
+
+    fun lookupLeadingLid(surface: String): Int {
+        surfaceToLidMap[surface]?.let { if (it > 0) return it }
+        for (len in minOf(surface.length - 1, 6) downTo 1) {
+            val prefix = surface.substring(0, len)
+            surfaceToLidMap[prefix]?.let { if (it > 0) return it }
+        }
+        return 0
+    }
 
     fun setMmapDictionary(dict: MmapDictionary?) {
         this.mmapDictionary = dict
@@ -512,6 +531,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         root.words.clear()
         root.minCostInSubtree = Int.MAX_VALUE
         surfaceToRidMap.clear()
+        surfaceToLidMap.clear()
         reloadMmapDictionaries()
         clearMemoryCache()
         initializeIfNeeded()
@@ -582,6 +602,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     ) {
         if (rid > 0 && !surfaceToRidMap.containsKey(surface)) {
             surfaceToRidMap[surface] = rid
+        }
+        if (lid > 0 && !surfaceToLidMap.containsKey(surface)) {
+            surfaceToLidMap[surface] = lid
         }
         var node = root
         if (cost < node.minCostInSubtree) node.minCostInSubtree = cost
@@ -687,15 +710,18 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 for (cand in nextPredictions) {
                     val candReading = JapaneseKanaUtils.normalizeReading(cand.reading)
                     if (candReading.startsWith(normalized) && cand.surface != normalized) {
+                        val collocPriority = if (cand.source == "canonical_projected") 4.5f else 5.0f
                         addCandidate(
                             cand.copy(
                                 isPrediction = true,
                                 source = "context_collocation",
-                                priority = 5.0f
+                                priority = collocPriority
                             )
                         )
                     }
                 }
+                // Keep direct 1st-order context collocations (5.0f) ahead of projected multi-word continuations (4.5f)
+                result.sortByDescending { it.priority }
             }
         }
 

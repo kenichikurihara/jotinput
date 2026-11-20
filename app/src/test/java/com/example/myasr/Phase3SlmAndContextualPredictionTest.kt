@@ -302,4 +302,28 @@ class Phase3SlmAndContextualPredictionTest {
         // candB has the lowest NLL (1.2f) and high character length saving, so it should rank #1
         assertEquals("Highest expected utility candidate must rank #1", "お願いいたします", ranked[0].surface)
     }
+
+    @Test
+    fun testZeroQueryDualHorizonPairingWithCompoundChunk() {
+        val pool = listOf(
+            ConversionCandidate(surface = "お願いします", reading = "おねがいします", isPrediction = true, source = "canonical_collocation"),
+            ConversionCandidate(surface = "お願いいたします", reading = "おねがいいたします", isPrediction = true, source = "canonical_collocation"),
+            ConversionCandidate(surface = "お願い", reading = "おねがい", isPrediction = true, source = "canonical_collocation"),
+            ConversionCandidate(surface = "は", reading = "は", isPrediction = true, source = "particle")
+        )
+        // Make "お願いします" (CHUNK_EXT) clearly win Slot 1, and "お願い" (SHORT_EXT) have better NLL than "お願いいたします"
+        val scores = floatArrayOf(1.1f, 3.8f, 1.8f, 4.5f)
+        val ranked = LlmReranker.Companion.scoreAndRankPool(
+            topPool = pool,
+            scores = scores,
+            currentShownTop1 = null,
+            weightAlpha = 0.0f,
+            lambdaObs = 1.0f,
+            gammaUser = 0.5f,
+            targetInputLength = 0
+        )
+        assertEquals(pool.size, ranked.size)
+        assertEquals("お願いします", ranked[0].surface)
+        assertEquals("Idea D2 should pair short stem anchor 'お願い' in Slot 2", "お願い", ranked[1].surface)
+    }
 }

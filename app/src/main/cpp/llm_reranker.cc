@@ -66,6 +66,73 @@ bool EndsWith(const std::string& s, const std::string& suffix) {
          s.compare(s.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
+bool IsCompleteUtf8(const std::string& s) {
+  if (s.empty()) return true;
+  const size_t n = s.size();
+  size_t i = n;
+  // Walk back at most 4 bytes to find the start of the last UTF-8 codepoint
+  int cont = 0;
+  while (i > 0 && cont < 4) {
+    --i;
+    unsigned char b = static_cast<unsigned char>(s[i]);
+    if ((b & 0x80) == 0) {
+      return cont == 0;
+    } else if ((b & 0xC0) == 0x80) {
+      ++cont;
+    } else {
+      int expected = 0;
+      if ((b & 0xE0) == 0xC0) expected = 1;
+      else if ((b & 0xF0) == 0xE0) expected = 2;
+      else if ((b & 0xF8) == 0xF0) expected = 3;
+      else return false;
+      return cont == expected;
+    }
+  }
+  return false;
+}
+
+void SanitizeIncompleteUtf8Tail(std::string* s) {
+  if (!s || s->empty() || IsCompleteUtf8(*s)) return;
+  size_t i = s->size();
+  int steps = 0;
+  while (i > 0 && steps < 4) {
+    --i;
+    ++steps;
+    unsigned char b = static_cast<unsigned char>((*s)[i]);
+    if ((b & 0x80) == 0) {
+      s->resize(i + 1);
+      return;
+    }
+    if ((b & 0xC0) != 0x80) {
+      s->resize(i);
+      return;
+    }
+  }
+  s->clear();
+}
+
+size_t CountUtf8Chars(const std::string& s) {
+  size_t count = 0;
+  for (unsigned char b : s) {
+    if ((b & 0xC0) != 0x80) ++count;
+  }
+  return count;
+}
+
+bool IsBunsetsuBoundary(const std::string& s) {
+  if (!IsCompleteUtf8(s) || CountUtf8Chars(s) < 2) return false;
+  static const char* kPredicateEndings[] = {
+      "ております", "ています", "いたしました", "いたします",
+      "ませんでした", "ました", "ません", "ます",
+      "でした", "です", "ください",
+      "する", "した", "して", "いる", "いた", "ない", "たい"
+  };
+  for (const char* ending : kPredicateEndings) {
+    if (EndsWith(s, ending)) return true;
+  }
+  return false;
+}
+
 bool IsTerminalPunctuation(const std::string& s) {
   return EndsWith(s, "。") || EndsWith(s, "！") || EndsWith(s, "？") ||
          EndsWith(s, "、") || EndsWith(s, ".") || EndsWith(s, "!") || EndsWith(s, "?");
@@ -101,8 +168,17 @@ void AppendTokenPieceAndCheckTermination(const llama_vocab* vocab,
     return;
   }
 
+  if (next_piece == "、") {
+    *finished = true;
+    return;
+  }
+
   tokens->push_back(tok);
   *text += next_piece;
+
+  if (IsBunsetsuBoundary(*text)) {
+    *finished = true;
+  }
 }
 
 }  // namespace
@@ -672,6 +748,15 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
 }
 
 bool LlmReranker::WarmContext(const std::string& context) {
+  std::string effective_context = context.empty() ? "<s>" : context;
+  uint64_t target_hash = ComputeContextHash(effective_context);
+  {
+    std::unique_lock<std::mutex> lock(mutex_, std::try_to_lock);
+    if (lock.owns_lock() && initialized_ &&
+        target_hash == cached_context_hash_ && cached_context_n_tokens_ > 0) {
+      return true;
+    }
+  }
   abort_prediction_.store(true);
   abort_scoring_.store(false);
   std::lock_guard<std::mutex> lock(mutex_);
@@ -1214,6 +1299,7 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
   }
 
   for (auto& beam : beams) {
+    SanitizeIncompleteUtf8Tail(&beam.text);
     std::string cleaned = TrimWhitespace(beam.text);
     if (!cleaned.empty() &&
         std::find(out_predictions->begin(), out_predictions->end(), cleaned) == out_predictions->end()) {

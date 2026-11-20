@@ -86,6 +86,7 @@ class VoiceInputMethodService : InputMethodService() {
     private var phase1TimerJob: Job? = null
     private var englishCandidateJob: Job? = null
     private var warmContextJob: Job? = null
+    private var speculativePrewarmJob: Job? = null
     private var lastWarmedContextText: String? = null
     private var isCurrentCandidatesReranked: Boolean = false
     private val audioRecorder = AudioRecorder()
@@ -1159,6 +1160,7 @@ class VoiceInputMethodService : InputMethodService() {
         if (!arbitrator.isKeyboardComposing()) {
             phase1TimerJob?.cancel()
             rerankJob?.cancel()
+            speculativePrewarmJob?.cancel()
             LlmReranker.getInstance(this).requestAbortScoring()
             isCurrentCandidatesReranked = false
             updateDebugSlmBadge(null)
@@ -1176,8 +1178,8 @@ class VoiceInputMethodService : InputMethodService() {
         // Signal any ongoing C++ score/decode pass to abort immediately (Policy ⑥)
         LlmReranker.getInstance(this).requestAbortScoring()
         phase1TimerJob?.cancel()
-        phase1TimerJob?.cancel()
-            rerankJob?.cancel()
+        rerankJob?.cancel()
+        speculativePrewarmJob?.cancel()
         isCurrentCandidatesReranked = false
         updateDebugSlmBadge(null)
 
@@ -1227,6 +1229,9 @@ class VoiceInputMethodService : InputMethodService() {
                 renderedCandidates,
                 highlightFirstAsAi = isAntiJitterUiEnabled && isFullyCompleteFromFastPath
             )
+            if (canRerank) {
+                scheduleSpeculativeNextPhrasePrewarm(textBeforeCursor, initialRenderedTop1)
+            }
             return
         }
 
@@ -1339,6 +1344,10 @@ class VoiceInputMethodService : InputMethodService() {
                             }
 
                             applyUpdate(isPhase1Rendered)
+                            scheduleSpeculativeNextPhrasePrewarm(
+                                textBeforeCursor,
+                                renderedCandidates.firstOrNull()?.surface ?: initialRenderedTop1
+                            )
                         }
                     }
                 } catch (e: TimeoutCancellationException) {
@@ -1392,6 +1401,10 @@ class VoiceInputMethodService : InputMethodService() {
                             val debugBadge = if (slmUsed) engineType.badgeLabel else null
                             updateDebugSlmBadge(debugBadge)
                             candidateStripView?.setCandidates(tapSafeDecision.finalCandidates)
+                            scheduleSpeculativeNextPhrasePrewarm(
+                                textBeforeCursor,
+                                tapSafeDecision.finalCandidates.firstOrNull()?.surface
+                            )
                         }
                     }
                 }
@@ -1399,6 +1412,30 @@ class VoiceInputMethodService : InputMethodService() {
                 Log.w(TAG, "KanaKanji/SLM rerank timed out (>2500ms), fail-safe preserving base candidates")
             } catch (e: Exception) {
                 Log.w(TAG, "KanaKanji/SLM rerank error: ${e.message}")
+            }
+        }
+    }
+
+    private fun scheduleSpeculativeNextPhrasePrewarm(contextBeforeCursor: String, top1Surface: String?) {
+        val top1 = top1Surface?.trim().orEmpty()
+        if (top1.isEmpty()) return
+        val slm = LlmReranker.getInstance(this)
+        val decision = CandidateRerankJudgement.judgeSpeculativeWarm(
+            CandidateRerankJudgement.SpeculativeWarmInput(
+                isRerankEnabled = KeyboardHeightManager.isSlmRerankEnabled(this),
+                isSlmReady = slm.isReady(),
+                isAlreadyComposing = true,
+                trigger = CandidateRerankJudgement.WarmTrigger.COMPOSING_TOP1_STABLE
+            )
+        )
+        if (!decision.shouldWarm) return
+
+        val expectedReading = arbitrator.composingText.toString()
+        speculativePrewarmJob?.cancel()
+        speculativePrewarmJob = serviceScope.launch(Dispatchers.Default) {
+            delay(120L)
+            if (isActive && arbitrator.isKeyboardComposing() && arbitrator.composingText.toString() == expectedReading) {
+                slm.speculativePrepareNextPhrases(contextBeforeCursor + top1, maxCandidates = 3, maxTokens = 5)
             }
         }
     }
@@ -1455,7 +1492,6 @@ class VoiceInputMethodService : InputMethodService() {
             }
             syncKeyboardState()
             showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
-            triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.TEXT_COMMITTED)
         }
     }
 
@@ -1609,27 +1645,59 @@ class VoiceInputMethodService : InputMethodService() {
         return EnglishAssistJudgement.judgeAutoAssistBypass(mode, isFieldBypassed).decision
     }
 
+    private fun mergeZeroQueryCandidates(
+        fastPredictions: List<ConversionCandidate>,
+        slmContinuations: List<ConversionCandidate>
+    ): List<ConversionCandidate> {
+        val combined = mutableListOf<ConversionCandidate>()
+        val seenSurfaces = HashSet<String>()
+        fun addCombinedCandidate(cand: ConversionCandidate) {
+            val trimmedSurface = cand.surface.trim { it.isWhitespace() || it == '\u3000' }
+            if (trimmedSurface.isNotEmpty() && seenSurfaces.add(trimmedSurface)) {
+                combined.add(
+                    if (trimmedSurface == cand.surface) cand else cand.copy(surface = trimmedSurface)
+                )
+            }
+        }
+        // 1. Priority: User history skip-bigrams and bigrams
+        for (cand in fastPredictions) {
+            if (cand.source == "history_skip_bigram" || cand.source == "history_bigram") {
+                addCombinedCandidate(cand)
+            }
+        }
+        // 2. Priority: Contextual SLM generation
+        for (cand in slmContinuations) {
+            addCombinedCandidate(cand)
+        }
+        // 3. Priority: Remaining canonical and particle candidates
+        for (cand in fastPredictions) {
+            addCombinedCandidate(cand)
+        }
+        return combined
+    }
+
     private fun showNextPhrasePredictions(committedPhrase: String) {
         phase1TimerJob?.cancel()
-            rerankJob?.cancel()
+        rerankJob?.cancel()
+        warmContextJob?.cancel()
+        speculativePrewarmJob?.cancel()
         updateDebugSlmBadge(null)
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
         val suggestJpPeriod = KeyboardHeightManager.isJapanesePeriodSuggestionEnabled(this)
 
         // 1. FAST PATH (Instant UI update on main thread, < 0.1ms):
-        // Display user history bigrams, canonical collocations, sentence-ending period, and particle continuation
-        val fastPredictions = nextPhrasePredictor.predict(
-            committedPhrase,
-            textBeforeCursor,
-            suggestPeriod = suggestJpPeriod
+        // Display user history bigrams, skip-bigrams, canonical collocations, and ConnectionMatrix-ranked particles
+        val committedRid = if (committedPhrase.isNotBlank()) kanaKanjiEngine.lookupSurfaceRid(committedPhrase) else 0
+        val rawFastPredictions = nextPhrasePredictor.predict(
+            lastPhrase = committedPhrase,
+            textBeforeCursor = textBeforeCursor,
+            suggestPeriod = suggestJpPeriod,
+            committedRid = committedRid,
+            connectionMatrix = kanaKanjiEngine.getConnectionMatrix(),
+            surfaceToLid = kanaKanjiEngine::lookupLeadingLid
         )
-        if (fastPredictions.isNotEmpty()) {
-            candidateStripView?.setCandidates(fastPredictions)
-        } else {
-            candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
-        }
+        val fastPredictions = CandidateRerankJudgement.applyZeroQueryHorizonPairing(rawFastPredictions)
 
-        // 2. SLM SPECULATIVE CONTINUATION & CONTEXTUAL RERANKING PATH (Async worker on Dispatchers.Default):
         val slm = LlmReranker.getInstance(this)
         val nextPhraseDecision = CandidateRerankJudgement.judgeNextPhraseRerank(
             CandidateRerankJudgement.NextPhraseRerankInput(
@@ -1638,6 +1706,45 @@ class VoiceInputMethodService : InputMethodService() {
                 textBeforeCursor = textBeforeCursor
             )
         )
+
+        // Z5: Check speculative pre-warmed zero-query cache for 0ms single-pass render on commit
+        val prewarmedSlm = if (nextPhraseDecision.decision) {
+            slm.getSpeculativeNextPhrases(textBeforeCursor)
+        } else {
+            null
+        }
+        if (prewarmedSlm != null && prewarmedSlm.isNotEmpty()) {
+            val combined = mergeZeroQueryCandidates(fastPredictions, prewarmedSlm)
+            val alpha = KeyboardHeightManager.getSlmWeightAlpha(this)
+            val fastReranked = if (combined.size > 1) {
+                slm.tryFastRerankWithStatus(
+                    contextPrefix = textBeforeCursor,
+                    candidates = combined.take(8),
+                    weightAlpha = alpha,
+                    targetInputLength = 0
+                )
+            } else {
+                null
+            }
+            if (fastReranked != null && fastReranked.candidates.isNotEmpty()) {
+                val finalZeroQuery = CandidateRerankJudgement.applyZeroQueryHorizonPairing(
+                    fastReranked.candidates + combined.drop(8)
+                )
+                val engineType = KeyboardHeightManager.getRerankEngineType(this)
+                updateDebugSlmBadge(engineType.badgeLabel)
+                candidateStripView?.setCandidates(finalZeroQuery)
+                if (fastReranked.isFullyComplete) {
+                    return
+                }
+            } else {
+                candidateStripView?.setCandidates(CandidateRerankJudgement.applyZeroQueryHorizonPairing(combined))
+            }
+        } else if (fastPredictions.isNotEmpty()) {
+            candidateStripView?.setCandidates(fastPredictions)
+        } else {
+            candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+        }
+
         if (!nextPhraseDecision.decision) {
             return
         }
@@ -1649,41 +1756,21 @@ class VoiceInputMethodService : InputMethodService() {
                     slm.warmContext(textBeforeCursor)
 
                     // Generate next-phrase continuations directly from on-device SLM with lightweight bounds
-                    val slmContinuations = slm.predictNextPhrases(textBeforeCursor, maxCandidates = 3, maxTokens = 4)
+                    val slmContinuations = prewarmedSlm
+                        ?: slm.predictNextPhrases(textBeforeCursor, maxCandidates = 3, maxTokens = 5)
 
-                    // Combine SLM continuations with fast predictions
-                    val combined = mutableListOf<ConversionCandidate>()
-                    val seenSurfaces = HashSet<String>()
+                    val combined = mergeZeroQueryCandidates(fastPredictions, slmContinuations)
 
-                    fun addCombinedCandidate(cand: ConversionCandidate) {
-                        val trimmedSurface = cand.surface.trim { it.isWhitespace() || it == '\u3000' }
-                        if (trimmedSurface.isNotEmpty() && seenSurfaces.add(trimmedSurface)) {
-                            combined.add(
-                                if (trimmedSurface == cand.surface) cand else cand.copy(surface = trimmedSurface)
-                            )
-                        }
-                    }
-
-                    // 1. Priority: User history bigrams
-                    for (cand in fastPredictions) {
-                        if (cand.source == "history_bigram") {
-                            addCombinedCandidate(cand)
-                        }
-                    }
-                    // 2. Priority: Contextual SLM generation
-                    for (cand in slmContinuations) {
-                        addCombinedCandidate(cand)
-                    }
-                    // 3. Priority: Remaining canonical and particle candidates
-                    for (cand in fastPredictions) {
-                        addCombinedCandidate(cand)
-                    }
-
-                    // If candidates exist, rerank the top candidates using SLM log-likelihood
+                    // If candidates exist, rerank the top candidates using SLM log-likelihood with targetInputLength = 0 (JA_ZERO_QUERY)
                     val (reranked, slmUsed) = if (combined.size > 1) {
                         val alpha = KeyboardHeightManager.getSlmWeightAlpha(this@VoiceInputMethodService)
-                        val (topReranked, used) = slm.rerankWithStatus(textBeforeCursor, combined.take(8), weightAlpha = alpha)
-                        Pair(topReranked + combined.drop(8), used)
+                        val (topReranked, used) = slm.rerankWithStatus(
+                            contextPrefix = textBeforeCursor,
+                            candidates = combined.take(8),
+                            weightAlpha = alpha,
+                            targetInputLength = 0
+                        )
+                        Pair(CandidateRerankJudgement.applyZeroQueryHorizonPairing(topReranked + combined.drop(8)), used)
                     } else {
                         Pair(combined, false)
                     }

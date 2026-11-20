@@ -1,5 +1,6 @@
 package com.example.myasr
 
+import com.example.myasr.context.kanakanji.domain.ConnectionMatrix
 import com.example.myasr.context.kanakanji.domain.NextPhrasePredictor
 
 import org.junit.Assert.assertEquals
@@ -147,5 +148,61 @@ class NextPhrasePredictorTest {
         val periodCandidates = preds.filter { it.surface.trim { ch -> ch.isWhitespace() || ch == '\u3000' } == "。" }
         assertEquals("Period '。' should appear at most once", 1, periodCandidates.size)
         assertEquals("。", periodCandidates.first().surface)
+    }
+
+    @Test
+    fun testParticlePrefixProjectionPromotesContextSpecificVerbOverGenericParticle() {
+        // After "作業を", CANONICAL_COLLOCATIONS["作業"] has "を進めます" -> projects "進めます" at Rank 1
+        val sagyoPreds = predictor.predict("を", textBeforeCursor = "作業を", suggestPeriod = false)
+        assertTrue("Expected non-empty predictions for '作業を'", sagyoPreds.isNotEmpty())
+        assertEquals("進めます", sagyoPreds.first().surface)
+
+        // After "資料を", CANONICAL_COLLOCATIONS["資料"] has "を送信しました" -> projects "送信しました" at Rank 1
+        val shiryoPreds = predictor.predict("を", textBeforeCursor = "資料を", suggestPeriod = false)
+        assertTrue("Expected non-empty predictions for '資料を'", shiryoPreds.isNotEmpty())
+        assertEquals("送信しました", shiryoPreds.first().surface)
+    }
+
+    @Test
+    fun testSkipBigramHistoryLearningAcrossParticle() {
+        predictor.recordTransition("書類", "を")
+        predictor.recordTransition("を", "提出します", currentReading = "ていしゅつします")
+
+        val preds = predictor.predict("を", textBeforeCursor = "書類を", suggestPeriod = false)
+        assertTrue("Expected non-empty predictions", preds.isNotEmpty())
+        assertEquals("提出します", preds.first().surface)
+        assertEquals("history_skip_bigram", preds.first().source)
+    }
+
+    @Test
+    fun testConnectionMatrixPrunesInvalidTransitionsAndSortsParticles() {
+        // Build 5x5 matrix: rid=1 (noun), lid=2 ('が', low cost=400), lid=3 ('を', higher cost=1200), lid=4 ('は', INVALID_COST)
+        val size = 5
+        val data = ShortArray(size * size) { 2500.toShort() }
+        data[1 * size + 2] = 400.toShort()
+        data[1 * size + 3] = 1200.toShort()
+        data[1 * size + 4] = ConnectionMatrix.INVALID_COST.toShort()
+        val matrix = ConnectionMatrix.createInMemory(size, data)
+
+        val lidLookup: (String) -> Int = { surface ->
+            when (surface) {
+                "が" -> 2
+                "を" -> 3
+                "は" -> 4
+                else -> 0
+            }
+        }
+
+        val preds = predictor.predict(
+            lastPhrase = "報告書",
+            textBeforeCursor = "報告書",
+            suggestPeriod = false,
+            committedRid = 1,
+            connectionMatrix = matrix,
+            surfaceToLid = lidLookup
+        )
+        val particleSurfaces = preds.filter { it.source == "particle" }.map { it.surface }
+        assertFalse("INVALID_COST particle 'は' must be pruned", particleSurfaces.contains("は"))
+        assertTrue("Expected 'が' before 'を' due to lower connection cost", particleSurfaces.indexOf("が") < particleSurfaces.indexOf("を"))
     }
 }

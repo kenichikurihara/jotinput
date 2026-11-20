@@ -95,8 +95,28 @@ object CandidateRerankJudgement {
         INPUT_VIEW_STARTED,
         CURSOR_MOVED_EXTERNAL,
         KEY_TOUCH_DOWN,
-        VOICE_CHUNK_DECODING
+        VOICE_CHUNK_DECODING,
+        COMPOSING_TOP1_STABLE
     }
+
+    data class ZeroQueryHorizonInput(
+        val candidateCount: Int,
+        val top1IsHistoryBigram: Boolean,
+        val top1IsCompoundChunk: Boolean,
+        val hasSameStemShortCandidate: Boolean,
+        val hasPivotParticleCandidate: Boolean
+    )
+
+    enum class Slot2PairingStrategy {
+        KEEP_UTILITY_ORDER,
+        PAIR_SAME_STEM_SHORT_CANDIDATE,
+        PAIR_TOP_PIVOT_PARTICLE
+    }
+
+    data class ZeroQueryHorizonDecision(
+        val slot2Strategy: Slot2PairingStrategy,
+        val reason: String
+    )
 
     data class SpeculativeWarmInput(
         val isRerankEnabled: Boolean,
@@ -374,11 +394,49 @@ object CandidateRerankJudgement {
         )
     }
 
+    val zeroQueryHorizonDecisionTable: DecisionTable<ZeroQueryHorizonInput, ZeroQueryHorizonDecision> = decisionTable(
+        name = "ZeroQueryHorizonPolicy",
+        hitPolicy = HitPolicy.FIRST
+    ) {
+        rule(id = "ZQ_HORIZON_R1", description = "Keep order when candidate count <= 1") {
+            `when` { it.candidateCount <= 1 }
+            thenValue(ZeroQueryHorizonDecision(Slot2PairingStrategy.KEEP_UTILITY_ORDER, "insufficient_candidates"))
+        }
+        rule(id = "ZQ_HORIZON_R2", description = "Preserve short history bigram at Top-1") {
+            `when` { it.top1IsHistoryBigram && !it.top1IsCompoundChunk }
+            thenValue(ZeroQueryHorizonDecision(Slot2PairingStrategy.KEEP_UTILITY_ORDER, "preserve_short_history_top1"))
+        }
+        rule(id = "ZQ_HORIZON_R3", description = "Pair same-stem short candidate into Slot 2 when compound chunk is Top-1") {
+            `when` { it.top1IsCompoundChunk && it.hasSameStemShortCandidate }
+            thenValue(
+                ZeroQueryHorizonDecision(
+                    Slot2PairingStrategy.PAIR_SAME_STEM_SHORT_CANDIDATE,
+                    "pair_short_stem_anchor_with_chunk_top1"
+                )
+            )
+        }
+        rule(id = "ZQ_HORIZON_R4", description = "Pair pivot particle into Slot 2 when compound chunk is Top-1") {
+            `when` { it.top1IsCompoundChunk && it.hasPivotParticleCandidate }
+            thenValue(
+                ZeroQueryHorizonDecision(
+                    Slot2PairingStrategy.PAIR_TOP_PIVOT_PARTICLE,
+                    "pair_pivot_particle_with_chunk_top1"
+                )
+            )
+        }
+        defaultValue(
+            id = "ZQ_HORIZON_DEFAULT",
+            description = "Keep default utility order",
+            value = ZeroQueryHorizonDecision(Slot2PairingStrategy.KEEP_UTILITY_ORDER, "default_utility_order")
+        )
+    }
+
     val executionJudgement: Judgement<ExecutionInput, ExecutionDecision> = executionDecisionTable
     val tapSafeOrderingJudgement: Judgement<TapSafeOrderingInput, TapSafeOrderingDecision> = tapSafeOrderingDecisionTable
     val nextPhraseRerankJudgement: Judgement<NextPhraseRerankInput, JudgementResult<Boolean>> = nextPhraseRerankDecisionTable
     val speculativeWarmJudgement: Judgement<SpeculativeWarmInput, SpeculativeWarmDecision> = speculativeWarmDecisionTable
     val viewportAwareOrderingJudgement: Judgement<ViewportAwareOrderingInput, ViewportAwareOrderingDecision> = viewportAwareOrderingDecisionTable
+    val zeroQueryHorizonJudgement: Judgement<ZeroQueryHorizonInput, ZeroQueryHorizonDecision> = zeroQueryHorizonDecisionTable
 
     fun judgeExecution(input: ExecutionInput): ExecutionDecision = executionJudgement.judge(input)
 
@@ -408,4 +466,52 @@ object CandidateRerankJudgement {
 
     fun judgeSpeculativeWarmWithTrace(input: SpeculativeWarmInput): DecisionTrace<SpeculativeWarmDecision> =
         speculativeWarmDecisionTable.evaluateWithTrace(input)
+
+    fun judgeZeroQueryHorizon(input: ZeroQueryHorizonInput): ZeroQueryHorizonDecision =
+        zeroQueryHorizonJudgement.judge(input)
+
+    fun judgeZeroQueryHorizonWithTrace(input: ZeroQueryHorizonInput): DecisionTrace<ZeroQueryHorizonDecision> =
+        zeroQueryHorizonDecisionTable.evaluateWithTrace(input)
+
+    /**
+     * Applies ZeroQueryHorizonPolicy to fast-path zero-query candidates so Slot 2 preserves
+     * a short stem anchor or pivot particle alongside a Top-1 compound chunk.
+     */
+    fun applyZeroQueryHorizonPairing(candidates: List<ConversionCandidate>): List<ConversionCandidate> {
+        if (candidates.size <= 2) return candidates
+        val top1 = candidates[0]
+        val rest = candidates.drop(1)
+        val sameStemShort = rest.firstOrNull {
+            it.surface.length < top1.surface.length &&
+                it.surface.length >= 2 &&
+                top1.surface.startsWith(it.surface)
+        }
+        val pivotParticle = rest.firstOrNull { it.source == "particle" }
+        val top1IsHistory = top1.source == "history_bigram" || top1.source == "history_skip_bigram"
+        val top1IsChunk = top1.surface.length >= 5 || sameStemShort != null
+
+        val decision = judgeZeroQueryHorizon(
+            ZeroQueryHorizonInput(
+                candidateCount = candidates.size,
+                top1IsHistoryBigram = top1IsHistory,
+                top1IsCompoundChunk = top1IsChunk,
+                hasSameStemShortCandidate = sameStemShort != null,
+                hasPivotParticleCandidate = pivotParticle != null
+            )
+        )
+        val slot2Anchor = when (decision.slot2Strategy) {
+            Slot2PairingStrategy.PAIR_SAME_STEM_SHORT_CANDIDATE -> sameStemShort
+            Slot2PairingStrategy.PAIR_TOP_PIVOT_PARTICLE -> pivotParticle
+            Slot2PairingStrategy.KEEP_UTILITY_ORDER -> null
+        } ?: return candidates
+
+        if (candidates[1].surface == slot2Anchor.surface) return candidates
+        val reordered = ArrayList<ConversionCandidate>(candidates.size)
+        reordered.add(top1)
+        reordered.add(slot2Anchor)
+        for (c in rest) {
+            if (c.surface != slot2Anchor.surface) reordered.add(c)
+        }
+        return reordered
+    }
 }

@@ -37,7 +37,8 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-2: Neural Reranking** | `CandidateRerankJudgement` | `TapSafeCandidateOrdering` | `FIRST` | Policy ⑤ タップ安全ウィンドウ保護（100ms / タッチ中ピン留め） |
 | **BC-2: Neural Reranking** | `CandidateRerankJudgement` | `ViewportAwareCandidateOrdering` | `FIRST` | ゼロ・ジッター候補UI（50ms待機・AI予約枠・可視領域凍結・画面外リランク） |
 | **BC-2: Neural Reranking** | `CandidateRerankJudgement` | `NextPhraseSlmRerank` | `FIRST` | 次文節予測の SLM リランキング適用可否 |
-| **BC-2: Neural Reranking** | `CandidateRerankJudgement` | `SpeculativeContextWarming` | `FIRST` | 文節確定・起動・カーソル移動・キー押下時の投機的 KV ウォーミング可否 |
+| **BC-2: Neural Reranking** | `CandidateRerankJudgement` | `ZeroQueryHorizonPolicy` | `FIRST` | 確定直後ゼロクエリ候補における複合チャンクと短語幹/ピボット助詞の Slot 2 ペアリング方針 |
+| **BC-2: Neural Reranking** | `CandidateRerankJudgement` | `SpeculativeContextWarming` | `FIRST` | 文節確定・起動・カーソル移動・キー押下・Composing安定時の投機的 KV ウォーミング可否 |
 | **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishAutoAssistBypass` | `FIRST` | QWERTY モード・対象フィールドによる英語アシストバイパス判定 |
 | **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishWordCandidateEligibility` | `FIRST` | 英語単語候補生成の適格性判定 |
 | **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishGecClauseEligibility` | `FIRST` | GEC（文法/文脈修正）対象節の抽出と適格性判定 |

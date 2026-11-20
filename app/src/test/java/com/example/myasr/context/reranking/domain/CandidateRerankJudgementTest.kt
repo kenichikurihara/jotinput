@@ -291,5 +291,53 @@ class CandidateRerankJudgementTest {
         )
         assertEquals("WARM_DEFAULT", touchBeforeFirstChar.selectedRuleId)
         assertTrue(touchBeforeFirstChar.result.shouldWarm)
+
+        val composingTop1Stable = CandidateRerankJudgement.judgeSpeculativeWarmWithTrace(
+            CandidateRerankJudgement.SpeculativeWarmInput(
+                isRerankEnabled = true,
+                isSlmReady = true,
+                isAlreadyComposing = true,
+                trigger = CandidateRerankJudgement.WarmTrigger.COMPOSING_TOP1_STABLE
+            )
+        )
+        assertEquals("WARM_DEFAULT", composingTop1Stable.selectedRuleId)
+        assertTrue(composingTop1Stable.result.shouldWarm)
+    }
+
+    @Test
+    fun `zeroQueryHorizonDecisionTable and applyZeroQueryHorizonPairing enforce dual-horizon Slot 2`() {
+        val traceR3 = CandidateRerankJudgement.judgeZeroQueryHorizonWithTrace(
+            CandidateRerankJudgement.ZeroQueryHorizonInput(
+                candidateCount = 4,
+                top1IsHistoryBigram = false,
+                top1IsCompoundChunk = true,
+                hasSameStemShortCandidate = true,
+                hasPivotParticleCandidate = true
+            )
+        )
+        assertEquals("ZQ_HORIZON_R3", traceR3.selectedRuleId)
+        assertEquals(CandidateRerankJudgement.Slot2PairingStrategy.PAIR_SAME_STEM_SHORT_CANDIDATE, traceR3.result.slot2Strategy)
+
+        val traceR4 = CandidateRerankJudgement.judgeZeroQueryHorizonWithTrace(
+            CandidateRerankJudgement.ZeroQueryHorizonInput(
+                candidateCount = 4,
+                top1IsHistoryBigram = false,
+                top1IsCompoundChunk = true,
+                hasSameStemShortCandidate = false,
+                hasPivotParticleCandidate = true
+            )
+        )
+        assertEquals("ZQ_HORIZON_R4", traceR4.selectedRuleId)
+        assertEquals(CandidateRerankJudgement.Slot2PairingStrategy.PAIR_TOP_PIVOT_PARTICLE, traceR4.result.slot2Strategy)
+
+        val candidates = listOf(
+            ConversionCandidate(surface = "お願いします", reading = "おねがいします", isPrediction = true, source = "canonical_collocation"),
+            ConversionCandidate(surface = "お願いいたします", reading = "おねがいいたします", isPrediction = true, source = "canonical_collocation"),
+            ConversionCandidate(surface = "お願い", reading = "おねがい", isPrediction = true, source = "canonical_collocation"),
+            ConversionCandidate(surface = "を", reading = "を", isPrediction = true, source = "particle")
+        )
+        val paired = CandidateRerankJudgement.applyZeroQueryHorizonPairing(candidates)
+        assertEquals("お願いします", paired[0].surface)
+        assertEquals("お願い", paired[1].surface)
     }
 }

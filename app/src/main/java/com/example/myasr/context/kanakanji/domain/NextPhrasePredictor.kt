@@ -454,6 +454,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
     private val bigramLastUsed = LinkedHashMap<String, LinkedHashMap<String, Long>>(256, 0.75f, true)
     private val bigramReadings = HashMap<String, String>()
     private var totalBigramPairs = 0
+    private var lastCommittedContentPhrase: String = ""
     private val historyLoadLock = Any()
 
     @Volatile
@@ -495,8 +496,42 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         }
 
         val nowMs = System.currentTimeMillis()
-        val nextMap = bigramHistory.getOrPut(prev) { LinkedHashMap(8, 0.75f, true) }
-        val nextTsMap = bigramLastUsed.getOrPut(prev) { LinkedHashMap(8, 0.75f, true) }
+        incrementBigramCount(prev, curr, nowMs)
+
+        // Track preceding content word even when the caller starts with (contentWord -> particle)
+        val prevIsSentenceEnd = prev.endsWith("。") || prev.endsWith("！") || prev.endsWith("？") ||
+            prev.endsWith(".") || prev.endsWith("!") || prev.endsWith("?") || prev.endsWith("\n")
+        if (!isParticle(prev) && !prevIsSentenceEnd) {
+            lastCommittedContentPhrase = prev
+        }
+
+        // Z2: Particle-Bridged 2nd-Order Skip-Bigram ("ContentWord|Particle" -> Predicate)
+        if (isParticle(prev) && !isParticle(curr) && lastCommittedContentPhrase.isNotEmpty() && lastCommittedContentPhrase != curr) {
+            val skipKey = "$lastCommittedContentPhrase|$prev"
+            incrementBigramCount(skipKey, curr, nowMs)
+        }
+
+        if (curr.endsWith("。") || curr.endsWith("！") || curr.endsWith("？") ||
+            curr.endsWith(".") || curr.endsWith("!") || curr.endsWith("?") || curr.endsWith("\n")
+        ) {
+            lastCommittedContentPhrase = ""
+        } else if (!isParticle(curr)) {
+            lastCommittedContentPhrase = curr
+        }
+
+        scheduleSaveHistory()
+        context?.let { ctx ->
+            try {
+                UserHistorySyncManager.getInstance(ctx).notifyHistoryMutated()
+            } catch (e: Exception) {
+                // Ignore if sync manager is not ready
+            }
+        }
+    }
+
+    private fun incrementBigramCount(prevKey: String, curr: String, nowMs: Long) {
+        val nextMap = bigramHistory.getOrPut(prevKey) { LinkedHashMap(8, 0.75f, true) }
+        val nextTsMap = bigramLastUsed.getOrPut(prevKey) { LinkedHashMap(8, 0.75f, true) }
         val existed = nextMap.containsKey(curr)
         val count = nextMap.getOrDefault(curr, 0)
         nextMap[curr] = (count + 1).coerceAtMost(100_000)
@@ -532,15 +567,6 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             bigramLastUsed.remove(oldestKey)
             if (removedMap != null) totalBigramPairs -= removedMap.size
         }
-
-        scheduleSaveHistory()
-        context?.let { ctx ->
-            try {
-                UserHistorySyncManager.getInstance(ctx).notifyHistoryMutated()
-            } catch (e: Exception) {
-                // Ignore if sync manager is not ready
-            }
-        }
     }
 
     /**
@@ -548,22 +574,44 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
      * Guaranteed sub-millisecond execution (< 0.1 ms) safe for direct UI invocation.
      */
     @Synchronized
+    @JvmOverloads
     fun predict(
         lastPhrase: String,
         textBeforeCursor: String = "",
-        suggestPeriod: Boolean = true
+        suggestPeriod: Boolean = true,
+        committedRid: Int = 0,
+        connectionMatrix: ConnectionMatrix? = null,
+        surfaceToLid: ((String) -> Int)? = null
     ): List<ConversionCandidate> {
         val result = mutableListOf<ConversionCandidate>()
         val seenSurfaces = HashSet<String>()
 
+        fun computeUnifiedDictCost(surface: String): Pair<Int, Int> {
+            if (committedRid <= 0 || connectionMatrix == null || surfaceToLid == null) {
+                return Pair(5000, 0)
+            }
+            val lid = surfaceToLid(surface)
+            if (lid <= 0) return Pair(5000, 0)
+            val connCost = connectionMatrix.getTransitionCost(committedRid, lid)
+            return Pair((3500 + connCost).coerceIn(0, 15000), connCost)
+        }
+
         fun addCandidate(cand: ConversionCandidate) {
             val trimmedSurface = cand.surface.trim { it.isWhitespace() || it == '\u3000' }
-            if (trimmedSurface.isNotEmpty() && seenSurfaces.add(trimmedSurface)) {
-                val normalizedCand = if (trimmedSurface == cand.surface) {
-                    cand
-                } else {
-                    cand.copy(surface = trimmedSurface)
+            if (trimmedSurface.isNotEmpty() && !seenSurfaces.contains(trimmedSurface)) {
+                val isUserHist = cand.source == "history_bigram" || cand.source == "history_skip_bigram"
+                val (unifiedCost, connCost) = computeUnifiedDictCost(trimmedSurface)
+                if (!isUserHist && committedRid > 0 && connectionMatrix != null && surfaceToLid != null) {
+                    val lid = surfaceToLid(trimmedSurface)
+                    if (lid > 0 && connCost >= ConnectionMatrix.INVALID_COST) {
+                        return
+                    }
                 }
+                seenSurfaces.add(trimmedSurface)
+                val normalizedCand = cand.copy(
+                    surface = trimmedSurface,
+                    dictCost = if (cand.dictCost != 5000) cand.dictCost else unifiedCost
+                )
                 result.add(normalizedCand)
             }
         }
@@ -576,7 +624,40 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             ""
         }
 
-        // 1. User Bigram History Cache (Highest Priority)
+        val anchor = JapaneseKanaUtils.extractTrailingContentAndParticle(textBeforeCursor)
+        val effectiveContentWord = anchor.contentWord ?: if (isParticle(cleanLast) && lastCommittedContentPhrase.isNotEmpty()) {
+            lastCommittedContentPhrase
+        } else {
+            null
+        }
+        val effectiveSkipKey = if (effectiveContentWord != null && isParticle(cleanLast)) {
+            "$effectiveContentWord|$cleanLast"
+        } else {
+            anchor.skipBigramKey
+        }
+
+        // 1. User Bigram History Cache (Highest Priority: 2nd-order Skip-Bigram -> 1st-order Bigram)
+        if (effectiveSkipKey != null) {
+            ensureHistoryLoaded()
+            val skipNextMap = bigramHistory[effectiveSkipKey]
+            if (skipNextMap != null) {
+                val tsMap = bigramLastUsed[effectiveSkipKey]
+                for (entry in skipNextMap.entries.sortedByDescending { it.value }) {
+                    val entryReading = bigramReadings[entry.key] ?: entry.key
+                    addCandidate(
+                        ConversionCandidate(
+                            surface = entry.key,
+                            reading = entryReading,
+                            isPrediction = true,
+                            source = "history_skip_bigram",
+                            historyCount = entry.value,
+                            lastUsedAtMs = tsMap?.get(entry.key) ?: 0L
+                        )
+                    )
+                }
+            }
+        }
+
         if (cleanLast.isNotEmpty()) {
             ensureHistoryLoaded()
             val userNextMap = bigramHistory[cleanLast]
@@ -599,7 +680,31 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             }
         }
 
-        // 2. Canonical Collocation Dictionary
+        // 2. Canonical Collocation Dictionary (Particle-Prefix Projection -> 1st-order Collocations)
+        if (effectiveContentWord != null && isParticle(cleanLast)) {
+            val contentCollocs = CANONICAL_COLLOCATIONS[effectiveContentWord]
+            if (contentCollocs != null) {
+                for (entry in contentCollocs) {
+                    if (entry.surface.startsWith(cleanLast) && entry.surface.length > cleanLast.length) {
+                        val projSurface = entry.surface.removePrefix(cleanLast)
+                        val projReading = if (entry.reading.startsWith(cleanLast) && entry.reading.length > cleanLast.length) {
+                            entry.reading.removePrefix(cleanLast)
+                        } else {
+                            projSurface
+                        }
+                        addCandidate(
+                            ConversionCandidate(
+                                surface = projSurface,
+                                reading = projReading,
+                                isPrediction = true,
+                                source = "canonical_projected"
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
         if (cleanLast.isNotEmpty()) {
             val canonicalList = CANONICAL_COLLOCATIONS[cleanLast] ?: run {
                 val trailing = JapaneseKanaUtils.extractLastWordOrParticle(cleanLast)
@@ -671,10 +776,19 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             }
         }
 
-        // 4. Particle Continuation
+        // 4. Particle Continuation (sorted by Mozc ConnectionMatrix transition cost when available)
         // If lastPhrase does not already end in a particle or punctuation, suggest common particles
         if (cleanLast.isNotEmpty() && !isSentenceStart && !isParticle(cleanLast)) {
-            for (p in COMMON_PARTICLES) {
+            val orderedParticles = if (committedRid > 0 && connectionMatrix != null && surfaceToLid != null) {
+                COMMON_PARTICLES.withIndex().sortedBy { (idx, p) ->
+                    val lid = surfaceToLid(p)
+                    val cost = if (lid > 0) connectionMatrix.getTransitionCost(committedRid, lid) else 2500
+                    cost * 100 + idx
+                }.map { it.value }
+            } else {
+                COMMON_PARTICLES
+            }
+            for (p in orderedParticles) {
                 addCandidate(
                     ConversionCandidate(
                         surface = p,
@@ -729,6 +843,7 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         bigramHistory.clear()
         bigramReadings.clear()
         totalBigramPairs = 0
+        lastCommittedContentPhrase = ""
         scheduleSaveHistory(immediate = true)
     }
 

@@ -169,22 +169,32 @@ def _predictive_flick_items():
         full_keys = est_kana_keystrokes(rd)
         chars = len(tgt)
 
+        def _find_pred_rank(cands, target):
+            if target in cands:
+                return cands.index(target) + 1
+            for idx, cand in enumerate(cands):
+                if cand.startswith(target):
+                    return idx + 1
+            return None
+
         def eval_pred_case(c_data):
             preds = c_data["predictions"]
             z = preds["zero_char"]["no_history"]
             o = preds["one_char"]["no_history"]
             t = preds["two_char"]["no_history"]
 
-            if tgt in z:
-                return KLM.select_cost(z.index(tgt) + 1)
-            elif tgt in o:
+            z_rank = _find_pred_rank(z, tgt)
+            if z_rank is not None:
+                return KLM.select_cost(z_rank)
+            o_rank = _find_pred_rank(o, tgt)
+            if o_rank is not None:
                 q_keys = est_kana_keystrokes(preds["one_char"]["query"])
-                return KLM.K_f * q_keys + KLM.select_cost(o.index(tgt) + 1)
-            elif tgt in t:
+                return KLM.K_f * q_keys + KLM.select_cost(o_rank)
+            t_rank = _find_pred_rank(t, tgt)
+            if t_rank is not None:
                 q_keys = est_kana_keystrokes(preds["two_char"]["query"])
-                return KLM.K_f * q_keys + KLM.select_cost(t.index(tgt) + 1)
-            else:
-                return KLM.K_f * full_keys + KLM.select_cost(2)
+                return KLM.K_f * q_keys + KLM.select_cost(t_rank)
+            return KLM.K_f * full_keys + KLM.select_cost(2)
 
         sec_on = eval_pred_case(on_c)
         sec_off = eval_pred_case(off_c)
