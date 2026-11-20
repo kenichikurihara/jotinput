@@ -1677,7 +1677,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                             // Idea V1: Unigram Confidence-Gated Length Bonus & Functional-Boundary Over-Spanning Guard
                             val baseBonus = if (spanLen > 1 && !isUser && !isCanonical) {
                                 val conf = ((8500 - w.cost).toFloat() / 4000.0f).coerceIn(0.15f, 1.0f)
-                                val touchesParticleBoundary = (subReading.first() in boundaryChars || subReading.last() in boundaryChars)
+                                val touchesLeadingParticle = i > 0 && !isFunctionalWord(path.lastRid) && subReading.first() in boundaryChars
+                                val touchesTrailingParticle = subReading.last() in boundaryChars
+                                val touchesParticleBoundary = touchesLeadingParticle || touchesTrailingParticle
                                 val isRiskyOverSpan = (isProperNoun(w.lid) && w.cost > 4500) || w.cost > 5200
                                 val effectiveConf = if (touchesParticleBoundary && isRiskyOverSpan) minOf(conf, 0.25f) else conf
                                 ((spanLen - 1) * 2000 * effectiveConf).toInt()
@@ -1950,12 +1952,26 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
                     if (tokens.isNotEmpty()) {
                         val stratifiedTokens = selectPosStratifiedSubwords(tokens, maxTotal = 20)
+                        val bBoundaryChars = "とはがをにでものかねよ"
                         for (tok in stratifiedTokens) {
-                            val lengthBonus = if (j - m > 1) (j - m - 1) * 2000 else 0
+                            val bSpan = j - m
+                            val isTokUserOrCanon = tok.source == "user" || tok.source == "canonical"
+                            val lengthBonus = if (bSpan > 1 && !isTokUserOrCanon) {
+                                val conf = ((8500 - tok.cost).toFloat() / 4000.0f).coerceIn(0.15f, 1.0f)
+                                val touchesBoundary = (m > 0 && subReading.first() in bBoundaryChars) || subReading.last() in bBoundaryChars
+                                val isRisky = (isProperNoun(tok.lid) && tok.cost > 4500) || tok.cost > 5200
+                                val effConf = if (touchesBoundary && isRisky) minOf(conf, 0.25f) else conf
+                                ((bSpan - 1) * 2000 * effConf).toInt()
+                            } else if (bSpan > 1) {
+                                (bSpan - 1) * 2000
+                            } else {
+                                0
+                            }
+                            val rarityPen = if (isTokUserOrCanon) 0 else maxOf(0, tok.cost - 6200) / 2
                             val transCost = if (matrix != null) {
                                 if (j == n) matrix.getTransitionCost(tok.rid, 0) else 0
                             } else 0
-                            val futureCost = tok.cost - lengthBonus + transCost + betaMin[j]
+                            val futureCost = tok.cost - lengthBonus + rarityPen + transCost + betaMin[j]
                             transitionCosts.add(futureCost)
                             if (futureCost < bestCost) {
                                 bestCost = futureCost
