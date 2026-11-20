@@ -168,20 +168,33 @@ class FlickDiversityToplineEvaluationTest {
 
     @Test
     fun testR1_slot1PromotionUsesIndependentUtilityAndNoDuplicates() {
+        // rankedFull[0] shares stem "作業" with the highest-utility priority-3.5 chunk "作業中ですので".
+        // Pre-R1 bug: kappa=0.35 decay from rankedFull[0] made greedy rank "先ほど送付した" (NLL 6.2) above "作業中ですので" (NLL 6.0).
+        // Post-R1: Slot 1 promotion uses INDEPENDENT utility ("作業中ですので"), and Slot 2+ greedy promotes "先ほど送付した" without duplicates.
         val pool = listOf(
-            ConversionCandidate("詐欺", "さぎ", isPrediction = false, source = "dict", dictCost = 3000),
+            ConversionCandidate("作業", "さぎ", isPrediction = false, source = "dict", dictCost = 2000, firstBunsetsuSurface = "作業"),
             ConversionCandidate("作業中ですので", "さぎょうちゅうですので", isPrediction = true, source = "phrase_chunk", priority = 3.5f, firstBunsetsuSurface = "作業"),
             ConversionCandidate("作業します", "さぎょうします", isPrediction = true, source = "phrase_chunk", priority = 3.5f, firstBunsetsuSurface = "作業"),
             ConversionCandidate("先ほど送付した", "さきほどそうふした", isPrediction = true, source = "phrase_chunk", priority = 3.5f, firstBunsetsuSurface = "先ほど")
         )
-        val scores = floatArrayOf(12.0f, 6.0f, 6.1f, 6.5f)
+        val scores = floatArrayOf(12.0f, 6.0f, 6.1f, 6.2f)
         val reranked = LlmReranker.scoreAndRankPool(
             topPool = pool, scores = scores, currentShownTop1 = null,
             weightAlpha = 0.20f, lambdaObs = 0.50f, gammaUser = 3.00f, targetInputLength = 2
         )
-        // Slot 1 = best independent utility (lowest NLL among priority-3.5 chunks)
         assertEquals("作業中ですので", reranked[0].surface)
         assertEquals(reranked.size, reranked.map { it.surface }.distinct().size)
         assertTrue(reranked.take(4).map { it.surface }.contains("先ほど送付した"))
+    }
+
+    @Test
+    fun testR2_dynamicChunksCarryFirstBunsetsuSurface() {
+        val cands = engine.getBaseCandidates("こう")
+        val chunks = cands.filter { it.source == "phrase_chunk" }
+        assertTrue("Expected phrase_chunk candidates for 'こう'", chunks.isNotEmpty())
+        assertTrue(
+            "All generated phrase_chunk candidates must set firstBunsetsuSurface: $chunks",
+            chunks.all { it.firstBunsetsuSurface.isNotEmpty() }
+        )
     }
 }

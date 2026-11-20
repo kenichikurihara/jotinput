@@ -575,23 +575,26 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             }
 
-            // Greedy submodular selection for Slot 2+; optionally conditioned on an already-decided Slot 1 candidate.
-            fun runExtGreedy(conditionOnIdx: Int?): List<Int> {
+            // Greedy submodular selection for Slot 2+; conditioned on already-decided Slot 1 / D2 anchor candidates.
+            fun runExtGreedy(conditionOnIndices: List<Int>): List<Int> {
                 val residual = residualMultiplier.copyOf()
                 val ordered = mutableListOf<Int>()
                 val remaining = extIndices.toMutableList()
                 var rankPos = 0
-                if (conditionOnIdx != null && conditionOnIdx in remaining) {
-                    ordered.add(conditionOnIdx)
-                    remaining.remove(conditionOnIdx)
+                for (condIdx in conditionOnIndices) {
+                    if (condIdx in remaining) {
+                        ordered.add(condIdx)
+                        remaining.remove(condIdx)
+                    }
+                    // Apply overlap decay regardless of whether condIdx is in extIndices (e.g. EXACT anchor)
                     for (otherIdx in remaining) {
                         val kappa = computeIntentOverlapKappa(
                             canonicalStems[otherIdx], horizons[otherIdx], topPool[otherIdx].lastContentWordSurface,
-                            canonicalStems[conditionOnIdx], horizons[conditionOnIdx], topPool[conditionOnIdx].lastContentWordSurface
+                            canonicalStems[condIdx], horizons[condIdx], topPool[condIdx].lastContentWordSurface
                         )
                         if (kappa > 0.0f) residual[otherIdx] *= (1.0f - kappa)
                     }
-                    rankPos = 1
+                    rankPos++
                 }
                 while (remaining.isNotEmpty()) {
                     val slotRiskWeight = riskWeight * 0.65f.pow(minOf(rankPos, 4))
@@ -632,7 +635,6 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 topPool[it].historyCount >= 2 || topPool[it].source == "history_bigram"
             }
             val bestExtIdx = independentExtOrder.firstOrNull()
-            val initialRankedExtIndices = runExtGreedy(null)
 
             // 10. Adaptive Stratified Interleaving Schedule
             val maxBranch = prefixIndices.map { topPool[it].suffixBranchingFactor }.maxOrNull() ?: 1.0f
@@ -705,14 +707,15 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             } else if (rankedFull.isNotEmpty()) {
                 addCandidate(rankedFull[fullIdx++])
-            } else if (initialRankedExtIndices.isNotEmpty() && n > 0 && horizons[initialRankedExtIndices[0]] == HorizonBucket.CHUNK_EXT) {
-                topChunkIdxForAnchor = initialRankedExtIndices[0]
-                promotedExtIdx = initialRankedExtIndices[0]
-                promotedCandidateSurface = topPool[initialRankedExtIndices[0]].surface
-                addCandidate(topPool[initialRankedExtIndices[0]])
+            } else if (bestExtIdx != null && n > 0 && horizons[bestExtIdx] == HorizonBucket.CHUNK_EXT) {
+                topChunkIdxForAnchor = bestExtIdx
+                promotedExtIdx = bestExtIdx
+                promotedCandidateSurface = topPool[bestExtIdx].surface
+                addCandidate(topPool[bestExtIdx])
             }
 
             // Idea D2: Dual-Horizon Pairing (Pair a short anchor stem in visible slots when a long chunk wins Slot 1)
+            var pairedAnchorIdx: Int? = null
             if (!isEnglishPool && n > 0 && topChunkIdxForAnchor != null) {
                 val chunkStem = canonicalStems[topChunkIdxForAnchor]
                 val chunkLen = topPool[topChunkIdxForAnchor].surface.length
@@ -727,6 +730,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                         }
                         .maxByOrNull { utilities[it] }
                     if (anchorIdx != null) {
+                        pairedAnchorIdx = anchorIdx
                         addCandidate(topPool[anchorIdx])
                     }
                 }
@@ -736,8 +740,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 addCandidate(rankedFull[fullIdx++])
             }
             // Interleave remaining high-utility prediction candidate into Stratum 2/3 (B1: Eliminates Stratum 6 burial)
-            // R1: Slot 2+ submodular greedy is conditioned on the already-decided Slot 1 promotion.
-            val rankedExtIndices = if (promotedExtIdx != null) runExtGreedy(promotedExtIdx) else initialRankedExtIndices
+            // R1: Slot 2+ submodular greedy is conditioned on the already-decided Slot 1 promotion and D2 anchor.
+            val conditionedIndices = listOfNotNull(promotedExtIdx, pairedAnchorIdx)
+            val rankedExtIndices = runExtGreedy(conditionedIndices)
             val rankedExt = rankedExtIndices.map { topPool[it] }
             // R5: exclude surfaces already emitted (e.g. paired anchor) so slots aren't wasted.
             val remainingExt = rankedExt.filter { it.surface != promotedCandidateSurface && it.surface !in seenSurfaces }
@@ -1012,11 +1017,12 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             prioritizedSingle.addAll(regularSingle)
             if (fuzzyShort.size > 2) prioritizedSingle.addAll(fuzzyShort.drop(2))
 
+            val diversifiedPhraseChunkPrefix = diversifyByFirstStem(phraseChunkPrefix)
             val balancedPrefix = mutableListOf<ConversionCandidate>()
             balancedPrefix.addAll(prioritizedSingle.take(4))
-            balancedPrefix.addAll(diversifyByFirstStem(phraseChunkPrefix).take(4))
+            balancedPrefix.addAll(diversifiedPhraseChunkPrefix.take(4))
             if (balancedPrefix.size < 8) {
-                val remaining = prioritizedSingle.drop(4) + diversifyByFirstStem(phraseChunkPrefix).drop(4)
+                val remaining = prioritizedSingle.drop(4) + diversifiedPhraseChunkPrefix.drop(4)
                 balancedPrefix.addAll(remaining.take(8 - balancedPrefix.size))
             }
             for (c in balancedPrefix) {
@@ -1181,11 +1187,12 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             prioritizedSingle.addAll(regularSingle)
             if (fuzzyShort.size > 2) prioritizedSingle.addAll(fuzzyShort.drop(2))
 
+            val diversifiedPhraseChunkPrefix = diversifyByFirstStem(phraseChunkPrefix)
             val balancedPrefix = mutableListOf<ConversionCandidate>()
             balancedPrefix.addAll(prioritizedSingle.take(4))
-            balancedPrefix.addAll(diversifyByFirstStem(phraseChunkPrefix).take(4))
+            balancedPrefix.addAll(diversifiedPhraseChunkPrefix.take(4))
             if (balancedPrefix.size < 8) {
-                val remaining = prioritizedSingle.drop(4) + diversifyByFirstStem(phraseChunkPrefix).drop(4)
+                val remaining = prioritizedSingle.drop(4) + diversifiedPhraseChunkPrefix.drop(4)
                 balancedPrefix.addAll(remaining.take(8 - balancedPrefix.size))
             }
             for (c in balancedPrefix) {

@@ -38,7 +38,7 @@ internal fun isClauseStartOrTopicContext(contextPrefix: String): Boolean {
 internal fun diversifyByFirstStem(cands: List<ConversionCandidate>): List<ConversionCandidate> {
     val isChunk = { c: ConversionCandidate -> c.source == "phrase_chunk" && c.firstBunsetsuSurface.isNotEmpty() }
     val chunks = cands.filter(isChunk)
-    if (chunks.size < 2) return cands
+    if (chunks.size < 2) return cands.toList()
     val seenStems = HashSet<String>()
     val firsts = ArrayList<ConversionCandidate>()
     val rest = ArrayList<ConversionCandidate>()
@@ -2228,6 +2228,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                             isPrediction = true,
                             source = "phrase_chunk",
                             priority = 3.3f,
+                            dictCost = stemWord.cost,
                             firstBunsetsuSurface = stemSurface
                         )
                     )

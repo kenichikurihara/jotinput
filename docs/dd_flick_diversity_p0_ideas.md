@@ -138,7 +138,7 @@ Step 10（Adaptive Stratified Interleaving Schedule）において、以下の�
 
 | ID | 修正 |
 |---|---|
-| R1 | Slot 1 昇格候補は独立 utility で選定。submodular greedy は Slot 1 確定後にそれを条件として実行 (`runExtGreedy(conditionOnIdx)`) |
+| R1 | Slot 1 昇格候補は独立 utility で選定。submodular greedy は Slot 1 確定後（および D2 ペアリングアンカー確定後）にそれらを条件として 1 回実行 (`runExtGreedy(conditionOnIndices)`) |
 | R2 | `synthesizeDynamicMultiBunsetsuChunks` が `firstBunsetsuSurface = stem`、動的 chunk は `dictCost = stemWord.cost` を設定 (`extractCanonicalStem` の推測を排除) |
 | R3 | `diversifyByFirstStem` を `interleavePredictiveCandidates` のソート後と `LlmReranker` の `phraseChunkPrefix.take(4)` 前に適用し、stem ラウンドロビンを維持 |
 | R4 | `getBaseCandidates` の cacheKey に `isClauseStartOrTopicContext` (B3 テール順序の条件) を反映 |
