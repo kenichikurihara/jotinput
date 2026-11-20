@@ -991,7 +991,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             scoreA.compareTo(scoreB)
         }
         // R3: preserve stem round-robin diversity after the sort above
-        val diversifiedFuture = diversifyByFirstStem(futurePredCands)
+        val diversifiedFuture = diversifyByFirstStem(futurePredCands).toList()
         futurePredCands.clear()
         futurePredCands.addAll(diversifiedFuture)
 
