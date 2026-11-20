@@ -283,13 +283,11 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             val isDeadEndReading = !isEnglishPool && n in 2..5 && !hasNaturalFullWord
 
             var fullRankCounter = 0
-            var prefixRankCounter = 0
-            var extRankCounter = 0
             val stratumRanks = IntArray(topPool.size) { i ->
-                when {
-                    unconsumedDeltas[i] == 0 && extDeltas[i] == 0 && !topPool[i].isPrediction -> fullRankCounter++
-                    unconsumedDeltas[i] > 0 -> prefixRankCounter++
-                    else -> extRankCounter++
+                if (unconsumedDeltas[i] == 0 && extDeltas[i] == 0 && !topPool[i].isPrediction) {
+                    fullRankCounter++
+                } else {
+                    i
                 }
             }
 
