@@ -488,7 +488,7 @@ object CandidateRerankJudgement {
         }
         val pivotParticle = rest.firstOrNull { it.source == "particle" }
         val top1IsHistory = top1.source == "history_bigram" || top1.source == "history_skip_bigram"
-        val top1IsChunk = top1.surface.length >= 5 || sameStemShort != null
+        val top1IsChunk = top1.surface.length >= 4 || top1.reading.length >= 5 || sameStemShort != null
 
         val decision = judgeZeroQueryHorizon(
             ZeroQueryHorizonInput(

@@ -326,4 +326,36 @@ class Phase3SlmAndContextualPredictionTest {
         assertEquals("お願いします", ranked[0].surface)
         assertEquals("Idea D2 should pair short stem anchor 'お願い' in Slot 2", "お願い", ranked[1].surface)
     }
+
+    @Test
+    fun testInferReadingAndHistorySkipBigramZeroQueryBoost() {
+        // 1. Verify KanaKanjiEngine.inferReading decomposes compound SLM surfaces into Hiragana readings
+        val inferred = engine.inferReading("確認しました")
+        assertEquals("かくにんしました", inferred)
+
+        // 2. Verify history_skip_bigram receives contextual prior boost in zero-query scoreAndRankPool
+        val pool = listOf(
+            ConversionCandidate(surface = "送信します", reading = "そうしんします", isPrediction = true, source = "canonical_collocation"),
+            ConversionCandidate(
+                surface = "進めます",
+                reading = "すすめます",
+                isPrediction = true,
+                source = "history_skip_bigram",
+                historyCount = 1,
+                lastUsedAtMs = System.currentTimeMillis()
+            )
+        )
+        // Even with slightly higher raw NLL, 2nd-order history_skip_bigram should win Slot 1
+        val scores = floatArrayOf(2.2f, 2.5f)
+        val ranked = LlmReranker.Companion.scoreAndRankPool(
+            topPool = pool,
+            scores = scores,
+            currentShownTop1 = null,
+            weightAlpha = 0.0f,
+            lambdaObs = 1.0f,
+            gammaUser = 0.5f,
+            targetInputLength = 0
+        )
+        assertEquals("進めます", ranked[0].surface)
+    }
 }

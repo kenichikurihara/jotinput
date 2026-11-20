@@ -797,7 +797,6 @@ class VoiceInputMethodService : InputMethodService() {
                     triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.TEXT_COMMITTED)
                 } else {
                     showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
-                    triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.TEXT_COMMITTED)
                 }
             }
         }
@@ -1346,7 +1345,9 @@ class VoiceInputMethodService : InputMethodService() {
                             applyUpdate(isPhase1Rendered)
                             scheduleSpeculativeNextPhrasePrewarm(
                                 textBeforeCursor,
-                                renderedCandidates.firstOrNull()?.surface ?: initialRenderedTop1
+                                filteredReranked.firstOrNull()?.surface
+                                    ?: renderedCandidates.firstOrNull()?.surface
+                                    ?: initialRenderedTop1
                             )
                         }
                     }
@@ -1435,7 +1436,14 @@ class VoiceInputMethodService : InputMethodService() {
         speculativePrewarmJob = serviceScope.launch(Dispatchers.Default) {
             delay(120L)
             if (isActive && arbitrator.isKeyboardComposing() && arbitrator.composingText.toString() == expectedReading) {
-                slm.speculativePrepareNextPhrases(contextBeforeCursor + top1, maxCandidates = 3, maxTokens = 5)
+                val combinedCtx = contextBeforeCursor + top1
+                slm.speculativePrepareNextPhrases(
+                    contextPlusTop1 = combinedCtx,
+                    maxCandidates = 3,
+                    maxTokens = 5,
+                    readingResolver = kanaKanjiEngine::inferReading
+                )
+                lastWarmedContextText = ContextWindowTrimmer.trimToOptimalContextSticky(combinedCtx)
             }
         }
     }
@@ -1753,11 +1761,18 @@ class VoiceInputMethodService : InputMethodService() {
             try {
                 withTimeout(2500L) {
                     // Pre-warm SLM KV cache with current context so next keystroke hits the cache instantly (<1ms)
-                    slm.warmContext(textBeforeCursor)
+                    if (slm.warmContext(textBeforeCursor)) {
+                        lastWarmedContextText = ContextWindowTrimmer.trimToOptimalContextSticky(textBeforeCursor)
+                    }
 
                     // Generate next-phrase continuations directly from on-device SLM with lightweight bounds
                     val slmContinuations = prewarmedSlm
-                        ?: slm.predictNextPhrases(textBeforeCursor, maxCandidates = 3, maxTokens = 5)
+                        ?: slm.predictNextPhrases(
+                            contextPrefix = textBeforeCursor,
+                            maxCandidates = 3,
+                            maxTokens = 5,
+                            readingResolver = kanaKanjiEngine::inferReading
+                        )
 
                     val combined = mergeZeroQueryCandidates(fastPredictions, slmContinuations)
 

@@ -96,6 +96,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     private val root = TrieNode()
     private val surfaceToRidMap = HashMap<String, Int>(16384)
     private val surfaceToLidMap = HashMap<String, Int>(16384)
+    private val surfaceToReadingMap = HashMap<String, String>(16384)
     // In-memory access-ordered LinkedHashMap to guarantee consistent JVM/Android LRU behavior and null-safety
     private val historyMap = LinkedHashMap<String, Int>(256, 0.75f, true)
     private val historyLastUsedMap = LinkedHashMap<String, Long>(256, 0.75f, true)
@@ -168,6 +169,40 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             surfaceToLidMap[prefix]?.let { if (it > 0) return it }
         }
         return 0
+    }
+
+    /**
+     * Infers the Hiragana reading for an SLM-generated surface string using exact lexicon lookup
+     * with greedy longest-prefix morphological decomposition fallback.
+     */
+    fun inferReading(surface: String): String {
+        if (surface.isEmpty()) return ""
+        surfaceToReadingMap[surface]?.let { return it }
+        if (JapaneseKanaUtils.isAllHiragana(surface)) return surface
+
+        val sb = StringBuilder()
+        var i = 0
+        val n = surface.length
+        while (i < n) {
+            var matched = false
+            val maxLen = minOf(n - i, 8)
+            for (len in maxLen downTo 1) {
+                val sub = surface.substring(i, i + len)
+                val subReading = surfaceToReadingMap[sub]
+                if (subReading != null) {
+                    sb.append(subReading)
+                    i += len
+                    matched = true
+                    break
+                }
+            }
+            if (!matched) {
+                val ch = surface[i].toString()
+                sb.append(JapaneseKanaUtils.normalizeReading(ch))
+                i++
+            }
+        }
+        return sb.toString()
     }
 
     fun setMmapDictionary(dict: MmapDictionary?) {
@@ -532,6 +567,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         root.minCostInSubtree = Int.MAX_VALUE
         surfaceToRidMap.clear()
         surfaceToLidMap.clear()
+        surfaceToReadingMap.clear()
         reloadMmapDictionaries()
         clearMemoryCache()
         initializeIfNeeded()
@@ -605,6 +641,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         }
         if (lid > 0 && !surfaceToLidMap.containsKey(surface)) {
             surfaceToLidMap[surface] = lid
+        }
+        if (reading.isNotEmpty() && !surfaceToReadingMap.containsKey(surface)) {
+            surfaceToReadingMap[surface] = reading
         }
         var node = root
         if (cost < node.minCostInSubtree) node.minCostInSubtree = cost
