@@ -282,6 +282,17 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             }
             val isDeadEndReading = !isEnglishPool && n in 2..5 && !hasNaturalFullWord
 
+            var fullRankCounter = 0
+            var prefixRankCounter = 0
+            var extRankCounter = 0
+            val stratumRanks = IntArray(topPool.size) { i ->
+                when {
+                    unconsumedDeltas[i] == 0 && extDeltas[i] == 0 && !topPool[i].isPrediction -> fullRankCounter++
+                    unconsumedDeltas[i] > 0 -> prefixRankCounter++
+                    else -> extRankCounter++
+                }
+            }
+
             val baseScores = FloatArray(topPool.size)
             for (index in topPool.indices) {
                 val candidate = topPool[index]
@@ -368,8 +379,14 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     1.0f
                 }
                 val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f * obsDiscount
-                val dictCostPenalty = if (!isEnglishPool) (candidate.dictCost.coerceIn(0, 15000) / 3000.0f) else 0.0f
-                val rankCost = (index * 1000.0f) / 1000.0f
+                val dictCostPenalty = if (!isEnglishPool) {
+                    val c = candidate.dictCost.coerceIn(0, 15000)
+                    val rareExcess = maxOf(0f, (c - 6000) / 2000.0f)
+                    (c / 3000.0f) + 0.45f * rareExcess * rareExcess
+                } else {
+                    0.0f
+                }
+                val rankCost = minOf(4, stratumRanks[index]).toFloat()
 
                 val hysteresisBonus = if (currentShownTop1 != null && candidate.surface == currentShownTop1 && !isExactUser) {
                     hysteresisDelta
@@ -400,9 +417,11 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                         1.0f
                     }
                     val obsEff = lambdaObs * cand.obsPenalty * 5.0f * obsDiscount
-                    val dictCostNats = (cand.dictCost.coerceIn(0, 15000) / 3000.0f)
+                    val c = cand.dictCost.coerceIn(0, 15000)
+                    val rareExcess = maxOf(0f, (c - 6000) / 2000.0f)
+                    val dictCostNats = (c / 3000.0f) + 0.45f * rareExcess * rareExcess
                     val priorHist = if (cand.historyCount > 0) minOf(3.0f, cand.historyCount.toFloat()) else 0.0f
-                    val rankCost = (i * 0.15f)
+                    val rankCost = (minOf(4, stratumRanks[i]) * 0.15f)
                     -(normNll + obsEff + rankCost + dictCostNats - priorHist)
                 }
             }
@@ -1002,7 +1021,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             for (c in nonHiraganaCandidates.filter { it.historyCount >= 2 }.sortedByDescending { it.historyCount }.take(4)) {
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
-            for (c in fullCands.take(8)) {
+            val prioritizedFullCands = fullCands.filter { it.source != "system" } + fullCands.filter { it.source == "system" }
+            for (c in prioritizedFullCands.take(8)) {
                 if (topPool.size >= 16) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
@@ -1172,7 +1192,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             for (c in nonHiraganaCandidates.filter { it.historyCount >= 2 }.sortedByDescending { it.historyCount }.take(4)) {
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }
-            for (c in fullCands.take(8)) {
+            val prioritizedFullCands = fullCands.filter { it.source != "system" } + fullCands.filter { it.source == "system" }
+            for (c in prioritizedFullCands.take(8)) {
                 if (topPool.size >= 16) break
                 if (topPoolSurfaces.add(c.surface)) topPool.add(c)
             }

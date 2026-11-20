@@ -194,6 +194,38 @@ class KanaKanjiEngineDiversityTest {
         )
     }
 
+    @Test
+    fun testOnToOfuTo_suppressesRareMorphemesAndRanksOnToOfuToFirst() {
+        val candidates = engine.getBaseCandidates("おんとおふと")
+        assertTrue("Candidates for おんとおふと should not be empty", candidates.isNotEmpty())
+        val surfaces = candidates.map { it.surface }
+        val top4 = surfaces.take(4)
+
+        assertTrue(
+            "Expected 'オンとオフと' in top 2 candidates for おんとおふと, but was: $top4 (all: ${surfaces.take(10)})",
+            surfaces.take(2).contains("オンとオフと")
+        )
+        assertEquals(
+            "Expected 'オンとオフと' at Rank 1 for おんとおふと, but was: $top4",
+            "オンとオフと",
+            surfaces.first()
+        )
+
+        val rareNoise = listOf("音とオフト", "オンとオフト", "音吐", "音吐オフと", "音吐オフト")
+        for (noise in rareNoise) {
+            assertFalse(
+                "Rare morpheme chimera '$noise' must NOT appear in top 6 for おんとおふと, was: ${surfaces.take(6)}",
+                surfaces.take(6).contains(noise)
+            )
+        }
+
+        val onToOfuTo = candidates.first { it.surface == "オンとオフと" }
+        assertTrue(
+            "Viterbi candidate 'オンとオフと' must propagate structured dictCost (< 6000), was: ${onToOfuTo.dictCost}",
+            onToOfuTo.dictCost in 1..5999
+        )
+    }
+
     private class MockEditorBridge : EditorBridge {
         var committedText: String = ""
         var currentComposing: String = ""

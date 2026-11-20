@@ -388,4 +388,62 @@ class SpanAwareBayesianRerankingEvaluationTest {
         assertTrue("Expected full candidates like '最初の' or '再書の' in candidate list",
             candidateSurfaces.contains("最初の") || candidateSurfaces.contains("再書の"))
     }
+
+    @Test
+    fun testRareMorphemeSuppressionInSlmRerankingAndStratumRankNormalization() {
+        // Simulates "おんとおふと" where interleaved prefix candidates sit between early and late full candidates
+        val candRare = ConversionCandidate(
+            surface = "音吐オフと",
+            reading = "おんとおふと",
+            source = "viterbi",
+            dictCost = 8436,
+            firstBunsetsuSurface = "音吐オフ",
+            lastContentWordSurface = "オフ"
+        )
+        val candPrefix1 = ConversionCandidate(
+            surface = "音",
+            reading = "おん",
+            source = "viterbi_prefix",
+            dictCost = 580
+        )
+        val candPrefix2 = ConversionCandidate(
+            surface = "オン",
+            reading = "おん",
+            source = "viterbi_prefix",
+            dictCost = 3719
+        )
+        val candPrefix3 = ConversionCandidate(
+            surface = "恩",
+            reading = "おん",
+            source = "viterbi_prefix",
+            dictCost = 5412
+        )
+        val candTarget = ConversionCandidate(
+            surface = "オンとオフと",
+            reading = "おんとおふと",
+            source = "viterbi",
+            dictCost = 4470,
+            firstBunsetsuSurface = "オン",
+            lastContentWordSurface = "オフ"
+        )
+
+        val pool = listOf(candRare, candPrefix1, candPrefix2, candPrefix3, candTarget)
+        // Even if SLM assigns slightly lower NLL to candRare (e.g. 11.5 vs 11.8),
+        // Idea R2 (dictCost quadratic rarity penalty) + Idea R3 (stratum-normalized rankCost)
+        // must rank "オンとオフと" at #1 ahead of "音吐オフと".
+        val scores = floatArrayOf(11.50f, 6.20f, 6.40f, 9.80f, 11.80f)
+
+        val reranked = LlmReranker.scoreAndRankPool(
+            topPool = pool,
+            scores = scores,
+            currentShownTop1 = null,
+            weightAlpha = 0.20f,
+            lambdaObs = 0.50f,
+            gammaUser = 3.00f,
+            targetInputLength = "おんとおふと".length
+        )
+
+        assertEquals("オンとオフと", reranked[0].surface)
+        assertEquals("音吐オフと", reranked[1].surface)
+    }
 }

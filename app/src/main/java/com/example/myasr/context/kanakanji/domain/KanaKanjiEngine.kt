@@ -1482,7 +1482,12 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val firstBunsetsuReadingLen: Int = 0,
         val isFirstBunsetsuClosed: Boolean = false,
         val lastContentWordSurface: String = "",
-        val secondBunsetsuIsProper: Boolean = false
+        val secondBunsetsuIsProper: Boolean = false,
+        val maxWordCost: Int = 0,
+        val wordCostSum: Int = 0,
+        val wordCount: Int = 0,
+        val excessTransCostSum: Int = 0,
+        val pendingCoordKind: Int = 0
     )
 
     private fun isContentWord(lid: Int): Boolean {
@@ -1663,12 +1668,28 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
                     if (subWords.isNotEmpty()) {
                         val stratifiedWords = selectPosStratifiedSubwords(subWords, maxTotal = 24)
+                        val boundaryChars = "とはがをにでものかねよ"
                         for (w in stratifiedWords) {
-                            val baseBonus = if (j - i > 1) (j - i - 1) * 2000 else 0
+                            val spanLen = j - i
+                            val isUser = w.source == "user"
+                            val isCanonical = w.source == "canonical"
+
+                            // Idea V1: Unigram Confidence-Gated Length Bonus & Functional-Boundary Over-Spanning Guard
+                            val baseBonus = if (spanLen > 1 && !isUser && !isCanonical) {
+                                val conf = ((8500 - w.cost).toFloat() / 4000.0f).coerceIn(0.15f, 1.0f)
+                                val touchesParticleBoundary = (subReading.first() in boundaryChars || subReading.last() in boundaryChars)
+                                val isRiskyOverSpan = (isProperNoun(w.lid) && w.cost > 4500) || w.cost > 5200
+                                val effectiveConf = if (touchesParticleBoundary && isRiskyOverSpan) minOf(conf, 0.25f) else conf
+                                ((spanLen - 1) * 2000 * effectiveConf).toInt()
+                            } else if (spanLen > 1) {
+                                (spanLen - 1) * 2000
+                            } else {
+                                0
+                            }
+
                             // Idea A: Additive Bunsetsu-level Length Bonus Normalization for auxiliary verbs attaching to verb/adj stems
                             val predicateBunsetsuBonus = if (i > 0 && isAuxiliaryVerb(w.lid) && isPredicatePos(path.lastRid)) 2000 else 0
                             val lengthBonus = baseBonus + predicateBunsetsuBonus
-                            val isUser = w.source == "user"
                             val userBonus = if (isUser) 50000 else 0
 
                             // Morphological connection transition cost
@@ -1682,8 +1703,37 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                 if (isSingleKatakana || isArchaicNo) 3000 else 0
                             }
 
-                            val newCost = path.cost + (w.cost - lengthBonus).coerceAtLeast(-50000) - userBonus + transitionCost
+                            // Idea V2: Incremental Max-Morpheme Surprisal (L_inf) Hinge Penalty & Single Proper Noun Guard
+                            val effectiveWordCost = if (isUser || isCanonical) 0 else w.cost.coerceAtLeast(0)
+                            val newMaxWordCost = maxOf(path.maxWordCost, effectiveWordCost)
+                            val prevRarityPen = maxOf(0, path.maxWordCost - 6200) / 2
+                            val nextRarityPen = maxOf(0, newMaxWordCost - 6200) / 2
+                            val rarityDelta = nextRarityPen - prevRarityPen
+
+                            val properAfterParticlePen = if (i > 0 && isFunctionalWord(path.lastRid) && isProperNoun(w.lid) && w.cost > 5000) 1200 else 0
+
+                            // Idea V2: Parallel Coordination Symmetry Bonus (e.g. "オン + と + オフ")
+                            val isKatakanaWord = w.surface.isNotEmpty() && w.surface.all { it in '\u30A0'..'\u30FF' || it == 'ー' }
+                            val isKanjiWord = !isKatakanaWord && w.surface.any { it in '\u4E00'..'\u9FFF' }
+                            val isCoordParticle = (w.surface == "と" || w.surface == "や") && isFunctionalWord(w.lid)
+                            val coordBonus = when {
+                                path.pendingCoordKind == -1 && isKatakanaWord -> 1200
+                                path.pendingCoordKind == -2 && isKanjiWord -> 600
+                                else -> 0
+                            }
+                            val nextCoordKind = when {
+                                isCoordParticle && path.pendingCoordKind > 0 -> -path.pendingCoordKind
+                                isKatakanaWord && (isContentWord(w.lid) || isProperNoun(w.lid)) -> 1
+                                isKanjiWord && isContentWord(w.lid) -> 2
+                                else -> 0
+                            }
+
+                            val newCost = path.cost + (w.cost - lengthBonus).coerceAtLeast(-50000) - userBonus + transitionCost + rarityDelta + properAfterParticlePen - coordBonus
                             val nextRid = if (w.rid > 0) w.rid else path.lastRid
+
+                            val nextWordCostSum = path.wordCostSum + if (isFunctionalWord(w.lid) || isCanonical) 0 else effectiveWordCost
+                            val nextWordCount = path.wordCount + if (isFunctionalWord(w.lid) || isCanonical) 0 else 1
+                            val nextExcessTrans = path.excessTransCostSum + maxOf(0, transitionCost - 1500)
 
                             // Update first bunsetsu metadata
                             val (nextFb, nextFbLen, nextClosed) = if (i == 0) {
@@ -1723,7 +1773,12 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                     firstBunsetsuReadingLen = nextFbLen,
                                     isFirstBunsetsuClosed = nextClosed,
                                     lastContentWordSurface = nextLastContent,
-                                    secondBunsetsuIsProper = nextSecondProper
+                                    secondBunsetsuIsProper = nextSecondProper,
+                                    maxWordCost = newMaxWordCost,
+                                    wordCostSum = nextWordCostSum,
+                                    wordCount = nextWordCount,
+                                    excessTransCostSum = nextExcessTrans,
+                                    pendingCoordKind = nextCoordKind
                                 )
                             )
                         }
@@ -1782,11 +1837,14 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         // Penalize repetitive first bunsetsu stems AND repetitive last content words.
         // Idea B: Partition first bunsetsu diversity key by (firstBunsetsuSurface, secondBunsetsuIsProper)
         // so compound surnames (ジム池田) and predicate phrases (ジム行けた) do not penalize each other.
+        // Idea V3: Pair Novelty Exemption & Outlier Guard so rare-morpheme chimeras do not lock out legitimate pairs.
         data class ScoredCandidate(val path: ViterbiPath, val effectiveCost: Int)
         val seenFullSurfaces = HashSet<String>()
+        val seenPairs = HashSet<Pair<String, String>>()
         val firstStemCounts = HashMap<Pair<String, Boolean>, Int>()
         val lastContentCounts = HashMap<String, Int>()
         val scoredFullCandidates = mutableListOf<ScoredCandidate>()
+        val bestFullCost = finalPaths.firstOrNull()?.cost ?: 0
 
         for (path in finalPaths) {
             if (path.surface.isNotBlank() &&
@@ -1795,15 +1853,23 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 seenFullSurfaces.add(path.surface)) {
                 val stem1 = if (path.firstBunsetsuSurface.isNotEmpty()) path.firstBunsetsuSurface else path.surface
                 val diversityKey = Pair(stem1, path.secondBunsetsuIsProper)
-                val count1 = firstStemCounts.getOrDefault(diversityKey, 0)
-                firstStemCounts[diversityKey] = count1 + 1
-
                 val stemLast = if (path.lastContentWordSurface.isNotEmpty()) path.lastContentWordSurface else path.surface
-                val countLast = lastContentCounts[stemLast] ?: 0
-                lastContentCounts[stemLast] = countLast + 1
 
-                // 2D Diversity penalty: 3000 for duplicate prefix stem, 2500 for duplicate suffix word
-                val penalty = count1 * 3000 + countLast * 2500
+                val count1 = firstStemCounts.getOrDefault(diversityKey, 0)
+                val countLast = lastContentCounts[stemLast] ?: 0
+                val isNewPair = seenPairs.add(Pair(stem1, stemLast))
+                val isHighQualityPath = (path.cost - bestFullCost <= 3000) && path.maxWordCost <= 6000
+
+                // Outlier paths (> +3500 from best or containing ultra-rare morphemes > 6500) do not pollute stem counts
+                if (path.cost - bestFullCost <= 3500 && path.maxWordCost <= 6500) {
+                    firstStemCounts[diversityKey] = count1 + 1
+                    lastContentCounts[stemLast] = countLast + 1
+                }
+
+                // 2D Diversity penalty: relax to min(pen1, pen2) when pair is novel and high-quality
+                val pen1 = count1 * 3000
+                val pen2 = countLast * 2500
+                val penalty = if (isNewPair && isHighQualityPath) minOf(pen1, pen2) else (pen1 + pen2)
                 scoredFullCandidates.add(ScoredCandidate(path, path.cost + penalty))
             }
         }
@@ -1824,11 +1890,18 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             } else {
                 ""
             }
+            // Idea R1: Propagate structured lattice cost to SLM reranker on [0, 15000] scale
+            val avgWordCost = if (it.path.wordCount > 0) it.path.wordCostSum / it.path.wordCount else 5000
+            val maxExcess = maxOf(0, it.path.maxWordCost - 4500) / 2
+            val avgExcessTrans = if (it.path.wordCount > 0) it.path.excessTransCostSum / it.path.wordCount else 0
+            val effDictCost = (avgWordCost + maxExcess + avgExcessTrans).coerceIn(0, 15000)
+
             ConversionCandidate(
                 surface = it.path.surface,
                 reading = reading,
                 isPrediction = false,
                 source = if (it.path.hasUserWord) "user" else "viterbi",
+                dictCost = effDictCost,
                 firstBunsetsuSurface = fb,
                 lastContentWordSurface = lastCw,
                 completedSurface = it.path.surface,
@@ -1917,15 +1990,16 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             data class ScoredPrefix(
                 val surface: String,
                 val readingLen: Int,
-                val score: Int
+                val score: Int,
+                val dictCost: Int = 5000
             )
             val bestPrefixMap = LinkedHashMap<String, ScoredPrefix>()
 
-            fun recordPrefix(surface: String, readingLen: Int, score: Int) {
+            fun recordPrefix(surface: String, readingLen: Int, score: Int, dictCost: Int = 5000) {
                 if (surface.isBlank() || JapaneseKanaUtils.isAllHiragana(surface)) return
                 val existing = bestPrefixMap[surface]
                 if (existing == null || score < existing.score) {
-                    bestPrefixMap[surface] = ScoredPrefix(surface, readingLen, score)
+                    bestPrefixMap[surface] = ScoredPrefix(surface, readingLen, score, dictCost)
                 }
             }
 
@@ -1960,10 +2034,15 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
 
                 directTokens.sortBy { it.cost }
-                for ((rank, tok) in directTokens.take(8).withIndex()) {
+                var acceptedRank = 0
+                for (tok in directTokens) {
+                    // Idea V3: Suppress ultra-rare unigrams (cost > 6000) from polluting top prefix slots
+                    if (tok.source != "user" && tok.source != "canonical" && tok.cost > 6000) continue
                     val transCost = if (matrix != null) matrix.getTransitionCost(0, tok.lid) else 0
-                    val score = (tok.cost - lengthBonus) + transCost + suffixCost - branchBonus + rank * 200
-                    recordPrefix(tok.surface, m, score)
+                    val score = (tok.cost - lengthBonus) + transCost + suffixCost - branchBonus + acceptedRank * 200
+                    recordPrefix(tok.surface, m, score, tok.cost.coerceIn(0, 15000))
+                    acceptedRank++
+                    if (acceptedRank >= 8) break
                 }
             }
 
@@ -1978,23 +2057,27 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     else -> 0
                 }
                 for (p in beam[m]) {
+                    if (!p.hasUserWord && p.maxWordCost > 6500) continue
                     val surf = if (p.firstBunsetsuSurface.isNotBlank()) p.firstBunsetsuSurface else p.surface
                     val rLen = if (p.firstBunsetsuReadingLen == m) m else if (p.surface == surf) m else 0
                     if (rLen == m) {
                         val compositePenalty = if (p.words.size > 1) 1500 * (p.words.size - 1) else 0
                         val score = p.cost + compositePenalty + betaMin[m] - branchBonus
-                        recordPrefix(surf, m, score)
+                        val pDictCost = (if (p.wordCount > 0) p.wordCostSum / p.wordCount else 5000).coerceIn(0, 15000)
+                        recordPrefix(surf, m, score, pDictCost)
                     }
                 }
             }
 
             // Also include firstBunsetsu from scored full paths if missed
             for (sc in scoredFullCandidates) {
+                if (!sc.path.hasUserWord && sc.path.maxWordCost > 6500) continue
                 val fb = sc.path.firstBunsetsuSurface
                 val fbLen = sc.path.firstBunsetsuReadingLen
                 if (fb.isNotBlank() && fbLen in 2 until n) {
                     val score = sc.path.cost - branchFactor[fbLen] * 200
-                    recordPrefix(fb, fbLen, score)
+                    val pDictCost = (if (sc.path.wordCount > 0) sc.path.wordCostSum / sc.path.wordCount else 5000).coerceIn(0, 15000)
+                    recordPrefix(fb, fbLen, score, pDictCost)
                 }
             }
 
@@ -2013,6 +2096,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                         reading = reading.substring(0, sp.readingLen),
                         isPrediction = false,
                         source = "viterbi_prefix",
+                        dictCost = sp.dictCost,
                         firstBunsetsuSurface = sp.surface,
                         lastContentWordSurface = "",
                         completedSurface = compSurface,
