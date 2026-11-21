@@ -643,24 +643,31 @@ private:
     }
 
     float EditAndSpatialCost(const std::string& typed, const std::string& cand) const {
+        static constexpr float kSpatialBoundaryGapCost = 1.5f;
+        static constexpr float kSpatialIndelCost = 1.2f;
+        static constexpr float kSpatialSubBaseCost = 0.8f;
+        static constexpr float kSpatialSubDistSlope = 0.3f;
+        static constexpr float kSpatialSubMaxDist = 2.0f;
+        static constexpr float kSpatialTranspositionCost = 0.6f;
+
         int m = static_cast<int>(typed.length());
         int n = static_cast<int>(cand.length());
         std::vector<std::vector<float>> dp(m + 1, std::vector<float>(n + 1, 0.0f));
 
-        for (int i = 0; i <= m; ++i) dp[i][0] = i * 1.5f;
-        for (int j = 0; j <= n; ++j) dp[0][j] = j * 1.5f;
+        for (int i = 0; i <= m; ++i) dp[i][0] = i * kSpatialBoundaryGapCost;
+        for (int j = 0; j <= n; ++j) dp[0][j] = j * kSpatialBoundaryGapCost;
 
         for (int i = 1; i <= m; ++i) {
             for (int j = 1; j <= n; ++j) {
                 float kd = KeyDistance(typed[i - 1], cand[j - 1], qwerty_map_);
-                float sub_cost = (kd == 0.0f) ? 0.0f : (0.8f + 0.3f * std::min(kd, 2.0f));
+                float sub_cost = (kd == 0.0f) ? 0.0f : (kSpatialSubBaseCost + kSpatialSubDistSlope * std::min(kd, kSpatialSubMaxDist));
                 dp[i][j] = std::min({
-                    dp[i - 1][j] + 1.2f,
-                    dp[i][j - 1] + 1.2f,
+                    dp[i - 1][j] + kSpatialIndelCost,
+                    dp[i][j - 1] + kSpatialIndelCost,
                     dp[i - 1][j - 1] + sub_cost
                 });
                 if (i > 1 && j > 1 && typed[i - 1] == cand[j - 2] && typed[i - 2] == cand[j - 1]) {
-                    dp[i][j] = std::min(dp[i][j], dp[i - 2][j - 2] + 0.6f);
+                    dp[i][j] = std::min(dp[i][j], dp[i - 2][j - 2] + kSpatialTranspositionCost);
                 }
             }
         }

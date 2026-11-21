@@ -82,6 +82,13 @@ object EnglishDictionaryUtils {
         return 3.0f
     }
 
+    private const val SPATIAL_BOUNDARY_GAP_COST = 1.5f
+    private const val SPATIAL_INDEL_COST = 1.2f
+    private const val SPATIAL_SUB_BASE_COST = 0.8f
+    private const val SPATIAL_SUB_DIST_SLOPE = 0.3f
+    private const val SPATIAL_SUB_MAX_DIST = 2.0f
+    private const val SPATIAL_TRANSPOSITION_COST = 0.6f
+
     /**
      * Calculates QWERTY spatial edit distance with Damerau-Levenshtein transposition.
      */
@@ -90,21 +97,21 @@ object EnglishDictionaryUtils {
         val n = cand.length
         val dp = Array(m + 1) { FloatArray(n + 1) }
 
-        for (i in 0..m) dp[i][0] = i * 1.5f
-        for (j in 0..n) dp[0][j] = j * 1.5f
+        for (i in 0..m) dp[i][0] = i * SPATIAL_BOUNDARY_GAP_COST
+        for (j in 0..n) dp[0][j] = j * SPATIAL_BOUNDARY_GAP_COST
 
         for (i in 1..m) {
             for (j in 1..n) {
                 val kd = keyDistance(typed[i - 1], cand[j - 1])
-                val subCost = if (kd == 0.0f) 0.0f else (0.8f + 0.3f * min(kd, 2.0f))
+                val subCost = if (kd == 0.0f) 0.0f else (SPATIAL_SUB_BASE_COST + SPATIAL_SUB_DIST_SLOPE * min(kd, SPATIAL_SUB_MAX_DIST))
 
-                var minCost = dp[i - 1][j] + 1.2f // deletion
-                minCost = min(minCost, dp[i][j - 1] + 1.2f) // insertion
+                var minCost = dp[i - 1][j] + SPATIAL_INDEL_COST // deletion
+                minCost = min(minCost, dp[i][j - 1] + SPATIAL_INDEL_COST) // insertion
                 minCost = min(minCost, dp[i - 1][j - 1] + subCost) // substitution
 
                 // Transposition
                 if (i > 1 && j > 1 && typed[i - 1] == cand[j - 2] && typed[i - 2] == cand[j - 1]) {
-                    minCost = min(minCost, dp[i - 2][j - 2] + 0.6f)
+                    minCost = min(minCost, dp[i - 2][j - 2] + SPATIAL_TRANSPOSITION_COST)
                 }
 
                 dp[i][j] = minCost

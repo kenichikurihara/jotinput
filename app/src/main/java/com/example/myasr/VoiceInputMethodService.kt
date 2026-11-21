@@ -778,7 +778,7 @@ class VoiceInputMethodService : InputMethodService() {
                     onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() },
                     formatStreamingFn = { formatVoiceText(it) }
                 )
-                audioRecorder.notifyUserTyping(350L)
+                audioRecorder.notifyUserTyping()
 
                 if (!candidate.isPrediction) {
                     kanaKanjiEngine.commitCandidate(candidate)
@@ -811,7 +811,7 @@ class VoiceInputMethodService : InputMethodService() {
                         onFlushPreTypingSpeech = { flushPreTypingSpeechIfNeeded() },
                         onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() }
                     )
-                    audioRecorder.notifyUserTyping(350L)
+                    audioRecorder.notifyUserTyping()
                     syncKeyboardState()
                     updateCandidates()
                 } else {
@@ -830,7 +830,7 @@ class VoiceInputMethodService : InputMethodService() {
                         onFlushPreTypingSpeech = { flushPreTypingSpeechIfNeeded() },
                         onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() }
                     )
-                    audioRecorder.notifyUserTyping(350L)
+                    audioRecorder.notifyUserTyping()
 
                     if (hadKeyboardComposing && prevPhrase.isNotEmpty()) {
                         nextPhrasePredictor.recordTransition(prevPhrase, readingBefore)
@@ -848,7 +848,7 @@ class VoiceInputMethodService : InputMethodService() {
 
             override fun onModifierPressed(direction: JapaneseKanaUtils.FlickDirection) {
                 clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
-                audioRecorder.notifyUserTyping(350L)
+                audioRecorder.notifyUserTyping()
                 val wasStreaming = arbitrator.isStreamingComposing()
                 val modifiedKeyboardComposing = arbitrator.onModifierPressed(
                     editor = editorBridge,
@@ -865,7 +865,7 @@ class VoiceInputMethodService : InputMethodService() {
 
             override fun onDeletePressed(count: Int) {
                 clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
-                audioRecorder.notifyUserTyping(350L)
+                audioRecorder.notifyUserTyping()
                 val outcome = arbitrator.onDeletePressed(
                     editor = editorBridge,
                     onDiscardUnflushedSpeech = {
@@ -930,7 +930,7 @@ class VoiceInputMethodService : InputMethodService() {
                     onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() },
                     formatStreamingFn = { formatVoiceText(it) }
                 )
-                audioRecorder.notifyUserTyping(350L)
+                audioRecorder.notifyUserTyping()
                 phase1TimerJob?.cancel()
             rerankJob?.cancel()
                 isCurrentCandidatesReranked = false
@@ -964,7 +964,7 @@ class VoiceInputMethodService : InputMethodService() {
                     onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() },
                     formatStreamingFn = { formatVoiceText(it) }
                 )
-                audioRecorder.notifyUserTyping(350L)
+                audioRecorder.notifyUserTyping()
                 phase1TimerJob?.cancel()
             rerankJob?.cancel()
                 LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
@@ -1007,7 +1007,7 @@ class VoiceInputMethodService : InputMethodService() {
                     onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() },
                     formatStreamingFn = { formatVoiceText(it) }
                 )
-                audioRecorder.notifyUserTyping(350L)
+                audioRecorder.notifyUserTyping()
                 phase1TimerJob?.cancel()
             rerankJob?.cancel()
                 LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
@@ -1028,7 +1028,7 @@ class VoiceInputMethodService : InputMethodService() {
                     onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() },
                     formatStreamingFn = { formatVoiceText(it) }
                 )
-                audioRecorder.notifyUserTyping(350L)
+                audioRecorder.notifyUserTyping()
                 phase1TimerJob?.cancel()
             rerankJob?.cancel()
                 LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
@@ -1040,7 +1040,7 @@ class VoiceInputMethodService : InputMethodService() {
 
             override fun onUndoPressed() {
                 clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
-                audioRecorder.notifyUserTyping(350L)
+                audioRecorder.notifyUserTyping()
                 if (arbitrator.onUndoPressed(editorBridge)) {
                     syncKeyboardState()
                     updateCandidates()
@@ -1144,7 +1144,7 @@ class VoiceInputMethodService : InputMethodService() {
                     onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() },
                     formatStreamingFn = { formatVoiceText(it) }
                 )
-                audioRecorder.notifyUserTyping(350L)
+                audioRecorder.notifyUserTyping()
                 phase1TimerJob?.cancel()
                 rerankJob?.cancel()
                 LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
@@ -2576,7 +2576,7 @@ class VoiceInputMethodService : InputMethodService() {
                 onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() },
                 formatStreamingFn = { formatVoiceText(it) }
             )
-            audioRecorder.notifyUserTyping(350L)
+            audioRecorder.notifyUserTyping()
             phase1TimerJob?.cancel()
             rerankJob?.cancel()
             isCurrentCandidatesReranked = false

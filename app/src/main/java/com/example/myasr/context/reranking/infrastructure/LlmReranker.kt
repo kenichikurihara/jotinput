@@ -53,6 +53,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
     companion object {
         private val CASE_PARTICLES = listOf("に", "を", "が")
+        private const val DEFAULT_MU_SPAN_JA = 2.20f
+        private const val DEFAULT_MU_SPAN_EN = 1.40f
 
         @Volatile
         private var instance: LlmReranker? = null
@@ -219,7 +221,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 fullCand?.reading?.length ?: 0
             }
 
-            val muSpan = if (isEnglishPool) 1.40f else 2.20f
+            val muSpan = if (isEnglishPool) DEFAULT_MU_SPAN_EN else DEFAULT_MU_SPAN_JA
             val kappaCommit = 1.50f
             val lambdaExt = 1.20f
 
@@ -1292,7 +1294,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 c.source in listOf("user_english", "english_typo", "english_cap", "english_gec", "raw") ||
                     (c.reading.isNotEmpty() && c.reading.all { it.code < 128 && (it.isLetter() || it == '\'' || it == '-') })
             }
-            val muSpan = if (isEnglishPool) 1.40f else 2.20f
+            val muSpan = if (isEnglishPool) DEFAULT_MU_SPAN_EN else DEFAULT_MU_SPAN_JA
             val surfaceMinPriorMap = HashMap<String, Float>()
             for (i in topPool.indices) {
                 val cand = topPool[i]

@@ -17,8 +17,6 @@ OUTPUT_FILE = os.path.join(REPO_ROOT, "tools/mozc_dict/base_dictionary.tsv")
 BACKUP_FILE = os.path.join(REPO_ROOT, "tools/mozc_dict/base_dictionary.tsv.bak")
 EXISTING_FILE = os.path.join(REPO_ROOT, "tools/mozc_dict/base_dictionary.tsv")
 
-MAX_COST_THRESHOLD = 5500
-
 def load_existing_symbols(existing_file):
     symbols = []
     if not os.path.exists(existing_file):

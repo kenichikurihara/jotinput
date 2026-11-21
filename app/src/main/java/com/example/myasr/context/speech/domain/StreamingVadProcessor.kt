@@ -84,11 +84,15 @@ class StreamingVadProcessor(
      * Temporarily suppresses starting new speech detection to prevent typing acoustic
      * clicks and vibration noise from triggering false speech starts.
      */
-    fun notifyUserTyping(durationMs: Long = 300L) {
+    fun notifyUserTyping(durationMs: Long = DEFAULT_TYPING_SUPPRESS_MS) {
         val targetTime = System.currentTimeMillis() + durationMs
         if (targetTime > typingSuppressionEndTimeMs) {
             typingSuppressionEndTimeMs = targetTime
         }
+    }
+
+    companion object {
+        const val DEFAULT_TYPING_SUPPRESS_MS = 350L
     }
 
     fun isTypingSuppressed(): Boolean {

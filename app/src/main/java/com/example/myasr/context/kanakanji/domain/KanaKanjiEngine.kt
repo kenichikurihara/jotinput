@@ -273,6 +273,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
     companion object {
         const val MAX_HISTORY_WORDS = 10_000
+        internal const val BOUNDARY_PARTICLE_CHARS = "とはがをにでものかねよ"
+        internal const val DEFAULT_LENGTH_BONUS_PER_CHAR = 2000
+        internal const val RARITY_HINGE_THRESHOLD = 6200
 
         @Volatile
         private var instance: KanaKanjiEngine? = null
@@ -791,23 +794,18 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             val contextRid = if (contextKey.isNotEmpty()) surfaceToRidMap[contextKey] ?: 0 else 0
             val matrix = connectionMatrix
             val connRid = if (contextRid > 0) contextRid else 0
-            val boundaryChars = "とはがをにでものかねよ"
 
             fun singleViterbiCost(rawCost: Int, lid: Int, rid: Int, source: String): Int {
-                val spanLen = normalized.length
                 val isUserOrCanon = source == "user" || source == "canonical"
-                val bonus = if (spanLen > 1 && !isUserOrCanon) {
-                    val conf = ((8500 - rawCost).toFloat() / 4000.0f).coerceIn(0.15f, 1.0f)
-                    val touchesTrailingParticle = normalized.last() in boundaryChars
-                    val isRiskyOverSpan = (isProperNoun(lid) && rawCost > 4500) || rawCost > 5200
-                    val effectiveConf = if (touchesTrailingParticle && isRiskyOverSpan) minOf(conf, 0.25f) else conf
-                    ((spanLen - 1) * 2000 * effectiveConf).toInt()
-                } else if (spanLen > 1) {
-                    (spanLen - 1) * 2000
-                } else {
-                    0
-                }
-                val rarityPen = if (isUserOrCanon) 0 else maxOf(0, rawCost - 6200) / 2
+                val bonus = computeLengthBonus(
+                    subReading = normalized,
+                    rawCost = rawCost,
+                    lid = lid,
+                    isUserOrCanonical = isUserOrCanon,
+                    checkLeadingParticle = false,
+                    prevIsFunctional = false
+                )
+                val rarityPen = if (isUserOrCanon) 0 else maxOf(0, rawCost - RARITY_HINGE_THRESHOLD) / 2
                 val transCost = if (matrix != null && lid > 0) matrix.getTransitionCost(connRid, lid) else 0
                 val eosCost = if (matrix != null && rid > 0) matrix.getTransitionCost(rid, 0) else 0
                 return rawCost - bonus + transCost + rarityPen + eosCost
@@ -1799,6 +1797,28 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return selected
     }
 
+    internal fun computeLengthBonus(
+        subReading: String,
+        rawCost: Int,
+        lid: Int,
+        isUserOrCanonical: Boolean,
+        checkLeadingParticle: Boolean,
+        prevIsFunctional: Boolean,
+        bonusPerChar: Int = DEFAULT_LENGTH_BONUS_PER_CHAR
+    ): Int {
+        val spanLen = subReading.length
+        if (spanLen <= 1) return 0
+        if (isUserOrCanonical) return (spanLen - 1) * bonusPerChar
+
+        val conf = ((8500 - rawCost).toFloat() / 4000.0f).coerceIn(0.15f, 1.0f)
+        val touchesLeadingParticle = checkLeadingParticle && !prevIsFunctional && subReading.first() in BOUNDARY_PARTICLE_CHARS
+        val touchesTrailingParticle = subReading.last() in BOUNDARY_PARTICLE_CHARS
+        val touchesParticleBoundary = touchesLeadingParticle || touchesTrailingParticle
+        val isRiskyOverSpan = (isProperNoun(lid) && rawCost > 4500) || rawCost > 5200
+        val effectiveConf = if (touchesParticleBoundary && isRiskyOverSpan) minOf(conf, 0.25f) else conf
+        return ((spanLen - 1) * bonusPerChar * effectiveConf).toInt()
+    }
+
     /**
      * Fast in-memory N-best Viterbi lattice beam search over Trie subwords.
      * Evaluates in < 0.3ms synchronously on the UI thread for long continuous phrases.
@@ -1847,29 +1867,22 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
                     if (subWords.isNotEmpty()) {
                         val stratifiedWords = selectPosStratifiedSubwords(subWords, maxTotal = 24)
-                        val boundaryChars = "とはがをにでものかねよ"
                         for (w in stratifiedWords) {
-                            val spanLen = j - i
                             val isUser = w.source == "user"
                             val isCanonical = w.source == "canonical"
 
                             // Idea V1: Unigram Confidence-Gated Length Bonus & Functional-Boundary Over-Spanning Guard
-                            val baseBonus = if (spanLen > 1 && !isUser && !isCanonical) {
-                                val conf = ((8500 - w.cost).toFloat() / 4000.0f).coerceIn(0.15f, 1.0f)
-                                val touchesLeadingParticle = i > 0 && !isFunctionalWord(path.lastRid) && subReading.first() in boundaryChars
-                                val touchesTrailingParticle = subReading.last() in boundaryChars
-                                val touchesParticleBoundary = touchesLeadingParticle || touchesTrailingParticle
-                                val isRiskyOverSpan = (isProperNoun(w.lid) && w.cost > 4500) || w.cost > 5200
-                                val effectiveConf = if (touchesParticleBoundary && isRiskyOverSpan) minOf(conf, 0.25f) else conf
-                                ((spanLen - 1) * 2000 * effectiveConf).toInt()
-                            } else if (spanLen > 1) {
-                                (spanLen - 1) * 2000
-                            } else {
-                                0
-                            }
+                            val baseBonus = computeLengthBonus(
+                                subReading = subReading,
+                                rawCost = w.cost,
+                                lid = w.lid,
+                                isUserOrCanonical = isUser || isCanonical,
+                                checkLeadingParticle = i > 0,
+                                prevIsFunctional = isFunctionalWord(path.lastRid)
+                            )
 
                             // Idea A: Additive Bunsetsu-level Length Bonus Normalization for auxiliary verbs attaching to verb/adj stems
-                            val predicateBunsetsuBonus = if (i > 0 && isAuxiliaryVerb(w.lid) && isPredicatePos(path.lastRid)) 2000 else 0
+                            val predicateBunsetsuBonus = if (i > 0 && isAuxiliaryVerb(w.lid) && isPredicatePos(path.lastRid)) DEFAULT_LENGTH_BONUS_PER_CHAR else 0
                             val lengthBonus = baseBonus + predicateBunsetsuBonus
                             val userBonus = if (isUser) 50000 else 0
 
@@ -1887,8 +1900,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                             // Idea V2: Incremental Max-Morpheme Surprisal (L_inf) Hinge Penalty & Single Proper Noun Guard
                             val effectiveWordCost = if (isUser || isCanonical) 0 else w.cost.coerceAtLeast(0)
                             val newMaxWordCost = maxOf(path.maxWordCost, effectiveWordCost)
-                            val prevRarityPen = maxOf(0, path.maxWordCost - 6200) / 2
-                            val nextRarityPen = maxOf(0, newMaxWordCost - 6200) / 2
+                            val prevRarityPen = maxOf(0, path.maxWordCost - RARITY_HINGE_THRESHOLD) / 2
+                            val nextRarityPen = maxOf(0, newMaxWordCost - RARITY_HINGE_THRESHOLD) / 2
                             val rarityDelta = nextRarityPen - prevRarityPen
 
                             val properAfterParticlePen = if (i > 0 && isFunctionalWord(path.lastRid) && isProperNoun(w.lid) && w.cost > 5000) 1200 else 0

@@ -24,6 +24,8 @@ class AsrManager(private val context: Context) {
         const val JOINER_INT8 = "joiner-epoch-99-avg-1.int8.onnx"
         const val JOINER_FP32 = "joiner-epoch-99-avg-1.onnx"
         const val TOKENS = "tokens.txt"
+        private const val DEFAULT_MAX_ACTIVE_PATHS = 8
+        private const val DEFAULT_HOTWORDS_SCORE = 3.5f
 
         // English NVIDIA Parakeet TDT-CTC 110M (FastConformer NeMo CTC, CC-BY-4.0)
         const val ENGLISH_MODEL_DIR_NAME = "parakeet-en-110m"
@@ -129,9 +131,9 @@ class AsrManager(private val context: Context) {
                 val config = OfflineRecognizerConfig(
                     modelConfig = modelConfig,
                     decodingMethod = "modified_beam_search",
-                    maxActivePaths = 8,
+                    maxActivePaths = DEFAULT_MAX_ACTIVE_PATHS,
                     hotwordsFile = "",
-                    hotwordsScore = 3.5f
+                    hotwordsScore = DEFAULT_HOTWORDS_SCORE
                 )
                 japaneseRecognizer = OfflineRecognizer(context.assets, config)
                 Log.i(TAG, "ReazonSpeech model successfully loaded from assets with modified_beam_search")
@@ -163,9 +165,9 @@ class AsrManager(private val context: Context) {
                 val config = OfflineRecognizerConfig(
                     modelConfig = modelConfig,
                     decodingMethod = "modified_beam_search",
-                    maxActivePaths = 8,
+                    maxActivePaths = DEFAULT_MAX_ACTIVE_PATHS,
                     hotwordsFile = hotwordsPath,
-                    hotwordsScore = 3.5f
+                    hotwordsScore = DEFAULT_HOTWORDS_SCORE
                 )
                 japaneseRecognizer = OfflineRecognizer(null, config)
                 Log.i(TAG, "ReazonSpeech model successfully loaded from storage with hotwords: $hasHotwords")

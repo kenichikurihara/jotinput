@@ -200,4 +200,25 @@ class UnifiedEnglishDictionaryTest {
         val enCands = engine.getBaseCandidates("antigravity")
         assertFalse("English word Antigravity should not be returned by Japanese KanaKanjiEngine", enCands.any { it.surface == "Antigravity" })
     }
+
+    @Test
+    fun testSpatialEditConstantsMatchCppImplementation() {
+        var dir: java.io.File? = java.io.File(System.getProperty("user.dir") ?: ".").absoluteFile
+        while (dir != null && !java.io.File(dir, "app/src/main/cpp/spelling/english_spell_engine.cc").exists()) {
+            dir = dir.parentFile
+        }
+        val cppFile = java.io.File(requireNotNull(dir), "app/src/main/cpp/spelling/english_spell_engine.cc")
+        val cppSource = cppFile.readText()
+        val expected = listOf(
+            "kSpatialBoundaryGapCost = 1.5f",
+            "kSpatialIndelCost = 1.2f",
+            "kSpatialSubBaseCost = 0.8f",
+            "kSpatialSubDistSlope = 0.3f",
+            "kSpatialSubMaxDist = 2.0f",
+            "kSpatialTranspositionCost = 0.6f"
+        )
+        for (decl in expected) {
+            assertTrue("Missing or drifted C++ constant: $decl", cppSource.contains(decl))
+        }
+    }
 }
