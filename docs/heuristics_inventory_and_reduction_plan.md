@@ -13,9 +13,14 @@
 - **[Timing/Gate]**: 決め打ちのデバウンス時間、ウィンドウ時間、各種しきい値・ゲート条件
 
 ### 1.2 削減可否のトリアージ基準
-- **Tier A (即時整理・削除候補)**: 未使用コード、複数箇所での重複定義、データファイル化または SLM 委譲が容易なハードコードリスト
-- **Tier B (統計・モデル置換候補)**: Viterbi やリランキング内の経験的ボーナス/ペナルティ（コーパス学習・交差検証・SLM 統合で置き換え可能）
-- **Tier C (維持すべき仕様・安全制約)**: バイナリフォーマット制約（`u16` 上限等）、UI タップ安全性ガード、非回帰契約（音声句読点の誤変換防止リスト等）
+- **Tier A0 (挙動不変リファクタ)**: 未使用定数の削除、同一ロジック・同一定数の重複定義の統一、マジックナンバーの名前付き定数化。出力が変わらないため評価不要（ユニットテストのみ）
+- **Tier A (評価付き削除候補)**: データファイル化・コーパス統合・N-gram 委譲が容易なハードコード語彙リストやフォールバック。出力が変わるため評価ゲート（§8.0）必須
+- **Tier B (統計・モデル置換候補)**: Viterbi やリランキング内の経験的ボーナス/ペナルティ（コーパス学習・交差検証・SLM 統合で置き換え可能）。**SLM 未導入環境での品質も維持すること**
+- **Tier C (維持すべき仕様・安全制約)**: バイナリフォーマット制約（`u16` 上限等）、UI タップ安全性ガード、メモリ・レイテンシ予算、非回帰契約（音声句読点の誤変換防止リスト等）
+
+### 1.3 改訂履歴
+- **v1** (2026-11-20): 初版。
+- **v2** (2026-11-20): レビュー反映。`isVerbStem` と `matrix == null` フォールバックを Tier A→B に変更、`Idea V1` の二重実装・規模の指摘、VAD 打鍵抑制の実効値修正、音声訂正・英語 Kotlin 側・IME タイミング・キャッシュ上限の抜け漏れ追加、Tier A0 / Phase 0 の新設、共通検証ゲート（SLM-off 評価を含む）の追加。
 
 ---
 
@@ -25,7 +30,7 @@
 
 | 対象ファイル | 種別 | 内容・決め打ちの値 | 削減難易度 / Tier |
 | :--- | :--- | :--- | :--- |
-| [build_base_dictionary.py](tools/mozc_dict/build_base_dictionary.py#L20) | `[Score/Weight]` | `MAX_COST_THRESHOLD = 5500`（定義のみで現在未使用） | **Tier A** (削除可) |
+| [build_base_dictionary.py](tools/mozc_dict/build_base_dictionary.py#L20) | `[Score/Weight]` | `MAX_COST_THRESHOLD = 5500`（定義のみで現在未使用） | **Tier A0** (挙動不変で削除可) |
 | [build_base_dictionary.py](tools/mozc_dict/build_base_dictionary.py#L40-L43) | `[POS/Lexicon]` | 保護記号の決め打ち読みリスト (`"（"`, `"("`, `"！"`, `"。"`, `"、"` 等) および `cost <= 200` かつ非数字の保護条件 | **Tier B** (辞書メタデータ化) |
 | [build_base_dictionary.py](tools/mozc_dict/build_base_dictionary.py#L81-L85) | `[POS/Lexicon]` | ノイズトークン除外の決め打ち (`lid == "0" && rid == "0" && surface.isdigit()`、および `reading == "せん" && surface == "1000"`) | **Tier B** (上流コーパスフィルタ化) |
 | [build_base_dictionary.py](tools/mozc_dict/build_base_dictionary.py#L94-L123) | `[POS/Lexicon]` `[Score/Weight]` | `essential_conjugations`: 29個の活用語・助動詞（「出」「ません」「行けた」等）に対し、Mozc 品詞 ID (`705, 659, 240, 1906, 1851, 1975, 2430, 701, 694, 142, 348`) と固定コスト (`0, 43, 50, 66, 100` 等) をハードコード | **Tier A** (Mozc OSS 展開ルールへ統合) |
@@ -56,7 +61,7 @@
 | 箇所 | 種別 | 内容・決め打ちの値 | 削減難易度 / Tier |
 | :--- | :--- | :--- | :--- |
 | `KanaKanjiEngine.kt` (L1659-1682, L2353-2369) | `[POS/Lexicon]` | 品詞カテゴリのハードコード ID 範囲:<br>- `isSuffix`: `2032, 1941, 1951, 1975, 1941..2034`<br>- `isFunctionalWord`: `29..433`<br>- `isAuxiliaryVerb`: `29..267`<br>- `isPredicatePos`: `434..1840, 2196..2590`<br>- `isProperNoun`: `1917..1940`<br>- `isSahenNoun`: `1841, 2035..2150`<br>- `isContentWord`: `1841..2195, 434..1840, 2196..2590, 12..28, 2659..2671` | **Tier B** (`id.def` からのメタデータ自動生成へ置換) |
-| `KanaKanjiEngine.kt` (L2361-2362) | `[POS/Lexicon]` | `isVerbStem`: 表記が2文字以上かつ末尾が `っ/い/め/り/き/ぎ/し/ち` なら動詞語幹とみなす形態素ヒューリスティクス | **Tier A** (POS ID のみで判定すべき) |
+| `KanaKanjiEngine.kt` (L2358-2363) | `[POS/Lexicon]` | `isVerbStem`: まず `isProperNoun` / `isPredicatePos` の POS 判定を行い、**判定できなかった場合のみ**、表記が2文字以上かつ末尾が `っ/い/め/り/き/ぎ/し/ち` なら動詞語幹とみなす形態素フォールバック。呼び出し元は動的テイル合成 (L2478, `Idea B3`) | **Tier B**（フォールバック除去は B3 出力を変え得るため、POS 自動生成化後に評価付きで削除） |
 | `KanaKanjiEngine.kt` (L1736-1800) | `[Length/Limit]` `[POS/Lexicon]` | `selectPosStratifiedSubwords(maxTotal=24 / 20)`: 品詞クラスごとのビーム枠決め打ち（機能語 `2`/POSペア、用言 `2`/POSペア、固有名詞 計`4`/`2`、一般名詞 計`8`/`3`、記号 `2`） | **Tier B** (スコア差ベースの動的枠配分へ) |
 
 ### 3.2 Viterbi ラティス探索・スコア計算・2D 多様性
@@ -64,15 +69,16 @@
 | 箇所 | 種別 | 内容・決め打ちの値 | 削減難易度 / Tier |
 | :--- | :--- | :--- | :--- |
 | `KanaKanjiEngine.kt` (L973-978) | `[Length/Limit]` | Viterbi 起動最小文字数 `normalized.length >= 3`、ビーム幅 `beamWidth = 12`（各位置での prune 上限 `beamWidth * 2 = 24`） | **Tier C / B** (計算量制御として幅のみ維持) |
-| `KanaKanjiEngine.kt` (L794-814, L1850-1873) | `[Score/Weight]` `[POS/Lexicon]` | **長さボーナス＆境界ガード (`Idea V1`)**:<br>- `boundaryChars = "とはがをにでものかねよ"`<br>- `conf = ((8500 - cost) / 4000f).coerceIn(0.15f, 1.0f)`<br>- `isRiskyOverSpan`: 固有名詞かつ `cost > 4500` または `cost > 5200` で `effectiveConf = min(conf, 0.25f)`<br>- `baseBonus = (spanLen - 1) * 2000 * effectiveConf`<br>- `predicateBunsetsuBonus = 2000` (用言後の助動詞) | **Tier B** (最有力削減対象: CRF/SLM スコアに統合すべきアドホック補正) |
+| `KanaKanjiEngine.kt` (L796-814, L1850-1873) | `[Score/Weight]` `[POS/Lexicon]` | **長さボーナス＆境界ガード (`Idea V1`)**:<br>- `boundaryChars = "とはがをにでものかねよ"`<br>- `conf = ((8500 - cost) / 4000f).coerceIn(0.15f, 1.0f)`<br>- `isRiskyOverSpan`: 固有名詞かつ `cost > 4500` または `cost > 5200` で `effectiveConf = min(conf, 0.25f)`<br>- `baseBonus = (spanLen - 1) * 2000 * effectiveConf`（user/canonical は無条件 `(spanLen - 1) * 2000`）<br>- `predicateBunsetsuBonus = 2000` (用言後の助動詞)<br>⚠️ **規模**: 1文字あたり最大 `2000` は Mozc 単語コスト（典型 3000〜8000）に匹敵し、ランキングへの影響が最も大きい補正。<br>⚠️ **重複と不一致**: 単文節用 `singleViterbiCost`（L796-814）とラティス内（L1857-1894）に**同じロジックが二重実装**されており、前者は先頭助詞境界判定が無く EOS 遷移コストを加算する点で挙動が異なる | **Tier B** (最有力削減対象: CRF/SLM スコアに統合すべきアドホック補正)。二重実装の統一は **Tier A0** |
 | `KanaKanjiEngine.kt` (L1874) | `[Score/Weight]` | ユーザー辞書ボーナス `userBonus = 50000` | **Tier B** (SLM 側の `gammaUser` に一本化可能) |
-| `KanaKanjiEngine.kt` (L1881-1885) | `[Score/Weight]` `[POS/Lexicon]` | 接続行列不在時のフォールバックペナルティ: 単一カタカナまたは古語「之」(`lid == 385`) に `+3000` | **Tier A** (`connection_data.bin` 常時バンドル済みのため削除可能) |
+| `KanaKanjiEngine.kt` (L1877-1885) | `[Score/Weight]` `[POS/Lexicon]` | 接続行列不在時のフォールバックペナルティ: 単一カタカナまたは古語「之」(`lid == 385`) に `+3000` | **Tier B**（`connection_data.bin` は APK 同梱だが、ロード失敗時や行列未ロードのユニットテストでは `connectionMatrix == null` が実際に発生する。null 分岐は他にも L811, L1075, L2150, L2236, L2447 等に存在し、「行列必須」への契約変更とテストフィクスチャ移行を伴う） |
 | `KanaKanjiEngine.kt` (L810, L1888-1894) | `[Score/Weight]` | **希少語ヒンジペナルティ (`Idea V2`)**:<br>- `rarityDelta`: `maxWordCost > 6200` の超過分の `1/2` を加算<br>- `properAfterParticlePen`: 機能語直後の `cost > 5000` な固有名詞に `+1200` | **Tier B** (辞書コスト分布・SLM NLL へ委譲) |
 | `KanaKanjiEngine.kt` (L1897-1910) | `[Score/Weight]` | **並列協調対称ボーナス (`Idea V2`)**: 「カタカナ＋と/や＋カタカナ」に `+1200`、「漢字＋と/や＋漢字」に `+600` | **Tier B** (SLM が文脈で自然に評価可能) |
 | `KanaKanjiEngine.kt` (L1971) | `[Score/Weight]` | 未登録1文字ひらがなフォールバック遷移コスト `+18000` | **Tier C** (未知語フォールバック) |
 | `KanaKanjiEngine.kt` (L989) | `[Score/Weight]` | 濁音展開あり時の Viterbi 全文節昇格許可マージン `vCost <= bestStep2Cost + 2500` | **Tier B** |
 | `KanaKanjiEngine.kt` (L2042-2054) | `[Score/Weight]` `[Length/Limit]` | **2D 多様性ペナルティ (`Idea V3`)**:<br>- 第1文節重複 `count1 * 3000`, 最終内容語重複 `countLast * 2500`<br>- 外れ値パス (`cost - bestFullCost > 3500` または `maxWordCost > 6500`) はカウント除外<br>- 新規ペアかつ高品質 (`<= 3000`, `maxWordCost <= 6000`) なら `min(pen1, pen2)` に緩和 | **Tier B** (SLM 側の 2D-MMR / 効用最大化へ一本化可能) |
 | `KanaKanjiEngine.kt` (L2075-2078) | `[Score/Weight]` | **SLM への辞書コスト伝播 (`Idea R1`)**: `avgWordCost + max(0, maxWordCost - 4500)/2 + avgExcessTrans` (`transitionCost - 1500` の超過平均) を `[0, 15000]` にクリップ | **Tier B** (生の対数尤度/Viterbi 総コストの線形射影へ簡素化) |
+| `KanaKanjiEngine.kt` (L103, L275, L1114-1116, L2338-2342) | `[Length/Limit]` | クエリ結果キャッシュ `queryCache` 上限 `300` 件、学習履歴上限 `MAX_HISTORY_WORDS = 10_000`、Multi-Horizon 合成結果の上限 `beamWidth + 12`（Full）/ `beamWidth + 18`（Prefix 込み） | **Tier C**（メモリ・レイテンシ予算）。結果上限は Multi-Horizon 統一（Phase 2-5）時に再検討 |
 
 ### 3.3 Multi-Horizon Prefix 抽出・曖昧一致・動的テイル合成
 
@@ -112,7 +118,7 @@
 | :--- | :--- | :--- | :--- |
 | L1063-1100, L1233-1270 | `[Length/Limit]` | **`topPool` 構築 (上限 16 候補)**:<br>- 履歴 `>= 2`: 最大 `4`<br>- Full 候補: 最大 `8`<br>- `fuzzyShort` (`obsPenalty > 0 && dictCost <= 6000`): 保護枠 `2`<br>- Single Prefix `4` + Diversified PhraseChunk `4` (計 `8` 枠) | **Tier B** (Stage 1 logit スコアで全候補から直接絞る設計にすれば簡素化可能) |
 | L76-85<br>[KeyboardHeightManager.kt](app/src/main/java/com/example/myasr/context/ime/presentation/KeyboardHeightManager.kt#L21-L25) | `[Score/Weight]` | **主要ハイパーパラメータ & `ScoringProfile`**:<br>- `DEFAULT_SLM_WEIGHT_ALPHA = 0.20f`, `LAMBDA_OBS = 0.50f`, `GAMMA_USER = 3.00f`<br>- `JA_FLICK`: `(keyCostSec=0.40, riskWeight=0.25, extGainWeight=1.00, slot1MarginSec=0.15)`<br>- `JA_ZERO_QUERY`: `(0.40, 0.30, 1.00, 0.00)`<br>- `EN_QWERTY`: `(0.30, 0.45, 0.85, 0.25)` | **Tier B** (少数の最適化パラメータへ集約) |
-| L222-224, L256, L324-356 | `[Score/Weight]` | **スパン長・キメラ・分岐ペナルティ**:<br>- `muSpan = 2.20f` (JP) / `1.40f` (EN), `kappaCommit = 1.50f`, `lambdaExt = 1.20f`<br>- キメラ判定: `thetaCoherent = 4.0f`, ペナルティ `+10.0f`<br>- 分岐ボーナス: `min(1.20f, 0.55f * ln(max(1, branching)))`<br>- Zero-query 長さ正規化: `rawNll / tokens^0.85f` | **Tier B** |
+| L222-224, L256, L324-356 | `[Score/Weight]` | **スパン長・キメラ・分岐ペナルティ**:<br>- `muSpan = 2.20f` (JP) / `1.40f` (EN)（**L222 と L1295 に二重定義**）, `kappaCommit = 1.50f`, `lambdaExt = 1.20f`<br>- キメラ判定: `thetaCoherent = 4.0f`, ペナルティ `+10.0f`<br>- 分岐ボーナス: `min(1.20f, 0.55f * ln(max(1, branching)))`<br>- Zero-query 長さ正規化: `rawNll / tokens^0.85f` | **Tier B**（`muSpan` の重複統一は **Tier A0**） |
 | L288-295, L390-396 | `[Timing/Gate]` `[Score/Weight]` | **Dead-End Reading Gate (`Idea 7`)**: `n in 2..5` かつ `dictCost <= 5500` の自然語が無い場合、`obsDiscount` に `0.35f` 倍を適用。`obsDiscount = 0.20f + 0.80f * ((deltaNll - 1.5f) / 3.0f)` | **Tier B** |
 | L360-386 | `[Score/Weight]` `[Timing/Gate]` | **Hybrid-6b 履歴 × SLM 融合**:<br>- Coherence Gate: `thetaGate = 4.6f + 0.25f * deltaExt`, 温度 `0.6f`<br>- 減衰時定数: 短期 `1.0h`, 長期 `336.0h` (14日)<br>- Soft-Clamping `eta` 上限: Bigram `0.90f`, Unigram `0.70f` (`(count-1)/5`)<br>- ブースト係数: `bigramBoost = 6.0f`, `shortTerm = 2.2f`, `longTerm = 1.8f * min(ln(1+c), 3.0f)`, `c==1` 減衰 `0.30f` | **Tier B** (パラメータ数が非常に多く、簡素な対数線形融合へ整理可能) |
 | L398-404, L407-413 | `[Score/Weight]` | **辞書コスト融合・ヒステリシス**:<br>- `dictCostPenalty = (c / 3000f) + 0.45f * rareExcess^2` (`rareExcess = max(0, (c - 6000)/2000f)`)<br>- `rankCost = min(4, stratumRank)`<br>- `hysteresisDelta = -1.20f` (Full) / `-0.35f` (Fast) | **Tier B** (Viterbi 側 `dictCost` 変換と二重に非線形補正している) |
@@ -148,6 +154,8 @@
 | [english_spell_engine.cc](app/src/main/cpp/spelling/english_spell_engine.cc#L302-L321, L431-L440, L645-L668) | `[Score/Weight]` `[Length/Limit]` | **SymSpell & 空間編集距離**:<br>- ユーザー語擬似頻度 (`50M / 30M / 15M`)、Prefix 登録長 `2..10`・リスト上限 `12/14`<br>- `EditAndSpatialCost`: 削除/挿入 `1.5 / 1.2`, 置換 `0.8 + 0.3 * min(kd, 2.0)`, 転置 `0.6`<br>- Prefix スコア `log_freq - 0.45 * len_diff + 2.0 * cov_ratio` | **Tier B** |
 | [BayesianCaseRanker.kt](app/src/main/java/com/example/myasr/context/english/domain/BayesianCaseRanker.kt#L41-L43, L91-L147)<br>[EnglishCaseModel.kt](app/src/main/java/com/example/myasr/context/english/domain/EnglishCaseModel.kt#L29) | `[Score/Weight]` | `LAMBDA_OBS = 5.0f`, `LAMBDA_FREQ = 0.15f`, `MIN_VARIANT_POSTERIOR = 0.04f`, `OOV_ACRO_THRESHOLD_LLR = 0.28f`、各種フォールバック事前確率 (`0.95, 0.85, 0.70, 0.15, 0.08, 0.05`) | **Tier B** |
 | [VoiceInputMethodService.kt](app/src/main/java/com/example/myasr/VoiceInputMethodService.kt#L1993-L1998) | `[Length/Limit]` | 英語候補の SLM リランキング入力上限 `take(8)`、表示上限 `take(5)` | **Tier C** |
+| [EnglishDictionaryUtils.kt](app/src/main/java/com/example/myasr/context/english/domain/EnglishDictionaryUtils.kt#L93-L186) | `[Score/Weight]` `[Length/Limit]` | **Kotlin 側の英語辞書照合**:<br>- 空間編集距離 削除/挿入 `1.5 / 1.2`, 置換 `0.8 + 0.3 * min(kd, 2.0)`, 転置 `0.6` — **C++ `english_spell_engine.cc` の `EditAndSpatialCost` と同一定数の二重定義**<br>- ユーザー語の優先度別擬似スコア `HIGH=22.0 / NORMAL=19.5 / LOW=17.5`<br>- Prefix コスト `0.4 + 0.1 * lenDiff`、スコア係数 `2.8`<br>- 受理閾値 `normCost <= 0.38 && cost <= 3.6`、ファジー Prefix `<= 0.30 && <= 1.2`（加算 `+0.8`） | **Tier A0**（二重定義の統一）/ **Tier B**（擬似スコア・閾値の統計化） |
+| [SentenceBoundaryDetector.kt](app/src/main/java/com/example/myasr/context/english/domain/SentenceBoundaryDetector.kt#L44-L95) | `[Score/Weight]` | 文頭大文字化のための文境界確率の固定値: 改行 `1.0`, `!?。` `0.98`, 既定 `0.97`, `0.95`, `0.25`, `0.10`, `0.05`（略語・番号付きリスト等の分岐別） | **Tier B** (英語コーパスからの最尤推定) |
 
 ---
 
@@ -157,37 +165,66 @@
 
 | 対象ファイル | 種別 | 内容・決め打ちの値 | 削減難易度 / Tier |
 | :--- | :--- | :--- | :--- |
-| [StreamingVadProcessor.kt](app/src/main/java/com/example/myasr/context/speech/domain/StreamingVadProcessor.kt) | `[Timing/Gate]` | ノイズフロア窓 (24チャンク / ~1.5s)、打鍵抑制ガード `300ms`、マイクロポーズフラッシュ `<= 200ms`、無音確定 `450ms`、連続発話ペーシング `<= 2400ms` | **Tier C** (レイテンシ契約で規定) |
+| [StreamingVadProcessor.kt](app/src/main/java/com/example/myasr/context/speech/domain/StreamingVadProcessor.kt#L20-L87) | `[Timing/Gate]` | ノイズフロア窓 (24チャンク / ~1.5s)、マイクロポーズフラッシュ `200ms`、無音確定 `450ms`、連続発話ペーシング `<= 2400ms`。打鍵抑制ガード `notifyUserTyping` の既定値は `300ms` だが、**`VoiceInputMethodService` の全呼び出し（約13箇所）が `350L`（1箇所 `500L`）を明示指定しており、実効値は 350/500ms**（既定値は事実上未使用） | **Tier C**（レイテンシ契約）。打鍵抑制値の単一定数化は **Tier A0** |
 | [JapanesePunctuationEngine.kt](app/src/main/java/com/example/myasr/context/speech/domain/JapanesePunctuationEngine.kt#L56-L200) | `[POS/Lexicon]` | `PRESERVED_WORDS`（天気・天然・満点・まるで等の誤変換防止リスト）、`SAFE_PARTICLE_ENDINGS`、音声句読点コマンド置換ルール | **Tier C** (トップライン品質契約で保護必須) |
-| [JapaneseNumeralUtils.kt](app/src/main/java/com/example/myasr/context/kanakanji/domain/JapaneseNumeralUtils.kt#L19-L54, L244-L301, L354) | `[POS/Lexicon]` `[Length/Limit]` | `PRESERVED_IDIOMS` (~60語)、`UNIT_WORDS` / `KANA_UNITS` (~50単位)、`parseKanaToNumber` の最大 `9999` 制限 | **Tier C** (熟語誤変換ゼロ保証) |
-| [AsrManager.kt](app/src/main/java/com/example/myasr/context/speech/infrastructure/AsrManager.kt) | `[Score/Weight]` `[Length/Limit]` | ビーム幅 `maxActivePaths = 8`, ホットワードブースト `hotwordsScore = 3.5f` | **Tier C** (評価済み最適値) |
+| [JapaneseNumeralUtils.kt](app/src/main/java/com/example/myasr/context/kanakanji/domain/JapaneseNumeralUtils.kt#L19-L54) | `[POS/Lexicon]` `[Length/Limit]` | `PRESERVED_IDIOMS` (~60語)、`UNIT_WORDS` / `KANA_UNITS` (~50単位)、`parseKanaToNumber` の最大 `9999` 制限 | **Tier C** (熟語誤変換ゼロ保証) |
+| [AsrManager.kt](app/src/main/java/com/example/myasr/context/speech/infrastructure/AsrManager.kt#L132-L168) | `[Score/Weight]` `[Length/Limit]` | ビーム幅 `maxActivePaths = 8`, ホットワードブースト `hotwordsScore = 3.5f`（L132-134 と L166-168 の 2 箇所に重複記述） | **Tier C** (評価済み最適値)。重複記述の定数化は **Tier A0** |
+| [VoiceCorrectionScoring.kt](app/src/main/java/com/example/myasr/context/speech/domain/VoiceCorrectionScoring.kt#L88-L181) | `[Score/Weight]` `[Timing/Gate]` | 音声訂正学習のスコア: 頻度項 `1.5 * ln(1 + net) * recencyDecay`、文脈一致ボーナス `0.8 * tokenMatches`、文脈内に訂正後表記が既出なら `+2.0`、頻度ブースト上限 `3.0`、SLM コヒーレンスゲート `gate >= 0.35`、SLM 非使用時 `ctxScore >= 2.2` | **Tier B** (訂正ログからのロジスティック回帰等で推定) |
+| [VoiceCorrectionDetector.kt](app/src/main/java/com/example/myasr/context/speech/domain/VoiceCorrectionDetector.kt#L26-L27) | `[Timing/Gate]` `[Length/Limit]` `[Score/Weight]` | 訂正検出窓 `EDIT_WINDOW_MS = 15s`、最大スパン `MAX_SPAN_LENGTH = 36`、仮名距離（小書き/濁音同一視 `0.3`、共有文字 `0.2`、活用・漢字化修正 `0.05`） | **Tier B / C** (窓・スパンは C、距離重みは B) |
+| [ProsodyPitchEstimator.kt](app/src/main/java/com/example/myasr/context/speech/domain/ProsodyPitchEstimator.kt#L21-L89) | `[Timing/Gate]` `[Score/Weight]` | 文末ピッチ推定: 最小音声長 `200ms`、フレーム長 `50ms`、F0 探索範囲 `75..420Hz`、比較区間 `末尾180ms / 70ms`、有声判定 `自己相関 >= 0.45` | **Tier C** (音響的に標準的な値) |
+| [ContextAwareProcessor.kt](app/src/main/java/com/example/myasr/context/speech/domain/ContextAwareProcessor.kt#L275) | `[POS/Lexicon]` | 敬称の固定リスト（`さん/様/くん/君/氏/ちゃん`） | **Tier B** (Mozc 接尾辞 POS 判定へ置換可能) |
+| [VoiceInputMethodService.kt](app/src/main/java/com/example/myasr/VoiceInputMethodService.kt) | `[Timing/Gate]` `[Length/Limit]` | SLM リランキングのタイムアウト `withTimeout(2500L)`（L1267, L1374, L1762）、ASR 推論タイムアウト `3000L`（L1556, L2305）、UI 遅延 `delay(120L / 150L / 250L)`、訂正置換時の後続テキスト長上限 `tail.length <= 32`（L697）、英語候補表示の最小語長 `2` | **Tier C**（レイテンシ予算）。定数の集約は **Tier A0** |
+
 
 ---
 
 ## 8. ヒューリスティクス削減ロードマップ (Reduction Action Plan)
 
-コードベース全体の複雑性を下げ、コーパスおよび言語モデル (Mozc CRF + Qwen3.5 SLM) 主導のクリーンな設計へ移行するため、以下の 3 フェーズでの削減を推奨します。
+コードベース全体の複雑性を下げ、コーパスおよび言語モデル (Mozc CRF + Qwen3.5 SLM) 主導のクリーンな設計へ移行するため、以下の 4 フェーズでの削減を推奨します。
 
-### Phase 1: 重複・死蔵・ハードコード語彙の整理 (Tier A)
-1. **死蔵・不要フォールバックの削除**:
-   - `build_base_dictionary.py` の未使用 `MAX_COST_THRESHOLD` 削除。
-   - `KanaKanjiEngine.kt` 内の `matrix == null` 時フォールバック（単一カタカナ・古語「之」`+3000`）の削除（`connection_data.bin` が APK 同梱必須となったため不要）。
-2. **ハードコード語彙リストの辞書データ移管**:
-   - `KanaKanjiEngine.registerCanonicalVocabulary()` と `build_base_dictionary.py` の `essential_conjugations` を整理し、Mozc OSS コーパス生成パイプラインに一本化。
-   - `KanaKanjiEngine.isVerbStem()` の末尾文字ヒューリスティクスを削除し、純粋に POS ID 判定へ統一。
-   - `NextPhrasePredictor.CANONICAL_COLLOCATIONS` および時間帯挨拶ヒューリスティクスを、ユーザー履歴 + SLM 次フレーズ生成 (`predictNextPhrases`) へ段階的に委譲。
+> [!IMPORTANT]
+> **SLM 非存在時の品質保証が前提条件**: 本プロジェクトは Model & Lexicon Decoupling Contract により **SLM はオンデマンドダウンロード（未導入状態があり得る）** です。したがって「SLM が既に評価しているから Viterbi 側の補正は不要」という理由だけで削除してはなりません。Phase 1 以降のすべての削除は **SLM-off（Viterbi 単体）と SLM-on の両条件で** 非回帰を確認します。
+
+### 8.0 共通検証ゲート (全フェーズ必須)
+
+| ゲート | コマンド / 評価セット | 合格基準 |
+| :--- | :--- | :--- |
+| G1: ユニット / アーキテクチャ | `./gradlew testDebugUnitTest`（`JapanesePunctuationEvaluationTest`, `DddArchitectureKonsistTest`, `AlloyVerificationTest` を含む） | 100% パス |
+| G2: 仮名漢字 SLM-off | `myasr-eval` スキルのフリック変換評価（100件ヘッドルームセット）を SLM 未ロードで実行 | Top-1 / Top-3 が削除前ベースライン比 **-0.5pt 以内**（暫定値。初回ベースライン計測時に評価セットの分散から確定） |
+| G3: 仮名漢字 SLM-on | 同上を SLM ロード状態で実行 + EIS（期待打鍵削減）評価 | Top-1 / EIS が **非劣化**（統計的に有意な低下なし） |
+| G4: ゼロクエリ予測 | `myasr-eval` の次フレーズ予測評価 | Hit@3 が非劣化 |
+| G5: 英語入力 | Swipe / SymSpell / Truecasing 評価 | Top-1 精度が非劣化 |
+| G6: 実機 | `./deploy.sh` による ARCVM + Pixel のデュアルターゲット確認 | 両端末で `AsrManager` ロード・変換動作正常 |
+
+各削除 PR では「削除対象」「影響予想 (大/中/小)」「通過したゲートと数値差分」を PR 説明に記載すること。
+
+### Phase 0: 挙動不変のリファクタリング (Tier A0 — 評価不要・即時実施可)
+挙動を一切変えずに重複・死蔵を解消し、以降のフェーズの差分を読みやすくする。ゲート: **G1 のみ**（出力バイト一致をユニットテストで確認）。
+1. `build_base_dictionary.py` の未使用 `MAX_COST_THRESHOLD` 削除。
+2. **Idea V1 の重複定義統一**: `singleViterbiCost`（L796-814）とラティス内（L1857-1894）の長さボーナス・希少語ペナルティを単一の純粋関数に抽出（現状の差異＝先頭助詞判定と EOS コストは引数で明示し、挙動を保存）。
+3. **空間編集距離の二重定義統一**: `EnglishDictionaryUtils.kt` と `english_spell_engine.cc` の `1.5/1.2/0.8+0.3·kd/0.6` を単一定義（共有定数表または JNI 呼び出し）へ。
+4. **`muSpan` 二重定義統一**: `LlmReranker.kt` L222 / L1295 を共通定数化。
+5. **打鍵抑制時間の単一化**: `VoiceInputMethodService` の `notifyUserTyping(350L)` ×約13箇所と `StreamingVadProcessor` 既定値 `300L` の乖離を、名前付き定数 1 つに統合（実効値 350ms を保存）。
+6. Tier C に分類した上限・タイムアウト類（`queryCache=300`, SLM `withTimeout(2500L)` 等）を名前付き定数として集約。
+
+### Phase 1: ハードコード語彙・フォールバックの評価付き削除 (Tier A)
+ゲート: **G1 + G2 + G3 (+ G4)**。
+1. **canonical 語彙のコーパス一本化**: `KanaKanjiEngine.registerCanonicalVocabulary()` と `build_base_dictionary.py` の `essential_conjugations` を、Mozc OSS コーパス生成パイプラインに一本化（Anti-Anecdotal Tuning Policy に整合）。削除後に同語彙がシステム辞書側でコーパス由来コストを持つことを辞書ビルドテストで保証する。
+2. **固定用例・挨拶の委譲**: `NextPhrasePredictor.CANONICAL_COLLOCATIONS` および時間帯挨拶ヒューリスティクスを、ユーザー履歴 + 軽量 N-gram へ委譲（SLM-off 時も G4 を満たすこと）。
 
 ### Phase 2: 変換・リランキング数理モデルの簡素化 (Tier B)
-1. **POS ID ハードコードの自動生成化**:
-   - `KanaKanjiEngine.kt` に散在する `1841..2195`, `434..1840` 等の POS ID マジックナンバー群を、Mozc `id.def` からビルド時に生成する列挙型/ビットマスクへ置換。
-2. **Viterbi 内のアドホック補正の削減**:
-   - `Idea V1`（境界文字ガード・信頼度ゲート付き長さボーナス）、`Idea V2`（希少語ヒンジ・助詞後固有名詞・並列協調ボーナス）、`Idea V3`（Viterbi 側 2D 多様性ペナルティ）は、**後段の SLM リランキングが既に文脈・自然さ・多様性を評価している機能と重複**している。評価セット（EIS / 100件フリックヘッドルーム）で A/B テストしつつ、Viterbi を「純粋な Unigram + ConnectionMatrix 最小コスト探索」に近づける。
-3. **SLM リランキングのパラメータ統合**:
-   - `LlmReranker.scoreAndRankPool` の 15 個以上の経験定数（特に Hybrid-6b の `thetaGate`, `shortTerm`, `longTerm`, `c1Damp`, `eta` 上限、および `dictCostPenalty` の二重非線形ペナルティ）を、交差検証で同定可能な最小限のパラメータセット（例: 3〜4 個）へ縮約する。
-4. **Multi-Horizon Prefix / 短読みインターリーブの統一**:
-   - `KanaKanjiEngine` 側の `branchBonus`・`interleavePredictiveCandidates` と `LlmReranker` 側の EIS 効用・Strata 配置で二重になっている順位制御を、SLM 未ロード時のフォールバックのみに限定する。
+ゲート: **G1〜G5 全て**。1 項目ずつ独立した PR で A/B 評価する。
+1. **POS ID ハードコードの自動生成化**: `KanaKanjiEngine.kt` に散在する `1841..2195`, `434..1840` 等の POS ID マジックナンバー群を、Mozc `id.def` からビルド時に生成する列挙型/ビットマスクへ置換。完了後に `isVerbStem` の末尾文字フォールバックの要否を評価（POS 判定のみで B3 テイル合成の出力が変わらないことを確認してから削除）。
+2. **`matrix == null` フォールバックの整理**: 「接続行列ロード失敗時はエンジン非活性」という前提へ契約を変更し、行列未ロードのユニットテストをテスト用行列フィクスチャへ移行したうえで、単一カタカナ・古語「之」`+3000` 分岐および null 分岐群（L811, L1075, L1877, L2150, L2236, L2447 等）を削除。
+3. **Viterbi 内のアドホック補正の削減（最優先: 長さボーナス）**:
+   - `Idea V1` の `(spanLen-1) * 2000` は Mozc 単語コスト（典型 3000〜8000）に匹敵する規模で、全体のランキングを最も強く歪めている。まず**係数のスイープ（0 / 500 / 1000 / 2000）を G2 で計測**し、Mozc コストのみで成立する範囲を特定する。
+   - `Idea V2`（希少語ヒンジ・助詞後固有名詞・並列協調ボーナス）、`Idea V3`（Viterbi 側 2D 多様性ペナルティ）は SLM-on では後段と重複するが、**SLM-off での G2 劣化が許容範囲内の場合のみ削除**する。劣化する場合は「SLM-off 専用フォールバック」として明示的にフラグ分離する。
+4. **SLM リランキングのパラメータ統合**: `LlmReranker.scoreAndRankPool` の 15 個以上の経験定数（特に Hybrid-6b の `thetaGate`, `shortTerm`, `longTerm`, `c1Damp`, `eta` 上限、および Viterbi 側 `Idea R1` と重なる `dictCostPenalty` の二重非線形ペナルティ）を、交差検証で同定可能な最小限のパラメータセット（例: 3〜4 個）へ縮約する。
+5. **Multi-Horizon Prefix / 短読みインターリーブの統一**: `KanaKanjiEngine` 側の `branchBonus`・`interleavePredictiveCandidates` と `LlmReranker` 側の EIS 効用・Strata 配置で二重になっている順位制御を、SLM 未ロード時のフォールバックのみに限定する。
+6. **英語側の統計化**: `EnglishDictionaryUtils` の優先度擬似スコア（`22.0/19.5/17.5`）・閾値群、`SentenceBoundaryDetector` の固定確率を、英語評価コーパスからの最尤推定値へ置換。
 
 ### Phase 3: 維持すべき不変条件 (Tier C)
 - バイナリフォーマット制約 (`MYASRDIC v1.0` の `u16` 上限・`ConnectionMatrix` サイズ)
-- 音声句読点・漢数字の非回帰保護リスト (`PRESERVED_WORDS`, `PRESERVED_IDIOMS`)
-- UI 安全ガード (`TAP_SAFE_WINDOW_MS`, `RAPID_TYPING_DEBOUNCE_MS`, VAD レイテンシ予算)
+- 音声句読点・漢数字の非回帰保護リスト (`PRESERVED_WORDS`, `PRESERVED_IDIOMS`) — Top-Line Quality Contract により削減対象外
+- UI 安全ガード (`TAP_SAFE_WINDOW_MS`, `RAPID_TYPING_DEBOUNCE_MS`, VAD レイテンシ予算 `≤ 200ms` / `≤ 2400ms`)
+- メモリ・レイテンシ予算（キャッシュ上限、`n_ctx`, SLM / ASR タイムアウト）
