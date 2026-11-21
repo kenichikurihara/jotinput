@@ -1683,8 +1683,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val maxWordCost: Int = 0,
         val wordCostSum: Int = 0,
         val wordCount: Int = 0,
-        val excessTransCostSum: Int = 0,
-        val pendingCoordKind: Int = 0
+        val excessTransCostSum: Int = 0
     )
 
     private fun isContentWord(lid: Int): Boolean = MozcPosCatalog.isContentWord(lid)
@@ -1923,23 +1922,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
                             val properAfterParticlePen = if (i > 0 && isFunctionalWord(path.lastRid) && isProperNoun(w.lid) && w.cost > 5000) 1200 else 0
 
-                            // Idea V2: Parallel Coordination Symmetry Bonus (e.g. "オン + と + オフ")
-                            val isKatakanaWord = w.surface.isNotEmpty() && w.surface.all { it in '\u30A0'..'\u30FF' || it == 'ー' }
-                            val isKanjiWord = !isKatakanaWord && w.surface.any { it in '\u4E00'..'\u9FFF' }
-                            val isCoordParticle = (w.surface == "と" || w.surface == "や") && isFunctionalWord(w.lid)
-                            val coordBonus = when {
-                                path.pendingCoordKind == -1 && isKatakanaWord -> 1200
-                                path.pendingCoordKind == -2 && isKanjiWord -> 600
-                                else -> 0
-                            }
-                            val nextCoordKind = when {
-                                isCoordParticle && path.pendingCoordKind > 0 -> -path.pendingCoordKind
-                                isKatakanaWord && (isContentWord(w.lid) || isProperNoun(w.lid)) -> 1
-                                isKanjiWord && isContentWord(w.lid) -> 2
-                                else -> 0
-                            }
-
-                            val newCost = path.cost + (w.cost - lengthBonus).coerceAtLeast(-50000) - userBonus + transitionCost + rarityDelta + properAfterParticlePen - coordBonus
+                            val newCost = path.cost + (w.cost - lengthBonus).coerceAtLeast(-50000) - userBonus + transitionCost + rarityDelta + properAfterParticlePen
                             val nextRid = if (w.rid > 0) w.rid else path.lastRid
 
                             val nextWordCostSum = path.wordCostSum + if (isFunctionalWord(w.lid) || isCanonical) 0 else effectiveWordCost
@@ -1988,8 +1971,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                     maxWordCost = newMaxWordCost,
                                     wordCostSum = nextWordCostSum,
                                     wordCount = nextWordCount,
-                                    excessTransCostSum = nextExcessTrans,
-                                    pendingCoordKind = nextCoordKind
+                                    excessTransCostSum = nextExcessTrans
                                 )
                             )
                         }

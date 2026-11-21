@@ -46,16 +46,20 @@ object SentenceBoundaryDetector {
 
         return when (val ch = prefix[idx]) {
             '\n' -> 1.0f
-            '!', '?', '！', '？', '。' -> 0.98f
+            '!', '?', '！', '？', '。' -> PROB_DEFINITE_BOUNDARY
             '.' -> evaluatePeriodBoundary(prefix, idx)
             else -> 0.0f
         }
     }
 
+    private const val PROB_DEFINITE_BOUNDARY = 0.98f
+    private const val PROB_AMBIGUOUS_BOUNDARY = 0.20f
+    private const val PROB_NON_BOUNDARY = 0.05f
+
     private fun evaluatePeriodBoundary(prefix: String, periodIdx: Int): Float {
         // Check for ellipsis ("..." or "..")
         if (periodIdx > 0 && prefix[periodIdx - 1] == '.') {
-            return 0.25f
+            return PROB_AMBIGUOUS_BOUNDARY
         }
 
         // Extract the token immediately preceding the period
@@ -65,23 +69,23 @@ object SentenceBoundaryDetector {
         }
         val tokenBeforePeriod = prefix.substring(start + 1, periodIdx)
         if (tokenBeforePeriod.isEmpty()) {
-            return 0.95f
+            return PROB_DEFINITE_BOUNDARY
         }
 
         // 1. Internal-period token (e.g., "e.g", "i.e", "U.S", "a.m", "p.m", "v1.0", "google.com")
         if (tokenBeforePeriod.contains('.')) {
-            return 0.05f
+            return PROB_NON_BOUNDARY
         }
 
         // 2. Single-letter initial (e.g., "J.", "A.")
         if (tokenBeforePeriod.length == 1 && tokenBeforePeriod[0].isLetter()) {
-            return 0.10f
+            return PROB_NON_BOUNDARY
         }
 
         // 3. Numeric list item after newline/start ("\n1. ") vs inline number ("Fig. 1. ")
         if (tokenBeforePeriod.all { it.isDigit() }) {
             val beforeNum = prefix.substring(0, start + 1).trimEnd(' ', '\t', '\r')
-            return if (beforeNum.isEmpty() || beforeNum.last() == '\n') 0.90f else 0.15f
+            return if (beforeNum.isEmpty() || beforeNum.last() == '\n') PROB_DEFINITE_BOUNDARY else PROB_NON_BOUNDARY
         }
 
         // 4. Corpus-derived Punkt abbreviation EOS probability P(EOS | stem, '.')
@@ -92,6 +96,6 @@ object SentenceBoundaryDetector {
         }
 
         // 5. Standard sentence-ending period
-        return 0.97f
+        return PROB_DEFINITE_BOUNDARY
     }
 }
