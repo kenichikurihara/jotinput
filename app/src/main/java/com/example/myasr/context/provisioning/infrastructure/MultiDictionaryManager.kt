@@ -3,6 +3,7 @@ package com.example.myasr.context.provisioning.infrastructure
 import com.example.myasr.AsrApp
 import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.kanakanji.domain.MozcPosCatalog
 import com.example.myasr.context.kanakanji.infrastructure.MmapDictionaryCompiler
 
 import android.content.Context
@@ -346,8 +347,8 @@ class MultiDictionaryManager(private val context: Context) {
         if (parts.size >= 5) {
             // reading, left_id, right_id, cost, surface
             val reading = JapaneseKanaUtils.normalizeReading(parts[0])
-            val lid = parts[1].toIntOrNull() ?: 1851
-            val rid = parts[2].toIntOrNull() ?: 1851
+            val lid = parts[1].toIntOrNull() ?: MozcPosCatalog.POS_NOUN_GENERAL
+            val rid = parts[2].toIntOrNull() ?: MozcPosCatalog.POS_NOUN_GENERAL
             val cost = parts[3].toIntOrNull() ?: 8000
             val surface = parts[4]
             if (reading.isNotBlank() && surface.isNotBlank()) {
@@ -358,7 +359,7 @@ class MultiDictionaryManager(private val context: Context) {
             val surface = parts[1]
             val cost = if (parts.size >= 3) parts[2].toIntOrNull() ?: 6000 else 6000
             if (reading.isNotBlank() && surface.isNotBlank()) {
-                builder.addToken(reading, surface, cost, 1851, 1851)
+                builder.addToken(reading, surface, cost, MozcPosCatalog.POS_NOUN_GENERAL, MozcPosCatalog.POS_NOUN_GENERAL)
             }
         }
     }
@@ -377,7 +378,7 @@ class MultiDictionaryManager(private val context: Context) {
                     for (r in readings) {
                         val norm = JapaneseKanaUtils.normalizeReading(r)
                         if (norm.isNotBlank() && emoji.isNotBlank()) {
-                            builder.addToken(norm, emoji, 5500, 2632, 2632)
+                            builder.addToken(norm, emoji, 5500, MozcPosCatalog.POS_SYMBOL, MozcPosCatalog.POS_SYMBOL)
                         }
                     }
                 }
@@ -390,7 +391,7 @@ class MultiDictionaryManager(private val context: Context) {
                     for (r in readings) {
                         val norm = JapaneseKanaUtils.normalizeReading(r)
                         if (norm.isNotBlank() && emoticon.isNotBlank()) {
-                            builder.addToken(norm, emoticon, 4500, 2632, 2632)
+                            builder.addToken(norm, emoticon, 4500, MozcPosCatalog.POS_SYMBOL, MozcPosCatalog.POS_SYMBOL)
                         }
                     }
                 }
@@ -403,7 +404,7 @@ class MultiDictionaryManager(private val context: Context) {
                     if (reading.isNotBlank()) {
                         kanjiString.forEachIndexed { idx, ch ->
                             val kanjiCost = (7500 + idx * 120).coerceAtMost(14000)
-                            builder.addToken(reading, ch.toString(), kanjiCost, 1851, 1851)
+                            builder.addToken(reading, ch.toString(), kanjiCost, MozcPosCatalog.POS_NOUN_GENERAL, MozcPosCatalog.POS_NOUN_GENERAL)
                         }
                     }
                 }
@@ -414,7 +415,7 @@ class MultiDictionaryManager(private val context: Context) {
                     val reading = JapaneseKanaUtils.normalizeReading(parts[0])
                     val symbol = parts[1]
                     if (reading.isNotBlank() && symbol.isNotBlank()) {
-                        builder.addToken(reading, symbol, 4000, 2632, 2632)
+                        builder.addToken(reading, symbol, 4000, MozcPosCatalog.POS_SYMBOL, MozcPosCatalog.POS_SYMBOL)
                     }
                 }
             }

@@ -1654,30 +1654,17 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val pendingCoordKind: Int = 0
     )
 
-    private fun isContentWord(lid: Int): Boolean {
-        if (isSuffix(lid)) return false
-        return (lid in 1841..2195) || (lid in 434..1840) || (lid in 2196..2590) || (lid in 12..28) || (lid in 2659..2671)
-    }
+    private fun isContentWord(lid: Int): Boolean = MozcPosCatalog.isContentWord(lid)
 
-    private fun isSuffix(lid: Int): Boolean {
-        return lid == 2032 || lid == 1941 || lid == 1951 || lid == 1975 || (lid in 1941..2034)
-    }
+    private fun isSuffix(lid: Int): Boolean = MozcPosCatalog.isSuffix(lid)
 
-    private fun isFunctionalWord(lid: Int): Boolean {
-        return lid in 29..433
-    }
+    private fun isFunctionalWord(lid: Int): Boolean = MozcPosCatalog.isFunctionalWord(lid)
 
-    private fun isAuxiliaryVerb(lid: Int): Boolean {
-        return lid in 29..267
-    }
+    private fun isAuxiliaryVerb(lid: Int): Boolean = MozcPosCatalog.isAuxiliaryVerb(lid)
 
-    private fun isPredicatePos(posId: Int): Boolean {
-        return (posId in 434..1840) || (posId in 2196..2590)
-    }
+    private fun isPredicatePos(posId: Int): Boolean = MozcPosCatalog.isPredicatePos(posId)
 
-    private fun isProperNoun(lid: Int): Boolean {
-        return lid in 1917..1940
-    }
+    private fun isProperNoun(lid: Int): Boolean = MozcPosCatalog.isProperNoun(lid)
 
     private fun queryAllMmapExactTokens(reading: String, includeEmojiSymbols: Boolean = true): List<WordEntry> {
         val dicts = activeMmapDictionaries
@@ -1761,10 +1748,10 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 isFunctionalWord(lid) -> countForPos < 2
 
                 // Priority 2: Verbs (434..1840) & Adjectives (2196..2590) -> up to 2 per POS pair
-                (lid in 434..1840) || (lid in 2196..2590) -> countForPos < 2
+                isPredicatePos(lid) -> countForPos < 2
 
                 // Priority 3: Proper nouns, personal/place names (1917..1940) -> up to 4 total, 2 per POS
-                lid in 1917..1940 -> properNounCount < 4 && countForPos < 2
+                isProperNoun(lid) -> properNounCount < 4 && countForPos < 2
 
                 // Priority 4: General nouns, suffixes, adverbs -> up to 8 total, 3 per POS
                 isContentWord(lid) || isSuffix(lid) -> generalNounCount < 8 && countForPos < 3
@@ -1777,9 +1764,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 selected.add(w)
                 posPairCounts[posKey] = countForPos + 1
                 when {
-                    lid in 1917..1940 -> properNounCount++
+                    isProperNoun(lid) -> properNounCount++
                     isContentWord(lid) || isSuffix(lid) -> generalNounCount++
-                    !isFunctionalWord(lid) && lid !in 434..1840 && lid !in 2196..2590 -> symbolCount++
+                    !isFunctionalWord(lid) && !isPredicatePos(lid) -> symbolCount++
                 }
                 if (selected.size >= maxTotal) break
             } else {
@@ -2365,20 +2352,18 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
     private fun isSahenNoun(lid: Int, rid: Int, surface: String): Boolean {
         if (isProperNoun(lid) || isProperNoun(rid)) return false
-        return lid == 1841 || rid == 1841 || lid in 2035..2150 || rid in 2035..2150
+        return MozcPosCatalog.isSahenNoun(lid) || MozcPosCatalog.isSahenNoun(rid)
     }
 
     private fun isVerbStem(lid: Int, rid: Int, surface: String): Boolean {
         if (isProperNoun(lid) || isProperNoun(rid)) return false
-        if (isPredicatePos(lid) || isPredicatePos(rid)) return true
-        return surface.length >= 2 && (surface.endsWith("っ") || surface.endsWith("い") || surface.endsWith("め") ||
-            surface.endsWith("り") || surface.endsWith("き") || surface.endsWith("ぎ") || surface.endsWith("し") || surface.endsWith("ち"))
+        return isPredicatePos(lid) || isPredicatePos(rid)
     }
 
     private fun isGeneralNoun(lid: Int, rid: Int, surface: String): Boolean {
         if (isProperNoun(lid) || isProperNoun(rid)) return false
         if (isSahenNoun(lid, rid, surface)) return false
-        return (lid in 1841..2195 || rid in 1841..2195) || isContentWord(lid)
+        return MozcPosCatalog.isInNounRange(lid) || MozcPosCatalog.isInNounRange(rid) || isContentWord(lid)
     }
 
     /**
@@ -2505,9 +2490,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 if (fullReading.startsWith(normalized) && fullSurface != normalized) {
                     if (matrix != null && stemWord.rid > 0 && tail.reading.isNotEmpty()) {
                         val tailLid = when (tail.surface) {
-                            "です", "でした", "ですので", "ですが" -> 172
-                            "中", "中ですので" -> 2003
-                            "します", "しました", "いたします" -> 1825
+                            "です", "でした", "ですので", "ですが" -> MozcPosCatalog.POS_AUX_DESU
+                            "中", "中ですので" -> MozcPosCatalog.POS_SUFFIX_CHUU
+                            "します", "しました", "いたします" -> MozcPosCatalog.POS_SAHEN_SURU_MASU
                             else -> 0
                         }
                         if (tailLid > 0) {
