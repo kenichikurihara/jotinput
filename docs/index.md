@@ -352,6 +352,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 67. [コードベース内ヒューリスティクス網羅リスト＆削減ロードマップ (Heuristics Inventory & Reduction Plan)](heuristics_inventory_and_reduction_plan.md)
     - 辞書コンパイル・Viterbi ラティス探索・ゼロクエリ予測・SLM リランキング・英語入力・音声認識後処理の各ステップに存在する決め打ちスコア、品詞 ID、長さ制限、しきい値を網羅的に列挙し、Tier A〜C の削減ロードマップを定義。
 
+68. [詳細設計書: ヒューリスティクス削減計画 (Tier A0 / A / B) (`dd_heuristics_reduction_tier_a_and_b.md`)](dd_heuristics_reduction_tier_a_and_b.md)
+    - Tier A0（挙動不変リファクタ）、Tier A（コーパス一本化・予測委譲）、Tier B（POS 自動生成、行列必須化、Viterbi `V1/V2/V3` の SLM-off/on 二軸評価削減、SLM パラメータ縮約、英語・音声訂正の統計化）の詳細実装仕様と検証ゲート G1〜G6。
+
 ---
 
 ## 📂 Source Code Layout
