@@ -349,6 +349,9 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 66. [オンデバイスLLM/SLM レイテンシ・ヘッドルーム分析と高速化アイデア設計書 (SLM Latency Headroom Analysis & Optimization Ideas)](docs/slm_latency_headroom_and_optimization_ideas.md)
     - `LlmReranker.kt` / `llm_reranker.cc` (`llama.cpp` バックエンド) における5大レイテンシボトルネック（Stage 2 の候補ごと直列 `llama_decode` による DRAM 帯域浪費、潜在格助詞バリアント重複デコード、`ContextWindowTrimmer` 先頭シフトによる LCP=0 キャッシュ全破棄、15.2万語彙 LM Head 射影、Little コア混入によるバリア同期ストラグラー遅延）の解剖と、レイテンシを $1/3 \sim 1/10$（平均 $25\sim 105\text{ms} \to 1\sim 12\text{ms}$）へ短縮する10個の改善アイデア（Prefix-Tree Packed Single-Pass Decoding、RoPE Position-Shift Ring KV Cache、Prior-Aware Admissible Lower Bound、Sparse LM Head、In-Flight Speculative Context Warming 等）の設計仕様。
 
+67. [コードベース内ヒューリスティクス網羅リスト＆削減ロードマップ (Heuristics Inventory & Reduction Plan)](heuristics_inventory_and_reduction_plan.md)
+    - 辞書コンパイル・Viterbi ラティス探索・ゼロクエリ予測・SLM リランキング・英語入力・音声認識後処理の各ステップに存在する決め打ちスコア、品詞 ID、長さ制限、しきい値を網羅的に列挙し、Tier A〜C の削減ロードマップを定義。
+
 ---
 
 ## 📂 Source Code Layout
