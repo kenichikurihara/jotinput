@@ -340,4 +340,70 @@ class CandidateRerankJudgementTest {
         assertEquals("お願いします", paired[0].surface)
         assertEquals("お願い", paired[1].surface)
     }
+
+    @Test
+    fun `zero-query next phrase predictions follow viewport-aware anti-jitter contract`() {
+        val fastPredictions = listOf(
+            ConversionCandidate(surface = "を", reading = "を", isPrediction = true, source = "particle"),
+            ConversionCandidate(surface = "が", reading = "が", isPrediction = true, source = "particle"),
+            ConversionCandidate(surface = "に", reading = "に", isPrediction = true, source = "particle"),
+            ConversionCandidate(surface = "は", reading = "は", isPrediction = true, source = "particle"),
+            ConversionCandidate(surface = "から", reading = "から", isPrediction = true, source = "particle")
+        )
+        val slmRerankedPredictions = listOf(
+            ConversionCandidate(surface = "確認します", reading = "かくにんします", isPrediction = true, source = "slm"),
+            ConversionCandidate(surface = "に", reading = "に", isPrediction = true, source = "particle"),
+            ConversionCandidate(surface = "について", reading = "について", isPrediction = true, source = "slm"),
+            ConversionCandidate(surface = "を", reading = "を", isPrediction = true, source = "particle"),
+            ConversionCandidate(surface = "が", reading = "が", isPrediction = true, source = "particle"),
+            ConversionCandidate(surface = "は", reading = "は", isPrediction = true, source = "particle"),
+            ConversionCandidate(surface = "から", reading = "から", isPrediction = true, source = "particle")
+        )
+
+        // 1. Within 50ms micro-wait hold -> single-pass direct SLM
+        val withinHold = CandidateRerankJudgement.judgeViewportAwareOrdering(
+            CandidateRerankJudgement.ViewportAwareOrderingInput(
+                baseCandidates = fastPredictions,
+                rerankedCandidates = slmRerankedPredictions,
+                isPhase1AlreadyRendered = false,
+                hasReservedHeroSlot = false,
+                frozenVisibleCount = 0,
+                isUserTouchingStrip = false
+            )
+        )
+        assertEquals(CandidateRerankJudgement.UiRenderStrategy.DIRECT_SINGLE_PASS_SLM, withinHold.strategy)
+        assertEquals("確認します", withinHold.finalCandidates.first().surface)
+
+        // 2. After 50ms Phase 1 render (3 visible slots frozen) -> Hero gets "確認します", Zone B frozen ["を", "が", "に"], Zone C reranked ["について", "は", "から"]
+        val afterHold = CandidateRerankJudgement.judgeViewportAwareOrdering(
+            CandidateRerankJudgement.ViewportAwareOrderingInput(
+                baseCandidates = fastPredictions,
+                rerankedCandidates = slmRerankedPredictions,
+                isPhase1AlreadyRendered = true,
+                hasReservedHeroSlot = true,
+                frozenVisibleCount = 3,
+                isUserTouchingStrip = false
+            )
+        )
+        assertEquals(
+            CandidateRerankJudgement.UiRenderStrategy.PHASE2_POPULATE_HERO_AND_RERANK_OFFSCREEN_TAIL,
+            afterHold.strategy
+        )
+        assertEquals("確認します", afterHold.heroSlotCandidate?.surface)
+        assertEquals(listOf("を", "が", "に"), afterHold.frozenZoneBCandidates.map { it.surface })
+        assertEquals(listOf("について", "は", "から"), afterHold.offScreenZoneCCandidates.map { it.surface })
+
+        // 3. While user is touching/scrolling strip -> defer update
+        val whileTouching = CandidateRerankJudgement.judgeViewportAwareOrdering(
+            CandidateRerankJudgement.ViewportAwareOrderingInput(
+                baseCandidates = fastPredictions,
+                rerankedCandidates = slmRerankedPredictions,
+                isPhase1AlreadyRendered = true,
+                hasReservedHeroSlot = true,
+                frozenVisibleCount = 3,
+                isUserTouchingStrip = true
+            )
+        )
+        assertEquals(CandidateRerankJudgement.UiRenderStrategy.DEFER_WHILE_USER_TOUCHING, whileTouching.strategy)
+    }
 }

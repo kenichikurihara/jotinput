@@ -1689,6 +1689,7 @@ class VoiceInputMethodService : InputMethodService() {
         rerankJob?.cancel()
         warmContextJob?.cancel()
         speculativePrewarmJob?.cancel()
+        isCurrentCandidatesReranked = false
         updateDebugSlmBadge(null)
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
         val suggestJpPeriod = KeyboardHeightManager.isJapanesePeriodSuggestionEnabled(this)
@@ -1714,6 +1715,7 @@ class VoiceInputMethodService : InputMethodService() {
                 textBeforeCursor = textBeforeCursor
             )
         )
+        val isAntiJitterUiEnabled = KeyboardHeightManager.isAntiJitterCandidateUiEnabled(this)
 
         // Z5: Check speculative pre-warmed zero-query cache for 0ms single-pass render on commit
         val prewarmedSlm = if (nextPhraseDecision.decision) {
@@ -1721,6 +1723,7 @@ class VoiceInputMethodService : InputMethodService() {
         } else {
             null
         }
+        var prewarmedCombined: List<ConversionCandidate>? = null
         if (prewarmedSlm != null && prewarmedSlm.isNotEmpty()) {
             val combined = mergeZeroQueryCandidates(fastPredictions, prewarmedSlm)
             val alpha = KeyboardHeightManager.getSlmWeightAlpha(this)
@@ -1738,23 +1741,62 @@ class VoiceInputMethodService : InputMethodService() {
                 val finalZeroQuery = CandidateRerankJudgement.applyZeroQueryHorizonPairing(
                     fastReranked.candidates + combined.drop(8)
                 )
-                val engineType = KeyboardHeightManager.getRerankEngineType(this)
-                updateDebugSlmBadge(engineType.badgeLabel)
-                candidateStripView?.setCandidates(finalZeroQuery)
-                if (fastReranked.isFullyComplete) {
-                    return
+                if (fastReranked.isFullyComplete || !isAntiJitterUiEnabled) {
+                    isCurrentCandidatesReranked = fastReranked.isFullyComplete
+                    val engineType = KeyboardHeightManager.getRerankEngineType(this)
+                    updateDebugSlmBadge(engineType.badgeLabel)
+                    candidateStripView?.setCandidatesSinglePass(
+                        finalZeroQuery,
+                        highlightFirstAsAi = isAntiJitterUiEnabled && fastReranked.isFullyComplete
+                    )
+                    if (fastReranked.isFullyComplete) {
+                        return
+                    }
+                } else {
+                    prewarmedCombined = finalZeroQuery
                 }
-            } else {
+            } else if (!isAntiJitterUiEnabled) {
                 candidateStripView?.setCandidates(CandidateRerankJudgement.applyZeroQueryHorizonPairing(combined))
+            } else {
+                prewarmedCombined = CandidateRerankJudgement.applyZeroQueryHorizonPairing(combined)
             }
-        } else if (fastPredictions.isNotEmpty()) {
-            candidateStripView?.setCandidates(fastPredictions)
-        } else {
-            candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+        } else if (!nextPhraseDecision.decision || !isAntiJitterUiEnabled) {
+            if (fastPredictions.isNotEmpty()) {
+                candidateStripView?.setCandidates(fastPredictions)
+            } else {
+                candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+            }
         }
 
         if (!nextPhraseDecision.decision) {
             return
+        }
+
+        val initialPhase1Candidates = prewarmedCombined ?: fastPredictions
+        var isPhase1Rendered = false
+        var phase1DisplayCandidates: List<ConversionCandidate> = emptyList()
+
+        if (isAntiJitterUiEnabled) {
+            val heroReservedCharCount = (prewarmedSlm?.firstOrNull()?.surface?.length
+                ?: initialPhase1Candidates
+                    .filter { it.source != "particle" && it.source != "punctuation" }
+                    .maxOfOrNull { it.surface.length }
+                ?: 3).coerceIn(2, 4)
+
+            phase1TimerJob = serviceScope.launch(Dispatchers.Main) {
+                delay(CandidateRerankJudgement.MICRO_WAIT_HOLD_MS)
+                if (!arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing() && !isCurrentCandidatesReranked) {
+                    isPhase1Rendered = true
+                    if (initialPhase1Candidates.isNotEmpty()) {
+                        phase1DisplayCandidates = candidateStripView?.renderPhase1WithHeroPlaceholder(
+                            baseCandidates = initialPhase1Candidates,
+                            reservedHeroCharCount = heroReservedCharCount
+                        ) ?: CandidateStripView.filterAndDeduplicateDisplayCandidates(initialPhase1Candidates)
+                    } else {
+                        candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                    }
+                }
+            }
         }
 
         rerankJob = serviceScope.launch(Dispatchers.Default) {
@@ -1793,17 +1835,79 @@ class VoiceInputMethodService : InputMethodService() {
                     // Verify IME state has not changed (no new keystroke or streaming text while computing)
                     if (isActive && !arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing() && reranked.isNotEmpty()) {
                         withContext(Dispatchers.Main) {
-                            if (!arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing()) {
-                                val engineType = KeyboardHeightManager.getRerankEngineType(this@VoiceInputMethodService)
-                                val debugBadge = if (slmUsed) engineType.badgeLabel else null
-                                updateDebugSlmBadge(debugBadge)
+                            phase1TimerJob?.cancel()
+                            if (arbitrator.isKeyboardComposing() || arbitrator.isStreamingComposing()) {
+                                return@withContext
+                            }
+                            isCurrentCandidatesReranked = true
+                            val engineType = KeyboardHeightManager.getRerankEngineType(this@VoiceInputMethodService)
+                            val debugBadge = if (slmUsed) engineType.badgeLabel else null
+                            updateDebugSlmBadge(debugBadge)
+
+                            if (!isAntiJitterUiEnabled) {
                                 candidateStripView?.setCandidates(reranked)
+                                return@withContext
+                            }
+
+                            val filteredReranked = CandidateStripView.filterAndDeduplicateDisplayCandidates(reranked)
+                                .ifEmpty { reranked }
+
+                            if (!isPhase1Rendered || phase1DisplayCandidates.isEmpty()) {
+                                candidateStripView?.setCandidatesSinglePass(
+                                    filteredReranked,
+                                    highlightFirstAsAi = slmUsed
+                                )
+                            } else {
+                                val frozenSource = phase1DisplayCandidates
+                                val visibleCount = candidateStripView?.computeVisibleCandidateCount(excludeHeroSlot = true)
+                                    ?: CandidateRerankJudgement.DEFAULT_VISIBLE_SLOT_FALLBACK
+                                val decision = CandidateRerankJudgement.judgeViewportAwareOrdering(
+                                    CandidateRerankJudgement.ViewportAwareOrderingInput(
+                                        baseCandidates = frozenSource,
+                                        rerankedCandidates = filteredReranked,
+                                        isPhase1AlreadyRendered = true,
+                                        hasReservedHeroSlot = true,
+                                        frozenVisibleCount = visibleCount,
+                                        isUserTouchingStrip = candidateStripView?.isUserInteracting == true
+                                    )
+                                )
+                                when (decision.strategy) {
+                                    CandidateRerankJudgement.UiRenderStrategy.DIRECT_SINGLE_PASS_SLM -> {
+                                        candidateStripView?.setCandidatesSinglePass(
+                                            decision.finalCandidates,
+                                            highlightFirstAsAi = slmUsed
+                                        )
+                                    }
+                                    CandidateRerankJudgement.UiRenderStrategy.PHASE2_POPULATE_HERO_AND_RERANK_OFFSCREEN_TAIL -> {
+                                        candidateStripView?.applyPhase2NonDisruptiveUpdate(decision)
+                                    }
+                                    CandidateRerankJudgement.UiRenderStrategy.DEFER_WHILE_USER_TOUCHING -> {
+                                        candidateStripView?.deferPhase2UpdateUntilTouchRelease {
+                                            if (!arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing()) {
+                                                val newVisible = candidateStripView?.computeVisibleCandidateCount(excludeHeroSlot = true)
+                                                    ?: CandidateRerankJudgement.DEFAULT_VISIBLE_SLOT_FALLBACK
+                                                val deferredDecision = CandidateRerankJudgement.judgeViewportAwareOrdering(
+                                                    CandidateRerankJudgement.ViewportAwareOrderingInput(
+                                                        baseCandidates = frozenSource,
+                                                        rerankedCandidates = filteredReranked,
+                                                        isPhase1AlreadyRendered = true,
+                                                        hasReservedHeroSlot = true,
+                                                        frozenVisibleCount = newVisible,
+                                                        isUserTouchingStrip = false
+                                                    )
+                                                )
+                                                candidateStripView?.applyPhase2NonDisruptiveUpdate(deferredDecision)
+                                            }
+                                        }
+                                    }
+                                    else -> {}
+                                }
                             }
                         }
                     }
                 }
             } catch (e: TimeoutCancellationException) {
-                Log.w(TAG, "SLM next-phrase prediction timed out (>3000ms), fail-safe retaining fast predictions")
+                Log.w(TAG, "SLM next-phrase prediction timed out (>2500ms), fail-safe retaining fast predictions")
             } catch (e: Exception) {
                 Log.w(TAG, "SLM prediction worker error: ${e.message}")
             }
