@@ -364,8 +364,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
 
-            // 2. Register high-priority grammatical particles and common conversational vocabulary
-            registerCanonicalVocabulary()
+            // 2. Register structural brackets; register canonical words only when no base dictionary is loaded
+            if (!baseLoaded) {
+                registerCanonicalWordsFallback()
+            }
+            registerStructuralBrackets()
 
             // 3. Load User Custom Dictionary (highest priority)
             try {
@@ -404,7 +407,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     @Synchronized
     fun initializeWithStream(inputStream: InputStream) {
         loadTsv(inputStream, "base")
-        registerCanonicalVocabulary()
+        registerStructuralBrackets()
         isInitialized = true
     }
 
@@ -440,7 +443,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return f.exists() && f.length() > 1024
     }
 
-    internal fun registerCanonicalVocabulary() {
+    internal fun registerCanonicalWordsFallback() {
         val highPriority = listOf(
             // Primary functional particles with Mozc OSS POS IDs
             CanonicalWord("は", "は", 283, 283),
@@ -529,7 +532,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         for (item in highPriority) {
             insertWord(item.reading, item.surface, cost = 50, source = "canonical", lid = item.lid, rid = item.rid)
         }
+    }
 
+    internal fun registerStructuralBrackets() {
         // Japanese and ASCII brackets derived from Mozc OSS symbol.tsv
         val openingBrackets = listOf(
             "（", "「", "『", "【", "（）", "「」", "『』", "【】",
