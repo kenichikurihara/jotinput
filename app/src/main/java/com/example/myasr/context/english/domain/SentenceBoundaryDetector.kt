@@ -44,7 +44,7 @@ object SentenceBoundaryDetector {
             return 1.0f
         }
 
-        return when (val ch = prefix[idx]) {
+        return when (prefix[idx]) {
             '\n' -> 1.0f
             '!', '?', '！', '？', '。' -> PROB_DEFINITE_BOUNDARY
             '.' -> evaluatePeriodBoundary(prefix, idx)

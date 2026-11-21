@@ -21,6 +21,9 @@
 ### 1.3 改訂履歴
 - **v1** (2026-11-20): 初版。
 - **v2** (2026-11-20): レビュー反映。`isVerbStem` と `matrix == null` フォールバックを Tier A→B に変更、`Idea V1` の二重実装・規模の指摘、VAD 打鍵抑制の実効値修正、音声訂正・英語 Kotlin 側・IME タイミング・キャッシュ上限の抜け漏れ追加、Tier A0 / Phase 0 の新設、共通検証ゲート（SLM-off 評価を含む）の追加。
+- **v3** (2026-11-20): Tier A0 / A / B 実装結果を反映（詳細: [`docs/dd_heuristics_reduction_tier_a_and_b.md`](docs/dd_heuristics_reduction_tier_a_and_b.md) §5）。
+  - **削除・削減済み**: `MAX_COST_THRESHOLD` 削除、`isVerbStem` 末尾文字フォールバック削除、`matrix == null` ペナルティ (`+3000`) 削除、`NextPhrasePredictor` 非決定的時刻分岐 (`5..10時`) 削除、辞書ロード済み時の単形態素 67 語 `cost = 50` 上書き廃止、`properAfterParticlePen (+1200)` 削除、`DEFAULT_LENGTH_BONUS_PER_CHAR` を `2000 → 1000` に 50% 削減、`LlmReranker` `dictCostPenalty`/`dictCostNats` の二重非線形 `rareExcess^2` 削除、`Hybrid-6b` `thetaGate` の `+ 0.25f * deltaExt` 削除、`SentenceBoundaryDetector` の 7 段階確率を 3 クラスに集約。
+  - **統一・集約済み**: `Idea V1` 二重実装を `computeLengthBonus` に統一、`MozcPosCatalog` 新設＋POS ID 集約、空間編集距離の Kotlin/C++ 同期テスト追加、`muSpan` / `AsrManager` / `VoiceInputMethodService` / `AudioRecorder` (`350ms`) / `VoiceCorrectionScoring` 定数集約。
 
 ---
 
