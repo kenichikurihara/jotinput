@@ -433,9 +433,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                         1.0f
                     }
                     val obsEff = lambdaObs * cand.obsPenalty * 5.0f * obsDiscount
-                    val c = cand.dictCost.coerceIn(0, 15000)
-                    val rareExcess = maxOf(0f, (c - 6000) / 2000.0f)
-                    val dictCostNats = (c / 3000.0f) + 0.45f * rareExcess * rareExcess
+                    val dictCostNats = cand.dictCost.coerceIn(0, 15000) / 3000.0f
                     val countPrior = if (cand.historyCount > 0) minOf(3.0f, cand.historyCount.toFloat()) else 0.0f
                     val bigramPrior = when (cand.source) {
                         "history_skip_bigram" -> 2.5f

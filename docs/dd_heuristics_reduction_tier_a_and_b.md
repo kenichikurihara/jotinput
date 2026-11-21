@@ -179,12 +179,12 @@
 
 ## 5. 実行順序と進捗管理
 
-以下の順序で 1 ステップずつ実装・テスト（G1〜G5）を実行します。
+以下の順序で 1 ステップずつ実装・CI（`Android CI`）検証を実施しました。
 
-1. **Step 1 (Phase 0 一括)**: `A0-1`〜`A0-5`（挙動不変リファクタリング）→ `./gradlew testDebugUnitTest` で 100% パス確認
-2. **Step 2 (B-1)**: `MozcPosCatalog.kt` 抽出＋`isVerbStem` 末尾文字ヒューリスティクス削除 → G1/G2 検証
-3. **Step 3 (B-2)**: `connectionMatrix == null` 時専用ペナルティ（`+3000`）の削除 → G1/G2 検証
-4. **Step 4 (A-1)**: `registerCanonicalVocabulary()` の辞書ロード済み時スキップ＆`source == "canonical"` 特別免除整理 → G1/G2/G3 検証
-5. **Step 5 (A-2)**: `NextPhrasePredictor` の非決定的時刻分岐 (`5..10時`) 削除と文頭シード整理 → G1/G4 検証
-6. **Step 6 (B-3)**: Viterbi `coordBonus` 等のアブレーション削除と長さボーナス検証 → G1/G2/G3 検証
-7. **Step 7 (B-4 / B-5)**: `LlmReranker` 二重コスト整理 & `SentenceBoundaryDetector` 確率クラス集約 → G1/G3/G5 検証
+1. **[完了] Step 1 (Phase 0 一括 `a72c32f`, `594f813`)**: `A0-1`〜`A0-5` 完了。`AudioRecorder.notifyUserTyping` のデフォルト値も `350L` に同期。
+2. **[完了] Step 2 (B-1 `1313000`, `594f813`)**: `MozcPosCatalog.kt` 抽出＋`MozcPosCatalogTest` 追加＋`isVerbStem` 末尾文字ヒューリスティクス削除。
+3. **[完了] Step 3 (B-2 `e29587e`)**: `connectionMatrix == null` 時専用ペナルティ（`+3000`）を削除。
+4. **[完了] Step 4 (A-1 `05f2b5d`, `594f813`)**: 辞書ロード済み時に単形態素 67 語の `cost = 50` 上書きを廃止（未ロード時のみフォールバック）。※実測により単形態素辞書に無い複形態素 11 語（`ている` 等）は `LongPhraseConversionTest` 維持のため `registerMultiMorphemeAuxiliaryChunks()` として分離保持。
+5. **[一部完了] Step 5 (A-2 `e29587e`)**: `NextPhrasePredictor` の非決定的時刻分岐 (`5..10時`) を削除し `DEFAULT_SENTENCE_START_SEEDS` へ整理。（残課題: `CANONICAL_COLLOCATIONS` の汎用 Loop 2 / 外部データ移行）
+6. **[一部完了] Step 6 (B-3b `ef6eafd`)**: `properAfterParticlePen (+1200)` を削除。※`coordBonus` は SLM-off の `KanaKanjiEngineDiversityTest`（「オンとオフ」）で必須と判明したため復元。（残課題: `DEFAULT_LENGTH_BONUS_PER_CHAR` のスイープ評価）
+7. **[一部完了] Step 7 (B-4 / B-5 `16a9d70`, `ef6eafd`)**: `LlmReranker` の `dictCostPenalty` / `dictCostNats` 双方から二重非線形 `rareExcess^2` を削除して線形 `c / 3000f` に統一、`SentenceBoundaryDetector` を 3 事前確率クラスに集約、`VoiceCorrectionScoring` の重み・ゲート定数を集約。（残課題: Hybrid-6b 5-fold CV 縮約、実機 `./deploy.sh` 検証）

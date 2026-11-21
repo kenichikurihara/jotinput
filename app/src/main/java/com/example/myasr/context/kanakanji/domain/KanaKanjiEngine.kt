@@ -1912,7 +1912,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                 0
                             }
 
-                            // Idea V2: Incremental Max-Morpheme Surprisal (L_inf) Hinge Penalty & Single Proper Noun Guard
+                            // Idea V2: Incremental Max-Morpheme Surprisal (L_inf) Hinge Penalty
                             val effectiveWordCost = if (isUser || isCanonical) 0 else w.cost.coerceAtLeast(0)
                             val newMaxWordCost = maxOf(path.maxWordCost, effectiveWordCost)
                             val prevRarityPen = maxOf(0, path.maxWordCost - RARITY_HINGE_THRESHOLD) / 2

@@ -106,6 +106,9 @@ object VoiceCorrectionScoring {
     private const val RECENCY_DECAY_DAYS = 60.0
     private const val CONTEXT_TOKEN_BONUS = 0.8f
     private const val EXACT_CONTEXT_BONUS = 2.0f
+    private const val MAX_LOG_FREQ_CAP = 3.0f
+    private const val MIN_COHERENCE_GATE = 0.35f
+    private const val MIN_SLM_OFF_CONTEXT_SCORE = 2.2f
 
     /**
      * Applies learned voice corrections to [text] using S2 (Confusion-Pair + Context),
@@ -177,13 +180,13 @@ object VoiceCorrectionScoring {
                 if (deltaNll != null) {
                     val gate = computeCoherenceGate(deltaNll)
                     val boost = gate * VoiceCorrectionDecisionModel.DEFAULT_BETA_VOICE *
-                        ln(1.0 + entry.netCount().toDouble()).toFloat().coerceAtMost(3.0f)
+                        ln(1.0 + entry.netCount().toDouble()).toFloat().coerceAtMost(MAX_LOG_FREQ_CAP)
                     // Only pass coherence if net energy (deltaNll - boost) favors corrected form
-                    slmCoherencePassed = (deltaNll - boost) < 0.0f && gate >= 0.35f
+                    slmCoherencePassed = (deltaNll - boost) < 0.0f && gate >= MIN_COHERENCE_GATE
                 } else {
                     // Without SLM scoring, check strong context cue match; otherwise stay safe (gate off for tier 1)
                     val ctxScore = computeConfusionScore(entry, contextBefore, nowMs)
-                    slmCoherencePassed = ctxScore >= 2.2f
+                    slmCoherencePassed = ctxScore >= MIN_SLM_OFF_CONTEXT_SCORE
                 }
             }
 
