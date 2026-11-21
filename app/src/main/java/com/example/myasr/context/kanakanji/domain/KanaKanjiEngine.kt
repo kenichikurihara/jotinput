@@ -791,22 +791,40 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             val contextRid = if (contextKey.isNotEmpty()) surfaceToRidMap[contextKey] ?: 0 else 0
             val matrix = connectionMatrix
             val connRid = if (contextRid > 0) contextRid else 0
+            val boundaryChars = "とはがをにでものかねよ"
 
-            fun singleViterbiCost(rawCost: Int, lid: Int): Int {
+            fun singleViterbiCost(rawCost: Int, lid: Int, rid: Int, source: String): Int {
                 val spanLen = normalized.length
-                val bonus = if (spanLen > 1) {
+                val isUserOrCanon = source == "user" || source == "canonical"
+                val bonus = if (spanLen > 1 && !isUserOrCanon) {
                     val conf = ((8500 - rawCost).toFloat() / 4000.0f).coerceIn(0.15f, 1.0f)
-                    ((spanLen - 1) * 2000 * conf).toInt()
-                } else 0
+                    val touchesTrailingParticle = normalized.last() in boundaryChars
+                    val isRiskyOverSpan = (isProperNoun(lid) && rawCost > 4500) || rawCost > 5200
+                    val effectiveConf = if (touchesTrailingParticle && isRiskyOverSpan) minOf(conf, 0.25f) else conf
+                    ((spanLen - 1) * 2000 * effectiveConf).toInt()
+                } else if (spanLen > 1) {
+                    (spanLen - 1) * 2000
+                } else {
+                    0
+                }
+                val rarityPen = if (isUserOrCanon) 0 else maxOf(0, rawCost - 6200) / 2
                 val transCost = if (matrix != null && lid > 0) matrix.getTransitionCost(connRid, lid) else 0
-                return rawCost - bonus + transCost
+                val eosCost = if (matrix != null && rid > 0) matrix.getTransitionCost(rid, 0) else 0
+                return rawCost - bonus + transCost + rarityPen + eosCost
             }
 
             val step2StartIndex = result.size
             val step2ViterbiCosts = HashMap<String, Int>()
 
+            fun recordStep2Cost(surface: String, vCost: Int) {
+                val prev = step2ViterbiCosts[surface]
+                if (prev == null || vCost < prev) {
+                    step2ViterbiCosts[surface] = vCost
+                }
+            }
+
             val mmapTokens = queryAllMmapExactTokens(normalized).sortedBy { tok ->
-                singleViterbiCost(tok.cost, tok.lid)
+                singleViterbiCost(tok.cost, tok.lid, tok.rid, tok.source)
             }
             for (tok in mmapTokens) {
                 val cand = ConversionCandidate(
@@ -816,10 +834,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     source = tok.source,
                     dictCost = tok.cost
                 )
+                val vCost = singleViterbiCost(tok.cost, tok.lid, tok.rid, tok.source)
                 val prevSize = result.size
                 addCandidate(cand)
                 if (result.size > prevSize) {
-                    step2ViterbiCosts[tok.surface] = singleViterbiCost(tok.cost, tok.lid)
+                    recordStep2Cost(tok.surface, vCost)
                 }
             }
 
@@ -829,9 +848,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 if (histA != histB) {
                     histB.compareTo(histA)
                 } else {
-                    val connA = if (matrix != null && contextRid > 0 && a.lid > 0) matrix.getTransitionCost(contextRid, a.lid) else 0
-                    val connB = if (matrix != null && contextRid > 0 && b.lid > 0) matrix.getTransitionCost(contextRid, b.lid) else 0
-                    (a.cost + connA).compareTo(b.cost + connB)
+                    singleViterbiCost(a.cost, a.lid, a.rid, a.source).compareTo(
+                        singleViterbiCost(b.cost, b.lid, b.rid, b.source)
+                    )
                 }
             }
             for (w in otherExact) {
@@ -842,10 +861,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     source = w.source,
                     dictCost = w.cost
                 )
+                val vCost = singleViterbiCost(w.cost, w.lid, w.rid, w.source)
                 val prevSize = result.size
                 addCandidate(cand)
                 if (result.size > prevSize) {
-                    step2ViterbiCosts[w.surface] = singleViterbiCost(w.cost, w.lid)
+                    recordStep2Cost(w.surface, vCost)
                 }
             }
 
@@ -951,15 +971,23 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             // are prioritized over long predictive extensions (e.g. "家の外", "家の中").
             // Beam width is set to 12 to ensure natural inflected verb/particle phrases are never pruned.
             if (normalized.length >= 3) {
-                val (viterbiCandidates, viterbiFullCosts) = searchViterbiLatticeWithCosts(normalized, beamWidth = 12)
+                val (viterbiCandidates, viterbiFullCosts) = searchViterbiLatticeWithCosts(
+                    normalized,
+                    beamWidth = 12,
+                    initialRid = connRid
+                )
                 if (step2EndIndex > step2StartIndex) {
-                    // Merge full-span Viterbi phrases (e.g. "朝の", "家の") with Step 2 exact-reading
+                    // Merge competitive full-span Viterbi phrases (e.g. "朝の", "家の") with Step 2 exact-reading
                     // single-token matches by Viterbi effectiveCost so high-frequency multi-bunsetsu
-                    // phrases are not buried behind homophonic proper nouns (e.g. "浅野", "麻野", "家野").
+                    // phrases are not buried behind homophonic proper nouns (e.g. "浅野", "朝乃", "麻野", "家野").
+                    val bestStep2Cost = step2ViterbiCosts.values.minOrNull() ?: Int.MAX_VALUE
+                    val hasVoicedExpansion = voicedPaths.isNotEmpty()
                     val mergedFull = result.subList(step2StartIndex, step2EndIndex).toMutableList()
                     val remainingViterbi = mutableListOf<ConversionCandidate>()
                     for (cand in viterbiCandidates) {
-                        if (!cand.isPrediction && cand.source != "viterbi_prefix") {
+                        val vCost = viterbiFullCosts[cand.surface] ?: Int.MAX_VALUE
+                        val allowPromotion = !hasVoicedExpansion || vCost <= bestStep2Cost + 2500
+                        if (!cand.isPrediction && cand.source != "viterbi_prefix" && allowPromotion) {
                             val isParticleExact = JapaneseKanaUtils.isCommonParticle(cand.surface) && cand.surface == normalized
                             val isRedundantHiragana = !isParticleExact &&
                                 JapaneseKanaUtils.isAllHiragana(cand.surface) &&
@@ -967,7 +995,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                 cand.surface == normalized
                             if (cand.surface.isNotBlank() && !isRedundantHiragana && seenSurfaces.add(cand.surface)) {
                                 mergedFull.add(cand)
-                                viterbiFullCosts[cand.surface]?.let { step2ViterbiCosts[cand.surface] = it }
+                                recordStep2Cost(cand.surface, vCost)
                             }
                         } else {
                             remainingViterbi.add(cand)
@@ -1780,12 +1808,16 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return searchViterbiLatticeWithCosts(reading, beamWidth).first
     }
 
-    private fun searchViterbiLatticeWithCosts(reading: String, beamWidth: Int = 6): Pair<List<ConversionCandidate>, Map<String, Int>> {
+    private fun searchViterbiLatticeWithCosts(
+        reading: String,
+        beamWidth: Int = 6,
+        initialRid: Int = 0
+    ): Pair<List<ConversionCandidate>, Map<String, Int>> {
         val n = reading.length
         if (n < 3) return Pair(emptyList(), emptyMap())
 
         val beam = Array(n + 1) { mutableListOf<ViterbiPath>() }
-        beam[0].add(ViterbiPath(0, "", emptyList(), false, lastRid = 0, firstBunsetsuSurface = "", firstBunsetsuReadingLen = 0, isFirstBunsetsuClosed = false, lastContentWordSurface = "", secondBunsetsuIsProper = false))
+        beam[0].add(ViterbiPath(0, "", emptyList(), false, lastRid = initialRid, firstBunsetsuSurface = "", firstBunsetsuReadingLen = 0, isFirstBunsetsuClosed = false, lastContentWordSurface = "", secondBunsetsuIsProper = false))
 
         val matrix = connectionMatrix
 

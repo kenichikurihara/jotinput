@@ -69,6 +69,10 @@ class KanaKanjiEngineAsanoTest {
         if (manoIdx >= 0) {
             assertTrue("'朝の' ($asaNoIdx) must rank above '麻野' ($manoIdx)", asaNoIdx < manoIdx)
         }
+        val asanoNameIdx = surfaces.indexOf("朝乃")
+        if (asanoNameIdx >= 0) {
+            assertTrue("'朝の' ($asaNoIdx) must rank above '朝乃' ($asanoNameIdx)", asaNoIdx < asanoNameIdx)
+        }
 
         val asaNoCand = candidates[asaNoIdx]
         val asanoCand = candidates.firstOrNull { it.surface == "浅野" }
