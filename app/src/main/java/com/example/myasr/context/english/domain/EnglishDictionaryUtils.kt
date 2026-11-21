@@ -82,12 +82,12 @@ object EnglishDictionaryUtils {
         return 3.0f
     }
 
-    private const val SPATIAL_BOUNDARY_GAP_COST = 1.5f
-    private const val SPATIAL_INDEL_COST = 1.2f
-    private const val SPATIAL_SUB_BASE_COST = 0.8f
-    private const val SPATIAL_SUB_DIST_SLOPE = 0.3f
-    private const val SPATIAL_SUB_MAX_DIST = 2.0f
-    private const val SPATIAL_TRANSPOSITION_COST = 0.6f
+    internal const val SPATIAL_BOUNDARY_GAP_COST = 1.5f
+    internal const val SPATIAL_INDEL_COST = 1.2f
+    internal const val SPATIAL_SUB_BASE_COST = 0.8f
+    internal const val SPATIAL_SUB_DIST_SLOPE = 0.3f
+    internal const val SPATIAL_SUB_MAX_DIST = 2.0f
+    internal const val SPATIAL_TRANSPOSITION_COST = 0.6f
 
     /**
      * Calculates QWERTY spatial edit distance with Damerau-Levenshtein transposition.

@@ -513,36 +513,25 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             CanonicalWord("くらい", "くらい", 289, 289),
             CanonicalWord("ぐらい", "ぐらい", 290, 290),
             CanonicalWord("など", "など", 302, 302),
-            // Auxiliary verbs, inflections, and colloquial contractions
+            // Auxiliary verbs, inflections, and colloquial contractions (multi-morpheme chunks delegated below)
             CanonicalWord("です", "です", 172, 172),
             CanonicalWord("ます", "ます", 240, 240),
-            CanonicalWord("でした", "でした", 172, 172),
             CanonicalWord("ました", "ました", 240, 240),
             CanonicalWord("ません", "ません", 659, 659),
             CanonicalWord("たい", "たい", 152, 152),
             CanonicalWord("たく", "たく", 160, 160),
-            CanonicalWord("たかった", "たかった", 152, 152),
             CanonicalWord("ない", "ない", 204, 204),
-            CanonicalWord("なかった", "なかった", 204, 204),
             CanonicalWord("だ", "だ", 165, 165),
-            CanonicalWord("である", "である"),
-            CanonicalWord("だった", "だった"),
-            CanonicalWord("だろう", "だろう"),
             CanonicalWord("でしょう", "でしょう", 183, 35),
             CanonicalWord("て", "て", 348, 348),
             CanonicalWord("で", "で", 370, 370),
-            CanonicalWord("ている", "ている", 348, 1084),
-            CanonicalWord("てい", "てい", 348, 1084),
             CanonicalWord("てる", "てる", 1097, 1097),
             CanonicalWord("でる", "でる", 1099, 1099),
             CanonicalWord("た", "た", 142, 142),
-            CanonicalWord("てお", "てお"),
             CanonicalWord("おり", "おり", 1680, 1680),
             CanonicalWord("おる", "おる", 1580, 1580),
             CanonicalWord("し", "し"),
             CanonicalWord("して", "して"),
-            CanonicalWord("している", "している"),
-            CanonicalWord("しています", "しています"),
             // Potential verb Ichidan ren'youkei stems with Mozc OSS POS IDs
             CanonicalWord("いけ", "行け", 701, 701),
             CanonicalWord("いけ", "いけ", 701, 701),
@@ -560,6 +549,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         for (item in highPriority) {
             insertWord(item.reading, item.surface, cost = 50, source = "canonical", lid = item.lid, rid = item.rid)
         }
+        registerMultiMorphemeAuxiliaryChunks()
     }
 
     internal fun registerStructuralBrackets() {
@@ -627,7 +617,15 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     Priority.LOW -> 50
                 }
                 val priorityScore = entry.priority.score
-                insertWord(normalizedReading, entry.word, cost = cost, source = "user", lid = 1851, rid = 1851, priority = priorityScore)
+                insertWord(
+                    normalizedReading,
+                    entry.word,
+                    cost = cost,
+                    source = "user",
+                    lid = MozcPosCatalog.POS_NOUN_GENERAL,
+                    rid = MozcPosCatalog.POS_NOUN_GENERAL,
+                    priority = priorityScore
+                )
             }
         }
         clearMemoryCache()
@@ -2380,19 +2378,19 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return Pair(results, fullCostMap)
     }
 
-    private fun isSahenNoun(lid: Int, rid: Int, surface: String): Boolean {
+    private fun isSahenNoun(lid: Int, rid: Int): Boolean {
         if (isProperNoun(lid) || isProperNoun(rid)) return false
         return MozcPosCatalog.isSahenNoun(lid) || MozcPosCatalog.isSahenNoun(rid)
     }
 
-    private fun isVerbStem(lid: Int, rid: Int, surface: String): Boolean {
+    private fun isVerbStem(lid: Int, rid: Int): Boolean {
         if (isProperNoun(lid) || isProperNoun(rid)) return false
         return isPredicatePos(lid) || isPredicatePos(rid)
     }
 
-    private fun isGeneralNoun(lid: Int, rid: Int, surface: String): Boolean {
+    private fun isGeneralNoun(lid: Int, rid: Int): Boolean {
         if (isProperNoun(lid) || isProperNoun(rid)) return false
-        if (isSahenNoun(lid, rid, surface)) return false
+        if (isSahenNoun(lid, rid)) return false
         return MozcPosCatalog.isInNounRange(lid) || MozcPosCatalog.isInNounRange(rid) || isContentWord(lid)
     }
 
@@ -2502,9 +2500,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             val stemSurface = stemWord.surface
             if (NextPhrasePredictor.CANONICAL_STEM_READINGS.containsKey(stemSurface)) continue
 
-            val isSahen = isSahenNoun(stemWord.lid, stemWord.rid, stemSurface)
-            val isVerb = isVerbStem(stemWord.lid, stemWord.rid, stemSurface)
-            val isNoun = isGeneralNoun(stemWord.lid, stemWord.rid, stemSurface)
+            val isSahen = isSahenNoun(stemWord.lid, stemWord.rid)
+            val isVerb = isVerbStem(stemWord.lid, stemWord.rid)
+            val isNoun = isGeneralNoun(stemWord.lid, stemWord.rid)
 
             val applicableTails: List<NextPhrasePredictor.CollocationEntry> = when {
                 isSahen -> sahenTailsOrdered

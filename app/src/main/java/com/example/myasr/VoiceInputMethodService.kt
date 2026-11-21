@@ -694,7 +694,7 @@ class VoiceInputMethodService : InputMethodService() {
                         )
                         if (idx >= 0) {
                             val tail = textBefore.substring(idx + orig.length)
-                            if (tail.length <= 32) {
+                            if (tail.length <= CORRECTION_MAX_TAIL_CHARS) {
                                 ic.beginBatchEdit()
                                 ic.deleteSurroundingText(orig.length + tail.length, 0)
                                 ic.commitText(corr + tail, 1)
@@ -1058,7 +1058,7 @@ class VoiceInputMethodService : InputMethodService() {
             override fun onSwipeInput(trajectory: List<FutoSwipeEngine.SwipePoint>) {
                 if (trajectory.size < 2) return
                 clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
-                audioRecorder.notifyUserTyping(500L)
+                audioRecorder.notifyUserTyping(TYPING_SUPPRESS_LONG_MS)
                 val engine = FutoSwipeEngine.getInstance(this@VoiceInputMethodService)
 
                 serviceScope.launch(Dispatchers.Default) {
@@ -1264,7 +1264,7 @@ class VoiceInputMethodService : InputMethodService() {
 
             rerankJob = serviceScope.launch(Dispatchers.Default) {
                 try {
-                    val (reranked, slmUsed) = withTimeout(2500L) {
+                    val (reranked, slmUsed) = withTimeout(SLM_RERANK_TIMEOUT_MS) {
                         kanaKanjiEngine.rerankCandidatesWithStatus(
                             contextPrefix = textBeforeCursor,
                             baseCandidates = baseCandidates,
@@ -1371,7 +1371,7 @@ class VoiceInputMethodService : InputMethodService() {
         rerankJob = serviceScope.launch(Dispatchers.Default) {
             try {
                 delay(debounceMs)
-                val (reranked, slmUsed) = withTimeout(2500L) {
+                val (reranked, slmUsed) = withTimeout(SLM_RERANK_TIMEOUT_MS) {
                     kanaKanjiEngine.rerankCandidatesWithStatus(
                         contextPrefix = textBeforeCursor,
                         baseCandidates = baseCandidates,
@@ -1553,7 +1553,7 @@ class VoiceInputMethodService : InputMethodService() {
                         } else {
                             ""
                         }
-                        val rawText = withTimeout(3000L) {
+                        val rawText = withTimeout(ASR_TRANSCRIBE_TIMEOUT_MS) {
                             app.asrManager.transcribe(samples, 16000, hotwordsStr, asrLanguage)
                         }
                         val slmDeltaProvider: ((String, String) -> Float?)? = if (app.llmReranker.isReady()) {
@@ -1759,7 +1759,7 @@ class VoiceInputMethodService : InputMethodService() {
 
         rerankJob = serviceScope.launch(Dispatchers.Default) {
             try {
-                withTimeout(2500L) {
+                withTimeout(SLM_RERANK_TIMEOUT_MS) {
                     // Pre-warm SLM KV cache with current context so next keystroke hits the cache instantly (<1ms)
                     if (slm.warmContext(textBeforeCursor)) {
                         lastWarmedContextText = ContextWindowTrimmer.trimToOptimalContextSticky(textBeforeCursor)
@@ -2302,7 +2302,7 @@ class VoiceInputMethodService : InputMethodService() {
                                 } else {
                                     ""
                                 }
-                                val rawText = withTimeout(3000L) {
+                                val rawText = withTimeout(ASR_TRANSCRIBE_TIMEOUT_MS) {
                                     app.asrManager.transcribe(samples, 16000, hotwordsStr, asrLanguage)
                                 }
                                 val slmDeltaProvider: ((String, String) -> Float?)? = if (app.llmReranker.isReady()) {
@@ -2707,5 +2707,12 @@ class VoiceInputMethodService : InputMethodService() {
         super.onDestroy()
         serviceScope.cancel()
         audioRecorder.stop()
+    }
+
+    companion object {
+        private const val TYPING_SUPPRESS_LONG_MS = 500L
+        private const val SLM_RERANK_TIMEOUT_MS = 2500L
+        private const val ASR_TRANSCRIBE_TIMEOUT_MS = 3000L
+        private const val CORRECTION_MAX_TAIL_CHARS = 32
     }
 }

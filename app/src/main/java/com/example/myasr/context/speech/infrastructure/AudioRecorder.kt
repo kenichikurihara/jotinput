@@ -65,7 +65,7 @@ class AudioRecorder(
      * Informs the VAD processor that the user just touched or typed on the keyboard.
      * Prevents finger taps from triggering false speech starts during conversational pauses.
      */
-    fun notifyUserTyping(durationMs: Long = 300L) {
+    fun notifyUserTyping(durationMs: Long = StreamingVadProcessor.DEFAULT_TYPING_SUPPRESS_MS) {
         vadProcessor.notifyUserTyping(durationMs)
     }
 

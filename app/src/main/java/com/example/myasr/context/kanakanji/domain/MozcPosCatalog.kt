@@ -9,10 +9,7 @@ object MozcPosCatalog {
 
     // Named anchor POS IDs (Mozc id.def)
     const val POS_AUX_DESU = 172
-    const val POS_AUX_MASU = 240
-    const val POS_ARCHAIC_NO = 385
     const val POS_SAHEN_SURU_MASU = 1825
-    const val POS_NOUN_SAHEN_BASE = 1841
     const val POS_NOUN_GENERAL = 1851
     const val POS_SUFFIX_CHUU = 2003
     const val POS_SYMBOL = 2632

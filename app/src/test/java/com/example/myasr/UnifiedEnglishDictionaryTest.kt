@@ -210,12 +210,12 @@ class UnifiedEnglishDictionaryTest {
         val cppFile = java.io.File(requireNotNull(dir), "app/src/main/cpp/spelling/english_spell_engine.cc")
         val cppSource = cppFile.readText()
         val expected = listOf(
-            "kSpatialBoundaryGapCost = 1.5f",
-            "kSpatialIndelCost = 1.2f",
-            "kSpatialSubBaseCost = 0.8f",
-            "kSpatialSubDistSlope = 0.3f",
-            "kSpatialSubMaxDist = 2.0f",
-            "kSpatialTranspositionCost = 0.6f"
+            "kSpatialBoundaryGapCost = ${EnglishDictionaryUtils.SPATIAL_BOUNDARY_GAP_COST}f",
+            "kSpatialIndelCost = ${EnglishDictionaryUtils.SPATIAL_INDEL_COST}f",
+            "kSpatialSubBaseCost = ${EnglishDictionaryUtils.SPATIAL_SUB_BASE_COST}f",
+            "kSpatialSubDistSlope = ${EnglishDictionaryUtils.SPATIAL_SUB_DIST_SLOPE}f",
+            "kSpatialSubMaxDist = ${EnglishDictionaryUtils.SPATIAL_SUB_MAX_DIST}f",
+            "kSpatialTranspositionCost = ${EnglishDictionaryUtils.SPATIAL_TRANSPOSITION_COST}f"
         )
         for (decl in expected) {
             assertTrue("Missing or drifted C++ constant: $decl", cppSource.contains(decl))
