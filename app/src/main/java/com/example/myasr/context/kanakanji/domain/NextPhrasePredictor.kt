@@ -12,7 +12,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
-import java.util.Calendar
 
 /**
  * Predicts the next phrase / continuation candidates immediately after a phrase is committed
@@ -43,6 +42,15 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         const val MAX_PREFIX_KEYS = 4_000
         const val MAX_CONTINUATIONS_PER_KEY = 16
         const val MAX_TOTAL_BIGRAM_PAIRS = 32_000
+
+        private val DEFAULT_SENTENCE_START_SEEDS = listOf(
+            "お疲れ様です",
+            "お世話になっております",
+            "よろしくお願いいたします",
+            "また、",
+            "つきましては、",
+            "なお、"
+        )
 
         @Volatile
         private var instance: NextPhrasePredictor? = null
@@ -739,16 +747,9 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 textBeforeCursor.endsWith("\n")
 
         if (isSentenceStart) {
-            val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-            if (hour in 5..10) {
-                addCandidate(ConversionCandidate("おはようございます", "おはようございます", true, "time_heuristic"))
+            for (seed in DEFAULT_SENTENCE_START_SEEDS) {
+                addCandidate(ConversionCandidate(seed, seed, true, "sentence_start_seed"))
             }
-            addCandidate(ConversionCandidate("お疲れ様です", "お疲れ様です", true, "time_heuristic"))
-            addCandidate(ConversionCandidate("お世話になっております", "お世話になっております", true, "time_heuristic"))
-            addCandidate(ConversionCandidate("よろしくお願いいたします", "よろしくお願いいたします", true, "time_heuristic"))
-            addCandidate(ConversionCandidate("また、", "また、", true, "time_heuristic"))
-            addCandidate(ConversionCandidate("つきましては、", "つきましては、", true, "time_heuristic"))
-            addCandidate(ConversionCandidate("なお、", "なお、", true, "time_heuristic"))
         }
 
         val allowPeriod = suggestPeriod && !shouldSuppressPeriodSuggestion(cleanLast, isSentenceStart)

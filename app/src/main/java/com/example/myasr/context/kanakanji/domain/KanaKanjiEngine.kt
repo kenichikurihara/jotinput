@@ -1878,10 +1878,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                 val lid = if (w.lid > 0) w.lid else 0
                                 matrix.getTransitionCost(path.lastRid, lid)
                             } else {
-                                // Fallback penalty for isolated single-character katakana or archaic particle traps when matrix is absent
-                                val isSingleKatakana = w.surface.length == 1 && w.surface[0] in '\u30A0'..'\u30FF'
-                                val isArchaicNo = w.lid == 385 && w.surface == "之"
-                                if (isSingleKatakana || isArchaicNo) 3000 else 0
+                                0
                             }
 
                             // Idea V2: Incremental Max-Morpheme Surprisal (L_inf) Hinge Penalty & Single Proper Noun Guard
