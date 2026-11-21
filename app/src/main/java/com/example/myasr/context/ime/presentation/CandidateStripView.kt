@@ -34,7 +34,20 @@ class CandidateStripView @JvmOverloads constructor(
 
     private var deferredPhase2Action: (() -> Unit)? = null
     private var hasActiveHeroSlot: Boolean = false
+    private var isHeroPlaceholderPending: Boolean = false
+    private var staleClicksSuppressed: Boolean = false
     private var reservedHeroWidthPx: Int = 0
+
+    override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+        when (ev.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN -> isUserInteracting = true
+            android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                isUserInteracting = false
+                flushDeferredPhase2IfNeeded()
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
 
     override fun onInterceptTouchEvent(ev: android.view.MotionEvent): Boolean {
         when (ev.actionMasked) {
@@ -68,6 +81,41 @@ class CandidateStripView @JvmOverloads constructor(
         deferredPhase2Action = action
     }
 
+    /**
+     * Disables click handlers on currently displayed stale candidates during the brief
+     * Micro-Wait Hold transition (e.g., right after committing a phrase before next-phrase
+     * predictions render) to prevent accidental double-commits without flashing empty state.
+     */
+    fun suppressStaleClicksDuringMicroWait() {
+        deferredPhase2Action = null
+        staleClicksSuppressed = true
+        for (i in 0 until container.childCount) {
+            val child = container.getChildAt(i)
+            child.isClickable = false
+            child.setOnClickListener(null)
+        }
+    }
+
+    /**
+     * Safely resolves any pending "[✨ …]" Hero Slot placeholder when background SLM
+     * prediction/reranking times out, fails, or returns empty results.
+     */
+    fun dismissHeroPlaceholderIfPending(
+        fallbackCandidates: List<ConversionCandidate>,
+        emptyStatusPrompt: String
+    ) {
+        deferredPhase2Action = null
+        if (!isHeroPlaceholderPending) {
+            return
+        }
+        isHeroPlaceholderPending = false
+        if (fallbackCandidates.isNotEmpty()) {
+            setCandidatesSinglePass(fallbackCandidates, highlightFirstAsAi = false)
+        } else {
+            showEmptyStatus(emptyStatusPrompt)
+        }
+    }
+
     private val container = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
@@ -98,6 +146,8 @@ class CandidateStripView @JvmOverloads constructor(
     fun showEmptyStatus(text: String) {
         deferredPhase2Action = null
         hasActiveHeroSlot = false
+        isHeroPlaceholderPending = false
+        staleClicksSuppressed = false
         reservedHeroWidthPx = 0
         currentCandidates = emptyList()
         container.removeAllViews()
@@ -165,8 +215,11 @@ class CandidateStripView @JvmOverloads constructor(
         candidates: List<ConversionCandidate>,
         highlightFirstAsAi: Boolean = false
     ) {
+        val mustRebuildDom = hasActiveHeroSlot || isHeroPlaceholderPending || staleClicksSuppressed
         deferredPhase2Action = null
         hasActiveHeroSlot = false
+        isHeroPlaceholderPending = false
+        staleClicksSuppressed = false
         reservedHeroWidthPx = 0
 
         val displayCandidates = filterAndDeduplicateDisplayCandidates(candidates)
@@ -178,7 +231,7 @@ class CandidateStripView @JvmOverloads constructor(
         // Zero-Jitter optimization: If surfaces are identical to current strip, skip DOM recreation
         val currentSurfaces = filterAndDeduplicateDisplayCandidates(currentCandidates).map { it.surface }
         val newSurfaces = displayCandidates.map { it.surface }
-        if (currentSurfaces == newSurfaces && container.childCount > 0 && !highlightFirstAsAi) {
+        if (!mustRebuildDom && currentSurfaces == newSurfaces && container.childCount > 0 && !highlightFirstAsAi) {
             currentCandidates = candidates
             return
         }
@@ -206,6 +259,7 @@ class CandidateStripView @JvmOverloads constructor(
         reservedHeroCharCount: Int = 2
     ): List<ConversionCandidate> {
         deferredPhase2Action = null
+        staleClicksSuppressed = false
         val displayCandidates = filterAndDeduplicateDisplayCandidates(baseCandidates)
         if (displayCandidates.isEmpty()) {
             showEmptyStatus("話すか、フリックで入力")
@@ -221,6 +275,7 @@ class CandidateStripView @JvmOverloads constructor(
         val clampedCharCount = reservedHeroCharCount.coerceIn(2, 4)
         reservedHeroWidthPx = quantizedMinWidthPx(clampedCharCount, density)
         hasActiveHeroSlot = true
+        isHeroPlaceholderPending = true
         currentCandidates = displayCandidates
 
         container.removeAllViews()
@@ -258,24 +313,33 @@ class CandidateStripView @JvmOverloads constructor(
         decision: CandidateRerankJudgement.ViewportAwareOrderingDecision
     ) {
         deferredPhase2Action = null
+        staleClicksSuppressed = false
         if (decision.strategy != CandidateRerankJudgement.UiRenderStrategy.PHASE2_POPULATE_HERO_AND_RERANK_OFFSCREEN_TAIL) {
             return
         }
 
         val hero = decision.heroSlotCandidate
-        if (hasActiveHeroSlot && container.childCount > 0 && hero != null) {
-            val heroView = container.getChildAt(0) as? TextView
-            if (heroView != null) {
-                heroView.text = "✨ ${hero.surface}"
-                heroView.setTextColor(ContextCompat.getColor(context, R.color.primary))
-                heroView.setBackgroundResource(R.drawable.bg_candidate_pill_ai_promoted)
-                heroView.isClickable = true
-                heroView.setOnClickListener {
-                    listener?.onCandidateClick(hero)
+        if (hasActiveHeroSlot && container.childCount > 0) {
+            if (hero != null) {
+                val heroView = container.getChildAt(0) as? TextView
+                if (heroView != null) {
+                    heroView.text = "✨ ${hero.surface}"
+                    heroView.setTextColor(ContextCompat.getColor(context, R.color.primary))
+                    heroView.setBackgroundResource(R.drawable.bg_candidate_pill_ai_promoted)
+                    heroView.isClickable = true
+                    heroView.setOnClickListener {
+                        listener?.onCandidateClick(hero)
+                    }
+                    heroView.alpha = 0.55f
+                    heroView.animate().alpha(1.0f).setDuration(150L).start()
                 }
-                heroView.alpha = 0.55f
-                heroView.animate().alpha(1.0f).setDuration(150L).start()
+            } else {
+                // Never leave an unclickable "[✨ …]" placeholder stuck if hero candidate is null
+                container.removeViewAt(0)
+                hasActiveHeroSlot = false
+                reservedHeroWidthPx = 0
             }
+            isHeroPlaceholderPending = false
         }
 
         val zoneBStart = if (hasActiveHeroSlot) 1 else 0

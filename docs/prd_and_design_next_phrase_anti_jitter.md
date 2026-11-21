@@ -110,16 +110,20 @@ flowchart TD
 
 ### 3. エッジケース・安全性設計
 
-1. **セッション世代チェック（Stale Callback 防止）**:
-   * `showNextPhrasePredictions` 起動時に任意のキー入力・音声入力・カーソル移動が発生すると、各ハンドラが `phase1TimerJob?.cancel()` および `rerankJob?.cancel()` を呼ぶ。
-   * さらに `Dispatchers.Main` に戻った際、`if (!isActive || arbitrator.isKeyboardComposing() || arbitrator.isStreamingComposing()) return@withContext` を必ず検証し、入力状態が変化していた場合は古い予測候補で UI を上書きしない。
-   * 同様に `deferPhase2UpdateUntilTouchRelease` のコールバック内でも `!arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing()` を再検証する。
-2. **`fastPredictions` が空のときの Phase 1 振る舞い**:
-   * `fastPredictions` が空の場合（例：文頭直後や記号直後など）、`renderPhase1WithHeroPlaceholder` を呼んでも空ステータスになるだけなので、素直に `showEmptyStatus(getActiveIdleStatusPrompt())` とし、Phase 2 完了時に `phase1DisplayCandidates.isEmpty()` なら `setCandidatesSinglePass(reranked, highlightFirstAsAi = slmUsed)` で 1回描画を行う。
-3. **Hero Slot 予約幅（`reservedHeroCharCount`）の算出**:
-   * すでに `prewarmedSlm` がある場合はその先頭候補の文字数を、ない場合は `fastPredictions` の非助詞候補の最大文字数（ただし 2〜4 文字にクランプ、デフォルト 3 文字）を使用する。
-   * これにより、日本語の次文節（例：「ですね」「します」「ました」「確認」「今日」）の大半がエリプシスなしで綺麗に収まる。
-4. **`isAntiJitterUiEnabled == false`（Legacy モード）の互換性**:
+1. **セッション世代チェック（`nextPhrasePredictionGeneration` による Stale Callback 防止）**:
+   * `showNextPhrasePredictions` 起動時に `nextPhrasePredictionGeneration` をインクリメントし、`updateCandidates` でもインクリメントする。
+   * `phase1TimerJob`、`rerankJob`、`deferPhase2UpdateUntilTouchRelease` のすべてのメインスレッド反映箇所で `generation == nextPhrasePredictionGeneration` および `!arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing()` を検証し、古い予測セッションが新しいセッションや変換入力を上書きしないことを保証する。
+2. **確定直後の Micro-Wait Hold（`50ms`）中の誤タップ防止（Stale Click Suppression）**:
+   * 確定直後に Micro-Wait Hold に入る瞬間、`CandidateStripView.suppressStaleClicksDuringMicroWait()` で直前の変換候補ピルのクリック受付だけを無効化する。これにより、空ステータスへのフラッシュ（チラつき）を起こさずに、確定済み単語を二重確定してしまう事故を物理的に防止する。
+3. **タイムアウト・例外・空結果・`hero == null` 時の `[ ✨ … ]` プレースホルダー解消保証**:
+   * `rerankJob` がタイムアウト（`TimeoutCancellationException`）、例外、または空結果で終了した場合、`CandidateStripView.dismissHeroPlaceholderIfPending()` を通じて保留中の `[ ✨ … ]` プレースホルダーを必ず解消し、`initialPhase1Candidates` の単一パス表示へ安全にフォールバックする。
+   * `CancellationException` は握りつぶさず再スローし、構造的並行性を維持する。
+   * `applyPhase2NonDisruptiveUpdate()` でも `heroSlotCandidate == null` の場合は Slot 0 プレースホルダーを除去する。
+4. **Hero Slot 予約幅（`reservedHeroCharCount`）の算出**:
+   * 予測候補は `"✨ "` プレフィックス＋複数文字の次文節フレーズになるため、`(rawHeroCharCount + 1).coerceIn(3, 4)`（デフォルト 4 文字枠 = `108dp`）を確保し、エリプシスによる文字途切れを軽減する。
+5. **タッチ状態リセットの堅牢化**:
+   * `CandidateStripView.dispatchTouchEvent()` で `ACTION_UP` / `ACTION_CANCEL` を捕捉し、子ビューによるインターセプト抑止が起きても `isUserInteracting` が `true` のままスタックしないことを保証する。
+6. **`isAntiJitterUiEnabled == false`（Legacy モード）の互換性**:
    * 設定で Anti-Jitter UI が無効化されている場合は、既存の即時描画＋非同期上書きパスをフォールバックとして維持する。
 
 ---

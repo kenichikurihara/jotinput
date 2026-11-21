@@ -84,6 +84,7 @@ class VoiceInputMethodService : InputMethodService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var rerankJob: Job? = null
     private var phase1TimerJob: Job? = null
+    private var nextPhrasePredictionGeneration: Long = 0L
     private var englishCandidateJob: Job? = null
     private var warmContextJob: Job? = null
     private var speculativePrewarmJob: Job? = null
@@ -1156,6 +1157,7 @@ class VoiceInputMethodService : InputMethodService() {
     }
 
     private fun updateCandidates() {
+        nextPhrasePredictionGeneration++
         if (!arbitrator.isKeyboardComposing()) {
             phase1TimerJob?.cancel()
             rerankJob?.cancel()
@@ -1685,6 +1687,7 @@ class VoiceInputMethodService : InputMethodService() {
     }
 
     private fun showNextPhrasePredictions(committedPhrase: String) {
+        val generation = ++nextPhrasePredictionGeneration
         phase1TimerJob?.cancel()
         rerankJob?.cancel()
         warmContextJob?.cancel()
@@ -1777,21 +1780,58 @@ class VoiceInputMethodService : InputMethodService() {
         var phase1DisplayCandidates: List<ConversionCandidate> = emptyList()
 
         if (isAntiJitterUiEnabled) {
-            val heroReservedCharCount = (prewarmedSlm?.firstOrNull()?.surface?.length
+            // Prevent accidental taps on stale composing candidates from the just-committed phrase
+            // during the brief 50ms Micro-Wait Hold window without flashing empty status.
+            candidateStripView?.suppressStaleClicksDuringMicroWait()
+
+            // Reserve slightly wider Hero Slot (3..4 chars) to accommodate "✨ " prefix + multi-char Japanese continuations
+            val rawHeroCharCount = prewarmedSlm?.firstOrNull()?.surface?.length
                 ?: initialPhase1Candidates
                     .filter { it.source != "particle" && it.source != "punctuation" }
                     .maxOfOrNull { it.surface.length }
-                ?: 3).coerceIn(2, 4)
+                ?: 3
+            val heroReservedCharCount = (rawHeroCharCount + 1).coerceIn(3, 4)
 
             phase1TimerJob = serviceScope.launch(Dispatchers.Main) {
                 delay(CandidateRerankJudgement.MICRO_WAIT_HOLD_MS)
-                if (!arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing() && !isCurrentCandidatesReranked) {
+                if (generation == nextPhrasePredictionGeneration &&
+                    !arbitrator.isKeyboardComposing() &&
+                    !arbitrator.isStreamingComposing() &&
+                    !isCurrentCandidatesReranked
+                ) {
                     isPhase1Rendered = true
                     if (initialPhase1Candidates.isNotEmpty()) {
                         phase1DisplayCandidates = candidateStripView?.renderPhase1WithHeroPlaceholder(
                             baseCandidates = initialPhase1Candidates,
                             reservedHeroCharCount = heroReservedCharCount
                         ) ?: CandidateStripView.filterAndDeduplicateDisplayCandidates(initialPhase1Candidates)
+                    } else {
+                        candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                    }
+                }
+            }
+        }
+
+        val renderFallbackOnMain: suspend () -> Unit = {
+            if (isAntiJitterUiEnabled) {
+                withContext(Dispatchers.Main) {
+                    phase1TimerJob?.cancel()
+                    if (generation != nextPhrasePredictionGeneration ||
+                        arbitrator.isKeyboardComposing() ||
+                        arbitrator.isStreamingComposing()
+                    ) {
+                        return@withContext
+                    }
+                    if (isPhase1Rendered) {
+                        candidateStripView?.dismissHeroPlaceholderIfPending(
+                            fallbackCandidates = initialPhase1Candidates,
+                            emptyStatusPrompt = getActiveIdleStatusPrompt()
+                        )
+                    } else if (initialPhase1Candidates.isNotEmpty()) {
+                        candidateStripView?.setCandidatesSinglePass(
+                            initialPhase1Candidates,
+                            highlightFirstAsAi = false
+                        )
                     } else {
                         candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                     }
@@ -1833,10 +1873,17 @@ class VoiceInputMethodService : InputMethodService() {
                     }
 
                     // Verify IME state has not changed (no new keystroke or streaming text while computing)
-                    if (isActive && !arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing() && reranked.isNotEmpty()) {
+                    if (isActive && !arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing()) {
+                        if (reranked.isEmpty()) {
+                            renderFallbackOnMain()
+                            return@withTimeout
+                        }
                         withContext(Dispatchers.Main) {
                             phase1TimerJob?.cancel()
-                            if (arbitrator.isKeyboardComposing() || arbitrator.isStreamingComposing()) {
+                            if (generation != nextPhrasePredictionGeneration ||
+                                arbitrator.isKeyboardComposing() ||
+                                arbitrator.isStreamingComposing()
+                            ) {
                                 return@withContext
                             }
                             isCurrentCandidatesReranked = true
@@ -1883,7 +1930,10 @@ class VoiceInputMethodService : InputMethodService() {
                                     }
                                     CandidateRerankJudgement.UiRenderStrategy.DEFER_WHILE_USER_TOUCHING -> {
                                         candidateStripView?.deferPhase2UpdateUntilTouchRelease {
-                                            if (!arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing()) {
+                                            if (generation == nextPhrasePredictionGeneration &&
+                                                !arbitrator.isKeyboardComposing() &&
+                                                !arbitrator.isStreamingComposing()
+                                            ) {
                                                 val newVisible = candidateStripView?.computeVisibleCandidateCount(excludeHeroSlot = true)
                                                     ?: CandidateRerankJudgement.DEFAULT_VISIBLE_SLOT_FALLBACK
                                                 val deferredDecision = CandidateRerankJudgement.judgeViewportAwareOrdering(
@@ -1908,8 +1958,12 @@ class VoiceInputMethodService : InputMethodService() {
                 }
             } catch (e: TimeoutCancellationException) {
                 Log.w(TAG, "SLM next-phrase prediction timed out (>2500ms), fail-safe retaining fast predictions")
+                renderFallbackOnMain()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Log.w(TAG, "SLM prediction worker error: ${e.message}")
+                renderFallbackOnMain()
             }
         }
     }
