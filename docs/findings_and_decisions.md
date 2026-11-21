@@ -2208,3 +2208,18 @@ Users experienced frequent keyboard crashes during active typing, rapid deletion
 
 
 
+
+---
+
+## 52. Multi-Bunsetsu Phrase vs. Homophonic Proper Noun Ranking Fix (`あさの` -> `朝の`)
+
+### 1. Problem & Root Cause
+When typing `あさの` at sentence start (`contextPrefix = ""`), the natural multi-bunsetsu phrase `朝の` was ranked far below homophonic proper nouns and prefix completions (such as `浅野`, `浅野川`, `麻野`, `朝乃`, etc.), even though pure Mozc Viterbi cost strongly favored `朝の` (`5623` vs `浅野` `6355`, `麻野` `8225`; `effDictCost = 3439` vs `4855`, `6725`):
+1. **Unmerged Candidate Generation Order (`KanaKanjiEngine.getBaseCandidates`)**: Step 2 (`queryAllMmapExactTokens`) unconditionally inserted all exact single-token matches of `あさの` (`浅野`, `朝乃`, `麻野`, `淺野`, `アサノ`, `朝野`, `麻乃`, `浅乃`, `浅埜`, `旭野`, `阿佐野`, `麻埜`, `苧野`, ...) ahead of Step 4 (`searchViterbiLattice`), without sorting or merging them with Step 4's full-span Viterbi phrases (`朝の`, `家の`, `今日は`, etc.). Moreover, Step 2 `mmapTokens` used raw unigram `tok.cost` rather than the excess-transition-adjusted cost used by `searchViterbiLattice`.
+2. **Predictive Interleaving (`interleavePredictiveCandidates`)**: For 2–4 char readings, Slot 2 was filled by `queryAllMmapPrefixTokens` (`あさのがわ` -> `浅野川`), pushing `朝の` down to ~17th place.
+3. **SLM `topPool` Truncation (`LlmReranker`)**: `prioritizedFullCands.take(8)` only admitted the first 8 exact-reading candidates into the 16-item SLM `topPool`. Because `朝の` sat at index ~13+, it was excluded from SLM scoring (`restPool`) and never re-ranked by Qwen.
+
+### 2. Architectural Solution
+1. **Unified Effective Mozc Cost (`KanaKanjiEngine.effectiveSingleWordCost`)**: Applied the same excess-transition and max-cost excess formula (`rawCost + maxOf(0, rawCost - 4500)/2 + maxOf(0, transCost - 1500)`) to Step 2 single-token exact matches as Step 4 `searchViterbiLattice` uses for `effDictCost`, using `contextRid` (or `0` for BOS).
+2. **In-Place Cost Merge of Step 2 & Step 4 Full-Span Candidates**: When Step 2 produces exact-reading matches, full-span Viterbi phrases (`!isPrediction && source != "viterbi_prefix"`) are merged into the Step 2 block and sorted by `dictCost` (keeping Step 3.6/3.8 voiced prefix matches such as `とうきよ` -> `東京` undisturbed when Step 2 is empty).
+3. **Regression Test Suite (`KanaKanjiEngineAsanoTest.kt`)**: Added JVM unit tests against `system_dictionary.bin` and `connection_data.bin` verifying that `朝の` (`あさの`), `家の` (`いえの`), and `今日は` (`きょうは`) rank #1 at sentence start, ahead of `浅野川`, `麻野`, `家野`, and `教派`.

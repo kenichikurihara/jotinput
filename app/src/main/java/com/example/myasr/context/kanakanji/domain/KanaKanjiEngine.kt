@@ -788,13 +788,33 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             }
 
             // 2. Base in-memory Trie & MmapDictionary exact matches
-            val mmapTokens = queryAllMmapExactTokens(normalized)
-            for (tok in mmapTokens) {
-                addCandidate(ConversionCandidate(surface = tok.surface, reading = normalized, isPrediction = false, source = tok.source, dictCost = tok.cost))
-            }
-
             val contextRid = if (contextKey.isNotEmpty()) surfaceToRidMap[contextKey] ?: 0 else 0
             val matrix = connectionMatrix
+            val connRid = if (contextRid > 0) contextRid else 0
+
+            fun effectiveSingleWordCost(rawCost: Int, lid: Int): Int {
+                val transCost = if (matrix != null && lid > 0) matrix.getTransitionCost(connRid, lid) else 0
+                val excessTrans = if (matrix != null && lid > 0) maxOf(0, transCost - 1500) else 0
+                val maxExcess = maxOf(0, rawCost - 4500) / 2
+                return (rawCost + maxExcess + excessTrans).coerceIn(0, 15000)
+            }
+
+            val step2StartIndex = result.size
+
+            val mmapTokens = queryAllMmapExactTokens(normalized).sortedBy { tok ->
+                effectiveSingleWordCost(tok.cost, tok.lid)
+            }
+            for (tok in mmapTokens) {
+                addCandidate(
+                    ConversionCandidate(
+                        surface = tok.surface,
+                        reading = normalized,
+                        isPrediction = false,
+                        source = tok.source,
+                        dictCost = effectiveSingleWordCost(tok.cost, tok.lid)
+                    )
+                )
+            }
 
             val otherExact = exactTrieWords.filter { it.source != "user" }.sortedWith { a, b ->
                 val histA = synchronized(historyLock) { historyMap["${normalized}:${a.surface}"] ?: 0 }
@@ -808,8 +828,18 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
             for (w in otherExact) {
-                addCandidate(ConversionCandidate(surface = w.surface, reading = normalized, isPrediction = false, source = w.source, dictCost = w.cost))
+                addCandidate(
+                    ConversionCandidate(
+                        surface = w.surface,
+                        reading = normalized,
+                        isPrediction = false,
+                        source = w.source,
+                        dictCost = effectiveSingleWordCost(w.cost, w.lid)
+                    )
+                )
             }
+
+            var step2EndIndex = result.size
 
             // 3.6. Voiced & Semi-voiced Exact Matches (e.g. "かいき" -> "会議" [かいぎ], "こはん" -> "ご飯" [ごはん])
             val voicedPaths = matchingPaths.filter { it.voicingDistance > 0 && it.typoCostPenalty == 0 }
@@ -912,7 +942,39 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             // Beam width is set to 12 to ensure natural inflected verb/particle phrases are never pruned.
             if (normalized.length >= 3) {
                 val viterbiCandidates = searchViterbiLattice(normalized, beamWidth = 12)
-                for (cand in viterbiCandidates) {
+                val viterbiFull = viterbiCandidates.filter { !it.isPrediction && it.source != "viterbi_prefix" }
+                val viterbiPrefix = viterbiCandidates.filter { it.isPrediction || it.source == "viterbi_prefix" }
+
+                if (step2EndIndex > step2StartIndex && viterbiFull.isNotEmpty()) {
+                    // Merge full-span Viterbi phrases (e.g. "朝の", "家の") with Step 2 exact-reading
+                    // single-token matches by effective Mozc cost so high-frequency multi-bunsetsu
+                    // phrases are not buried behind homophonic proper nouns (e.g. "浅野", "麻野", "家野").
+                    val mergedFull = result.subList(step2StartIndex, step2EndIndex).toMutableList()
+                    for (cand in viterbiFull) {
+                        val isParticleExact = JapaneseKanaUtils.isCommonParticle(cand.surface) && cand.surface == normalized
+                        val isRedundantHiragana = !isParticleExact &&
+                            JapaneseKanaUtils.isAllHiragana(cand.surface) &&
+                            !cand.isPrediction &&
+                            cand.surface == normalized
+                        if (cand.surface.isNotBlank() && !isRedundantHiragana && seenSurfaces.add(cand.surface)) {
+                            mergedFull.add(cand)
+                        }
+                    }
+                    mergedFull.sortBy { it.dictCost }
+                    val before = result.subList(0, step2StartIndex).toList()
+                    val after = result.subList(step2EndIndex, result.size).toList()
+                    result.clear()
+                    result.addAll(before)
+                    result.addAll(mergedFull)
+                    result.addAll(after)
+                    step2EndIndex = step2StartIndex + mergedFull.size
+                } else {
+                    for (cand in viterbiFull) {
+                        addCandidate(cand)
+                    }
+                }
+
+                for (cand in viterbiPrefix) {
                     addCandidate(cand)
                 }
             }
