@@ -443,6 +443,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return f.exists() && f.length() > 1024
     }
 
+    internal fun registerCanonicalVocabulary() {
+        registerCanonicalWordsFallback()
+        registerStructuralBrackets()
+    }
+
     internal fun registerCanonicalWordsFallback() {
         val highPriority = listOf(
             // Primary functional particles with Mozc OSS POS IDs
