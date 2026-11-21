@@ -69,11 +69,11 @@ class MozcPosCatalogTest {
         )
         // User/canonical gets full (spanLen - 1) * bonusPerChar
         assertEquals(
-            4000,
+            2 * KanaKanjiEngine.DEFAULT_LENGTH_BONUS_PER_CHAR,
             engine.computeLengthBonus("きょう", 9000, MozcPosCatalog.POS_NOUN_GENERAL, true, false, false)
         )
         // Risky over-span touching trailing particle boundary gets clamped confidence (<= 0.25f)
         val clamped = engine.computeLengthBonus("きょうは", 6000, MozcPosCatalog.POS_NOUN_GENERAL, false, false, false)
-        assertEquals((3 * 2000 * 0.25f).toInt(), clamped)
+        assertEquals((3 * KanaKanjiEngine.DEFAULT_LENGTH_BONUS_PER_CHAR * 0.25f).toInt(), clamped)
     }
 }

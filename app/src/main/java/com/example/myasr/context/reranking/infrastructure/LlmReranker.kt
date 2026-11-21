@@ -55,6 +55,14 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
         private val CASE_PARTICLES = listOf("に", "を", "が")
         private const val DEFAULT_MU_SPAN_JA = 2.20f
         private const val DEFAULT_MU_SPAN_EN = 1.40f
+        private const val HISTORY_THETA_GATE_NATS = 4.6f
+        private const val HISTORY_GATE_TEMP_NATS = 0.6f
+        private const val HISTORY_SHORT_DECAY_HOURS = 1.0f
+        private const val HISTORY_LONG_DECAY_HOURS = 336.0f
+        private const val HISTORY_BIGRAM_BOOST_NATS = 6.0f
+        private const val HISTORY_SHORT_TERM_BOOST_NATS = 2.2f
+        private const val HISTORY_LONG_TERM_BOOST_NATS = 1.8f
+        private const val HISTORY_C1_DAMPING = 0.30f
 
         @Volatile
         private var instance: LlmReranker? = null
@@ -362,16 +370,15 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 val isBigram = candidate.source == "history_bigram" || candidate.source == "history_skip_bigram"
                 val effectiveNll: Float = if (!isExactUser && (candidate.historyCount > 0 || isBigram) && !isChimeraFull[index]) {
                     val deltaNll = rawNll - bestPoolNll
-                    val thetaGate = 4.6f + (if (deltaExt > 0) 0.25f * deltaExt else 0.0f)
-                    val gate = 1.0f / (1.0f + kotlin.math.exp(((deltaNll - thetaGate) / 0.6f).coerceIn(-20.0f, 20.0f)))
+                    val gate = 1.0f / (1.0f + kotlin.math.exp(((deltaNll - HISTORY_THETA_GATE_NATS) / HISTORY_GATE_TEMP_NATS).coerceIn(-20.0f, 20.0f)))
 
                     val hoursElapsed = if (candidate.lastUsedAtMs > 0L && nowMs > candidate.lastUsedAtMs) {
                         (nowMs - candidate.lastUsedAtMs).toFloat() / 3_600_000.0f
                     } else {
                         0.0f
                     }
-                    val shortDecay = kotlin.math.exp((-hoursElapsed / 1.0f).coerceIn(-50.0f, 0.0f))
-                    val longDecay = kotlin.math.exp((-hoursElapsed / 336.0f).coerceIn(-50.0f, 0.0f))
+                    val shortDecay = kotlin.math.exp((-hoursElapsed / HISTORY_SHORT_DECAY_HOURS).coerceIn(-50.0f, 0.0f))
+                    val longDecay = kotlin.math.exp((-hoursElapsed / HISTORY_LONG_DECAY_HOURS).coerceIn(-50.0f, 0.0f))
 
                     val clampedBase = if (candidate.historyCount >= 2 || isBigram) {
                         val eta = gate * (if (isBigram) 0.90f else minOf(0.70f, (candidate.historyCount - 1) / 5.0f)) * longDecay
@@ -380,10 +387,10 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                         rawBaseNll
                     }
 
-                    val bigramBoost = if (isBigram) 6.0f * longDecay else 0.0f
-                    val shortTerm = if (candidate.lastUsedAtMs > 0L) 2.2f * shortDecay else 0.0f
-                    val longTerm = 1.8f * minOf(kotlin.math.ln(1.0f + candidate.historyCount.toFloat()), 3.0f) * longDecay
-                    val c1Damp = if (candidate.historyCount == 1 && !isBigram) 0.30f else 1.0f
+                    val bigramBoost = if (isBigram) HISTORY_BIGRAM_BOOST_NATS * longDecay else 0.0f
+                    val shortTerm = if (candidate.lastUsedAtMs > 0L) HISTORY_SHORT_TERM_BOOST_NATS * shortDecay else 0.0f
+                    val longTerm = HISTORY_LONG_TERM_BOOST_NATS * minOf(kotlin.math.ln(1.0f + candidate.historyCount.toFloat()), 3.0f) * longDecay
+                    val c1Damp = if (candidate.historyCount == 1 && !isBigram) HISTORY_C1_DAMPING else 1.0f
                     clampedBase - gate * (bigramBoost + shortTerm + longTerm) * c1Damp
                 } else {
                     rawBaseNll

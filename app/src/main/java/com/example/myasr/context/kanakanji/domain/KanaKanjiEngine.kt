@@ -274,7 +274,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     companion object {
         const val MAX_HISTORY_WORDS = 10_000
         internal const val BOUNDARY_PARTICLE_CHARS = "とはがをにでものかねよ"
-        internal const val DEFAULT_LENGTH_BONUS_PER_CHAR = 2000
+        internal const val DEFAULT_LENGTH_BONUS_PER_CHAR = 1000
         internal const val RARITY_HINGE_THRESHOLD = 6200
 
         @Volatile
