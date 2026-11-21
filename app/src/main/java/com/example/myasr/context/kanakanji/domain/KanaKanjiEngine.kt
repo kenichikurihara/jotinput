@@ -792,28 +792,35 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             val matrix = connectionMatrix
             val connRid = if (contextRid > 0) contextRid else 0
 
-            fun effectiveSingleWordCost(rawCost: Int, lid: Int): Int {
+            fun singleViterbiCost(rawCost: Int, lid: Int): Int {
+                val spanLen = normalized.length
+                val bonus = if (spanLen > 1) {
+                    val conf = ((8500 - rawCost).toFloat() / 4000.0f).coerceIn(0.15f, 1.0f)
+                    ((spanLen - 1) * 2000 * conf).toInt()
+                } else 0
                 val transCost = if (matrix != null && lid > 0) matrix.getTransitionCost(connRid, lid) else 0
-                val excessTrans = if (matrix != null && lid > 0) maxOf(0, transCost - 1500) else 0
-                val maxExcess = maxOf(0, rawCost - 4500) / 2
-                return (rawCost + maxExcess + excessTrans).coerceIn(0, 15000)
+                return rawCost - bonus + transCost
             }
 
             val step2StartIndex = result.size
+            val step2ViterbiCosts = HashMap<String, Int>()
 
             val mmapTokens = queryAllMmapExactTokens(normalized).sortedBy { tok ->
-                effectiveSingleWordCost(tok.cost, tok.lid)
+                singleViterbiCost(tok.cost, tok.lid)
             }
             for (tok in mmapTokens) {
-                addCandidate(
-                    ConversionCandidate(
-                        surface = tok.surface,
-                        reading = normalized,
-                        isPrediction = false,
-                        source = tok.source,
-                        dictCost = effectiveSingleWordCost(tok.cost, tok.lid)
-                    )
+                val cand = ConversionCandidate(
+                    surface = tok.surface,
+                    reading = normalized,
+                    isPrediction = false,
+                    source = tok.source,
+                    dictCost = tok.cost
                 )
+                val prevSize = result.size
+                addCandidate(cand)
+                if (result.size > prevSize) {
+                    step2ViterbiCosts[tok.surface] = singleViterbiCost(tok.cost, tok.lid)
+                }
             }
 
             val otherExact = exactTrieWords.filter { it.source != "user" }.sortedWith { a, b ->
@@ -828,18 +835,21 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
             for (w in otherExact) {
-                addCandidate(
-                    ConversionCandidate(
-                        surface = w.surface,
-                        reading = normalized,
-                        isPrediction = false,
-                        source = w.source,
-                        dictCost = effectiveSingleWordCost(w.cost, w.lid)
-                    )
+                val cand = ConversionCandidate(
+                    surface = w.surface,
+                    reading = normalized,
+                    isPrediction = false,
+                    source = w.source,
+                    dictCost = w.cost
                 )
+                val prevSize = result.size
+                addCandidate(cand)
+                if (result.size > prevSize) {
+                    step2ViterbiCosts[w.surface] = singleViterbiCost(w.cost, w.lid)
+                }
             }
 
-            var step2EndIndex = result.size
+            val step2EndIndex = result.size
 
             // 3.6. Voiced & Semi-voiced Exact Matches (e.g. "かいき" -> "会議" [かいぎ], "こはん" -> "ご飯" [ごはん])
             val voicedPaths = matchingPaths.filter { it.voicingDistance > 0 && it.typoCostPenalty == 0 }
@@ -941,41 +951,42 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             // are prioritized over long predictive extensions (e.g. "家の外", "家の中").
             // Beam width is set to 12 to ensure natural inflected verb/particle phrases are never pruned.
             if (normalized.length >= 3) {
-                val viterbiCandidates = searchViterbiLattice(normalized, beamWidth = 12)
-                val viterbiFull = viterbiCandidates.filter { !it.isPrediction && it.source != "viterbi_prefix" }
-                val viterbiPrefix = viterbiCandidates.filter { it.isPrediction || it.source == "viterbi_prefix" }
-
-                if (step2EndIndex > step2StartIndex && viterbiFull.isNotEmpty()) {
+                val (viterbiCandidates, viterbiFullCosts) = searchViterbiLatticeWithCosts(normalized, beamWidth = 12)
+                if (step2EndIndex > step2StartIndex) {
                     // Merge full-span Viterbi phrases (e.g. "朝の", "家の") with Step 2 exact-reading
-                    // single-token matches by effective Mozc cost so high-frequency multi-bunsetsu
+                    // single-token matches by Viterbi effectiveCost so high-frequency multi-bunsetsu
                     // phrases are not buried behind homophonic proper nouns (e.g. "浅野", "麻野", "家野").
                     val mergedFull = result.subList(step2StartIndex, step2EndIndex).toMutableList()
-                    for (cand in viterbiFull) {
-                        val isParticleExact = JapaneseKanaUtils.isCommonParticle(cand.surface) && cand.surface == normalized
-                        val isRedundantHiragana = !isParticleExact &&
-                            JapaneseKanaUtils.isAllHiragana(cand.surface) &&
-                            !cand.isPrediction &&
-                            cand.surface == normalized
-                        if (cand.surface.isNotBlank() && !isRedundantHiragana && seenSurfaces.add(cand.surface)) {
-                            mergedFull.add(cand)
+                    val remainingViterbi = mutableListOf<ConversionCandidate>()
+                    for (cand in viterbiCandidates) {
+                        if (!cand.isPrediction && cand.source != "viterbi_prefix") {
+                            val isParticleExact = JapaneseKanaUtils.isCommonParticle(cand.surface) && cand.surface == normalized
+                            val isRedundantHiragana = !isParticleExact &&
+                                JapaneseKanaUtils.isAllHiragana(cand.surface) &&
+                                !cand.isPrediction &&
+                                cand.surface == normalized
+                            if (cand.surface.isNotBlank() && !isRedundantHiragana && seenSurfaces.add(cand.surface)) {
+                                mergedFull.add(cand)
+                                viterbiFullCosts[cand.surface]?.let { step2ViterbiCosts[cand.surface] = it }
+                            }
+                        } else {
+                            remainingViterbi.add(cand)
                         }
                     }
-                    mergedFull.sortBy { it.dictCost }
+                    mergedFull.sortBy { step2ViterbiCosts[it.surface] ?: Int.MAX_VALUE }
                     val before = result.subList(0, step2StartIndex).toList()
                     val after = result.subList(step2EndIndex, result.size).toList()
                     result.clear()
                     result.addAll(before)
                     result.addAll(mergedFull)
                     result.addAll(after)
-                    step2EndIndex = step2StartIndex + mergedFull.size
-                } else {
-                    for (cand in viterbiFull) {
+                    for (cand in remainingViterbi) {
                         addCandidate(cand)
                     }
-                }
-
-                for (cand in viterbiPrefix) {
-                    addCandidate(cand)
+                } else {
+                    for (cand in viterbiCandidates) {
+                        addCandidate(cand)
+                    }
                 }
             }
 
@@ -1766,8 +1777,12 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
      * Implements quotient-state stratified beam search (同値類層化) and multi-granularity (Prefix) interleaving.
      */
     private fun searchViterbiLattice(reading: String, beamWidth: Int = 6): List<ConversionCandidate> {
+        return searchViterbiLatticeWithCosts(reading, beamWidth).first
+    }
+
+    private fun searchViterbiLatticeWithCosts(reading: String, beamWidth: Int = 6): Pair<List<ConversionCandidate>, Map<String, Int>> {
         val n = reading.length
-        if (n < 3) return emptyList()
+        if (n < 3) return Pair(emptyList(), emptyMap())
 
         val beam = Array(n + 1) { mutableListOf<ViterbiPath>() }
         beam[0].add(ViterbiPath(0, "", emptyList(), false, lastRid = 0, firstBunsetsuSurface = "", firstBunsetsuReadingLen = 0, isFirstBunsetsuClosed = false, lastContentWordSurface = "", secondBunsetsuIsProper = false))
@@ -2296,7 +2311,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             tryAdd(prefixCandidates[prefixIdx++])
         }
 
-        return results
+        val fullCostMap = HashMap<String, Int>(scoredFullCandidates.size)
+        for (sc in scoredFullCandidates) {
+            fullCostMap.putIfAbsent(sc.path.surface, sc.effectiveCost)
+        }
+        return Pair(results, fullCostMap)
     }
 
     private fun isSahenNoun(lid: Int, rid: Int, surface: String): Boolean {

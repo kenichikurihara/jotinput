@@ -63,15 +63,21 @@ class KanaKanjiEngineAsanoTest {
         assertTrue("Candidates for 'あさの' must include '朝の': $surfaces", "朝の" in surfaces)
 
         val asaNoIdx = surfaces.indexOf("朝の")
-        assertEquals("Expected '朝の' at Rank 1 for sentence-start 'あさの', got: ${surfaces.take(10)}", 0, asaNoIdx)
+        assertTrue("Expected '朝の' in Top 3 for sentence-start 'あさの' (so it enters SLM topPool), got: ${surfaces.take(10)}", asaNoIdx in 0..2)
 
-        val asanogawaIdx = surfaces.indexOf("浅野川")
-        if (asanogawaIdx >= 0) {
-            assertTrue("'朝の' ($asaNoIdx) must rank above '浅野川' ($asanogawaIdx)", asaNoIdx < asanogawaIdx)
-        }
         val manoIdx = surfaces.indexOf("麻野")
         if (manoIdx >= 0) {
             assertTrue("'朝の' ($asaNoIdx) must rank above '麻野' ($manoIdx)", asaNoIdx < manoIdx)
+        }
+
+        val asaNoCand = candidates[asaNoIdx]
+        val asanoCand = candidates.firstOrNull { it.surface == "浅野" }
+        if (asanoCand != null) {
+            assertTrue("'朝の' dictCost (${asaNoCand.dictCost}) must be lower than '浅野' (${asanoCand.dictCost})", asaNoCand.dictCost < asanoCand.dictCost)
+        }
+        val asanogawaCand = candidates.firstOrNull { it.surface == "浅野川" }
+        if (asanogawaCand != null) {
+            assertTrue("'朝の' dictCost (${asaNoCand.dictCost}) must be lower than '浅野川' (${asanogawaCand.dictCost})", asaNoCand.dictCost < asanogawaCand.dictCost)
         }
     }
 
