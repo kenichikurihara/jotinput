@@ -398,9 +398,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
                 val effectiveObs = lambdaObs * candidate.obsPenalty * 5.0f * obsDiscount
                 val dictCostPenalty = if (!isEnglishPool) {
-                    val c = candidate.dictCost.coerceIn(0, 15000)
-                    val rareExcess = maxOf(0f, (c - 6000) / 2000.0f)
-                    (c / 3000.0f) + 0.45f * rareExcess * rareExcess
+                    candidate.dictCost.coerceIn(0, 15000) / 3000.0f
                 } else {
                     0.0f
                 }

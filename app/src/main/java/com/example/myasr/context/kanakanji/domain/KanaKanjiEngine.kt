@@ -1919,8 +1919,6 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                             val nextRarityPen = maxOf(0, newMaxWordCost - RARITY_HINGE_THRESHOLD) / 2
                             val rarityDelta = nextRarityPen - prevRarityPen
 
-                            val properAfterParticlePen = if (i > 0 && isFunctionalWord(path.lastRid) && isProperNoun(w.lid) && w.cost > 5000) 1200 else 0
-
                             // Idea V2: Parallel Coordination Symmetry Bonus (e.g. "オン + と + オフ")
                             val isKatakanaWord = w.surface.isNotEmpty() && w.surface.all { it in '\u30A0'..'\u30FF' || it == 'ー' }
                             val isKanjiWord = !isKatakanaWord && w.surface.any { it in '\u4E00'..'\u9FFF' }
@@ -1937,7 +1935,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                                 else -> 0
                             }
 
-                            val newCost = path.cost + (w.cost - lengthBonus).coerceAtLeast(-50000) - userBonus + transitionCost + rarityDelta + properAfterParticlePen - coordBonus
+                            val newCost = path.cost + (w.cost - lengthBonus).coerceAtLeast(-50000) - userBonus + transitionCost + rarityDelta - coordBonus
                             val nextRid = if (w.rid > 0) w.rid else path.lastRid
 
                             val nextWordCostSum = path.wordCostSum + if (isFunctionalWord(w.lid) || isCanonical) 0 else effectiveWordCost

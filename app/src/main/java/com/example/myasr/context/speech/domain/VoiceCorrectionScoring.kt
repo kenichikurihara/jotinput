@@ -86,21 +86,26 @@ object VoiceCorrectionScoring {
         if (net <= 0) return -100f
 
         val elapsedDays = ((nowMs - entry.lastCorrectedAtMs).coerceAtLeast(0L)) / (1000.0 * 60.0 * 60.0 * 24.0)
-        val recencyDecay = exp(-elapsedDays / 60.0).toFloat()
-        val freqScore = 1.5f * ln(1.0 + net.toDouble()).toFloat() * recencyDecay
+        val recencyDecay = exp(-elapsedDays / RECENCY_DECAY_DAYS).toFloat()
+        val freqScore = FREQ_WEIGHT * ln(1.0 + net.toDouble()).toFloat() * recencyDecay
 
         val ctxLower = contextBefore.lowercase()
         val tokenMatches = entry.recentContextTokens.count { tok ->
             tok.isNotBlank() && ctxLower.contains(tok.lowercase())
         }
-        val ctxBonus = tokenMatches * 0.8f
+        val ctxBonus = tokenMatches * CONTEXT_TOKEN_BONUS
         val exactInCtxBonus = if (contextBefore.contains(entry.correctedSurface, ignoreCase = entry.language == AsrLanguage.ENGLISH)) {
-            2.0f
+            EXACT_CONTEXT_BONUS
         } else {
             0.0f
         }
         return freqScore + ctxBonus + exactInCtxBonus
     }
+
+    private const val FREQ_WEIGHT = 1.5f
+    private const val RECENCY_DECAY_DAYS = 60.0
+    private const val CONTEXT_TOKEN_BONUS = 0.8f
+    private const val EXACT_CONTEXT_BONUS = 2.0f
 
     /**
      * Applies learned voice corrections to [text] using S2 (Confusion-Pair + Context),
