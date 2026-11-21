@@ -364,9 +364,12 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
 
-            // 2. Register structural brackets; register canonical words only when no base dictionary is loaded
+            // 2. Register structural brackets; register full canonical fallback only when no base dictionary is loaded.
+            // When base dictionary is loaded, only keep multi-morpheme auxiliary chunks absent from single-morpheme TSV.
             if (!baseLoaded) {
                 registerCanonicalWordsFallback()
+            } else {
+                registerMultiMorphemeAuxiliaryChunks()
             }
             registerStructuralBrackets()
 
@@ -407,6 +410,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     @Synchronized
     fun initializeWithStream(inputStream: InputStream) {
         loadTsv(inputStream, "base")
+        registerMultiMorphemeAuxiliaryChunks()
         registerStructuralBrackets()
         isInitialized = true
     }
@@ -446,6 +450,25 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     internal fun registerCanonicalVocabulary() {
         registerCanonicalWordsFallback()
         registerStructuralBrackets()
+    }
+
+    internal fun registerMultiMorphemeAuxiliaryChunks() {
+        val multiMorphemes = listOf(
+            CanonicalWord("でした", "でした", 172, 172),
+            CanonicalWord("たかった", "たかった", 152, 152),
+            CanonicalWord("なかった", "なかった", 204, 204),
+            CanonicalWord("である", "である"),
+            CanonicalWord("だった", "だった"),
+            CanonicalWord("だろう", "だろう"),
+            CanonicalWord("ている", "ている", 348, 1084),
+            CanonicalWord("てい", "てい", 348, 1084),
+            CanonicalWord("てお", "てお"),
+            CanonicalWord("している", "している"),
+            CanonicalWord("しています", "しています")
+        )
+        for (item in multiMorphemes) {
+            insertWord(item.reading, item.surface, cost = 50, source = "canonical", lid = item.lid, rid = item.rid)
+        }
     }
 
     internal fun registerCanonicalWordsFallback() {
