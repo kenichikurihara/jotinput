@@ -126,6 +126,19 @@ object JapaneseKanaUtils {
     }
 
     /**
+     * Returns true if contextPrefix ends directly with a predictable word or particle
+     * (i.e., non-empty, does not end with whitespace, newline, or punctuation, and
+     * [extractLastWordOrParticle] extracts a non-empty trigger).
+     */
+    fun hasTrailingPredictablePhrase(contextPrefix: String): Boolean {
+        if (contextPrefix.isEmpty()) return false
+        val lastChar = contextPrefix.last()
+        if (lastChar.isWhitespace() || lastChar == '\u3000') return false
+        if (lastChar in listOf('。', '、', '！', '？', '!', '?', '\n', '.', ',')) return false
+        return extractLastWordOrParticle(contextPrefix).isNotEmpty()
+    }
+
+    /**
      * Particle-bridged trailing context anchor for 2nd-order Skip-Bigram next-phrase prediction.
      */
     data class TrailingContextAnchor(

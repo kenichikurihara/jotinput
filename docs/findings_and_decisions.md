@@ -2223,3 +2223,23 @@ When typing `あさの` at sentence start (`contextPrefix = ""`), the natural mu
 1. **Consistent Single-Word Viterbi Cost (`KanaKanjiEngine.singleViterbiCost`)**: Computed each Step 2 single-token match's Viterbi path cost (`rawCost - bonus + transCost` using `contextRid` or `0` for BOS) without altering `ConversionCandidate.dictCost`.
 2. **In-Place Viterbi Cost Merge of Step 2 & Step 4 Full-Span Candidates**: Added `searchViterbiLatticeWithCosts` to return full-span Viterbi `effectiveCost` values. When Step 2 produces exact-reading matches, full-span Viterbi phrases (`!isPrediction && source != "viterbi_prefix"`) are merged into the Step 2 block and sorted by Viterbi `effectiveCost` (while preserving Step 4's interleaved `fullCandidates` + `viterbi_prefix` ordering when Step 2 is empty, as well as Step 3.6/3.8 voiced prefix matches such as `とうきよ` -> `東京`).
 3. **Regression Test Suite (`KanaKanjiEngineAsanoTest.kt`)**: Added JVM unit tests against `system_dictionary.bin` and `connection_data.bin` verifying that `朝の` (`あさの`) ranks in Top 3 (ahead of `麻野` and inside `LlmReranker.topPool`, with lower `dictCost` than `浅野` and `浅野川`), and that `家の` (`いえの`) and `今日は` (`きょうは`) rank #1 at sentence start.
+
+---
+
+## 53. Prediction Checkpoint Restoration & Bigram Rollback on Backspace / Cursor Return
+
+### 1. Problem & Root Causes
+When a user committed a phrase (e.g., `明日の`), tapped a next-phrase prediction candidate (e.g., `会議` -> `明日の会議`), and then deleted `会議` via Backspace (or selection delete / cursor return) so the cursor returned to `明日の`, the candidate strip disappeared to the idle prompt (`話すか、フリックで入力`) instead of restoring the exact prediction list shown right after committing `明日の`. Four issues caused this:
+1. `VoiceInputMethodService.onDeletePressed()` unconditionally called `candidateStripView?.showEmptyStatus(...)` on `DELETED_SURROUNDING_TEXT` (outside ALPHABET mode) and `DELETED_FROM_KEYBOARD_COMPOSING_NOW_EMPTY`.
+2. `VoiceTouchInputArbitrator` cleared `previousCommittedPhrase` on deletion and maintained no post-commit `PredictionCheckpoint` stack recording displayed candidates, SLM completion status, AI badge, and context anchors.
+3. `NextPhrasePredictor.recordTransition()` immediately mutated bigram/skip-bigram counts and `lastCommittedContentPhrase` without returning a rollback token, so deleting a tapped prediction candidate left speculative history pollution behind.
+4. Multi-bunsetsu phrases ending with a particle (e.g., `明日の`) triggered `isParticle("明日の") == true` without projecting the trailing common particle (`の`) and preceding content word (`明日`), producing `明日|明日の` instead of `明日|の` for skip-bigram learning and lookup.
+
+### 2. Architectural Solution
+1. **PRD / JTBD / CUJ**: Authored [`docs/prd_and_design_prediction_checkpoint_restoration.md`](docs/prd_and_design_prediction_checkpoint_restoration.md).
+2. **Compound Particle Projection & Atomic Rollback (`NextPhrasePredictor.kt`, `JapaneseKanaUtils.kt`)**: Added `hasTrailingPredictablePhrase()`, `recordTransitionWithToken()` returning `TransitionRollbackToken` (`BigramKeySnapshot`, `previousContentPhrase`, reading snapshot), `rollbackTransition()`, and consistent `extractTrailingContentAndParticle()` handling for compound phrases ending with a particle (`明日の` -> `の` + `明日|の`).
+3. **DMN Policy (`CandidateRerankJudgement.kt`)**: Added `PredictionRestorationPolicy` (`HitPolicy.FIRST`) governing `SHOW_EMPTY_STATUS`, `RESTORE_CHECKPOINT_SINGLE_PASS`, `RESTORE_CHECKPOINT_AND_COMPLETE_SLM`, and `RECOMPUTE_FROM_SURROUNDING_CONTEXT`.
+4. **Bounded Checkpoint Stack (`VoiceTouchInputArbitrator.kt`)**: Added `PredictionCheckpoint` stack (`MAX_PREDICTION_CHECKPOINTS = 16`, `MAX_CHECKPOINT_CONTEXT_KEY_LEN = 128`) and `reconcilePredictionCheckpointsAfterDelete()` with sliding-window ancestor matching and speculative transition rollback.
+5. **IME Lifecycle Integration (`VoiceInputMethodService.kt`)**: Wired checkpoint recording/snapshotting across commits, candidate clicks, Phase 1/2 SLM updates, `onDeletePressed`, and `onUpdateSelection` (distinguishing cursor navigation from external deletion via `getTextAfterCursor`).
+6. **Alloy 6 Formal Verification (`prediction_checkpoint_restoration.als`)**: Verified DMN policy totality/safety and exact candidate/history restoration across `commitPhrase -> selectPrediction -> deleteToPreviousCheckpoint`.
+

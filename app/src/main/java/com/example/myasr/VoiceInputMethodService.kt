@@ -90,6 +90,8 @@ class VoiceInputMethodService : InputMethodService() {
     private var speculativePrewarmJob: Job? = null
     private var lastWarmedContextText: String? = null
     private var isCurrentCandidatesReranked: Boolean = false
+    private var currentDebugSlmBadge: String? = null
+    private var currentHighlightFirstAsAi: Boolean = false
     private val audioRecorder = AudioRecorder()
     private val asrDecodingMutex = Mutex()
     private lateinit var kanaKanjiEngine: KanaKanjiEngine
@@ -451,11 +453,35 @@ class VoiceInputMethodService : InputMethodService() {
             isCurrentCandidatesReranked = false
             updateDebugSlmBadge(null)
             syncKeyboardState()
-            candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+            if (newSelStart == newSelEnd && flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.KANA) {
+                val currentTextBefore = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+                if (currentTextBefore != arbitrator.lastExpectedTextBeforeCursor &&
+                    arbitrator.findPredictionCheckpoint(currentTextBefore) != null
+                ) {
+                    val isExternalShrink = isExternalDeletionShrink(currentTextBefore)
+                    restoreOrRefreshPredictionsAfterDeleteOrCursorReturn(currentTextBefore, isFromDelete = isExternalShrink)
+                } else {
+                    candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                }
+            } else {
+                candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+            }
             triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.CURSOR_MOVED_EXTERNAL)
         } else {
             updateContextBar()
             if (!arbitrator.isKeyboardComposing() && !arbitrator.isStreamingComposing()) {
+                if (newSelStart == newSelEnd && flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.KANA) {
+                    val currentTextBefore = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+                    if (currentTextBefore != arbitrator.lastExpectedTextBeforeCursor) {
+                        val matched = arbitrator.findPredictionCheckpoint(currentTextBefore)
+                        if (matched != null) {
+                            val isExternalShrink = isExternalDeletionShrink(currentTextBefore)
+                            restoreOrRefreshPredictionsAfterDeleteOrCursorReturn(currentTextBefore, isFromDelete = isExternalShrink)
+                        } else {
+                            arbitrator.lastExpectedTextBeforeCursor = currentTextBefore
+                        }
+                    }
+                }
                 triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.CURSOR_MOVED_EXTERNAL)
             }
         }
@@ -536,6 +562,7 @@ class VoiceInputMethodService : InputMethodService() {
     }
 
     private fun updateDebugSlmBadge(badge: String?) {
+        currentDebugSlmBadge = badge
         val isDebug = KeyboardHeightManager.isDebugDisplayEnabled(this)
         if (isDebug && !badge.isNullOrBlank()) {
             tvDebugSlmBadge?.text = badge
@@ -769,6 +796,22 @@ class VoiceInputMethodService : InputMethodService() {
                     return
                 }
 
+                val wasComposingBeforeClick = arbitrator.isKeyboardComposing()
+                val composingReadingBeforeClick = if (wasComposingBeforeClick) arbitrator.composingText.toString() else ""
+                val textBeforeCommit = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+                if (!wasComposingBeforeClick && !arbitrator.isStreamingComposing()) {
+                    val visibleCands = candidateStripView?.getCandidates().orEmpty()
+                    if (visibleCands.isNotEmpty()) {
+                        arbitrator.snapshotDisplayedCandidatesToCheckpoint(
+                            contextBeforeCursor = textBeforeCommit,
+                            displayedCandidates = visibleCands,
+                            isFullyReranked = isCurrentCandidatesReranked,
+                            debugBadge = currentDebugSlmBadge,
+                            highlightFirstAsAi = currentHighlightFirstAsAi
+                        )
+                    }
+                }
+
                 val isPartialCommit = arbitrator.onCandidateSelected(
                     editor = editorBridge,
                     candidateSurface = committedSurface,
@@ -784,8 +827,14 @@ class VoiceInputMethodService : InputMethodService() {
                 if (!candidate.isPrediction) {
                     kanaKanjiEngine.commitCandidate(candidate)
                 }
-                if (prevPhrase.isNotEmpty()) {
-                    nextPhrasePredictor.recordTransition(prevPhrase, committedSurface, currentReading = candidate.reading)
+                val rollbackToken = if (prevPhrase.isNotEmpty()) {
+                    nextPhrasePredictor.recordTransitionWithToken(
+                        prevPhrase,
+                        committedSurface,
+                        currentReading = candidate.reading
+                    )
+                } else {
+                    null
                 }
 
                 isCurrentCandidatesReranked = false
@@ -797,7 +846,20 @@ class VoiceInputMethodService : InputMethodService() {
                     candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                     triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.TEXT_COMMITTED)
                 } else {
-                    showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+                    val postCommitText = resolvePostCommitTextBeforeCursor(
+                        beforeCommitText = textBeforeCommit,
+                        committedSurface = committedSurface,
+                        replacedComposingText = composingReadingBeforeClick
+                    )
+                    arbitrator.attachRollbackTokenToCheckpoint(
+                        contextBeforeCursor = postCommitText,
+                        committedPhrase = arbitrator.previousCommittedPhrase,
+                        rollbackToken = rollbackToken
+                    )
+                    showNextPhrasePredictions(
+                        committedPhrase = arbitrator.previousCommittedPhrase,
+                        overrideTextBeforeCursor = postCommitText
+                    )
                 }
             }
         }
@@ -867,6 +929,9 @@ class VoiceInputMethodService : InputMethodService() {
             override fun onDeletePressed(count: Int) {
                 clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 audioRecorder.notifyUserTyping()
+                val textBeforeDelete = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+                val composingBeforeDelete = if (arbitrator.isKeyboardComposing()) arbitrator.composingText.toString() else ""
+                val hadSelectedText = !currentInputConnection?.getSelectedText(0).isNullOrEmpty()
                 val outcome = arbitrator.onDeletePressed(
                     editor = editorBridge,
                     onDiscardUnflushedSpeech = {
@@ -891,19 +956,45 @@ class VoiceInputMethodService : InputMethodService() {
                     }
                     VoiceTouchInputArbitrator.DeleteOutcome.DELETED_SURROUNDING_TEXT -> {
                         phase1TimerJob?.cancel()
-            rerankJob?.cancel()
+                        rerankJob?.cancel()
                         englishCandidateJob?.cancel()
                         isCurrentCandidatesReranked = false
                         if (count <= 1 && flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
                             updateEnglishTypoAndSpellingCandidates()
                         } else {
-                            candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                            val effectiveAfterDelete = resolvePostDeleteTextBeforeCursor(
+                                beforeDeleteText = textBeforeDelete,
+                                deletedChars = count,
+                                hadSelection = hadSelectedText
+                            )
+                            restoreOrRefreshPredictionsAfterDeleteOrCursorReturn(
+                                effectiveTextBeforeCursor = effectiveAfterDelete,
+                                isFromDelete = true
+                            )
                         }
                     }
-                    VoiceTouchInputArbitrator.DeleteOutcome.DELETED_FROM_KEYBOARD_COMPOSING_NOW_EMPTY,
+                    VoiceTouchInputArbitrator.DeleteOutcome.DELETED_FROM_KEYBOARD_COMPOSING_NOW_EMPTY -> {
+                        phase1TimerJob?.cancel()
+                        rerankJob?.cancel()
+                        englishCandidateJob?.cancel()
+                        isCurrentCandidatesReranked = false
+                        val currentBefore = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+                        val effectiveBefore = if (composingBeforeDelete.isNotEmpty() &&
+                            currentBefore == textBeforeDelete &&
+                            currentBefore.endsWith(composingBeforeDelete)
+                        ) {
+                            currentBefore.dropLast(composingBeforeDelete.length)
+                        } else {
+                            currentBefore
+                        }
+                        restoreOrRefreshPredictionsAfterDeleteOrCursorReturn(
+                            effectiveTextBeforeCursor = effectiveBefore,
+                            isFromDelete = true
+                        )
+                    }
                     VoiceTouchInputArbitrator.DeleteOutcome.DELETED_ENTIRE_SWIPE_WORD -> {
                         phase1TimerJob?.cancel()
-            rerankJob?.cancel()
+                        rerankJob?.cancel()
                         englishCandidateJob?.cancel()
                         isCurrentCandidatesReranked = false
                         candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
@@ -956,6 +1047,8 @@ class VoiceInputMethodService : InputMethodService() {
             override fun onEnterPressed() {
                 clipboardSuggestionPolicy.onUserTypingOrVoiceAction(android.os.SystemClock.uptimeMillis())
                 val prevPhrase = arbitrator.previousCommittedPhrase
+                val textBeforeEnterCommit = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+                val composingBeforeEnter = if (arbitrator.isKeyboardComposing()) arbitrator.composingText.toString() else ""
                 val hadUnflushed = currentState == State.RECORDING && audioRecorder.hasUnflushedSpeech()
 
                 val outcome = arbitrator.onEnterPressed(
@@ -967,7 +1060,7 @@ class VoiceInputMethodService : InputMethodService() {
                 )
                 audioRecorder.notifyUserTyping()
                 phase1TimerJob?.cancel()
-            rerankJob?.cancel()
+                rerankJob?.cancel()
                 LlmReranker.getInstance(this@VoiceInputMethodService).requestAbortScoring()
                 isCurrentCandidatesReranked = false
                 syncKeyboardState()
@@ -975,10 +1068,25 @@ class VoiceInputMethodService : InputMethodService() {
                 when (outcome) {
                     VoiceTouchInputArbitrator.EnterOutcome.COMMITTED_KEYBOARD_COMPOSING -> {
                         val committed = arbitrator.lastCommittedSurface.ifEmpty { arbitrator.previousCommittedPhrase }
-                        if (prevPhrase.isNotEmpty() && committed.isNotEmpty()) {
-                            nextPhrasePredictor.recordTransition(prevPhrase, committed)
+                        val rollbackToken = if (prevPhrase.isNotEmpty() && committed.isNotEmpty()) {
+                            nextPhrasePredictor.recordTransitionWithToken(prevPhrase, committed)
+                        } else {
+                            null
                         }
-                        showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+                        val postCommitText = resolvePostCommitTextBeforeCursor(
+                            beforeCommitText = textBeforeEnterCommit,
+                            committedSurface = committed,
+                            replacedComposingText = composingBeforeEnter
+                        )
+                        arbitrator.attachRollbackTokenToCheckpoint(
+                            contextBeforeCursor = postCommitText,
+                            committedPhrase = arbitrator.previousCommittedPhrase,
+                            rollbackToken = rollbackToken
+                        )
+                        showNextPhrasePredictions(
+                            committedPhrase = arbitrator.previousCommittedPhrase,
+                            overrideTextBeforeCursor = postCommitText
+                        )
                     }
                     VoiceTouchInputArbitrator.EnterOutcome.COMMITTED_STREAMING_COMPOSING -> {
                         if (arbitrator.previousCommittedPhrase.isNotEmpty()) {
@@ -1496,12 +1604,28 @@ class VoiceInputMethodService : InputMethodService() {
         }
         if (arbitrator.isKeyboardComposing()) {
             val prevPhrase = arbitrator.previousCommittedPhrase
+            val textBeforeCommit = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
             val reading = arbitrator.commitKeyboardComposing(editorBridge) ?: ""
-            if (prevPhrase.isNotEmpty() && reading.isNotEmpty()) {
-                nextPhrasePredictor.recordTransition(prevPhrase, reading)
+            val rollbackToken = if (prevPhrase.isNotEmpty() && reading.isNotEmpty()) {
+                nextPhrasePredictor.recordTransitionWithToken(prevPhrase, reading)
+            } else {
+                null
             }
             syncKeyboardState()
-            showNextPhrasePredictions(arbitrator.previousCommittedPhrase)
+            val postCommitText = resolvePostCommitTextBeforeCursor(
+                beforeCommitText = textBeforeCommit,
+                committedSurface = reading,
+                replacedComposingText = reading
+            )
+            arbitrator.attachRollbackTokenToCheckpoint(
+                contextBeforeCursor = postCommitText,
+                committedPhrase = arbitrator.previousCommittedPhrase,
+                rollbackToken = rollbackToken
+            )
+            showNextPhrasePredictions(
+                committedPhrase = arbitrator.previousCommittedPhrase,
+                overrideTextBeforeCursor = postCommitText
+            )
         }
     }
 
@@ -1686,15 +1810,153 @@ class VoiceInputMethodService : InputMethodService() {
         return combined
     }
 
-    private fun showNextPhrasePredictions(committedPhrase: String) {
+    private fun resolvePostCommitTextBeforeCursor(
+        beforeCommitText: String,
+        committedSurface: String,
+        replacedComposingText: String = ""
+    ): String {
+        val actual = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+        if (actual.isNotEmpty() && actual != beforeCommitText) {
+            return actual
+        }
+        val base = if (replacedComposingText.isNotEmpty() && beforeCommitText.endsWith(replacedComposingText)) {
+            beforeCommitText.dropLast(replacedComposingText.length)
+        } else {
+            beforeCommitText
+        }
+        return (base + committedSurface).takeLast(256)
+    }
+
+    private fun resolvePostDeleteTextBeforeCursor(
+        beforeDeleteText: String,
+        deletedChars: Int,
+        hadSelection: Boolean
+    ): String {
+        val actual = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+        return if (hadSelection || actual != beforeDeleteText) {
+            actual
+        } else {
+            beforeDeleteText.dropLast(deletedChars.coerceAtLeast(1).coerceAtMost(beforeDeleteText.length))
+        }
+    }
+
+    private fun isExternalDeletionShrink(currentTextBefore: String): Boolean {
+        if (!arbitrator.latestCheckpointContextStartsWith(currentTextBefore)) {
+            return false
+        }
+        val textAfter = currentInputConnection?.getTextAfterCursor(32, 0)?.toString() ?: ""
+        if (textAfter.isEmpty()) {
+            return true
+        }
+        val top = arbitrator.getLatestPredictionCheckpoint()
+        if (top != null && top.fullContextBeforeCursor.startsWith(currentTextBefore)) {
+            val expectedSuffixAfterCursor = top.fullContextBeforeCursor.removePrefix(currentTextBefore)
+            if (expectedSuffixAfterCursor.isNotEmpty() && textAfter.startsWith(expectedSuffixAfterCursor)) {
+                return false
+            }
+        }
+        return true
+    }
+
+    private fun restoreOrRefreshPredictionsAfterDeleteOrCursorReturn(
+        effectiveTextBeforeCursor: String,
+        isFromDelete: Boolean
+    ) {
+        phase1TimerJob?.cancel()
+        rerankJob?.cancel()
+        englishCandidateJob?.cancel()
+        warmContextJob?.cancel()
+        speculativePrewarmJob?.cancel()
+        LlmReranker.getInstance(this).requestAbortScoring()
+        isCurrentCandidatesReranked = false
+        currentHighlightFirstAsAi = false
+        arbitrator.lastExpectedTextBeforeCursor = effectiveTextBeforeCursor
+
+        val matchedCheckpoint = if (isFromDelete) {
+            arbitrator.reconcilePredictionCheckpointsAfterDelete(effectiveTextBeforeCursor) { token ->
+                nextPhrasePredictor.rollbackTransition(token)
+            }
+        } else {
+            arbitrator.findPredictionCheckpoint(effectiveTextBeforeCursor)?.also {
+                arbitrator.previousCommittedPhrase = it.committedPhrase
+            }
+        }
+
+        val slm = LlmReranker.getInstance(this)
+        val isRerankActive = KeyboardHeightManager.isSlmRerankEnabled(this) && slm.isReady()
+        val isPasswordField = ClipboardUtils.isPasswordInputType(currentInputEditorInfo?.inputType ?: 0)
+        val decision = CandidateRerankJudgement.judgePredictionRestoration(
+            CandidateRerankJudgement.PredictionRestorationInput(
+                isKanaMode = (flickKeyboardView?.currentMode == JapaneseKanaUtils.KeyboardMode.KANA),
+                isComposingOrStreaming = arbitrator.isKeyboardComposing() || arbitrator.isStreamingComposing(),
+                isPasswordOrBypassedField = isPasswordField,
+                textBeforeCursor = effectiveTextBeforeCursor,
+                hasMatchingCheckpoint = (matchedCheckpoint != null && matchedCheckpoint.candidates.isNotEmpty()),
+                checkpointIsFullyReranked = (matchedCheckpoint?.isFullyReranked == true) || !isRerankActive,
+                hasTrailingPredictablePhrase = JapaneseKanaUtils.hasTrailingPredictablePhrase(effectiveTextBeforeCursor)
+            )
+        )
+
+        when (decision.action) {
+            CandidateRerankJudgement.PredictionRestorationAction.SHOW_EMPTY_STATUS -> {
+                updateDebugSlmBadge(null)
+                candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+            }
+            CandidateRerankJudgement.PredictionRestorationAction.RESTORE_CHECKPOINT_SINGLE_PASS -> {
+                val cp = matchedCheckpoint!!
+                nextPhrasePredictionGeneration++
+                isCurrentCandidatesReranked = cp.isFullyReranked
+                currentHighlightFirstAsAi = cp.highlightFirstAsAi
+                updateDebugSlmBadge(cp.debugBadge)
+                candidateStripView?.setCandidatesSinglePass(
+                    cp.candidates,
+                    highlightFirstAsAi = cp.highlightFirstAsAi
+                )
+                triggerSpeculativeContextWarm(
+                    CandidateRerankJudgement.WarmTrigger.TEXT_COMMITTED,
+                    rawContext = effectiveTextBeforeCursor
+                )
+            }
+            CandidateRerankJudgement.PredictionRestorationAction.RESTORE_CHECKPOINT_AND_COMPLETE_SLM -> {
+                val cp = matchedCheckpoint!!
+                currentHighlightFirstAsAi = false
+                candidateStripView?.setCandidatesSinglePass(
+                    cp.candidates,
+                    highlightFirstAsAi = false
+                )
+                showNextPhrasePredictions(
+                    committedPhrase = cp.committedPhrase,
+                    overrideTextBeforeCursor = effectiveTextBeforeCursor
+                )
+            }
+            CandidateRerankJudgement.PredictionRestorationAction.RECOMPUTE_FROM_SURROUNDING_CONTEXT -> {
+                val phrase = arbitrator.previousCommittedPhrase.ifEmpty {
+                    JapaneseKanaUtils.extractLastWordOrParticle(effectiveTextBeforeCursor)
+                }
+                arbitrator.previousCommittedPhrase = phrase
+                showNextPhrasePredictions(
+                    committedPhrase = phrase,
+                    overrideTextBeforeCursor = effectiveTextBeforeCursor
+                )
+            }
+        }
+    }
+
+    private fun showNextPhrasePredictions(
+        committedPhrase: String,
+        overrideTextBeforeCursor: String? = null
+    ) {
         val generation = ++nextPhrasePredictionGeneration
         phase1TimerJob?.cancel()
         rerankJob?.cancel()
         warmContextJob?.cancel()
         speculativePrewarmJob?.cancel()
         isCurrentCandidatesReranked = false
+        currentHighlightFirstAsAi = false
         updateDebugSlmBadge(null)
-        val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: ""
+        val textBeforeCursor = overrideTextBeforeCursor
+            ?: (currentInputConnection?.getTextBeforeCursor(256, 0)?.toString() ?: "")
+        arbitrator.lastExpectedTextBeforeCursor = textBeforeCursor
         val suggestJpPeriod = KeyboardHeightManager.isJapanesePeriodSuggestionEnabled(this)
 
         // 1. FAST PATH (Instant UI update on main thread, < 0.1ms):
@@ -1719,6 +1981,17 @@ class VoiceInputMethodService : InputMethodService() {
             )
         )
         val isAntiJitterUiEnabled = KeyboardHeightManager.isAntiJitterCandidateUiEnabled(this)
+
+        if (fastPredictions.isNotEmpty()) {
+            arbitrator.recordOrUpdatePredictionCheckpoint(
+                contextBeforeCursor = textBeforeCursor,
+                committedPhrase = committedPhrase,
+                candidates = fastPredictions,
+                isFullyReranked = !nextPhraseDecision.decision,
+                debugBadge = null,
+                highlightFirstAsAi = false
+            )
+        }
 
         // Z5: Check speculative pre-warmed zero-query cache for 0ms single-pass render on commit
         val prewarmedSlm = if (nextPhraseDecision.decision) {
@@ -1747,10 +2020,20 @@ class VoiceInputMethodService : InputMethodService() {
                 if (fastReranked.isFullyComplete || !isAntiJitterUiEnabled) {
                     isCurrentCandidatesReranked = fastReranked.isFullyComplete
                     val engineType = KeyboardHeightManager.getRerankEngineType(this)
+                    val highlight = isAntiJitterUiEnabled && fastReranked.isFullyComplete
+                    currentHighlightFirstAsAi = highlight
                     updateDebugSlmBadge(engineType.badgeLabel)
                     candidateStripView?.setCandidatesSinglePass(
                         finalZeroQuery,
-                        highlightFirstAsAi = isAntiJitterUiEnabled && fastReranked.isFullyComplete
+                        highlightFirstAsAi = highlight
+                    )
+                    arbitrator.recordOrUpdatePredictionCheckpoint(
+                        contextBeforeCursor = textBeforeCursor,
+                        committedPhrase = committedPhrase,
+                        candidates = candidateStripView?.getCandidates()?.takeIf { it.isNotEmpty() } ?: finalZeroQuery,
+                        isFullyReranked = fastReranked.isFullyComplete,
+                        debugBadge = currentDebugSlmBadge,
+                        highlightFirstAsAi = highlight
                     )
                     if (fastReranked.isFullyComplete) {
                         return
@@ -1759,13 +2042,30 @@ class VoiceInputMethodService : InputMethodService() {
                     prewarmedCombined = finalZeroQuery
                 }
             } else if (!isAntiJitterUiEnabled) {
-                candidateStripView?.setCandidates(CandidateRerankJudgement.applyZeroQueryHorizonPairing(combined))
+                val displayCombined = CandidateRerankJudgement.applyZeroQueryHorizonPairing(combined)
+                candidateStripView?.setCandidates(displayCombined)
+                arbitrator.recordOrUpdatePredictionCheckpoint(
+                    contextBeforeCursor = textBeforeCursor,
+                    committedPhrase = committedPhrase,
+                    candidates = candidateStripView?.getCandidates()?.takeIf { it.isNotEmpty() } ?: displayCombined,
+                    isFullyReranked = false,
+                    debugBadge = currentDebugSlmBadge,
+                    highlightFirstAsAi = false
+                )
             } else {
                 prewarmedCombined = CandidateRerankJudgement.applyZeroQueryHorizonPairing(combined)
             }
         } else if (!nextPhraseDecision.decision || !isAntiJitterUiEnabled) {
             if (fastPredictions.isNotEmpty()) {
                 candidateStripView?.setCandidates(fastPredictions)
+                arbitrator.recordOrUpdatePredictionCheckpoint(
+                    contextBeforeCursor = textBeforeCursor,
+                    committedPhrase = committedPhrase,
+                    candidates = candidateStripView?.getCandidates()?.takeIf { it.isNotEmpty() } ?: fastPredictions,
+                    isFullyReranked = !nextPhraseDecision.decision,
+                    debugBadge = null,
+                    highlightFirstAsAi = false
+                )
             } else {
                 candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
             }
@@ -1805,6 +2105,14 @@ class VoiceInputMethodService : InputMethodService() {
                             baseCandidates = initialPhase1Candidates,
                             reservedHeroCharCount = heroReservedCharCount
                         ) ?: CandidateStripView.filterAndDeduplicateDisplayCandidates(initialPhase1Candidates)
+                        arbitrator.recordOrUpdatePredictionCheckpoint(
+                            contextBeforeCursor = textBeforeCursor,
+                            committedPhrase = committedPhrase,
+                            candidates = phase1DisplayCandidates.ifEmpty { initialPhase1Candidates },
+                            isFullyReranked = false,
+                            debugBadge = null,
+                            highlightFirstAsAi = false
+                        )
                     } else {
                         candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                     }
@@ -1834,6 +2142,17 @@ class VoiceInputMethodService : InputMethodService() {
                         )
                     } else {
                         candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
+                    }
+                    if (initialPhase1Candidates.isNotEmpty()) {
+                        currentHighlightFirstAsAi = false
+                        arbitrator.recordOrUpdatePredictionCheckpoint(
+                            contextBeforeCursor = textBeforeCursor,
+                            committedPhrase = committedPhrase,
+                            candidates = candidateStripView?.getCandidates()?.takeIf { it.isNotEmpty() } ?: initialPhase1Candidates,
+                            isFullyReranked = true,
+                            debugBadge = currentDebugSlmBadge,
+                            highlightFirstAsAi = false
+                        )
                     }
                 }
             }
@@ -1892,7 +2211,16 @@ class VoiceInputMethodService : InputMethodService() {
                             updateDebugSlmBadge(debugBadge)
 
                             if (!isAntiJitterUiEnabled) {
+                                currentHighlightFirstAsAi = false
                                 candidateStripView?.setCandidates(reranked)
+                                arbitrator.recordOrUpdatePredictionCheckpoint(
+                                    contextBeforeCursor = textBeforeCursor,
+                                    committedPhrase = committedPhrase,
+                                    candidates = candidateStripView?.getCandidates()?.takeIf { it.isNotEmpty() } ?: reranked,
+                                    isFullyReranked = true,
+                                    debugBadge = debugBadge,
+                                    highlightFirstAsAi = false
+                                )
                                 return@withContext
                             }
 
@@ -1900,8 +2228,17 @@ class VoiceInputMethodService : InputMethodService() {
                                 .ifEmpty { reranked }
 
                             if (!isPhase1Rendered || phase1DisplayCandidates.isEmpty()) {
+                                currentHighlightFirstAsAi = slmUsed
                                 candidateStripView?.setCandidatesSinglePass(
                                     filteredReranked,
+                                    highlightFirstAsAi = slmUsed
+                                )
+                                arbitrator.recordOrUpdatePredictionCheckpoint(
+                                    contextBeforeCursor = textBeforeCursor,
+                                    committedPhrase = committedPhrase,
+                                    candidates = candidateStripView?.getCandidates()?.takeIf { it.isNotEmpty() } ?: filteredReranked,
+                                    isFullyReranked = true,
+                                    debugBadge = debugBadge,
                                     highlightFirstAsAi = slmUsed
                                 )
                             } else {
@@ -1920,15 +2257,45 @@ class VoiceInputMethodService : InputMethodService() {
                                 )
                                 when (decision.strategy) {
                                     CandidateRerankJudgement.UiRenderStrategy.DIRECT_SINGLE_PASS_SLM -> {
+                                        currentHighlightFirstAsAi = slmUsed
                                         candidateStripView?.setCandidatesSinglePass(
                                             decision.finalCandidates,
                                             highlightFirstAsAi = slmUsed
                                         )
+                                        arbitrator.recordOrUpdatePredictionCheckpoint(
+                                            contextBeforeCursor = textBeforeCursor,
+                                            committedPhrase = committedPhrase,
+                                            candidates = candidateStripView?.getCandidates()?.takeIf { it.isNotEmpty() } ?: decision.finalCandidates,
+                                            isFullyReranked = true,
+                                            debugBadge = debugBadge,
+                                            highlightFirstAsAi = slmUsed
+                                        )
                                     }
                                     CandidateRerankJudgement.UiRenderStrategy.PHASE2_POPULATE_HERO_AND_RERANK_OFFSCREEN_TAIL -> {
+                                        val highlight = (decision.heroSlotCandidate != null) ||
+                                            (slmUsed && decision.spotlightIndexInViewport == 0)
+                                        currentHighlightFirstAsAi = highlight
                                         candidateStripView?.applyPhase2NonDisruptiveUpdate(decision)
+                                        arbitrator.recordOrUpdatePredictionCheckpoint(
+                                            contextBeforeCursor = textBeforeCursor,
+                                            committedPhrase = committedPhrase,
+                                            candidates = candidateStripView?.getCandidates()?.takeIf { it.isNotEmpty() } ?: decision.finalCandidates,
+                                            isFullyReranked = true,
+                                            debugBadge = debugBadge,
+                                            highlightFirstAsAi = highlight
+                                        )
                                     }
                                     CandidateRerankJudgement.UiRenderStrategy.DEFER_WHILE_USER_TOUCHING -> {
+                                        val preHighlight = (decision.heroSlotCandidate != null) ||
+                                            (slmUsed && decision.spotlightIndexInViewport == 0)
+                                        arbitrator.recordOrUpdatePredictionCheckpoint(
+                                            contextBeforeCursor = textBeforeCursor,
+                                            committedPhrase = committedPhrase,
+                                            candidates = decision.finalCandidates,
+                                            isFullyReranked = true,
+                                            debugBadge = debugBadge,
+                                            highlightFirstAsAi = preHighlight
+                                        )
                                         candidateStripView?.deferPhase2UpdateUntilTouchRelease {
                                             if (generation == nextPhrasePredictionGeneration &&
                                                 !arbitrator.isKeyboardComposing() &&
@@ -1946,7 +2313,18 @@ class VoiceInputMethodService : InputMethodService() {
                                                         isUserTouchingStrip = false
                                                     )
                                                 )
+                                                val deferredHighlight = (deferredDecision.heroSlotCandidate != null) ||
+                                                    (slmUsed && deferredDecision.spotlightIndexInViewport == 0)
+                                                currentHighlightFirstAsAi = deferredHighlight
                                                 candidateStripView?.applyPhase2NonDisruptiveUpdate(deferredDecision)
+                                                arbitrator.recordOrUpdatePredictionCheckpoint(
+                                                    contextBeforeCursor = textBeforeCursor,
+                                                    committedPhrase = committedPhrase,
+                                                    candidates = candidateStripView?.getCandidates()?.takeIf { it.isNotEmpty() } ?: deferredDecision.finalCandidates,
+                                                    isFullyReranked = true,
+                                                    debugBadge = debugBadge,
+                                                    highlightFirstAsAi = deferredHighlight
+                                                )
                                             }
                                         }
                                     }

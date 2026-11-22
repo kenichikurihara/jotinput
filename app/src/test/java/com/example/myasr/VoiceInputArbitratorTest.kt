@@ -2,12 +2,16 @@ package com.example.myasr
 
 import com.example.myasr.context.ime.domain.EditorBridge
 import com.example.myasr.context.ime.domain.VoiceTouchInputArbitrator
+import com.example.myasr.context.kanakanji.domain.ConversionCandidate
 import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
+import com.example.myasr.context.kanakanji.domain.NextPhrasePredictor
+import com.example.myasr.context.reranking.domain.CandidateRerankJudgement
 import com.example.myasr.context.speech.domain.StreamingVadProcessor
 import com.example.myasr.context.speech.infrastructure.AudioRecorder
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -668,5 +672,271 @@ class VoiceInputArbitratorTest {
         val outcome2 = arbitrator.onDeletePressed(editor = editor, count = 4)
         assertEquals(VoiceTouchInputArbitrator.DeleteOutcome.DELETED_SURROUNDING_TEXT, outcome2)
         assertEquals("He", editor.committedText)
+    }
+
+    @Test
+    fun testPredictionCheckpointRestoredAfterSelectingAndDeletingPredictionCandidate() {
+        val editor = RealisticMockEditorBridge()
+        val arbitrator = VoiceTouchInputArbitrator()
+        val predictor = NextPhrasePredictor(null)
+
+        // 1. User types "あしたの" and commits "明日の"
+        arbitrator.onTypeKana(editor, "あ")
+        arbitrator.onTypeKana(editor, "し")
+        arbitrator.onTypeKana(editor, "た")
+        arbitrator.onTypeKana(editor, "の")
+        arbitrator.onCandidateSelected(editor, candidateSurface = "明日の", isPrediction = false, candidateReading = "あしたの")
+        assertEquals("明日の", editor.committedText)
+
+        val predictionsAfterAshitaNo = predictor.predict("明日の", textBeforeCursor = "明日の", suggestPeriod = false)
+        assertTrue(predictionsAfterAshitaNo.any { it.surface == "会議" })
+        arbitrator.recordOrUpdatePredictionCheckpoint(
+            contextBeforeCursor = "明日の",
+            committedPhrase = "明日の",
+            candidates = predictionsAfterAshitaNo,
+            isFullyReranked = true,
+            debugBadge = "SLM",
+            highlightFirstAsAi = true
+        )
+
+        // 2. User taps prediction candidate "会議"
+        val kaigiCand = predictionsAfterAshitaNo.first { it.surface == "会議" }
+        val prevPhrase = arbitrator.previousCommittedPhrase
+        arbitrator.onCandidateSelected(
+            editor = editor,
+            candidateSurface = kaigiCand.surface,
+            isPrediction = true,
+            candidateReading = kaigiCand.reading
+        )
+        assertEquals("明日の会議", editor.committedText)
+        val kaigiToken = predictor.recordTransitionWithToken(prevPhrase, "会議", kaigiCand.reading)
+        val predictionsAfterKaigi = predictor.predict("会議", textBeforeCursor = "明日の会議", suggestPeriod = false)
+        arbitrator.recordOrUpdatePredictionCheckpoint(
+            contextBeforeCursor = "明日の会議",
+            committedPhrase = "会議",
+            candidates = predictionsAfterKaigi,
+            isFullyReranked = true,
+            rollbackToken = kaigiToken
+        )
+
+        // 3. First Backspace: "明日の会議" -> "明日の会"
+        val delOutcome1 = arbitrator.onDeletePressed(editor = editor, count = 1)
+        assertEquals(VoiceTouchInputArbitrator.DeleteOutcome.DELETED_SURROUNDING_TEXT, delOutcome1)
+        assertEquals("明日の会", editor.committedText)
+        val match1 = arbitrator.reconcilePredictionCheckpointsAfterDelete(editor.committedText) {
+            predictor.rollbackTransition(it)
+        }
+        assertNull("Intermediate partial string should not match checkpoint", match1)
+        assertNull("Speculative '会議' transition must already be rolled back", predictor.getHistorySnapshot()["明日の"]?.get("会議"))
+        assertNull(predictor.getHistorySnapshot()["明日|の"]?.get("会議"))
+
+        // 4. Second Backspace: "明日の会" -> "明日の"
+        val delOutcome2 = arbitrator.onDeletePressed(editor = editor, count = 1)
+        assertEquals(VoiceTouchInputArbitrator.DeleteOutcome.DELETED_SURROUNDING_TEXT, delOutcome2)
+        assertEquals("明日の", editor.committedText)
+        val match2 = arbitrator.reconcilePredictionCheckpointsAfterDelete(editor.committedText) {
+            predictor.rollbackTransition(it)
+        }
+        assertNotNull("Deleting '会議' back to '明日の' must match '明日の' checkpoint", match2)
+        assertEquals(predictionsAfterAshitaNo.map { it.surface }, match2!!.candidates.map { it.surface })
+        assertEquals("明日の", arbitrator.previousCommittedPhrase)
+        assertTrue(match2.isFullyReranked)
+        assertEquals("SLM", match2.debugBadge)
+        assertTrue(match2.highlightFirstAsAi)
+    }
+
+    @Test
+    fun testMultiStepPredictionChainDeleteRestoresEachIntermediateCheckpoint() {
+        val editor = RealisticMockEditorBridge()
+        val arbitrator = VoiceTouchInputArbitrator()
+        val predictor = NextPhrasePredictor(null)
+
+        // Step 1: Commit "明日"
+        arbitrator.onTypeKana(editor, "あ")
+        arbitrator.onCandidateSelected(editor, candidateSurface = "明日", isPrediction = false, candidateReading = "あした")
+        val candsAshita = predictor.predict("明日", textBeforeCursor = "明日", suggestPeriod = false)
+        arbitrator.recordOrUpdatePredictionCheckpoint("明日", "明日", candsAshita, isFullyReranked = true)
+
+        // Step 2: Select "の" -> "明日の"
+        arbitrator.onCandidateSelected(editor, candidateSurface = "の", isPrediction = true, candidateReading = "の")
+        val tNo = predictor.recordTransitionWithToken("明日", "の", "の")
+        val candsAshitaNo = predictor.predict("の", textBeforeCursor = "明日の", suggestPeriod = false)
+        arbitrator.recordOrUpdatePredictionCheckpoint("明日の", "の", candsAshitaNo, isFullyReranked = true, rollbackToken = tNo)
+
+        // Step 3: Select "会議" -> "明日の会議"
+        arbitrator.onCandidateSelected(editor, candidateSurface = "会議", isPrediction = true, candidateReading = "かいぎ")
+        val tKaigi = predictor.recordTransitionWithToken("の", "会議", "かいぎ")
+        val candsKaigi = predictor.predict("会議", textBeforeCursor = "明日の会議", suggestPeriod = false)
+        arbitrator.recordOrUpdatePredictionCheckpoint("明日の会議", "会議", candsKaigi, isFullyReranked = true, rollbackToken = tKaigi)
+
+        // Step 4: Select "に" -> "明日の会議に"
+        arbitrator.onCandidateSelected(editor, candidateSurface = "に", isPrediction = true, candidateReading = "に")
+        val tNi = predictor.recordTransitionWithToken("会議", "に", "に")
+        val candsNi = predictor.predict("に", textBeforeCursor = "明日の会議に", suggestPeriod = false)
+        arbitrator.recordOrUpdatePredictionCheckpoint("明日の会議に", "に", candsNi, isFullyReranked = true, rollbackToken = tNi)
+        assertEquals("明日の会議に", editor.committedText)
+
+        // Delete "に" -> restores "明日の会議"
+        arbitrator.onDeletePressed(editor, count = 1)
+        assertEquals("明日の会議", editor.committedText)
+        val restoredKaigi = arbitrator.reconcilePredictionCheckpointsAfterDelete(editor.committedText) { predictor.rollbackTransition(it) }
+        assertNotNull(restoredKaigi)
+        assertEquals(candsKaigi.map { it.surface }, restoredKaigi!!.candidates.map { it.surface })
+        assertNull(predictor.getHistorySnapshot()["会議"]?.get("に"))
+
+        // Delete "会議" (2 chars) -> restores "明日の"
+        arbitrator.onDeletePressed(editor, count = 2)
+        assertEquals("明日の", editor.committedText)
+        val restoredAshitaNo = arbitrator.reconcilePredictionCheckpointsAfterDelete(editor.committedText) { predictor.rollbackTransition(it) }
+        assertNotNull(restoredAshitaNo)
+        assertEquals(candsAshitaNo.map { it.surface }, restoredAshitaNo!!.candidates.map { it.surface })
+        assertNull(predictor.getHistorySnapshot()["明日|の"]?.get("会議"))
+
+        // Delete "の" (1 char) -> restores "明日"
+        arbitrator.onDeletePressed(editor, count = 1)
+        assertEquals("明日", editor.committedText)
+        val restoredAshita = arbitrator.reconcilePredictionCheckpointsAfterDelete(editor.committedText) { predictor.rollbackTransition(it) }
+        assertNotNull(restoredAshita)
+        assertEquals(candsAshita.map { it.surface }, restoredAshita!!.candidates.map { it.surface })
+        assertNull(predictor.getHistorySnapshot()["明日"]?.get("の"))
+    }
+
+    @Test
+    fun testComposingCancelBackToCommittedPhraseRestoresPredictionCheckpoint() {
+        val editor = RealisticMockEditorBridge()
+        val arbitrator = VoiceTouchInputArbitrator()
+        val predictor = NextPhrasePredictor(null)
+
+        // Commit "明日の" and save checkpoint
+        arbitrator.onTypeKana(editor, "あ")
+        arbitrator.onCandidateSelected(editor, candidateSurface = "明日の", isPrediction = false, candidateReading = "あしたの")
+        val cands = predictor.predict("明日の", textBeforeCursor = "明日の", suggestPeriod = false)
+        arbitrator.recordOrUpdatePredictionCheckpoint("明日の", "明日の", cands, isFullyReranked = true)
+
+        // Type "か" into composing buffer, then immediately cancel with Backspace
+        arbitrator.onTypeKana(editor, "か")
+        assertEquals("明日の", editor.committedText)
+        assertEquals("か", editor.composingSpan)
+
+        val outcome = arbitrator.onDeletePressed(editor, count = 1)
+        assertEquals(VoiceTouchInputArbitrator.DeleteOutcome.DELETED_FROM_KEYBOARD_COMPOSING_NOW_EMPTY, outcome)
+        assertEquals("", editor.composingSpan)
+        assertEquals("明日の", editor.getTextBeforeCursor(256, 0))
+
+        val restored = arbitrator.reconcilePredictionCheckpointsAfterDelete(editor.getTextBeforeCursor(256, 0))
+        assertNotNull(restored)
+        assertEquals(cands.map { it.surface }, restored!!.candidates.map { it.surface })
+        assertEquals("明日の", arbitrator.previousCommittedPhrase)
+    }
+
+    @Test
+    fun testPredictionRestorationDmnDecisionTableRules() {
+        // PRED_RESTORE_R1: Non-Kana mode -> SHOW_EMPTY_STATUS
+        val r1 = CandidateRerankJudgement.judgePredictionRestorationWithTrace(
+            CandidateRerankJudgement.PredictionRestorationInput(
+                isKanaMode = false,
+                isComposingOrStreaming = false,
+                isPasswordOrBypassedField = false,
+                textBeforeCursor = "明日の",
+                hasMatchingCheckpoint = true,
+                checkpointIsFullyReranked = true,
+                hasTrailingPredictablePhrase = true
+            )
+        )
+        assertEquals("PRED_RESTORE_R1", r1.selectedRuleId)
+        assertEquals(CandidateRerankJudgement.PredictionRestorationAction.SHOW_EMPTY_STATUS, r1.result.action)
+
+        // PRED_RESTORE_R2: Composing/streaming active -> SHOW_EMPTY_STATUS
+        val r2 = CandidateRerankJudgement.judgePredictionRestorationWithTrace(
+            CandidateRerankJudgement.PredictionRestorationInput(
+                isKanaMode = true,
+                isComposingOrStreaming = true,
+                isPasswordOrBypassedField = false,
+                textBeforeCursor = "明日の",
+                hasMatchingCheckpoint = true,
+                checkpointIsFullyReranked = true,
+                hasTrailingPredictablePhrase = true
+            )
+        )
+        assertEquals("PRED_RESTORE_R2", r2.selectedRuleId)
+        assertEquals(CandidateRerankJudgement.PredictionRestorationAction.SHOW_EMPTY_STATUS, r2.result.action)
+
+        // PRED_RESTORE_R3: Password field -> SHOW_EMPTY_STATUS
+        val r3 = CandidateRerankJudgement.judgePredictionRestorationWithTrace(
+            CandidateRerankJudgement.PredictionRestorationInput(
+                isKanaMode = true,
+                isComposingOrStreaming = false,
+                isPasswordOrBypassedField = true,
+                textBeforeCursor = "明日の",
+                hasMatchingCheckpoint = true,
+                checkpointIsFullyReranked = true,
+                hasTrailingPredictablePhrase = true
+            )
+        )
+        assertEquals("PRED_RESTORE_R3", r3.selectedRuleId)
+        assertEquals(CandidateRerankJudgement.PredictionRestorationAction.SHOW_EMPTY_STATUS, r3.result.action)
+
+        // PRED_RESTORE_R4: Exact fully reranked checkpoint match -> RESTORE_CHECKPOINT_SINGLE_PASS
+        val r4 = CandidateRerankJudgement.judgePredictionRestorationWithTrace(
+            CandidateRerankJudgement.PredictionRestorationInput(
+                isKanaMode = true,
+                isComposingOrStreaming = false,
+                isPasswordOrBypassedField = false,
+                textBeforeCursor = "明日の",
+                hasMatchingCheckpoint = true,
+                checkpointIsFullyReranked = true,
+                hasTrailingPredictablePhrase = true
+            )
+        )
+        assertEquals("PRED_RESTORE_R4", r4.selectedRuleId)
+        assertEquals(CandidateRerankJudgement.PredictionRestorationAction.RESTORE_CHECKPOINT_SINGLE_PASS, r4.result.action)
+
+        // PRED_RESTORE_R5: Partial fast-path checkpoint match -> RESTORE_CHECKPOINT_AND_COMPLETE_SLM
+        val r5 = CandidateRerankJudgement.judgePredictionRestorationWithTrace(
+            CandidateRerankJudgement.PredictionRestorationInput(
+                isKanaMode = true,
+                isComposingOrStreaming = false,
+                isPasswordOrBypassedField = false,
+                textBeforeCursor = "明日の",
+                hasMatchingCheckpoint = true,
+                checkpointIsFullyReranked = false,
+                hasTrailingPredictablePhrase = true
+            )
+        )
+        assertEquals("PRED_RESTORE_R5", r5.selectedRuleId)
+        assertEquals(CandidateRerankJudgement.PredictionRestorationAction.RESTORE_CHECKPOINT_AND_COMPLETE_SLM, r5.result.action)
+
+        // PRED_RESTORE_R6: Blank / whitespace / punctuation trailing without checkpoint -> SHOW_EMPTY_STATUS
+        val r6 = CandidateRerankJudgement.judgePredictionRestorationWithTrace(
+            CandidateRerankJudgement.PredictionRestorationInput(
+                isKanaMode = true,
+                isComposingOrStreaming = false,
+                isPasswordOrBypassedField = false,
+                textBeforeCursor = "   ",
+                hasMatchingCheckpoint = false,
+                checkpointIsFullyReranked = false,
+                hasTrailingPredictablePhrase = false
+            )
+        )
+        assertEquals("PRED_RESTORE_R6", r6.selectedRuleId)
+        assertEquals(CandidateRerankJudgement.PredictionRestorationAction.SHOW_EMPTY_STATUS, r6.result.action)
+
+        // PRED_RESTORE_DEFAULT: Non-checkpoint predictable trailing phrase -> RECOMPUTE_FROM_SURROUNDING_CONTEXT
+        val rDef = CandidateRerankJudgement.judgePredictionRestorationWithTrace(
+            CandidateRerankJudgement.PredictionRestorationInput(
+                isKanaMode = true,
+                isComposingOrStreaming = false,
+                isPasswordOrBypassedField = false,
+                textBeforeCursor = "明日の会",
+                hasMatchingCheckpoint = false,
+                checkpointIsFullyReranked = false,
+                hasTrailingPredictablePhrase = true
+            )
+        )
+        assertEquals("PRED_RESTORE_DEFAULT", rDef.selectedRuleId)
+        assertEquals(CandidateRerankJudgement.PredictionRestorationAction.RECOMPUTE_FROM_SURROUNDING_CONTEXT, rDef.result.action)
+        assertTrue(JapaneseKanaUtils.hasTrailingPredictablePhrase("明日の"))
+        assertFalse(JapaneseKanaUtils.hasTrailingPredictablePhrase("明日の "))
+        assertFalse(JapaneseKanaUtils.hasTrailingPredictablePhrase("完了しました。"))
     }
 }

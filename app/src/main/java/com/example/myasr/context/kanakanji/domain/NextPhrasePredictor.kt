@@ -30,6 +30,20 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
         val reading: String = surface
     )
 
+    data class BigramKeySnapshot(
+        val prefixKey: String,
+        val continuationSurface: String,
+        val previousCount: Int,
+        val previousTimestampMs: Long
+    )
+
+    data class TransitionRollbackToken(
+        val keySnapshots: List<BigramKeySnapshot>,
+        val previousContentPhrase: String,
+        val readingKeyAdded: String?,
+        val previousReadingValue: String?
+    )
+
     private val TAG = "NextPhrasePredictor"
     private val scope = CoroutineScope(Dispatchers.IO)
     private var saveHistoryJob: Job? = null
@@ -494,29 +508,65 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
     @Synchronized
     @JvmOverloads
     fun recordTransition(prevPhrase: String, currentPhrase: String, currentReading: String = currentPhrase) {
+        recordTransitionWithToken(prevPhrase, currentPhrase, currentReading)
+    }
+
+    /**
+     * Records a phrase transition and returns an atomic [TransitionRollbackToken] so the transition
+     * can be cleanly rolled back if the user immediately deletes the selected candidate.
+     */
+    @Synchronized
+    @JvmOverloads
+    fun recordTransitionWithToken(
+        prevPhrase: String,
+        currentPhrase: String,
+        currentReading: String = currentPhrase
+    ): TransitionRollbackToken? {
         ensureHistoryLoaded()
         val prev = prevPhrase.trim()
         val curr = currentPhrase.trim()
-        if (prev.isEmpty() || curr.isEmpty() || prev == curr) return
+        if (prev.isEmpty() || curr.isEmpty() || prev == curr) return null
 
-        if (currentReading.isNotBlank() && currentReading != curr) {
-            bigramReadings[curr] = currentReading.trim()
+        var readingKeyAdded: String? = null
+        var previousReadingValue: String? = null
+        val trimmedReading = currentReading.trim()
+        if (trimmedReading.isNotBlank() && trimmedReading != curr) {
+            readingKeyAdded = curr
+            previousReadingValue = bigramReadings[curr]
+            bigramReadings[curr] = trimmedReading
         }
 
+        val prevContentSnapshot = lastCommittedContentPhrase
+        val snapshots = ArrayList<BigramKeySnapshot>(3)
         val nowMs = System.currentTimeMillis()
-        incrementBigramCount(prev, curr, nowMs)
+        snapshots.add(incrementBigramCountWithSnapshot(prev, curr, nowMs))
 
-        // Track preceding content word even when the caller starts with (contentWord -> particle)
-        val prevIsSentenceEnd = prev.endsWith("。") || prev.endsWith("！") || prev.endsWith("？") ||
-            prev.endsWith(".") || prev.endsWith("!") || prev.endsWith("?") || prev.endsWith("\n")
-        if (!isParticle(prev) && !prevIsSentenceEnd) {
-            lastCommittedContentPhrase = prev
+        val prevAnchor = JapaneseKanaUtils.extractTrailingContentAndParticle(prev)
+        val prevIsCompoundEndingWithParticle = prevAnchor.contentWord != null &&
+            JapaneseKanaUtils.isCommonParticle(prevAnchor.lastToken) &&
+            prevAnchor.lastToken != prev
+
+        if (prevIsCompoundEndingWithParticle) {
+            snapshots.add(incrementBigramCountWithSnapshot(prevAnchor.lastToken, curr, nowMs))
+            lastCommittedContentPhrase = prevAnchor.contentWord!!
+        } else {
+            // Track preceding content word even when the caller starts with (contentWord -> particle)
+            val prevIsSentenceEnd = prev.endsWith("。") || prev.endsWith("！") || prev.endsWith("？") ||
+                prev.endsWith(".") || prev.endsWith("!") || prev.endsWith("?") || prev.endsWith("\n")
+            if (!isParticle(prev) && !prevIsSentenceEnd) {
+                lastCommittedContentPhrase = prev
+            }
         }
 
         // Z2: Particle-Bridged 2nd-Order Skip-Bigram ("ContentWord|Particle" -> Predicate)
-        if (isParticle(prev) && !isParticle(curr) && lastCommittedContentPhrase.isNotEmpty() && lastCommittedContentPhrase != curr) {
-            val skipKey = "$lastCommittedContentPhrase|$prev"
-            incrementBigramCount(skipKey, curr, nowMs)
+        val effectiveParticle = when {
+            JapaneseKanaUtils.isCommonParticle(prev) -> prev
+            prevIsCompoundEndingWithParticle -> prevAnchor.lastToken
+            else -> null
+        }
+        if (effectiveParticle != null && !isParticle(curr) && lastCommittedContentPhrase.isNotEmpty() && lastCommittedContentPhrase != curr) {
+            val skipKey = "$lastCommittedContentPhrase|$effectiveParticle"
+            snapshots.add(incrementBigramCountWithSnapshot(skipKey, curr, nowMs))
         }
 
         if (curr.endsWith("。") || curr.endsWith("！") || curr.endsWith("？") ||
@@ -535,6 +585,69 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
                 // Ignore if sync manager is not ready
             }
         }
+        return TransitionRollbackToken(
+            keySnapshots = snapshots,
+            previousContentPhrase = prevContentSnapshot,
+            readingKeyAdded = readingKeyAdded,
+            previousReadingValue = previousReadingValue
+        )
+    }
+
+    /**
+     * Atomically rolls back a transition recorded via [recordTransitionWithToken] so deleted
+     * prediction taps do not pollute user history or corrupt [lastCommittedContentPhrase].
+     */
+    @Synchronized
+    fun rollbackTransition(token: TransitionRollbackToken) {
+        ensureHistoryLoaded()
+        for (snap in token.keySnapshots.asReversed()) {
+            val nextMap = bigramHistory[snap.prefixKey]
+            val nextTsMap = bigramLastUsed[snap.prefixKey]
+            if (snap.previousCount <= 0) {
+                if (nextMap?.remove(snap.continuationSurface) != null) {
+                    totalBigramPairs = (totalBigramPairs - 1).coerceAtLeast(0)
+                }
+                nextTsMap?.remove(snap.continuationSurface)
+                if (nextMap != null && nextMap.isEmpty()) {
+                    bigramHistory.remove(snap.prefixKey)
+                    bigramLastUsed.remove(snap.prefixKey)
+                }
+            } else {
+                if (nextMap != null) {
+                    nextMap[snap.continuationSurface] = snap.previousCount
+                }
+                if (nextTsMap != null) {
+                    if (snap.previousTimestampMs > 0L) {
+                        nextTsMap[snap.continuationSurface] = snap.previousTimestampMs
+                    } else {
+                        nextTsMap.remove(snap.continuationSurface)
+                    }
+                }
+            }
+        }
+        lastCommittedContentPhrase = token.previousContentPhrase
+        if (token.readingKeyAdded != null) {
+            if (token.previousReadingValue != null) {
+                bigramReadings[token.readingKeyAdded] = token.previousReadingValue
+            } else {
+                bigramReadings.remove(token.readingKeyAdded)
+            }
+        }
+        scheduleSaveHistory()
+    }
+
+    private fun incrementBigramCountWithSnapshot(prevKey: String, curr: String, nowMs: Long): BigramKeySnapshot {
+        val nextMap = bigramHistory[prevKey]
+        val nextTsMap = bigramLastUsed[prevKey]
+        val prevCount = nextMap?.getOrDefault(curr, 0) ?: 0
+        val prevTs = nextTsMap?.get(curr) ?: 0L
+        incrementBigramCount(prevKey, curr, nowMs)
+        return BigramKeySnapshot(
+            prefixKey = prevKey,
+            continuationSurface = curr,
+            previousCount = prevCount,
+            previousTimestampMs = prevTs
+        )
     }
 
     private fun incrementBigramCount(prevKey: String, curr: String, nowMs: Long) {
@@ -632,14 +745,24 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             ""
         }
 
-        val anchor = JapaneseKanaUtils.extractTrailingContentAndParticle(textBeforeCursor)
-        val effectiveContentWord = anchor.contentWord ?: if (isParticle(cleanLast) && lastCommittedContentPhrase.isNotEmpty()) {
+        val anchorSource = if (textBeforeCursor.isNotEmpty()) textBeforeCursor else cleanLast
+        val anchor = JapaneseKanaUtils.extractTrailingContentAndParticle(anchorSource)
+        val trailingParticle = when {
+            JapaneseKanaUtils.isCommonParticle(cleanLast) -> cleanLast
+            JapaneseKanaUtils.isCommonParticle(anchor.lastToken) -> anchor.lastToken
+            else -> null
+        }
+        val effectiveContentWord = anchor.contentWord ?: if (
+            trailingParticle != null &&
+            lastCommittedContentPhrase.isNotEmpty() &&
+            lastCommittedContentPhrase != cleanLast
+        ) {
             lastCommittedContentPhrase
         } else {
             null
         }
-        val effectiveSkipKey = if (effectiveContentWord != null && isParticle(cleanLast)) {
-            "$effectiveContentWord|$cleanLast"
+        val effectiveSkipKey = if (effectiveContentWord != null && trailingParticle != null) {
+            "$effectiveContentWord|$trailingParticle"
         } else {
             anchor.skipBigramKey
         }
@@ -688,15 +811,37 @@ class NextPhrasePredictor internal constructor(private val context: Context? = n
             }
         }
 
+        if (trailingParticle != null && trailingParticle != cleanLast) {
+            ensureHistoryLoaded()
+            val particleNextMap = bigramHistory[trailingParticle]
+            if (particleNextMap != null) {
+                val tsMap = bigramLastUsed[trailingParticle]
+                for (entry in particleNextMap.entries.sortedByDescending { it.value }) {
+                    val entryReading = bigramReadings[entry.key] ?: entry.key
+                    addCandidate(
+                        ConversionCandidate(
+                            surface = entry.key,
+                            reading = entryReading,
+                            isPrediction = true,
+                            source = "history_bigram",
+                            historyCount = entry.value,
+                            lastUsedAtMs = tsMap?.get(entry.key) ?: 0L
+                        )
+                    )
+                }
+            }
+        }
+
         // 2. Canonical Collocation Dictionary (Particle-Prefix Projection -> 1st-order Collocations)
-        if (effectiveContentWord != null && isParticle(cleanLast)) {
+        val particleToProject = trailingParticle
+        if (effectiveContentWord != null && particleToProject != null) {
             val contentCollocs = CANONICAL_COLLOCATIONS[effectiveContentWord]
             if (contentCollocs != null) {
                 for (entry in contentCollocs) {
-                    if (entry.surface.startsWith(cleanLast) && entry.surface.length > cleanLast.length) {
-                        val projSurface = entry.surface.removePrefix(cleanLast)
-                        val projReading = if (entry.reading.startsWith(cleanLast) && entry.reading.length > cleanLast.length) {
-                            entry.reading.removePrefix(cleanLast)
+                    if (entry.surface.startsWith(particleToProject) && entry.surface.length > particleToProject.length) {
+                        val projSurface = entry.surface.removePrefix(particleToProject)
+                        val projReading = if (entry.reading.startsWith(particleToProject) && entry.reading.length > particleToProject.length) {
+                            entry.reading.removePrefix(particleToProject)
                         } else {
                             projSurface
                         }

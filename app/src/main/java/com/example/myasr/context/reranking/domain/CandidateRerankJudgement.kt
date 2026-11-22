@@ -130,6 +130,28 @@ object CandidateRerankJudgement {
         val reason: String
     )
 
+    enum class PredictionRestorationAction {
+        SHOW_EMPTY_STATUS,
+        RESTORE_CHECKPOINT_SINGLE_PASS,
+        RESTORE_CHECKPOINT_AND_COMPLETE_SLM,
+        RECOMPUTE_FROM_SURROUNDING_CONTEXT
+    }
+
+    data class PredictionRestorationInput(
+        val isKanaMode: Boolean,
+        val isComposingOrStreaming: Boolean,
+        val isPasswordOrBypassedField: Boolean,
+        val textBeforeCursor: String,
+        val hasMatchingCheckpoint: Boolean,
+        val checkpointIsFullyReranked: Boolean,
+        val hasTrailingPredictablePhrase: Boolean
+    )
+
+    data class PredictionRestorationDecision(
+        val action: PredictionRestorationAction,
+        val reason: String
+    )
+
     val executionDecisionTable: DecisionTable<ExecutionInput, ExecutionDecision> = decisionTable(
         name = "CandidateRerankExecution",
         hitPolicy = HitPolicy.FIRST
@@ -431,12 +453,81 @@ object CandidateRerankJudgement {
         )
     }
 
+    val predictionRestorationDecisionTable: DecisionTable<PredictionRestorationInput, PredictionRestorationDecision> = decisionTable(
+        name = "PredictionRestorationPolicy",
+        hitPolicy = HitPolicy.FIRST
+    ) {
+        rule(id = "PRED_RESTORE_R1", description = "Show empty status outside Kana keyboard mode") {
+            `when` { !it.isKanaMode }
+            thenValue(
+                PredictionRestorationDecision(
+                    action = PredictionRestorationAction.SHOW_EMPTY_STATUS,
+                    reason = "non_kana_mode"
+                )
+            )
+        }
+        rule(id = "PRED_RESTORE_R2", description = "Show empty status while composing or streaming voice is active") {
+            `when` { it.isComposingOrStreaming }
+            thenValue(
+                PredictionRestorationDecision(
+                    action = PredictionRestorationAction.SHOW_EMPTY_STATUS,
+                    reason = "active_composing_or_streaming"
+                )
+            )
+        }
+        rule(id = "PRED_RESTORE_R3", description = "Show empty status in password or bypassed fields") {
+            `when` { it.isPasswordOrBypassedField }
+            thenValue(
+                PredictionRestorationDecision(
+                    action = PredictionRestorationAction.SHOW_EMPTY_STATUS,
+                    reason = "password_or_bypassed_field"
+                )
+            )
+        }
+        rule(id = "PRED_RESTORE_R4", description = "Restore exact fully-reranked checkpoint in single pass") {
+            `when` { it.hasMatchingCheckpoint && it.checkpointIsFullyReranked }
+            thenValue(
+                PredictionRestorationDecision(
+                    action = PredictionRestorationAction.RESTORE_CHECKPOINT_SINGLE_PASS,
+                    reason = "restore_exact_reranked_checkpoint"
+                )
+            )
+        }
+        rule(id = "PRED_RESTORE_R5", description = "Restore partial fast-path checkpoint and complete SLM rerank") {
+            `when` { it.hasMatchingCheckpoint && !it.checkpointIsFullyReranked }
+            thenValue(
+                PredictionRestorationDecision(
+                    action = PredictionRestorationAction.RESTORE_CHECKPOINT_AND_COMPLETE_SLM,
+                    reason = "restore_fast_checkpoint_and_complete_slm"
+                )
+            )
+        }
+        rule(id = "PRED_RESTORE_R6", description = "Show empty status when context before cursor has no predictable phrase") {
+            `when` { it.textBeforeCursor.isBlank() || !it.hasTrailingPredictablePhrase }
+            thenValue(
+                PredictionRestorationDecision(
+                    action = PredictionRestorationAction.SHOW_EMPTY_STATUS,
+                    reason = "no_predictable_context_before_cursor"
+                )
+            )
+        }
+        defaultValue(
+            id = "PRED_RESTORE_DEFAULT",
+            description = "Recompute next-phrase predictions from trailing surrounding context",
+            value = PredictionRestorationDecision(
+                action = PredictionRestorationAction.RECOMPUTE_FROM_SURROUNDING_CONTEXT,
+                reason = "recompute_predictions_from_context"
+            )
+        )
+    }
+
     val executionJudgement: Judgement<ExecutionInput, ExecutionDecision> = executionDecisionTable
     val tapSafeOrderingJudgement: Judgement<TapSafeOrderingInput, TapSafeOrderingDecision> = tapSafeOrderingDecisionTable
     val nextPhraseRerankJudgement: Judgement<NextPhraseRerankInput, JudgementResult<Boolean>> = nextPhraseRerankDecisionTable
     val speculativeWarmJudgement: Judgement<SpeculativeWarmInput, SpeculativeWarmDecision> = speculativeWarmDecisionTable
     val viewportAwareOrderingJudgement: Judgement<ViewportAwareOrderingInput, ViewportAwareOrderingDecision> = viewportAwareOrderingDecisionTable
     val zeroQueryHorizonJudgement: Judgement<ZeroQueryHorizonInput, ZeroQueryHorizonDecision> = zeroQueryHorizonDecisionTable
+    val predictionRestorationJudgement: Judgement<PredictionRestorationInput, PredictionRestorationDecision> = predictionRestorationDecisionTable
 
     fun judgeExecution(input: ExecutionInput): ExecutionDecision = executionJudgement.judge(input)
 
@@ -472,6 +563,12 @@ object CandidateRerankJudgement {
 
     fun judgeZeroQueryHorizonWithTrace(input: ZeroQueryHorizonInput): DecisionTrace<ZeroQueryHorizonDecision> =
         zeroQueryHorizonDecisionTable.evaluateWithTrace(input)
+
+    fun judgePredictionRestoration(input: PredictionRestorationInput): PredictionRestorationDecision =
+        predictionRestorationJudgement.judge(input)
+
+    fun judgePredictionRestorationWithTrace(input: PredictionRestorationInput): DecisionTrace<PredictionRestorationDecision> =
+        predictionRestorationDecisionTable.evaluateWithTrace(input)
 
     /**
      * Applies ZeroQueryHorizonPolicy to fast-path zero-query candidates so Slot 2 preserves

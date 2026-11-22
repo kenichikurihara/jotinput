@@ -5,6 +5,8 @@ import com.example.myasr.context.kanakanji.domain.NextPhrasePredictor
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -204,5 +206,74 @@ class NextPhrasePredictorTest {
         val particleSurfaces = preds.filter { it.source == "particle" }.map { it.surface }
         assertFalse("INVALID_COST particle 'は' must be pruned", particleSurfaces.contains("は"))
         assertTrue("Expected 'が' before 'を' due to lower connection cost", particleSurfaces.indexOf("が") < particleSurfaces.indexOf("を"))
+    }
+
+    @Test
+    fun testMultiBunsetsuPhraseEndingWithParticlePredictsAndRecordsSkipBigram() {
+        // 1. Predict immediately after committing single compound phrase "明日の"
+        val initialPreds = predictor.predict("明日の", textBeforeCursor = "明日の", suggestPeriod = false)
+        assertTrue(
+            "Expected canonical 'の' continuation '会議' after '明日の'",
+            initialPreds.any { it.surface == "会議" }
+        )
+
+        // 2. Record transition from compound phrase "明日の" -> "資料"
+        val token = predictor.recordTransitionWithToken("明日の", "資料", currentReading = "しりょう")
+        assertNotNull(token)
+
+        val snapAfterCompound = predictor.getHistorySnapshot()
+        assertEquals(1, snapAfterCompound["明日の"]?.get("資料"))
+        assertEquals(1, snapAfterCompound["の"]?.get("資料"))
+        assertEquals(1, snapAfterCompound["明日|の"]?.get("資料"))
+
+        // 3. Subsequent predict("明日の") must rank "資料" as history_skip_bigram
+        val learnedPreds = predictor.predict("明日の", textBeforeCursor = "明日の", suggestPeriod = false)
+        assertEquals("資料", learnedPreds.first().surface)
+        assertEquals("history_skip_bigram", learnedPreds.first().source)
+
+        // 4. Separate two-step "明日" + "の" should also see the "明日|の" skip-bigram
+        val splitPreds = predictor.predict("の", textBeforeCursor = "明日の", suggestPeriod = false)
+        assertEquals("資料", splitPreds.first().surface)
+        assertEquals("history_skip_bigram", splitPreds.first().source)
+    }
+
+    @Test
+    fun testRollbackTransitionRestoresExactPreviousBigramCountsAndContentPhrase() {
+        // Establish baseline history: "資料" -> "を" -> "作成" (count 1), then content phrase "資料" -> "会議" (count 1)
+        predictor.recordTransition("資料", "を")
+        val existingToken = predictor.recordTransitionWithToken("を", "作成", currentReading = "さくせい")
+        assertNotNull(existingToken)
+
+        val pairsBeforeTap = predictor.getTotalBigramPairs()
+
+        // Simulate user committing "明日の", then accidentally tapping "会議"
+        val tapToken = predictor.recordTransitionWithToken("明日の", "会議", currentReading = "かいぎ")
+        assertNotNull(tapToken)
+        assertEquals(1, predictor.getHistorySnapshot()["明日の"]?.get("会議"))
+        assertEquals(1, predictor.getHistorySnapshot()["明日|の"]?.get("会議"))
+
+        // Roll back the accidental "会議" tap
+        predictor.rollbackTransition(tapToken!!)
+
+        val afterRollback = predictor.getHistorySnapshot()
+        assertNull(afterRollback["明日の"])
+        assertNull(afterRollback["の"])
+        assertNull(afterRollback["明日|の"])
+        assertEquals(pairsBeforeTap, predictor.getTotalBigramPairs())
+
+        // Also test rolling back an increment on an ALREADY-existing bigram ("を" -> "作成" count 1 -> 2 -> 1)
+        predictor.recordTransition("資料", "を")
+        val secondToken = predictor.recordTransitionWithToken("を", "作成", currentReading = "さくせい")
+        assertNotNull(secondToken)
+        assertEquals(2, predictor.getHistorySnapshot()["を"]?.get("作成"))
+        assertEquals(2, predictor.getHistorySnapshot()["資料|を"]?.get("作成"))
+
+        predictor.rollbackTransition(secondToken!!)
+        assertEquals(1, predictor.getHistorySnapshot()["を"]?.get("作成"))
+        assertEquals(1, predictor.getHistorySnapshot()["資料|を"]?.get("作成"))
+
+        // Ensure null token is returned for empty/self transitions
+        assertNull(predictor.recordTransitionWithToken("", "会議"))
+        assertNull(predictor.recordTransitionWithToken("会議", "会議"))
     }
 }

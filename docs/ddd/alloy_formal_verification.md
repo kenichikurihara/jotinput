@@ -99,6 +99,14 @@ IME ヘッダーバーのユーティリティアイコン表示裁定（[`ImeHe
 - **`SensitiveOrPasswordFieldNeverLearns`**: 機密クリップまたはパスワード入力欄では次文節予測・学習履歴への記録を一切許可しないこと。
 - **`FreshSensitiveClipIsMaskedAndAccessible`**: 有効期限内で未解除の機密クリップはマスク表示（`ModeMaskedSensitive`）で利用可能であること。
 
+### 3.12 [`prediction_checkpoint_restoration.als`](app/src/test/resources/alloy/prediction_checkpoint_restoration.als)
+予測候補選択後のバックスペース削除／カーソル復帰による予測一覧復元と履歴ロールバック（[`CandidateRerankJudgement`](app/src/main/java/com/example/myasr/context/reranking/domain/CandidateRerankJudgement.kt) `PredictionRestorationPolicy` および [`VoiceTouchInputArbitrator`](app/src/main/java/com/example/myasr/context/ime/domain/VoiceTouchInputArbitrator.kt) `PredictionCheckpoint`）をモデル化し、以下を検証する：
+- **`RestorationTableIsTotal`**: `PredictionRestorationPolicy` があらゆる入力に対して一意のルール・アクションへ解決されること。
+- **`NeverRestoresInPasswordOrNonKanaOrComposing`**: 非かなモード・入力中・パスワード欄では常に `ActShowEmptyStatus` となること。
+- **`CheckpointMatchAlwaysRestoresPredictions`**: かなモード・待機中・非パスワード欄で一致チェックポイントが存在すれば必ずチェックポイント復元を選択すること。
+- **`BlankOrNonPredictableWithoutCheckpointShowsEmptyStatus`**: 一致チェックポイントがなく空白または非予測末尾の場合は空ステータスを表示すること。
+- **`DeleteSelectedPredictionRestoresExactCandidatesAndRevertsHistory`**: 「確定 → 予測候補選択 → 削除復帰」の遷移後、直前の確定境界・表示候補スナップショット・学習履歴状態が厳密に復元されること。
+
 ---
 
 ## 4. 自動同期ルール

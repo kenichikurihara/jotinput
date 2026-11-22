@@ -1,6 +1,8 @@
 package com.example.myasr.context.ime.domain
 
+import com.example.myasr.context.kanakanji.domain.ConversionCandidate
 import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
+import com.example.myasr.context.kanakanji.domain.NextPhrasePredictor
 
 import android.view.inputmethod.InputConnection
 
@@ -114,7 +116,20 @@ class VoiceTouchInputArbitrator {
 
     companion object {
         const val DOUBLE_SPACE_TIMEOUT_MS = 1000L
+        const val MAX_PREDICTION_CHECKPOINTS = 16
+        const val MAX_CHECKPOINT_CONTEXT_KEY_LEN = 128
     }
+
+    data class PredictionCheckpoint(
+        val contextKey: String,
+        val fullContextBeforeCursor: String,
+        val committedPhrase: String,
+        val candidates: List<ConversionCandidate> = emptyList(),
+        val isFullyReranked: Boolean = false,
+        val debugBadge: String? = null,
+        val highlightFirstAsAi: Boolean = false,
+        val rollbackToken: NextPhrasePredictor.TransitionRollbackToken? = null
+    )
 
     data class InFlightDecode(
         val decodeId: Long,
@@ -216,6 +231,10 @@ class VoiceTouchInputArbitrator {
     // Bigram phrase tracking for next-phrase continuation prediction
     var previousCommittedPhrase: String = ""
 
+    // Bounded stack of post-commit next-phrase prediction checkpoints for backspace/cursor restoration
+    private val predictionCheckpoints = ArrayDeque<PredictionCheckpoint>()
+    var lastExpectedTextBeforeCursor: String = ""
+
     // Queue for post-typing voice chunks delivered while keyboard composing of the SAME session is still open
     val pendingVoiceQueue = mutableListOf<String>()
 
@@ -284,10 +303,186 @@ class VoiceTouchInputArbitrator {
         clearUndoState()
         clearAutoAssistState()
         previousCommittedPhrase = ""
+        predictionCheckpoints.clear()
+        lastExpectedTextBeforeCursor = ""
         pendingVoiceQueue.clear()
         synchronized(inFlightLock) {
             inFlightDecodes.clear()
         }
+    }
+
+    fun normalizeCheckpointKey(contextBeforeCursor: String): String =
+        contextBeforeCursor.takeLast(MAX_CHECKPOINT_CONTEXT_KEY_LEN)
+
+    fun getPredictionCheckpointCount(): Int = predictionCheckpoints.size
+
+    fun recordOrUpdatePredictionCheckpoint(
+        contextBeforeCursor: String,
+        committedPhrase: String,
+        candidates: List<ConversionCandidate>,
+        isFullyReranked: Boolean,
+        debugBadge: String? = null,
+        highlightFirstAsAi: Boolean = false,
+        rollbackToken: NextPhrasePredictor.TransitionRollbackToken? = null
+    ) {
+        if (contextBeforeCursor.isEmpty() && committedPhrase.isEmpty() && candidates.isEmpty()) return
+        val key = normalizeCheckpointKey(contextBeforeCursor)
+        val existingIdx = predictionCheckpoints.indexOfLast { it.contextKey == key }
+        if (existingIdx >= 0) {
+            val existing = predictionCheckpoints[existingIdx]
+            predictionCheckpoints[existingIdx] = existing.copy(
+                fullContextBeforeCursor = contextBeforeCursor,
+                committedPhrase = committedPhrase.ifEmpty { existing.committedPhrase },
+                candidates = candidates,
+                isFullyReranked = isFullyReranked,
+                debugBadge = debugBadge,
+                highlightFirstAsAi = highlightFirstAsAi,
+                rollbackToken = rollbackToken ?: existing.rollbackToken
+            )
+        } else {
+            predictionCheckpoints.addLast(
+                PredictionCheckpoint(
+                    contextKey = key,
+                    fullContextBeforeCursor = contextBeforeCursor,
+                    committedPhrase = committedPhrase,
+                    candidates = candidates,
+                    isFullyReranked = isFullyReranked,
+                    debugBadge = debugBadge,
+                    highlightFirstAsAi = highlightFirstAsAi,
+                    rollbackToken = rollbackToken
+                )
+            )
+            while (predictionCheckpoints.size > MAX_PREDICTION_CHECKPOINTS) {
+                predictionCheckpoints.removeFirst()
+            }
+        }
+    }
+
+    fun snapshotDisplayedCandidatesToCheckpoint(
+        contextBeforeCursor: String,
+        displayedCandidates: List<ConversionCandidate>,
+        isFullyReranked: Boolean,
+        debugBadge: String? = null,
+        highlightFirstAsAi: Boolean = false
+    ) {
+        if (displayedCandidates.isEmpty()) return
+        val key = normalizeCheckpointKey(contextBeforeCursor)
+        val existingIdx = predictionCheckpoints.indexOfLast { it.contextKey == key }
+        if (existingIdx >= 0) {
+            val existing = predictionCheckpoints[existingIdx]
+            predictionCheckpoints[existingIdx] = existing.copy(
+                fullContextBeforeCursor = contextBeforeCursor.ifEmpty { existing.fullContextBeforeCursor },
+                candidates = displayedCandidates,
+                isFullyReranked = isFullyReranked || existing.isFullyReranked,
+                debugBadge = debugBadge ?: existing.debugBadge,
+                highlightFirstAsAi = highlightFirstAsAi || existing.highlightFirstAsAi
+            )
+        } else if (contextBeforeCursor.isNotEmpty()) {
+            val fallbackPhrase = previousCommittedPhrase.ifEmpty {
+                JapaneseKanaUtils.extractLastWordOrParticle(contextBeforeCursor)
+            }
+            recordOrUpdatePredictionCheckpoint(
+                contextBeforeCursor = contextBeforeCursor,
+                committedPhrase = fallbackPhrase,
+                candidates = displayedCandidates,
+                isFullyReranked = isFullyReranked,
+                debugBadge = debugBadge,
+                highlightFirstAsAi = highlightFirstAsAi
+            )
+        }
+    }
+
+    fun attachRollbackTokenToCheckpoint(
+        contextBeforeCursor: String,
+        committedPhrase: String,
+        rollbackToken: NextPhrasePredictor.TransitionRollbackToken?
+    ) {
+        if (contextBeforeCursor.isEmpty() && committedPhrase.isEmpty()) return
+        val key = normalizeCheckpointKey(contextBeforeCursor)
+        val existingIdx = predictionCheckpoints.indexOfLast { it.contextKey == key }
+        if (existingIdx >= 0) {
+            val existing = predictionCheckpoints[existingIdx]
+            predictionCheckpoints[existingIdx] = existing.copy(
+                fullContextBeforeCursor = contextBeforeCursor,
+                committedPhrase = committedPhrase.ifEmpty { existing.committedPhrase },
+                rollbackToken = rollbackToken ?: existing.rollbackToken
+            )
+        } else {
+            recordOrUpdatePredictionCheckpoint(
+                contextBeforeCursor = contextBeforeCursor,
+                committedPhrase = committedPhrase,
+                candidates = emptyList(),
+                isFullyReranked = false,
+                rollbackToken = rollbackToken
+            )
+        }
+    }
+
+    fun findPredictionCheckpoint(contextBeforeCursor: String): PredictionCheckpoint? {
+        val key = normalizeCheckpointKey(contextBeforeCursor)
+        return predictionCheckpoints.lastOrNull { it.contextKey == key }
+    }
+
+    fun getLatestPredictionCheckpoint(): PredictionCheckpoint? = predictionCheckpoints.lastOrNull()
+
+    private fun isCheckpointAncestorOf(ancestorContext: String, currentContext: String): Boolean {
+        if (ancestorContext.isEmpty()) return currentContext.isNotEmpty()
+        if (currentContext.startsWith(ancestorContext)) return true
+        // Sliding-window fallback when getTextBeforeCursor(256, 0) clipped the left side
+        val maxTail = minOf(32, currentContext.length - 1)
+        for (addedLen in 1..maxTail) {
+            val currentPrefix = currentContext.substring(0, currentContext.length - addedLen)
+            if (ancestorContext.endsWith(currentPrefix) &&
+                currentPrefix.length >= minOf(ancestorContext.length, 16)
+            ) {
+                return true
+            }
+        }
+        return false
+    }
+
+    fun latestCheckpointContextStartsWith(currentContext: String): Boolean {
+        val top = predictionCheckpoints.lastOrNull() ?: return false
+        val newKey = normalizeCheckpointKey(currentContext)
+        return top.contextKey != newKey &&
+            (top.fullContextBeforeCursor.startsWith(currentContext) ||
+                !isCheckpointAncestorOf(top.fullContextBeforeCursor, currentContext))
+    }
+
+    /**
+     * Reconciles the checkpoint stack after text deletion so downstream checkpoints
+     * (and their speculative NextPhrasePredictor bigram transitions) are popped and rolled back,
+     * returning the matching ancestor [PredictionCheckpoint] if the cursor landed on one.
+     */
+    fun reconcilePredictionCheckpointsAfterDelete(
+        newTextBeforeCursor: String,
+        onRollback: (NextPhrasePredictor.TransitionRollbackToken) -> Unit = {}
+    ): PredictionCheckpoint? {
+        val newKey = normalizeCheckpointKey(newTextBeforeCursor)
+        while (predictionCheckpoints.isNotEmpty()) {
+            val top = predictionCheckpoints.last()
+            if (top.contextKey == newKey) {
+                break
+            }
+            val isAncestor = newKey.isNotEmpty() && isCheckpointAncestorOf(top.fullContextBeforeCursor, newTextBeforeCursor)
+            if (!isAncestor) {
+                val popped = predictionCheckpoints.removeLast()
+                popped.rollbackToken?.let(onRollback)
+            } else {
+                break
+            }
+        }
+        val matched = findPredictionCheckpoint(newTextBeforeCursor)
+        if (matched != null) {
+            previousCommittedPhrase = matched.committedPhrase
+            return matched
+        }
+        previousCommittedPhrase = if (JapaneseKanaUtils.hasTrailingPredictablePhrase(newTextBeforeCursor)) {
+            JapaneseKanaUtils.extractLastWordOrParticle(newTextBeforeCursor)
+        } else {
+            ""
+        }
+        return null
     }
 
     fun resetStreamingSessionState() {
