@@ -355,6 +355,12 @@ Welcome to the technical documentation for **JotInput**, a lightweight, fully of
 68. [詳細設計書: ヒューリスティクス削減計画 (Tier A0 / A / B) (`dd_heuristics_reduction_tier_a_and_b.md`)](dd_heuristics_reduction_tier_a_and_b.md)
     - Tier A0（挙動不変リファクタ）、Tier A（コーパス一本化・予測委譲）、Tier B（POS 自動生成、行列必須化、Viterbi `V1/V2/V3` の SLM-off/on 二軸評価削減、SLM パラメータ縮約、英語・音声訂正の統計化）の詳細実装仕様と検証ゲート G1〜G6。
 
+69. [PRD, JTBD, CUJ & System Design: 英語辞書強化＆プレフィックス補完（`tailsc` → `Tailscale`）](docs/prd_and_design_english_dictionary_strengthening.md)
+    - 多段コーパス統合（NLTK シード・Debian 英語説明文・マルチ LLM トークナイザ合意・Mozc OSS・Aspell・FUTO vocab）による語彙拡充、純粋ドメイン `EnglishCaseModel.suggestPrefixAndTypo()` の二分探索＋頻度降順タイポバケット＋上界枝刈り、DMN `EnglishPrefixCompletionPolicy`、および [`english_prefix_completion.als`](app/src/test/resources/alloy/english_prefix_completion.als) による形式検証仕様。
+
+70. [PRD, JTBD, CUJ & System Design: 定期的・体系的な新語取り込み計画（Periodic Vocabulary Ingestion Pipeline）](docs/prd_and_design_periodic_vocabulary_ingestion.md)
+    - 個別単語ハードコードを排した 5 層（Tier 1〜5）公開コーパス統合階層、日英クロスリンガル新語還流（Mozc-UT `jawiki` / `sudachidict` 連携）、汚染・退行を防ぐ 6 段階の統計アドミッション・ガード、月次 GitHub Actions 自動取り込み PR＆差分監査パイプライン、および段階的ロードマップ（Phase 1〜3）。
+
 ---
 
 ## 📂 Source Code Layout
