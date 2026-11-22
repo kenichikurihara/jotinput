@@ -28,7 +28,7 @@ object EnglishCaseModel {
 
     private const val ALPHABET_SIZE = 28 // '^', 'a'..'z', '$'
     private const val OOV_ACRO_THRESHOLD_LLR = 0.28f
-    private const val TYPO_INDEX_MIN_LOG_FREQ = 1.6f
+    private const val TYPO_INDEX_MIN_LOG_FREQ = 2.1f
 
     @Volatile
     private var loaded = false
@@ -41,6 +41,7 @@ object EnglishCaseModel {
     private val charBigramLlr = FloatArray(ALPHABET_SIZE * ALPHABET_SIZE)
 
     private var sortedKeys: Array<String> = emptyArray()
+    private var sortedKeyLengths: IntArray = IntArray(0)
     private var sortedSurfaces: Array<String> = emptyArray()
     private var sortedLogFreqs: FloatArray = FloatArray(0)
     private var sortedCharMasks: IntArray = IntArray(0)
@@ -143,6 +144,7 @@ object EnglishCaseModel {
         val bs = sortedKeys.binarySearch(typedLower)
         val startIdx = if (bs >= 0) bs else (-bs - 1)
         var i = startIdx
+        var exactPrefixCount = 0
         while (i < sortedKeys.size) {
             val k = sortedKeys[i]
             if (!k.startsWith(typedLower)) break
@@ -154,6 +156,7 @@ object EnglishCaseModel {
                 val covRatio = m.toFloat() / n.toFloat()
                 val score = sortedLogFreqs[i] - 0.45f * lenDiff + 2.0f * covRatio
                 record(k, sortedSurfaces[i], score)
+                exactPrefixCount++
             }
             i++
         }
@@ -168,52 +171,124 @@ object EnglishCaseModel {
         }
 
         // 3. Spatial typo & fuzzy prefix match via 2-char bucket index
-        if (m >= 3) {
-            val bucketKeys = ArrayList<String>(4)
+        if (m >= 3 && !(exactPrefixCount >= 1 && m >= 5 && m <= 24)) {
+            val topScores = FloatArray(maxCandidates) { Float.NEGATIVE_INFINITY }
+            var minTopScore = Float.NEGATIVE_INFINITY
+
+            fun updateTopScores(score: Float) {
+                if (score <= minTopScore) return
+                var minIdx = 0
+                var minVal = topScores[0]
+                for (j in 1 until maxCandidates) {
+                    if (topScores[j] < minVal) {
+                        minVal = topScores[j]
+                        minIdx = j
+                    }
+                }
+                if (score > minVal) {
+                    topScores[minIdx] = score
+                    var nextMin = topScores[0]
+                    for (j in 1 until maxCandidates) {
+                        if (topScores[j] < nextMin) nextMin = topScores[j]
+                    }
+                    minTopScore = nextMin
+                }
+            }
+
+            for (pair in bestByLower.values) {
+                updateTopScores(pair.second)
+            }
+
             val b0 = typedLower.substring(0, 2)
-            bucketKeys.add(b0)
             val bSwap = "${typedLower[1]}${typedLower[0]}"
-            if (bSwap != b0) bucketKeys.add(bSwap)
             val bSkip1 = "${typedLower[0]}${typedLower[2]}"
-            if (bSkip1 != b0 && bSkip1 != bSwap) bucketKeys.add(bSkip1)
             val bTail = typedLower.substring(1, 3)
+
+            val bucketKeys = ArrayList<String>(4)
+            bucketKeys.add(b0)
+            if (bSwap != b0) bucketKeys.add(bSwap)
+            if (bSkip1 != b0 && bSkip1 != bSwap) bucketKeys.add(bSkip1)
             if (bTail != b0 && bTail != bSwap && bTail != bSkip1) bucketKeys.add(bTail)
 
             val typedMask = computeCharMask(typedLower)
-            val visitedIndices = HashSet<Int>(256)
+            val bufLen = maxOf(m + 4, 36)
+            val dpBuf0 = FloatArray(bufLen)
+            val dpBuf1 = FloatArray(bufLen)
+            val dpBuf2 = FloatArray(bufLen)
+            // Admissible length/bitmask bounds: 2 indels cost >= 2.4f, requiring maxLen >= 7 for normCost <= 0.38f.
+            val maxLenDiff3a = if (m >= 5) 2 else 1
+            val maxMaskDiff3a = if (m >= 6) 4 else 2
 
             for (bk in bucketKeys) {
                 val bucket = typoBuckets[bk] ?: continue
+                val allowFuzzyPrefix = (bk == b0 || bk == bSwap)
                 for (candIdx in bucket) {
-                    if (!visitedIndices.add(candIdx)) continue
-                    val candKey = sortedKeys[candIdx]
-                    val n = candKey.length
-                    if (candKey == typedLower) continue
                     val candLogFreq = sortedLogFreqs[candIdx]
+                    // Bucket is sorted by logFreq descending; any non-identical edit costs >= 0.6f (2.8 * 0.6 = 1.68).
+                    if (candLogFreq - 1.68f < minTopScore) break
+
+                    val n = sortedKeyLengths[candIdx]
+                    if (n + 1 > bufLen) continue
 
                     // 3a. Full-word spatial edit distance typo
-                    if (abs(n - m) <= 2) {
-                        val maskDiff = Integer.bitCount(typedMask xor sortedCharMasks[candIdx])
-                        if (maskDiff <= 4) {
-                            val cost = EnglishDictionaryUtils.editAndSpatialCost(typedLower, candKey)
-                            val maxLen = maxOf(m, n)
-                            val normCost = if (maxLen > 0) cost / maxLen.toFloat() else cost
-                            val maxCost = if (n >= 7) 3.6f else 3.0f
-                            if (normCost <= 0.38f && cost <= maxCost) {
-                                val score = candLogFreq - 2.8f * cost
-                                record(candKey, sortedSurfaces[candIdx], score)
+                    val lenDiff = abs(n - m)
+                    if (lenDiff <= maxLenDiff3a) {
+                        val candMask = sortedCharMasks[candIdx]
+                        val xorMask = typedMask xor candMask
+                        val missing = Integer.bitCount(typedMask and xorMask)
+                        val extra = Integer.bitCount(candMask and xorMask)
+                        val unmatched = maxOf(missing, extra)
+                        val minCost = maxOf(
+                            when (lenDiff) {
+                                0 -> 0.6f
+                                1 -> 1.2f
+                                else -> 2.4f
+                            },
+                            unmatched * 1.1f
+                        )
+                        val maxCost = if (n >= 7) 3.6f else 3.0f
+                        val maxLen = maxOf(m, n)
+                        if (minCost > maxCost + 1e-4f || minCost > 0.38f * maxLen.toFloat() + 1e-4f) continue
+                        if (candLogFreq - 2.8f * minCost < minTopScore) continue
+
+                        if (missing + extra <= maxMaskDiff3a) {
+                            val candKey = sortedKeys[candIdx]
+                            if (candKey != typedLower && !bestByLower.containsKey(candKey)) {
+                                val cost = EnglishDictionaryUtils.editAndSpatialCostWithBuffers(
+                                    typedLower, candKey, n, dpBuf0, dpBuf1, dpBuf2
+                                )
+                                val normCost = if (maxLen > 0) cost / maxLen.toFloat() else cost
+                                if (normCost <= 0.38f && cost <= maxCost) {
+                                    val score = candLogFreq - 2.8f * cost
+                                    if (score >= minTopScore) {
+                                        record(candKey, sortedSurfaces[candIdx], score)
+                                        updateTopScores(score)
+                                    }
+                                }
                             }
                         }
-                    } else if (m >= 4 && n > m && n <= m + 10 && !candKey.startsWith(typedLower)) {
+                    } else if (allowFuzzyPrefix && m >= 4 && n > m && n <= m + 10) {
                         // 3b. Fuzzy prefix match for 1-char typo while typing a longer word
-                        val prefixMask = computeCharMask(candKey, minOf(n, m + 1))
-                        if (Integer.bitCount(typedMask and prefixMask.inv()) <= 1) {
-                            val prefixSub = candKey.substring(0, m)
-                            val fuzzyCost = EnglishDictionaryUtils.editAndSpatialCost(typedLower, prefixSub)
-                            val fuzzyNorm = fuzzyCost / m.toFloat()
-                            if (fuzzyNorm <= 0.30f && fuzzyCost <= 1.2f) {
-                                val score = candLogFreq - 2.8f * (fuzzyCost + 0.6f) - 0.35f * (n - m).toFloat()
-                                record(candKey, sortedSurfaces[candIdx], score)
+                        val maxFuzzyScore = candLogFreq - 3.36f - 0.35f * (n - m).toFloat()
+                        if (maxFuzzyScore < minTopScore) continue
+                        // Full word char mask is a superset of any prefix mask; prune before touching String heap.
+                        if (Integer.bitCount(typedMask and sortedCharMasks[candIdx].inv()) <= 1) {
+                            val candKey = sortedKeys[candIdx]
+                            if (!candKey.startsWith(typedLower) && !bestByLower.containsKey(candKey)) {
+                                val prefixMask = computeCharMask(candKey, minOf(n, m + 1))
+                                if (Integer.bitCount(typedMask and prefixMask.inv()) <= 1) {
+                                    val fuzzyCost = EnglishDictionaryUtils.editAndSpatialCostWithBuffers(
+                                        typedLower, candKey, m, dpBuf0, dpBuf1, dpBuf2
+                                    )
+                                    val fuzzyNorm = fuzzyCost / m.toFloat()
+                                    if (fuzzyNorm <= 0.30f && fuzzyCost <= 1.2f) {
+                                        val score = candLogFreq - 2.8f * (fuzzyCost + 0.6f) - 0.35f * (n - m).toFloat()
+                                        if (score >= minTopScore) {
+                                            record(candKey, sortedSurfaces[candIdx], score)
+                                            updateTopScores(score)
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -365,6 +440,7 @@ object EnglishCaseModel {
         val entries = unified.entries.sortedBy { it.key }
         val count = entries.size
         val keys = Array(count) { "" }
+        val keyLengths = IntArray(count)
         val surfaces = Array(count) { "" }
         val logFreqs = FloatArray(count)
         val charMasks = IntArray(count)
@@ -374,6 +450,7 @@ object EnglishCaseModel {
             val k = entry.key
             val lf = entry.value.second
             keys[idx] = k
+            keyLengths[idx] = k.length
             surfaces[idx] = entry.value.first
             logFreqs[idx] = lf
             charMasks[idx] = computeCharMask(k)
@@ -392,10 +469,12 @@ object EnglishCaseModel {
 
         val finalizedBuckets = HashMap<String, IntArray>(bucketsTmp.size * 2)
         for ((bk, list) in bucketsTmp) {
+            list.sortWith { a, b -> logFreqs[b].compareTo(logFreqs[a]) }
             finalizedBuckets[bk] = list.toIntArray()
         }
 
         sortedKeys = keys
+        sortedKeyLengths = keyLengths
         sortedSurfaces = surfaces
         sortedLogFreqs = logFreqs
         sortedCharMasks = charMasks

@@ -347,13 +347,38 @@ class EnglishTruecasingEvaluationTest {
         assertTrue("Expected 'Tailscale' in Top-3 for fuzzy typo 'tailscle'", "Tailscale" in rankEnglish("tailscle").take(3))
         assertTrue("Expected 'Kubernetes' in Top-3 for fuzzy typo 'kuberntes'", "Kubernetes" in rankEnglish("kuberntes").take(3))
 
-        // Latency guard (< 1.0ms average)
-        val startNs = System.nanoTime()
-        for ((typed, _) in prefixCases) {
-            rankEnglish(typed)
+        // Latency guard (< 0.5ms average for prefixes, < 0.8ms average including fuzzy typos)
+        // Warm up JVM C1/C2 JIT paths before measuring steady-state latency
+        repeat(10) {
+            for ((typed, _) in prefixCases) {
+                rankEnglish(typed)
+            }
         }
-        val avgMs = (System.nanoTime() - startNs) / 1_000_000.0 / prefixCases.size
-        assertTrue("Expected avg prefix lookup latency < 1.0ms, got ${avgMs}ms", avgMs < 1.0)
+        val typoQueries = listOf("teh", "tailscle", "kuberntes", "helo", "alredy")
+        repeat(10) {
+            for (q in typoQueries) {
+                rankEnglish(q)
+            }
+        }
+
+        val timedRounds = 5
+        val startNs = System.nanoTime()
+        repeat(timedRounds) {
+            for ((typed, _) in prefixCases) {
+                rankEnglish(typed)
+            }
+        }
+        val avgMs = (System.nanoTime() - startNs) / 1_000_000.0 / (prefixCases.size * timedRounds)
+        assertTrue("Expected avg prefix lookup latency < 0.5ms, got ${avgMs}ms", avgMs < 0.5)
+
+        val typoStartNs = System.nanoTime()
+        repeat(timedRounds) {
+            for (q in typoQueries) {
+                rankEnglish(q)
+            }
+        }
+        val avgTypoMs = (System.nanoTime() - typoStartNs) / 1_000_000.0 / (typoQueries.size * timedRounds)
+        assertTrue("Expected avg typo bucket lookup latency < 0.8ms, got ${avgTypoMs}ms", avgTypoMs < 0.8)
     }
 
     @Test

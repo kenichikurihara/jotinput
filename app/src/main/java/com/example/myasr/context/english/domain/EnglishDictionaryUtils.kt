@@ -68,16 +68,34 @@ object EnglishDictionaryUtils {
             .filter { it in 'a'..'z' }
     }
 
+    private val KEY_DIST_TABLE: FloatArray by lazy {
+        val table = FloatArray(26 * 26)
+        for (i in 0 until 26) {
+            for (j in 0 until 26) {
+                if (i == j) {
+                    table[i * 26 + j] = 0.0f
+                } else {
+                    val k1 = QWERTY_KEY_MAP['a' + i]
+                    val k2 = QWERTY_KEY_MAP['a' + j]
+                    table[i * 26 + j] = if (k1 != null && k2 != null) {
+                        val dx = k1.x - k2.x
+                        val dy = k1.y - k2.y
+                        sqrt(dx * dx + dy * dy)
+                    } else {
+                        3.0f
+                    }
+                }
+            }
+        }
+        table
+    }
+
     private fun keyDistance(c1: Char, c2: Char): Float {
         val l1 = c1.lowercaseChar()
         val l2 = c2.lowercaseChar()
         if (l1 == l2) return 0.0f
-        val k1 = QWERTY_KEY_MAP[l1]
-        val k2 = QWERTY_KEY_MAP[l2]
-        if (k1 != null && k2 != null) {
-            val dx = k1.x - k2.x
-            val dy = k1.y - k2.y
-            return sqrt(dx * dx + dy * dy)
+        if (l1 in 'a'..'z' && l2 in 'a'..'z') {
+            return KEY_DIST_TABLE[(l1 - 'a') * 26 + (l2 - 'a')]
         }
         return 3.0f
     }
@@ -93,31 +111,66 @@ object EnglishDictionaryUtils {
      * Calculates QWERTY spatial edit distance with Damerau-Levenshtein transposition.
      */
     fun editAndSpatialCost(typed: String, cand: String): Float {
-        val m = typed.length
         val n = cand.length
-        val dp = Array(m + 1) { FloatArray(n + 1) }
+        return editAndSpatialCostWithBuffers(
+            typed = typed,
+            cand = cand,
+            candLen = n,
+            buf0 = FloatArray(n + 1),
+            buf1 = FloatArray(n + 1),
+            buf2 = FloatArray(n + 1)
+        )
+    }
 
-        for (i in 0..m) dp[i][0] = i * SPATIAL_BOUNDARY_GAP_COST
-        for (j in 0..n) dp[0][j] = j * SPATIAL_BOUNDARY_GAP_COST
+    /**
+     * Zero-allocation spatial edit distance over `cand[0 until candLen]` using caller-supplied
+     * rolling row buffers of length >= candLen + 1.
+     */
+    internal fun editAndSpatialCostWithBuffers(
+        typed: String,
+        cand: String,
+        candLen: Int,
+        buf0: FloatArray,
+        buf1: FloatArray,
+        buf2: FloatArray
+    ): Float {
+        val m = typed.length
+        val n = candLen
+        if (m == 0) return n * SPATIAL_BOUNDARY_GAP_COST
+        if (n == 0) return m * SPATIAL_BOUNDARY_GAP_COST
+
+        var prev2 = buf0
+        var prev1 = buf1
+        var curr = buf2
+
+        for (j in 0..n) prev1[j] = j * SPATIAL_BOUNDARY_GAP_COST
 
         for (i in 1..m) {
+            curr[0] = i * SPATIAL_BOUNDARY_GAP_COST
+            val tc = typed[i - 1]
+            val tcPrev = if (i > 1) typed[i - 2] else '\u0000'
             for (j in 1..n) {
-                val kd = keyDistance(typed[i - 1], cand[j - 1])
+                val cc = cand[j - 1]
+                val kd = keyDistance(tc, cc)
                 val subCost = if (kd == 0.0f) 0.0f else (SPATIAL_SUB_BASE_COST + SPATIAL_SUB_DIST_SLOPE * min(kd, SPATIAL_SUB_MAX_DIST))
 
-                var minCost = dp[i - 1][j] + SPATIAL_INDEL_COST // deletion
-                minCost = min(minCost, dp[i][j - 1] + SPATIAL_INDEL_COST) // insertion
-                minCost = min(minCost, dp[i - 1][j - 1] + subCost) // substitution
+                var minCost = prev1[j] + SPATIAL_INDEL_COST // deletion
+                minCost = min(minCost, curr[j - 1] + SPATIAL_INDEL_COST) // insertion
+                minCost = min(minCost, prev1[j - 1] + subCost) // substitution
 
                 // Transposition
-                if (i > 1 && j > 1 && typed[i - 1] == cand[j - 2] && typed[i - 2] == cand[j - 1]) {
-                    minCost = min(minCost, dp[i - 2][j - 2] + SPATIAL_TRANSPOSITION_COST)
+                if (i > 1 && j > 1 && tc == cand[j - 2] && tcPrev == cc) {
+                    minCost = min(minCost, prev2[j - 2] + SPATIAL_TRANSPOSITION_COST)
                 }
 
-                dp[i][j] = minCost
+                curr[j] = minCost
             }
+            val tmp = prev2
+            prev2 = prev1
+            prev1 = curr
+            curr = tmp
         }
-        return dp[m][n]
+        return prev1[n]
     }
 
     private data class ScoredCandidate(
