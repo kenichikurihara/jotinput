@@ -446,4 +446,47 @@ class SpanAwareBayesianRerankingEvaluationTest {
         assertEquals("オンとオフと", reranked[0].surface)
         assertEquals("音吐オフと", reranked[1].surface)
     }
+
+    @Test
+    fun testEnglishDeadEndOovPrefixPromotesTailscaleAheadOfRawAndTruncatedTypos() {
+        // Input: "tailsc" (n = 6 letters typed; OOV incomplete prefix)
+        val candTailscale = ConversionCandidate(
+            surface = "Tailscale",
+            reading = "tailsc",
+            isPrediction = true,
+            source = "english_typo",
+            obsPenalty = 0.075f
+        )
+        val candTails = ConversionCandidate(
+            surface = "tails",
+            reading = "tailsc",
+            isPrediction = false,
+            source = "english_typo",
+            obsPenalty = 0.38f
+        )
+        val candRaw = ConversionCandidate(
+            surface = "tailsc",
+            reading = "tailsc",
+            isPrediction = false,
+            source = "raw",
+            obsPenalty = 0.0f
+        )
+
+        val pool = listOf(candTailscale, candTails, candRaw)
+        // Even when raw fragment or shorter word has competitive NLL, OOV raw penalty + light prefix extension
+        // promotes "Tailscale" to Rank 1 ahead of "tails" and "tailsc".
+        val scores = floatArrayOf(9.80f, 9.20f, 12.50f)
+
+        val reranked = LlmReranker.scoreAndRankPool(
+            topPool = pool,
+            scores = scores,
+            currentShownTop1 = null,
+            weightAlpha = 0.15f,
+            lambdaObs = 1.0f,
+            gammaUser = 0.65f,
+            targetInputLength = 6
+        )
+
+        assertEquals("Tailscale must win Rank 1 for OOV prefix 'tailsc'", "Tailscale", reranked[0].surface)
+    }
 }

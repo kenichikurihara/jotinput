@@ -44,6 +44,20 @@ object EnglishAssistJudgement {
         val hasPrimaryCapitalization: Boolean
     )
 
+    enum class PrefixCompletionStrategy {
+        NONE,
+        PROTECT_EXACT_WORD,
+        PROMOTE_PREFIX_COMPLETION,
+        RAW_AND_TYPO_ONLY
+    }
+
+    data class PrefixCompletionPolicyInput(
+        val rawWordLength: Int,
+        val isKnownExactWord: Boolean,
+        val isOovAcronym: Boolean,
+        val hasPrefixCompletions: Boolean
+    )
+
     val autoAssistBypassDecisionTable: DecisionTable<AutoAssistModeInput, JudgementResult<Boolean>> = decisionTable(
         name = "EnglishAutoAssistBypass",
         hitPolicy = HitPolicy.FIRST
@@ -130,12 +144,38 @@ object EnglishAssistJudgement {
         )
     }
 
+    val prefixCompletionPolicyDecisionTable: DecisionTable<PrefixCompletionPolicyInput, JudgementResult<PrefixCompletionStrategy>> =
+        decisionTable(
+            name = "EnglishPrefixCompletionPolicy",
+            hitPolicy = HitPolicy.FIRST
+        ) {
+            rule(id = "EN_PREFIX_R1", description = "Disable prefix completion for 1-char or empty input") {
+                `when` { it.rawWordLength < 2 }
+                thenValue(JudgementResult(PrefixCompletionStrategy.NONE, "input_too_short"))
+            }
+            rule(id = "EN_PREFIX_R2", description = "Protect exact known word or OOV acronym at Rank 1") {
+                `when` { it.isKnownExactWord || it.isOovAcronym }
+                thenValue(JudgementResult(PrefixCompletionStrategy.PROTECT_EXACT_WORD, "protect_known_exact_or_acronym"))
+            }
+            rule(id = "EN_PREFIX_R3", description = "Promote dictionary prefix completion ahead of OOV fragment") {
+                `when` { !it.isKnownExactWord && !it.isOovAcronym && it.hasPrefixCompletions }
+                thenValue(JudgementResult(PrefixCompletionStrategy.PROMOTE_PREFIX_COMPLETION, "promote_oov_prefix_completion"))
+            }
+            defaultValue(
+                id = "EN_PREFIX_DEFAULT",
+                description = "Fallback to raw input and spatial typo suggestions",
+                value = JudgementResult(PrefixCompletionStrategy.RAW_AND_TYPO_ONLY, "raw_and_typo_only")
+            )
+        }
+
     val autoAssistBypassJudgement: Judgement<AutoAssistModeInput, JudgementResult<Boolean>> =
         autoAssistBypassDecisionTable
     val wordCandidateEligibilityJudgement: Judgement<WordCandidateEligibilityInput, JudgementResult<Boolean>> =
         wordCandidateEligibilityDecisionTable
     val gecClauseJudgement: Judgement<String, GecClauseDecision> = gecClauseDecisionTable
     val candidateBadgeJudgement: Judgement<CandidateBadgeInput, String> = candidateBadgeDecisionTable
+    val prefixCompletionPolicyJudgement: Judgement<PrefixCompletionPolicyInput, JudgementResult<PrefixCompletionStrategy>> =
+        prefixCompletionPolicyDecisionTable
 
     private fun extractTrailingClause(textBeforeCursor: String): String {
         val lastSentenceStart = textBeforeCursor.lastIndexOfAny(SENTENCE_BOUNDARY_CHARS)
@@ -201,5 +241,23 @@ object EnglishAssistJudgement {
         hasPrimaryCapitalization: Boolean
     ): DecisionTrace<String> = candidateBadgeDecisionTable.evaluateWithTrace(
         CandidateBadgeInput(slmUsed, hasUserCandidates, hasPrimaryCapitalization)
+    )
+
+    fun judgePrefixCompletionPolicy(
+        rawWordLength: Int,
+        isKnownExactWord: Boolean,
+        isOovAcronym: Boolean,
+        hasPrefixCompletions: Boolean
+    ): JudgementResult<PrefixCompletionStrategy> = prefixCompletionPolicyJudgement.judge(
+        PrefixCompletionPolicyInput(rawWordLength, isKnownExactWord, isOovAcronym, hasPrefixCompletions)
+    )
+
+    fun judgePrefixCompletionPolicyWithTrace(
+        rawWordLength: Int,
+        isKnownExactWord: Boolean,
+        isOovAcronym: Boolean,
+        hasPrefixCompletions: Boolean
+    ): DecisionTrace<JudgementResult<PrefixCompletionStrategy>> = prefixCompletionPolicyDecisionTable.evaluateWithTrace(
+        PrefixCompletionPolicyInput(rawWordLength, isKnownExactWord, isOovAcronym, hasPrefixCompletions)
     )
 }

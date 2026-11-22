@@ -1,6 +1,7 @@
 package com.example.myasr.context.english.infrastructure
 
 import com.example.myasr.AsrApp
+import com.example.myasr.context.english.domain.EnglishCaseModel
 import com.example.myasr.context.vocabulary.domain.DictionaryEntry
 
 import android.content.Context
@@ -60,6 +61,7 @@ class EnglishSpellEngine private constructor(private val context: Context) {
         }
 
         return try {
+            EnglishCaseModel.exportVocabularyIfNeeded(File(modelDir, "vocab.txt"))
             val success = nativeInitialize(modelDir.absolutePath)
             isInitialized = success
             if (success) {

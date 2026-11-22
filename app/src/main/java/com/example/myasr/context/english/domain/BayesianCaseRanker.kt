@@ -41,6 +41,10 @@ object BayesianCaseRanker {
     private const val LAMBDA_OBS = 5.0f
     private const val LAMBDA_FREQ = 0.15f
     private const val MIN_VARIANT_POSTERIOR = 0.04f
+    private const val OOV_RAW_WORD_ENERGY_PENALTY = 2.2f
+    private const val KNOWN_WORD_EXTENSION_ENERGY_PENALTY = 0.45f
+    private const val KNOWN_WORD_TYPO_ENERGY_PENALTY = 0.40f
+    private const val SHORTER_WORD_TYPO_PENALTY = 0.18f
 
     fun classifyShape(surface: String): CaseShape {
         val letters = surface.filter { it.isLetter() }
@@ -69,26 +73,34 @@ object BayesianCaseRanker {
         obsPenalty: Float = 0.0f,
         isPrediction: Boolean = false,
         priority: Float = 0.0f,
-        isRawWord: Boolean = false
+        isRawWord: Boolean = false,
+        suppressOovAcronym: Boolean = false
     ): List<RankedCaseCandidate> {
-        if (baseWord.isEmpty() || policy == InputFieldCapPolicy.BYPASS) {
-            return if (baseWord.isEmpty()) emptyList() else listOf(
+        if (baseWord.isEmpty()) return emptyList()
+
+        val lower = baseWord.lowercase()
+        val lexEntry = EnglishCaseModel.lookupLexicon(lower)
+        val unigramLogFreq = EnglishCaseModel.getWordLogFreq(lower) ?: 0.5f
+        val oovAcroProb = if (suppressOovAcronym) 0.0f else EnglishCaseModel.oovAcronymProbability(lower)
+        val isOovUnknown = lexEntry == null &&
+            !EnglishCaseModel.isKnownLowerWord(lower) &&
+            oovAcroProb < 0.50f
+        val oovPenalty = if (isRawWord && isOovUnknown) OOV_RAW_WORD_ENERGY_PENALTY else 0.0f
+
+        if (policy == InputFieldCapPolicy.BYPASS) {
+            return listOf(
                 RankedCaseCandidate(
                     surface = baseWord,
                     baseWord = baseWord,
                     source = source,
                     posteriorProb = 1.0f,
-                    energy = LAMBDA_OBS * obsPenalty,
+                    energy = LAMBDA_OBS * obsPenalty - LAMBDA_FREQ * unigramLogFreq + oovPenalty,
                     obsPenalty = obsPenalty,
                     isPrediction = isPrediction,
                     priority = priority
                 )
             )
         }
-
-        val lower = baseWord.lowercase()
-        val lexEntry = EnglishCaseModel.lookupLexicon(lower)
-        val unigramLogFreq = lexEntry?.logFreq ?: if (EnglishCaseModel.isKnownLowerWord(lower)) 2.0f else 0.5f
 
         // Collect (surface -> lexical prior P_lex(s | w))
         val variantPriors = LinkedHashMap<String, Float>(4)
@@ -98,7 +110,6 @@ object BayesianCaseRanker {
                 variantPriors[v.surface] = maxOf(variantPriors[v.surface] ?: 0.0f, v.prob)
             }
         } else {
-            val oovAcroProb = EnglishCaseModel.oovAcronymProbability(lower)
             if (oovAcroProb >= 0.50f) {
                 variantPriors[lower.uppercase()] = oovAcroProb
                 variantPriors[lower] = 1.0f - oovAcroProb
@@ -191,7 +202,8 @@ object BayesianCaseRanker {
             val effectiveSource = if (source == "raw" && surf != baseWord) "english_cap" else source
             val energy = -ln(post.coerceAtLeast(1e-6f)) +
                 LAMBDA_OBS * obsPenalty -
-                LAMBDA_FREQ * unigramLogFreq
+                LAMBDA_FREQ * unigramLogFreq +
+                oovPenalty
             results.add(
                 RankedCaseCandidate(
                     surface = surf,
@@ -238,6 +250,196 @@ object BayesianCaseRanker {
             }
         }
         return out
+    }
+
+    /**
+     * Builds and ranks English candidate list combining user dictionary entries,
+     * Bayesian truecasing variants of [rawWord], and prefix/typo suggestions.
+     */
+    fun buildEnglishCandidates(
+        rawWord: String,
+        bosProb: Float,
+        fieldPolicy: InputFieldCapPolicy,
+        isShiftActive: Boolean,
+        userCandidates: List<ConversionCandidate>,
+        lexiconSuggestions: List<String>
+    ): List<ConversionCandidate> {
+        if (rawWord.isEmpty()) return emptyList()
+
+        val rawLower = rawWord.lowercase()
+        val isExplicitUpperOrShift = isShiftActive || rawWord.first().isUpperCase()
+        val isAllCapsTyped = rawWord.length >= 2 && rawWord.all { !it.isLetter() || it.isUpperCase() }
+        val isSentenceStart = !isExplicitUpperOrShift && bosProb >= 0.5f
+        val candidateList = mutableListOf<ConversionCandidate>()
+        // Exact-surface deduplication preserves distinct case variants (e.g. "US" vs "us", "May" vs "may")
+        val seenSurfaces = mutableSetOf<String>()
+
+        // 1. User dictionary entries (exact case / normalized typo / prefix)
+        for (uCand in userCandidates) {
+            val surface = uCand.surface
+            val adapted = if (isSentenceStart && surface.all { it.isLowerCase() || !it.isLetter() }) {
+                surface.replaceFirstChar { it.uppercase() }
+            } else {
+                surface
+            }
+            if (seenSurfaces.add(adapted)) {
+                candidateList.add(
+                    ConversionCandidate(
+                        surface = adapted,
+                        reading = rawWord,
+                        isPrediction = false,
+                        source = "user_english",
+                        priority = uCand.priority,
+                        obsPenalty = uCand.obsPenalty
+                    )
+                )
+            }
+        }
+
+        // 2. DMN policy: protect known exact words vs promote OOV prefix completions
+        val hasPrefixCompletions = lexiconSuggestions.any {
+            val sLow = it.lowercase()
+            sLow.startsWith(rawLower) && sLow.length > rawLower.length
+        }
+        val isIncompletePrefixOfKnownWord = !EnglishCaseModel.isKnownWord(rawLower) &&
+            hasPrefixCompletions &&
+            rawLower.length >= 5
+        val isEffectiveOovAcronym = !isIncompletePrefixOfKnownWord &&
+            EnglishCaseModel.oovAcronymProbability(rawLower) >= 0.50f
+        val prefixPolicy = EnglishAssistJudgement.judgePrefixCompletionPolicy(
+            rawWordLength = rawWord.length,
+            isKnownExactWord = EnglishCaseModel.isKnownWord(rawLower),
+            isOovAcronym = isEffectiveOovAcronym,
+            hasPrefixCompletions = hasPrefixCompletions
+        ).decision
+
+        // 3. Bayesian truecasing variants for rawWord + typo/completion suggestions
+        val rankedPool = mutableListOf<RankedCaseCandidate>()
+        if (!isExplicitUpperOrShift && fieldPolicy != InputFieldCapPolicy.BYPASS) {
+            rankedPool.addAll(
+                generateCaseVariants(
+                    baseWord = rawWord,
+                    bosProb = bosProb,
+                    policy = fieldPolicy,
+                    source = "raw",
+                    obsPenalty = 0.0f,
+                    isRawWord = true,
+                    suppressOovAcronym = isIncompletePrefixOfKnownWord
+                )
+            )
+        } else {
+            val isRawOovUnknown = !EnglishCaseModel.isKnownWord(rawLower) &&
+                !isEffectiveOovAcronym
+            val rawUnigramFreq = EnglishCaseModel.getWordLogFreq(rawLower) ?: 0.5f
+            val rawOovPenalty = if (isRawOovUnknown) OOV_RAW_WORD_ENERGY_PENALTY else 0.0f
+            rankedPool.add(
+                RankedCaseCandidate(
+                    surface = rawWord,
+                    baseWord = rawWord,
+                    source = "raw",
+                    posteriorProb = 1.0f,
+                    energy = rawOovPenalty - LAMBDA_FREQ * rawUnigramFreq,
+                    obsPenalty = 0.0f,
+                    isPrediction = false
+                )
+            )
+        }
+
+        for (sug in lexiconSuggestions) {
+            val sugLower = sug.lowercase()
+            val isPrefix = sugLower.startsWith(rawLower)
+            val isPrediction = isPrefix && sug.length > rawWord.length
+            val obsPenalty = if (isPrefix) {
+                0.025f * (sug.length - rawWord.length).coerceAtMost(12)
+            } else {
+                val cost = EnglishDictionaryUtils.editAndSpatialCost(rawLower, sugLower)
+                val maxLen = maxOf(rawWord.length, sug.length)
+                val baseObs = if (maxLen > 0) cost / maxLen.toFloat() else 0.0f
+                val shorterPenalty = if (hasPrefixCompletions && sug.length < rawWord.length) {
+                    SHORTER_WORD_TYPO_PENALTY
+                } else {
+                    0.0f
+                }
+                baseObs + shorterPenalty
+            }
+
+            val knownProtectionOffset = if (
+                prefixPolicy == EnglishAssistJudgement.PrefixCompletionStrategy.PROTECT_EXACT_WORD &&
+                sugLower != rawLower
+            ) {
+                when {
+                    isPrediction -> KNOWN_WORD_EXTENSION_ENERGY_PENALTY
+                    !isPrefix -> KNOWN_WORD_TYPO_ENERGY_PENALTY
+                    else -> 0.0f
+                }
+            } else {
+                0.0f
+            }
+
+            if (!isExplicitUpperOrShift && fieldPolicy != InputFieldCapPolicy.BYPASS) {
+                val variants = generateCaseVariants(
+                    baseWord = sug,
+                    bosProb = bosProb,
+                    policy = fieldPolicy,
+                    source = "english_typo",
+                    obsPenalty = obsPenalty,
+                    isPrediction = isPrediction
+                )
+                if (knownProtectionOffset > 0.0f) {
+                    rankedPool.addAll(variants.map { it.copy(energy = it.energy + knownProtectionOffset) })
+                } else {
+                    rankedPool.addAll(variants)
+                }
+            } else {
+                val adaptedSurface = when {
+                    fieldPolicy == InputFieldCapPolicy.BYPASS -> sug
+                    isAllCapsTyped -> sug.uppercase()
+                    sug.all { !it.isLetter() || it.isLowerCase() } -> sug.replaceFirstChar { it.uppercase() }
+                    else -> sug
+                }
+                val sugLogFreq = EnglishCaseModel.getWordLogFreq(sugLower) ?: 0.5f
+                rankedPool.add(
+                    RankedCaseCandidate(
+                        surface = adaptedSurface,
+                        baseWord = sug,
+                        source = "english_typo",
+                        posteriorProb = 1.0f,
+                        energy = LAMBDA_OBS * obsPenalty - LAMBDA_FREQ * sugLogFreq + knownProtectionOffset,
+                        obsPenalty = obsPenalty,
+                        isPrediction = isPrediction
+                    )
+                )
+            }
+        }
+
+        for (item in rankedPool.sortedBy { it.energy }) {
+            if (seenSurfaces.add(item.surface)) {
+                candidateList.add(
+                    ConversionCandidate(
+                        surface = item.surface,
+                        reading = rawWord,
+                        isPrediction = item.isPrediction,
+                        source = item.source,
+                        obsPenalty = item.obsPenalty
+                    )
+                )
+            }
+        }
+
+        // 4. Always ensure exact raw typed word is present as an escape hatch
+        if (seenSurfaces.add(rawWord)) {
+            candidateList.add(
+                ConversionCandidate(
+                    surface = rawWord,
+                    reading = rawWord,
+                    isPrediction = false,
+                    source = "raw",
+                    obsPenalty = 0.0f
+                )
+            )
+        }
+
+        return candidateList
     }
 
     private fun bosShapeProb(

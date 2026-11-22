@@ -141,11 +141,20 @@ for DEV in $DEVICES; do
         if [ "$DEV_SPELL_ENC" != "exists" ]; then
             echo "  -> Provisioning English Spelling Correction models to storage..."
             adb -s "$DEV" shell "mkdir -p /sdcard/Android/data/com.example.myasr/files/english_spelling" || true
-            for SPFILE in gec-encoder-int8.onnx gec-decoder-int8.onnx spm_unigram.bin vocab.txt; do
+            for SPFILE in gec-encoder-int8.onnx gec-decoder-int8.onnx spm_unigram.bin; do
                 if [ -f "$REPO_DIR/tools/models/english_spelling/$SPFILE" ]; then
                     adb -s "$DEV" push "$REPO_DIR/tools/models/english_spelling/$SPFILE" "/sdcard/Android/data/com.example.myasr/files/english_spelling/$SPFILE"
                 fi
             done
+        fi
+        if [ -f "$REPO_DIR/tools/models/english_spelling/vocab.txt" ]; then
+            LOCAL_VOCAB_SIZE=$(wc -c < "$REPO_DIR/tools/models/english_spelling/vocab.txt" | tr -d ' ')
+            REMOTE_VOCAB_SIZE=$(adb -s "$DEV" shell "wc -c < /sdcard/Android/data/com.example.myasr/files/english_spelling/vocab.txt 2>/dev/null" | tr -d '\r ')
+            if [ "$LOCAL_VOCAB_SIZE" != "$REMOTE_VOCAB_SIZE" ]; then
+                echo "  -> Updating English spelling vocab.txt in device storage ($LOCAL_VOCAB_SIZE bytes)..."
+                adb -s "$DEV" shell "mkdir -p /sdcard/Android/data/com.example.myasr/files/english_spelling" || true
+                adb -s "$DEV" push "$REPO_DIR/tools/models/english_spelling/vocab.txt" "/sdcard/Android/data/com.example.myasr/files/english_spelling/vocab.txt"
+            fi
         fi
     fi
 

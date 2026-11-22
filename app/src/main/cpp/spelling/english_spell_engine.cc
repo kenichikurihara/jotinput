@@ -309,12 +309,12 @@ public:
 
             // Also register in user prefix_dict_
             int L = static_cast<int>(w_lower.length());
-            for (int p_len = 2; p_len <= std::min(L, 10); ++p_len) {
+            for (int p_len = 2; p_len <= std::min(L, 24); ++p_len) {
                 std::string p = w_lower.substr(0, p_len);
                 auto& p_list = prefix_dict_[p];
                 if (std::find(p_list.begin(), p_list.end(), w_lower) == p_list.end()) {
                     p_list.push_back(w_lower);
-                    if (p_list.size() > 14) {
+                    if (p_list.size() > 24) {
                         p_list.pop_back();
                     }
                 }
@@ -606,11 +606,11 @@ private:
                     base_deletes_dict_[std::move(d)].push_back(w_lower);
                 }
 
-                // Register in base_prefix_dict_ (length 2 to min(L, 10))
+                // Register in base_prefix_dict_ (length 2 to min(L, 24))
                 int L = static_cast<int>(w_lower.length());
-                for (int p_len = 2; p_len <= std::min(L, 10); ++p_len) {
+                for (int p_len = 2; p_len <= std::min(L, 24); ++p_len) {
                     auto& p_list = base_prefix_dict_[w_lower.substr(0, p_len)];
-                    if (p_list.size() < 12) {
+                    if (p_list.size() < 24) {
                         p_list.push_back(w_lower);
                     }
                 }

@@ -93,4 +93,57 @@ class EnglishAssistJudgementTest {
         assertEquals("EN_BADGE_SLM", trace.selectedRuleId)
         assertEquals(listOf("EN_BADGE_SLM", "EN_BADGE_USER", "EN_BADGE_CAPS"), trace.matchedRuleIds)
     }
+
+    @Test
+    fun `DMN prefixCompletionPolicyDecisionTable protects known exact words and promotes OOV prefixes`() {
+        // 1. Short input (< 2) -> NONE
+        val tooShort = EnglishAssistJudgement.judgePrefixCompletionPolicyWithTrace(
+            rawWordLength = 1,
+            isKnownExactWord = false,
+            isOovAcronym = false,
+            hasPrefixCompletions = true
+        )
+        assertEquals(EnglishAssistJudgement.PrefixCompletionStrategy.NONE, tooShort.result.decision)
+        assertEquals("EN_PREFIX_R1", tooShort.selectedRuleId)
+
+        // 2. Known exact word (e.g. "an", "tail") -> PROTECT_EXACT_WORD
+        val knownExact = EnglishAssistJudgement.judgePrefixCompletionPolicyWithTrace(
+            rawWordLength = 2,
+            isKnownExactWord = true,
+            isOovAcronym = false,
+            hasPrefixCompletions = true
+        )
+        assertEquals(EnglishAssistJudgement.PrefixCompletionStrategy.PROTECT_EXACT_WORD, knownExact.result.decision)
+        assertEquals("EN_PREFIX_R2", knownExact.selectedRuleId)
+
+        // 3. OOV acronym (e.g. "sdk") -> PROTECT_EXACT_WORD
+        val oovAcro = EnglishAssistJudgement.judgePrefixCompletionPolicyWithTrace(
+            rawWordLength = 3,
+            isKnownExactWord = false,
+            isOovAcronym = true,
+            hasPrefixCompletions = true
+        )
+        assertEquals(EnglishAssistJudgement.PrefixCompletionStrategy.PROTECT_EXACT_WORD, oovAcro.result.decision)
+        assertEquals("EN_PREFIX_R2", oovAcro.selectedRuleId)
+
+        // 4. Incomplete OOV prefix with completions (e.g. "tailsc") -> PROMOTE_PREFIX_COMPLETION
+        val oovPrefix = EnglishAssistJudgement.judgePrefixCompletionPolicyWithTrace(
+            rawWordLength = 6,
+            isKnownExactWord = false,
+            isOovAcronym = false,
+            hasPrefixCompletions = true
+        )
+        assertEquals(EnglishAssistJudgement.PrefixCompletionStrategy.PROMOTE_PREFIX_COMPLETION, oovPrefix.result.decision)
+        assertEquals("EN_PREFIX_R3", oovPrefix.selectedRuleId)
+
+        // 5. Unknown word with no prefix completions -> RAW_AND_TYPO_ONLY
+        val unknownNoPrefix = EnglishAssistJudgement.judgePrefixCompletionPolicyWithTrace(
+            rawWordLength = 5,
+            isKnownExactWord = false,
+            isOovAcronym = false,
+            hasPrefixCompletions = false
+        )
+        assertEquals(EnglishAssistJudgement.PrefixCompletionStrategy.RAW_AND_TYPO_ONLY, unknownNoPrefix.result.decision)
+        assertEquals("EN_PREFIX_DEFAULT", unknownNoPrefix.selectedRuleId)
+    }
 }

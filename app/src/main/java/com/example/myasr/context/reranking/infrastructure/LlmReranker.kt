@@ -1,5 +1,6 @@
 package com.example.myasr.context.reranking.infrastructure
 
+import com.example.myasr.context.english.domain.EnglishCaseModel
 import com.example.myasr.context.ime.presentation.KeyboardHeightManager
 import com.example.myasr.context.kanakanji.domain.ConversionCandidate
 import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
@@ -303,6 +304,20 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 cand.reading.isNotEmpty() && cand.reading.length == n
             }
             val isDeadEndReading = !isEnglishPool && n in 2..5 && !hasNaturalFullWord
+            val hasEnglishPrefixCompletionInPool = isEnglishPool && topPool.any {
+                it.isPrediction &&
+                    it.surface.lowercase().startsWith(it.reading.lowercase()) &&
+                    it.surface.length > it.reading.length
+            }
+            val isEnglishOovRaw = BooleanArray(topPool.size) { i ->
+                val c = topPool[i]
+                isEnglishPool && c.source == "raw" &&
+                    !EnglishCaseModel.isKnownWord(c.surface.lowercase()) &&
+                    (hasEnglishPrefixCompletionInPool || EnglishCaseModel.oovAcronymProbability(c.surface.lowercase()) < 0.50f)
+            }
+            val hasKnownEnglishFullWord = isEnglishPool && topPool.indices.any { i ->
+                !isEnglishOovRaw[i] && unconsumedDeltas[i] == 0 && extDeltas[i] == 0 && !topPool[i].isPrediction
+            }
 
             var fullRankCounter = 0
             val stratumRanks = IntArray(topPool.size) { i ->
@@ -332,7 +347,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 } else if (deltaUnconsumed == 0 && deltaExt == 0 && !candidate.isPrediction) {
                     // (a) Full-span exact candidate
                     val chimeraPenalty = if (isChimeraFull[index]) 10.0f else 0.0f
-                    rawBaseNll = rawNll + chimeraPenalty
+                    val oovRawPenalty = if (isEnglishOovRaw[index] && hasEnglishPrefixCompletionInPool && topPool.size > 1) 5.0f else 0.0f
+                    rawBaseNll = rawNll + chimeraPenalty + oovRawPenalty
                 } else if (deltaUnconsumed > 0) {
                     // (b) Partial-prefix candidate (Virtual suffix completed or marginalized)
                     if (candidate.completedSurface.isNotEmpty() && candidate.completedSurface != candidate.surface) {
@@ -363,7 +379,15 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     val waiveExt = candidate.historyCount >= 2 ||
                         candidate.source == "history_bigram" ||
                         candidate.source == "history_skip_bigram"
-                    rawBaseNll = if (waiveExt) rawNll else rawNll + lambdaExt * maxOf(1, deltaExt)
+                    val isEnglishOovPrefixExt = isEnglishPool &&
+                        !hasKnownEnglishFullWord &&
+                        deltaExt > 0 &&
+                        candidate.surface.lowercase().startsWith(candidate.reading.lowercase())
+                    rawBaseNll = when {
+                        waiveExt -> rawNll
+                        isEnglishOovPrefixExt -> rawNll + 0.20f * deltaExt
+                        else -> rawNll + lambdaExt * maxOf(1, deltaExt)
+                    }
                 }
 
                 // Hybrid-6b History x SLM Fusion (Contextual Bigram Cache + Time-Decay + Coherence Gate + Gated Soft-Clamping + c=1 Damping)
@@ -503,8 +527,21 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 val c = topPool[it]
                 (c.source == "user" || c.source == "user_english") && c.obsPenalty == 0.0f && unconsumedDeltas[it] == 0
             }
+            if (isEnglishPool) {
+                val englishResult = mutableListOf<ConversionCandidate>()
+                val englishSeen = HashSet<String>()
+                for (idx in exactUserIndices.sortedBy { baseScores[it] }) {
+                    val cand = topPool[idx]
+                    if (englishSeen.add(cand.surface)) englishResult.add(cand)
+                }
+                for (idx in topPool.indices.filter { it !in exactUserIndices }.sortedBy { baseScores[it] }) {
+                    val cand = topPool[idx]
+                    if (englishSeen.add(cand.surface)) englishResult.add(cand)
+                }
+                return englishResult
+            }
             val fullIndices = topPool.indices.filter {
-                unconsumedDeltas[it] == 0 && extDeltas[it] == 0 && !topPool[it].isPrediction && !isChimeraFull[it] && it !in exactUserIndices
+                unconsumedDeltas[it] == 0 && extDeltas[it] == 0 && !topPool[it].isPrediction && !isChimeraFull[it] && it !in exactUserIndices && !isEnglishOovRaw[it]
             }
             val prefixIndices = topPool.indices.filter {
                 unconsumedDeltas[it] > 0 && it !in exactUserIndices

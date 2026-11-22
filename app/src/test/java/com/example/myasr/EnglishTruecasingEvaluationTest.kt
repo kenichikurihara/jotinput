@@ -281,9 +281,79 @@ class EnglishTruecasingEvaluationTest {
                 "AvgLatency=${String.format("%.3f", avgMs)}ms"
         )
 
-        assertTrue("Expected Top-1 accuracy >= 90%, got ${top1Acc * 100}%", top1Acc >= 0.90)
+        assertTrue("Expected Top-1 accuracy >= 95%, got ${top1Acc * 100}%", top1Acc >= 0.95)
         assertTrue("Expected Top-3 recall >= 98%, got ${top3Recall * 100}%", top3Recall >= 0.98)
         assertTrue("Expected avg latency < 1.0ms, got ${avgMs}ms", avgMs < 1.0)
+    }
+
+    @Test
+    fun `prefix completion and typo lexicon suggests Tailscale for tailsc and modern tech terms at Rank 1`() {
+        fun rankEnglish(rawWord: String, isShiftActive: Boolean = false, bosProb: Float = 0.0f): List<String> {
+            val suggestions = EnglishCaseModel.suggestPrefixAndTypo(rawWord, maxCandidates = 6)
+            return BayesianCaseRanker.buildEnglishCandidates(
+                rawWord = rawWord,
+                bosProb = bosProb,
+                fieldPolicy = InputFieldCapPolicy.STANDARD,
+                isShiftActive = isShiftActive,
+                userCandidates = emptyList(),
+                lexiconSuggestions = suggestions
+            ).map { it.surface }
+        }
+
+        // CUJ-1: Modern proper nouns & mixed-case tech terms
+        val prefixCases = listOf(
+            "tailsc" to "Tailscale",
+            "kubern" to "Kubernetes",
+            "postgr" to "PostgreSQL",
+            "typesc" to "TypeScript",
+            "wiregu" to "WireGuard",
+            "cloudfl" to "Cloudflare",
+            "javascr" to "JavaScript",
+            "pytor" to "PyTorch",
+            "tensorf" to "TensorFlow",
+            "fastap" to "FastAPI",
+            "githu" to "GitHub",
+            "gitla" to "GitLab",
+            "terraf" to "Terraform",
+            "promet" to "Prometheus",
+            "grafan" to "Grafana",
+            "webass" to "WebAssembly"
+        )
+        for ((typed, expected) in prefixCases) {
+            val ranked = rankEnglish(typed)
+            assertEquals("Expected '$expected' at Rank 1 for '$typed', got $ranked", expected, ranked.firstOrNull())
+            assertTrue("Expected raw escape hatch '$typed' in $ranked", typed in ranked)
+        }
+
+        // CUJ-2: Progressive typing from known short word ("tail" -> "tails" -> "tailsc")
+        val tailRanked = rankEnglish("tail")
+        assertEquals("Known word 'tail' must remain Rank 1, got $tailRanked", "tail", tailRanked.firstOrNull())
+
+        val tailsRanked = rankEnglish("tails")
+        assertEquals("Known word 'tails' must remain Rank 1, got $tailsRanked", "tails", tailsRanked.firstOrNull())
+        assertTrue("Expected 'Tailscale' in Top-3 for 'tails', got $tailsRanked", "Tailscale" in tailsRanked.take(3))
+
+        val tailscRanked = rankEnglish("tailsc")
+        assertEquals("Tailscale", tailscRanked.firstOrNull())
+        assertTrue("Expected 'Cloudflare' in Top-2 for 'cloudf'", "Cloudflare" in rankEnglish("cloudf").take(2))
+
+        // CUJ-3: Explicit Shift / TitleCase / ALL-CAPS prefix completion
+        assertEquals("Tailscale", rankEnglish("Tailsc").firstOrNull())
+        assertEquals("Example", rankEnglish("Examp").firstOrNull())
+        assertEquals("TAILSCALE", rankEnglish("TAILSC", isShiftActive = true).firstOrNull())
+
+        // CUJ-4: Spatial typo & fuzzy prefix recovery
+        assertEquals("the", rankEnglish("teh").firstOrNull())
+        assertTrue("Expected 'Tailscale' in Top-3 for fuzzy typo 'tailscle'", "Tailscale" in rankEnglish("tailscle").take(3))
+        assertTrue("Expected 'Kubernetes' in Top-3 for fuzzy typo 'kuberntes'", "Kubernetes" in rankEnglish("kuberntes").take(3))
+
+        // Latency guard (< 1.0ms average)
+        val startNs = System.nanoTime()
+        for ((typed, _) in prefixCases) {
+            rankEnglish(typed)
+        }
+        val avgMs = (System.nanoTime() - startNs) / 1_000_000.0 / prefixCases.size
+        assertTrue("Expected avg prefix lookup latency < 1.0ms, got ${avgMs}ms", avgMs < 1.0)
     }
 
     @Test

@@ -107,6 +107,13 @@ IME ヘッダーバーのユーティリティアイコン表示裁定（[`ImeHe
 - **`BlankOrNonPredictableWithoutCheckpointShowsEmptyStatus`**: 一致チェックポイントがなく空白または非予測末尾の場合は空ステータスを表示すること。
 - **`DeleteSelectedPredictionRestoresExactCandidatesAndRevertsHistory`**: 「確定 → 予測候補選択 → 削除復帰」の遷移後、直前の確定境界・表示候補スナップショット・学習履歴状態が厳密に復元されること。
 
+### 3.13 [`english_prefix_completion.als`](app/src/test/resources/alloy/english_prefix_completion.als)
+英語プレフィックス補完の DMN 決定表（[`EnglishAssistJudgement`](app/src/main/java/com/example/myasr/context/english/domain/EnglishAssistJudgement.kt) `EnglishPrefixCompletionPolicy`）およびランキング不変条件（[`BayesianCaseRanker`](app/src/main/java/com/example/myasr/context/english/domain/BayesianCaseRanker.kt)）をモデル化し、以下を検証する：
+- **`PrefixPolicyTableIsTotal`**: 全入力組み合わせに対して一意のルール・戦略へ解決されること。
+- **`KnownExactShortWordProtectedAtRank1`**: 既知単語（`an`, `tail` 等）入力時は拡張候補（`and`, `Tailscale`）より完全一致単語が Rank 1 に保護されること。
+- **`DeadEndOovPrefixPromotesCompletionToRank1`**: 未完成 OOV プレフィックス（`tailsc` 等）で辞書補完候補が存在するときは、OOV 生断片や短縮タイポよりプレフィックス補完候補が Rank 1 へ昇格すること。
+- **`RawEscapeHatchAlwaysPresent`**: 生入力文字列が常にエスケープハッチとして候補プールへ保持されること。
+
 ---
 
 ## 4. 自動同期ルール
