@@ -429,10 +429,12 @@ class FlickKeyboardView @JvmOverloads constructor(
         kanaIndex: Int = -1,
         isPill: Boolean = false,
         isAccent: Boolean = false,
-        isFunctionKey: Boolean = false
+        isFunctionKey: Boolean = false,
+        hitLeft: Float = left,
+        hitRight: Float = right
     ) {
         val visualRect = RectF(left + marginX, top + marginY, right - marginX, bottom - marginY)
-        val hitRect = RectF(left, top, right, bottom)
+        val hitRect = RectF(hitLeft, top, hitRight, bottom)
         add(
             Key(
                 type = type,
@@ -448,19 +450,46 @@ class FlickKeyboardView @JvmOverloads constructor(
         )
     }
 
+    private fun MutableList<Key>.addTwelveGridKey(
+        grid: FlickPopupGeometry.TwelveKeyGridSpec,
+        col: Int,
+        row: Int,
+        type: KeyType,
+        label: String,
+        kanaIndex: Int = -1,
+        isPill: Boolean = false,
+        isAccent: Boolean = false,
+        isFunctionKey: Boolean = false
+    ) {
+        val top = row * grid.rowHeight
+        addKey(
+            type = type,
+            left = grid.colLeft(col),
+            top = top,
+            right = grid.colRight(col),
+            bottom = top + grid.rowHeight,
+            marginX = grid.marginX,
+            marginY = if (isPill) grid.pillMarginY else grid.marginY,
+            label = label,
+            kanaIndex = kanaIndex,
+            isPill = isPill,
+            isAccent = isAccent,
+            isFunctionKey = isFunctionKey,
+            hitLeft = grid.hitLeft(col),
+            hitRight = grid.hitRight(col)
+        )
+    }
+
     /**
-     * Gboard-inspired 12-key Flick-Only Japanese Layout:
-     * - Left Function Column (15.5%): Undo (↶), Cursor Left (◀), ?123, Mode Toggle Pill (あa)
-     * - Center 3x4 Grid (69.0%): Clean primary labels only (あ か さ / た な は / ま や ら / ゛゜大⇔小 わ 、。？！…)
-     * - Right Function Column (15.5%): Delete (⌫), Cursor Right (▶), Space (␣ / 変換), Enter Pill (↵ / 確定)
+     * Gboard-inspired 12-key Flick-Only Japanese Layout (5 equal columns, 20.0% each):
+     * - Left Function Column (20%): Undo (↶), Cursor Left (◀), ?123, Mode Toggle Pill (あa)
+     * - Center 3x4 Grid (60%, 20% per col): Clean primary labels only (あ か さ / た な は / ま や ら / ゛゜大⇔小 わ 、。？！…)
+     * - Right Function Column (20%): Delete (⌫), Cursor Right (▶), Space (␣ / 変換), Enter Pill (↵ / 確定)
      */
     private fun MutableList<Key>.layoutGboardFlickKeys(width: Float, height: Float) {
         val density = resources.displayMetrics.density
-        val rowHeight = height / 4f
-        val colFnWidth = width * 0.155f
-        val colKanaWidth = (width - colFnWidth * 2f) / 3f
-        val marginX = 2.5f * density
-        val marginY = 2.5f * density
+        val grid = FlickPopupGeometry.computeTwelveKeyGrid(width, height, density)
+        val rowHeight = grid.rowHeight
 
         keyTextPaint.textSize = (rowHeight * 0.44f).coerceIn(24f, 48f)
         keyFnTextPaint.textSize = (rowHeight * 0.34f).coerceIn(18f, 36f)
@@ -469,11 +498,11 @@ class FlickKeyboardView @JvmOverloads constructor(
         keyCenterSubTextPaint.textSize = (rowHeight * 0.20f).coerceIn(13f, 22f)
         popupTextPaint.textSize = (rowHeight * 0.36f).coerceIn(20f, 38f)
 
-        // Col 0: Left Function Column
-        addKey(KeyType.UNDO, 0f, 0f, colFnWidth, rowHeight, marginX, marginY, "↶", isFunctionKey = true)
-        addKey(KeyType.CURSOR_LEFT, 0f, rowHeight, colFnWidth, rowHeight * 2f, marginX, marginY, "◀", isFunctionKey = true)
-        addKey(KeyType.MODE_NUMPAD, 0f, rowHeight * 2f, colFnWidth, rowHeight * 3f, marginX, marginY, "?123", isFunctionKey = true)
-        addKey(KeyType.MODE_KANA_ALPHA, 0f, rowHeight * 3f, colFnWidth, rowHeight * 4f, marginX * 1.4f, marginY * 1.6f, "あa", isPill = true, isFunctionKey = true)
+        // Col 0: Left Function Column (all keys share marginX so vertical column edges align cleanly)
+        addTwelveGridKey(grid, col = 0, row = 0, KeyType.UNDO, "↶", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 0, row = 1, KeyType.CURSOR_LEFT, "◀", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 0, row = 2, KeyType.MODE_NUMPAD, "?123", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 0, row = 3, KeyType.MODE_KANA_ALPHA, "あa", isPill = true, isFunctionKey = true)
 
         // Col 1..3: 12-key Flick-Only Center Grid (No sub-labels on Kana keys!)
         val mainLabels = arrayOf(
@@ -482,44 +511,24 @@ class FlickKeyboardView @JvmOverloads constructor(
             "ま", "や", "ら",
             "゛゜", "わ", "、。?!"
         )
-
         for (row in 0..3) {
             for (col in 0..2) {
                 val index = row * 3 + col
-                val left = colFnWidth + col * colKanaWidth
-                val top = row * rowHeight
-                val right = left + colKanaWidth
-                val bottom = top + rowHeight
-
                 val keyType = when (index) {
                     9 -> KeyType.MODIFIER_FLICK
                     11 -> KeyType.PUNCTUATION_FLICK
                     else -> KeyType.KANA_FLICK
                 }
-
-                addKey(
-                    type = keyType,
-                    left = left,
-                    top = top,
-                    right = right,
-                    bottom = bottom,
-                    marginX = marginX,
-                    marginY = marginY,
-                    label = mainLabels[index],
-                    kanaIndex = index
-                )
+                addTwelveGridKey(grid, col = col + 1, row = row, type = keyType, label = mainLabels[index], kanaIndex = index)
             }
         }
 
-        // Col 4: Right Function Column
-        val rightLeft = width - colFnWidth
-        val spaceLabel = "␣"
+        // Col 4: Right Function Column (all keys share marginX so vertical column edges align cleanly)
         val enterLabel = if (isComposingState || hasVoiceComposingState) "確定" else "↵"
-
-        addKey(KeyType.DELETE, rightLeft, 0f, width, rowHeight, marginX, marginY, "⌫", isFunctionKey = true)
-        addKey(KeyType.CURSOR_RIGHT, rightLeft, rowHeight, width, rowHeight * 2f, marginX, marginY, "▶", isFunctionKey = true)
-        addKey(KeyType.SPACE, rightLeft, rowHeight * 2f, width, rowHeight * 3f, marginX, marginY, spaceLabel, isFunctionKey = true)
-        addKey(KeyType.ENTER, rightLeft, rowHeight * 3f, width, rowHeight * 4f, marginX * 1.4f, marginY * 1.6f, enterLabel, isPill = true, isAccent = true, isFunctionKey = true)
+        addTwelveGridKey(grid, col = 4, row = 0, KeyType.DELETE, "⌫", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 4, row = 1, KeyType.CURSOR_RIGHT, "▶", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 4, row = 2, KeyType.SPACE, "␣", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 4, row = 3, KeyType.ENTER, enterLabel, isPill = true, isAccent = true, isFunctionKey = true)
     }
 
     /**
@@ -821,26 +830,23 @@ class FlickKeyboardView @JvmOverloads constructor(
     }
 
     /**
-     * Gboard-inspired 12-key Numpad Layout (gboard_numpad.png)
+     * Gboard-inspired 12-key Numpad Layout (gboard_numpad.png, 5 equal columns 20.0% each)
      */
     private fun MutableList<Key>.layoutGboardNumpadKeys(width: Float, height: Float) {
         val density = resources.displayMetrics.density
-        val rowHeight = height / 4f
-        val colFnWidth = width * 0.155f
-        val colNumWidth = (width - colFnWidth * 2f) / 3f
-        val marginX = 2.5f * density
-        val marginY = 2.5f * density
+        val grid = FlickPopupGeometry.computeTwelveKeyGrid(width, height, density)
+        val rowHeight = grid.rowHeight
 
         keyTextPaint.textSize = (rowHeight * 0.44f).coerceIn(24f, 48f)
         keyFnTextPaint.textSize = (rowHeight * 0.34f).coerceIn(18f, 36f)
         keyActionTextPaint.textSize = (rowHeight * 0.35f).coerceIn(20f, 40f)
 
-        // Left Column: +, -, *, あいう/ABC Pill
+        // Left Column: +, -, *, あいう/ABC Pill (all share marginX for aligned edges)
         val backLabel = if (previousAlphaOrKanaMode == JapaneseKanaUtils.KeyboardMode.QWERTY) "ABC" else "あいう"
-        addKey(KeyType.QWERTY_CHAR, 0f, 0f, colFnWidth, rowHeight, marginX, marginY, "+", isFunctionKey = true)
-        addKey(KeyType.QWERTY_CHAR, 0f, rowHeight, colFnWidth, rowHeight * 2f, marginX, marginY, "-", isFunctionKey = true)
-        addKey(KeyType.QWERTY_CHAR, 0f, rowHeight * 2f, colFnWidth, rowHeight * 3f, marginX, marginY, "*", isFunctionKey = true)
-        addKey(KeyType.MODE_BACK_KANA, 0f, rowHeight * 3f, colFnWidth, rowHeight * 4f, marginX * 1.2f, marginY * 1.5f, backLabel, isPill = true, isFunctionKey = true)
+        addTwelveGridKey(grid, col = 0, row = 0, KeyType.QWERTY_CHAR, "+", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 0, row = 1, KeyType.QWERTY_CHAR, "-", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 0, row = 2, KeyType.QWERTY_CHAR, "*", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 0, row = 3, KeyType.MODE_BACK_KANA, backLabel, isPill = true, isFunctionKey = true)
 
         // Center 3x4 Numpad Grid: 1 2 3 / 4 5 6 / 7 8 9 / , 0 .
         val numLabels = arrayOf(
@@ -852,29 +858,16 @@ class FlickKeyboardView @JvmOverloads constructor(
         for (row in 0..3) {
             for (col in 0..2) {
                 val index = row * 3 + col
-                val left = colFnWidth + col * colNumWidth
-                val top = row * rowHeight
-                addKey(
-                    type = KeyType.KANA_FLICK,
-                    left = left,
-                    top = top,
-                    right = left + colNumWidth,
-                    bottom = top + rowHeight,
-                    marginX = marginX,
-                    marginY = marginY,
-                    label = numLabels[index],
-                    kanaIndex = index
-                )
+                addTwelveGridKey(grid, col = col + 1, row = row, KeyType.KANA_FLICK, numLabels[index], kanaIndex = index)
             }
         }
 
-        // Right Column: %, ␣, ⌫, ↵
-        val rightLeft = width - colFnWidth
+        // Right Column: ⌫, /, ␣, ↵ (all share marginX for aligned edges)
         val enterLabel = if (isComposingState || hasVoiceComposingState) "確定" else "↵"
-        addKey(KeyType.DELETE, rightLeft, 0f, width, rowHeight, marginX, marginY, "⌫", isFunctionKey = true)
-        addKey(KeyType.QWERTY_CHAR, rightLeft, rowHeight, width, rowHeight * 2f, marginX, marginY, "/", isFunctionKey = true)
-        addKey(KeyType.SPACE, rightLeft, rowHeight * 2f, width, rowHeight * 3f, marginX, marginY, "␣", isFunctionKey = true)
-        addKey(KeyType.ENTER, rightLeft, rowHeight * 3f, width, rowHeight * 4f, marginX * 1.4f, marginY * 1.6f, enterLabel, isPill = true, isAccent = true, isFunctionKey = true)
+        addTwelveGridKey(grid, col = 4, row = 0, KeyType.DELETE, "⌫", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 4, row = 1, KeyType.QWERTY_CHAR, "/", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 4, row = 2, KeyType.SPACE, "␣", isFunctionKey = true)
+        addTwelveGridKey(grid, col = 4, row = 3, KeyType.ENTER, enterLabel, isPill = true, isAccent = true, isFunctionKey = true)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -941,13 +934,14 @@ class FlickKeyboardView @JvmOverloads constructor(
             }
         }
 
-        // Subtle vertical column dividers in 12-key Flick/Numpad mode (matching Gboard)
+        // Subtle vertical column dividers in 12-key Flick/Numpad mode (matching Gboard 0x7f150398)
         if (currentMode == JapaneseKanaUtils.KeyboardMode.KANA || currentMode == JapaneseKanaUtils.KeyboardMode.NUMBER) {
-            val colFnWidth = width * 0.155f
-            val topMargin = 8f * density
-            val botMargin = height - 8f * density
-            canvas.drawLine(colFnWidth, topMargin, colFnWidth, botMargin, dividerPaint)
-            canvas.drawLine(width - colFnWidth, topMargin, width - colFnWidth, botMargin, dividerPaint)
+            val grid = FlickPopupGeometry.computeTwelveKeyGrid(width.toFloat(), height.toFloat(), density)
+            dividerPaint.strokeWidth = (1f * density).coerceAtLeast(1f)
+            val topMargin = (14f * density).coerceAtMost(height * 0.15f)
+            val botMargin = height - topMargin
+            canvas.drawLine(grid.leftDividerX, topMargin, grid.leftDividerX, botMargin, dividerPaint)
+            canvas.drawLine(grid.rightDividerX, topMargin, grid.rightDividerX, botMargin, dividerPaint)
         }
 
         // Draw active swipe path on QWERTY

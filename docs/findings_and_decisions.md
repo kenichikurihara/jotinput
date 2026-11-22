@@ -2243,3 +2243,24 @@ When a user committed a phrase (e.g., `明日の`), tapped a next-phrase predict
 5. **IME Lifecycle Integration (`VoiceInputMethodService.kt`)**: Wired checkpoint recording/snapshotting across commits, candidate clicks, Phase 1/2 SLM updates, `onDeletePressed`, and `onUpdateSelection` (distinguishing cursor navigation from external deletion via `getTextAfterCursor`).
 6. **Alloy 6 Formal Verification (`prediction_checkpoint_restoration.als`)**: Verified DMN policy totality/safety and exact candidate/history restoration across `commitPhrase -> selectPrediction -> deleteToPreviousCheckpoint`.
 
+---
+
+## 54. Gboard-Aligned 12-Key Flick & Surrounding Key Proportions Across Multi-Screen Form Factors
+
+### 1. Problem & Empirical Gboard Inspection on ARCVM (`arc:5555`)
+Prior `FlickKeyboardView` layout builders (`layoutGboardFlickKeys`, `layoutGboardNumpadKeys`) assigned `15.5%` width to Left/Right function columns (`Col 0`, `Col 4`) and `23.0%` each to the center 3 columns (`Col 1..3`), making the 12 center keys $1.484\times$ wider than surrounding function keys, and applied `marginX * 1.4f` / `1.2f` horizontally to bottom corner pills (`あa`, `↵`/`確定`, `あいう`/`ABC`), narrowing them relative to the keys directly above them.
+
+Inspecting Gboard's installed APK (`res/5aF.xml`, `res/1SV.xml`, `res/3eV.xml`, `res/EAM.xml`, `res/IUs.xml`, `res/d1f.xml`, `style_sheet_default_border.binarypb`) and live Gboard screenshots on ARCVM across 7 typical device screen sizes (`360dp`, `411dp`, `480dp`, `701dp` foldable, `800dp` tablet portrait, `914dp` phone landscape, and `1600dp` ARCVM default) revealed:
+- **Equal 5-Column Weights (`1 : 1 : 1 : 1 : 1`, `20.0%` each)**: Gboard uses `layout_weight="200"` for Col 0 (`↶ ◀ ?123 あa`), `600` (`3 × 200`) for Col 1..3 (`あ..わ`), and `200` for Col 4 (`⌫ ▶ ␣ ↵`), giving identical horizontal width across all 5 columns on every screen size.
+- **Strict Vertical Edge Alignment**: All 4 keys in `Col 0` and `Col 4` share the exact same horizontal inset `marginX`; `.keytop.pill-shaped.extra-padding` only adds `+2dp` top/bottom vertical padding to pills without shrinking horizontal width.
+- **Density- & Width-Adaptive Margins and Dividers**: Horizontal gap spans `~10.3–12.3dp` with extra `+4dp` outer body padding on `sw600dp+` displays (`701dp` foldable, `800dp` tablet, `914dp` landscape), and `1dp` vertical column dividers sit between `Col 0 | Col 1` and `Col 3 | Col 4`.
+
+### 2. Architectural Solution & Verification
+1. **PRD Revision**: Updated [`docs/qwerty_and_gboard_flick_plan.md`](docs/qwerty_and_gboard_flick_plan.md) with JTBD, CUJ, and the 7-screen empirical Gboard table.
+2. **Pure-Kotlin Geometry Spec (`FlickPopupGeometry.kt`)**: Added `TwelveKeyGridSpec` and `computeTwelveKeyGrid(widthPx, heightPx, density)` computing equal 5-column boundaries (`colLeft`/`colRight`), seamless `hitLeft`/`hitRight` edge targets, width-adaptive `sidePaddingPx` (`4dp` extra at `widthDp >= 590f`), `marginX` (`4.2dp` / `4.8dp` / `5.5dp`), `pillMarginY`, and exact `leftDividerX`/`rightDividerX`.
+3. **Unified 12-Key Builders (`FlickKeyboardView.kt`)**: Extracted DRY `addTwelveGridKey` helper and updated `layoutGboardFlickKeys`, `layoutGboardNumpadKeys`, and `onDraw` vertical dividers (`1dp` stroke) to use `computeTwelveKeyGrid`.
+4. **JVM Unit & ARCVM Multi-Screen Instrumentation Verification**:
+   - [`FlickPopupGeometryTest`](app/src/test/java/com/example/myasr/FlickPopupGeometryTest.kt) verifies identical 5-column visual key widths, seamless `hitRect` tiling, and divider centering across 7 typical device profiles; `./gradlew testDebugUnitTest` passed 100%.
+   - [`FlickKeyboardMultiScreenInstrumentedTest`](app/src/androidTest/java/com/example/myasr/FlickKeyboardMultiScreenInstrumentedTest.kt) ran on ARCVM (`arc:5555`), verifying real `FlickKeyboardView` `RectF` parity across `360dp`, `411dp`, `480dp`, `701dp`, `800dp`, and `914dp` screens and visually inspecting all 6 rendered PNGs. *(Note: Live `VoiceInputMethodService` IME window projection on ARCVM in laptop mode is overridden within ~100ms by ChromeOS host `ArcInputMethodManagerService`, and physical Pixel 10 Pro was offline during deployment.)*
+
+

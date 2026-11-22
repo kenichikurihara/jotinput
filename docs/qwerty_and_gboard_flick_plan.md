@@ -11,8 +11,8 @@ Using `adb` on the connected Pixel 10 Pro (`<device-serial>`), we captured and i
 ### 1.1 Gboard Japanese 12-Key Flick-Only Layout (`gboard_1.png`, `gboard_flick_composing.png`)
 - **Clean Key Faces (No Sub-labels on Kana Keys)**:
   - Unlike legacy multi-tap keyboards that clutter each key with `いうえお` sub-labels, Gboard's flick-only layout renders **only the primary character** (`あ`, `か`, `さ`, `た`, `な`, `は`, `ま`, `や`, `ら`, `わ`) centered in a clean, large font, separated by subtle vertical hairlines between the left/right function columns and the 3-column center grid.
-- **5-Column × 4-Row Grid Structure**:
-  | Row | Col 0 (Left Fn ~15%) | Col 1 (Kana ~23.3%) | Col 2 (Kana ~23.3%) | Col 3 (Kana ~23.3%) | Col 4 (Right Fn ~15%) |
+- **5-Column × 4-Row Grid Structure** *(5 equal columns `20.0%` each; verified on ARCVM Gboard APK & live layouts across 7 screen sizes)*:
+  | Row | Col 0 (Left Fn `20%`) | Col 1 (Kana `20%`) | Col 2 (Kana `20%`) | Col 3 (Kana `20%`) | Col 4 (Right Fn `20%`) |
   | :--- | :--- | :--- | :--- | :--- | :--- |
   | **Row 0** | `↶` (Undo / 戻す) | `あ` (`あ い う え お`) | `か` (`か き く け こ`) | `さ` (`さ し す せ そ`) | `⌫` (Delete) |
   | **Row 1** | `◀` (Cursor Left) | `た` (`た ち つ て と`) | `な` (`な に ぬ ね の`) | `は` (`は ひ ふ へ ほ`) | `▶` (Cursor Right) |
@@ -73,14 +73,14 @@ Using `adb` on the connected Pixel 10 Pro (`<device-serial>`), we captured and i
   - Row 2: `=\<` (15%), `*` `"` `'` `:` `;` `!` `?` (10% each), `⌫` (15%)
   - Row 3: `ABC` / `あa` (13%), `,` (9%), `1234` Numpad switch (11%), `Space` (34%), `.` (9%), `◀` / `▶` (11%), `↵` (13%)
 - **12-Key Numpad Layer (`?123` from Flick, or `1234` from Symbols)**:
-  - Matches `gboard_numpad.png`:
-  - Col 0 (Left Fn 15%): Row 0 `+`, Row 1 `-`, Row 2 `*`, Row 3 `/` (or `あいう` back button at bottom-left).
-  - Center 3×4 Grid:
+  - Matches `gboard_numpad.png` using the same 5 equal columns (`20.0%` each):
+  - Col 0 (Left Fn `20%`): Row 0 `+`, Row 1 `-`, Row 2 `*`, Row 3 `/` (or `あいう` / `ABC` back button at bottom-left).
+  - Center 3×4 Grid (`60%` total, `20%` per column):
     - Row 0: `1` `2` `3`
     - Row 1: `4` `5` `6`
     - Row 2: `7` `8` `9`
     - Row 3: `, / !?#` `0` `. / =`
-  - Col 4 (Right Fn 15%): Row 0 `⌫`, Row 1 `%`, Row 2 `␣`, Row 3 `↵`.
+  - Col 4 (Right Fn `20%`): Row 0 `⌫`, Row 1 `%`, Row 2 `␣`, Row 3 `↵`.
 
 ---
 
@@ -126,14 +126,16 @@ We update `KeyboardMode` to represent the active layout cleanly:
 ## 3. Detailed Visual & Touch Specifications
 
 ### 3.1 Gboard-Style Flick-Only Visuals (`KANA` & `NUMBER` modes)
-1. **Grid Proportions**:
-   - Left function column (`Col 0`): `15.5%` of keyboard width.
-   - Center 3 columns (`Col 1..3`): `23.0%` each (`69.0%` total).
-   - Right function column (`Col 4`): `15.5%` of keyboard width.
+1. **Grid Proportions & Uniform Column Edges**:
+   - **5 Equal Columns (`1 : 1 : 1 : 1 : 1`, weights `200 : 200 : 200 : 200 : 200`)** inside the active body width (`widthPx - 2 * sidePaddingPx`):
+     - Left function column (`Col 0`): `20.0%` (`colWidth`)
+     - Center 3 columns (`Col 1..3`): `20.0%` each (`60.0%` total)
+     - Right function column (`Col 4`): `20.0%` (`colWidth`)
    - 4 equal-height rows (`height / 4f`).
+   - All 4 keys in `Col 0` (`↶`, `◀`, `?123`, `あa`) and all 4 keys in `Col 4` (`⌫`, `▶`, `␣`, `↵`) share identical horizontal `marginX` so their vertical left and right edges align strictly down each column (the bottom-right stadium pill only adds `+1.5dp` top/bottom vertical padding, matching Gboard's `.keytop.pill-shaped.extra-padding`).
 2. **Clean Key Rendering**:
    - Kana keys (`あ`..`わ`) render **only** the main character (no `いうえお` sub-labels), using clean, slightly larger typography (`rowHeight * 0.44f`).
-   - Vertical divider lines (`1dp` subtle border) separate `Col 0 | Col 1..3 | Col 4`, with crisp rounded key cards or Gboard-style key cells.
+   - Vertical divider lines (`1dp` stroke, `14dp` top/bottom margin) sit between `Col 0 | Col 1` (`sidePaddingPx + colWidth`) and `Col 3 | Col 4` (`widthPx - sidePaddingPx - colWidth`).
    - **Row 3, Col 0 (`あa` Mode Toggle Pill)**: Drawn as a stadium pill (`rx = height / 2`) with dual-tone text (`あ` highlighted in `KANA` mode, `a` highlighted in `QWERTY` mode).
    - **Row 3, Col 1 (`゛゜ / 大⇔小` Modifier Key)**: Custom canvas rendering showing `゛` and `゜` on the upper line and `大⇔小` on the lower line, matching Gboard's icon.
    - **Row 3, Col 3 (`、。？！…` Punctuation Key)**: Custom canvas rendering placing `?` at top, `。` at left, `、` at center-right, `!` at right, and `…` at bottom, matching Gboard's 5-direction punctuation key.
@@ -214,3 +216,35 @@ During self-review of this plan against [`docs/findings_and_decisions.md`](docs/
 6. **Step 6**: Update [`activity_main.xml`](app/src/main/res/layout/activity_main.xml) and [`MainActivity.kt`](app/src/main/java/com/example/myasr/MainActivity.kt) to add the **"英語QWERTY配列の数字行 (1〜0) を表示"** toggle switch and default mode selector.
 7. **Step 7**: Add unit tests in `app/src/test/` covering `JapaneseKanaUtils` directional modifiers, QWERTY key/symbol mappings, and `FlickPopupGeometry`.
 8. **Step 8**: Run `./gradlew testDebugUnitTest assembleDebug` and [`./deploy.sh`](deploy.sh) to deploy to **both** `arc:5555` and `<device-serial>`, verifying logcat, `dumpsys window windows`, and visual screenshots (`screencap`) across Flick, QWERTY (with number row ON), and QWERTY (with number row OFF).
+
+---
+
+## 7. PRD Revision: Empirical ARCVM Multi-Screen Gboard 12-Key Alignment (`20.0% × 5` Equal Grid)
+
+### 7.1 Problem Statement
+Earlier revisions of `FlickKeyboardView` set the 12-key surrounding function columns (`Col 0` and `Col 4`) to `15.5%` and the center 3 Kana/Numpad columns (`Col 1..3`) to `23.0%` each (`1.484:1` asymmetry), and applied extra horizontal inset (`marginX * 1.4f` / `1.2f`) to bottom corner keys (`あa`, `↵`/`確定`, `あいう`/`ABC`). That made surrounding function keys noticeably narrower and bottom corner keys misaligned compared to Gboard, disrupting muscle memory for users migrating from Gboard across phone, foldable, and tablet screens.
+
+### 7.2 Jobs to be Done (JTBD)
+- **When** typing Japanese via 12-key flick or entering numbers on any Android form factor (compact phone, standard phone, foldable, tablet, or landscape),
+- **I want** the 12 center keys (`あ..わ` / `1..0`) and all surrounding function keys (`↶`, `◀`, `?123`, `あa`, `⌫`, `▶`, `␣`, `↵`) to have the same horizontal width ratios, key spacing, and flush column edges as Gboard,
+- **So that** my thumb/finger targets land accurately by muscle memory without accidentally hitting an adjacent column or cramped corner function key.
+
+### 7.3 Critical User Journeys (CUJ)
+1. **CUJ-1 (Rapid Japanese Flick + Punctuation / Delete / Enter Rhythm)**:
+   - User taps/flicks center kana keys (`Col 1..3`) and immediately reaches for surrounding function keys (`⌫` in Col 4, `◀`/`▶`, `あa`, or `確定`/`↵`).
+   - All 5 columns span identically proportioned horizontal zones (`20%` each), and outer columns extend their touch `hitRect` seamlessly to `x = 0` and `x = widthPx` so edge taps never miss.
+2. **CUJ-2 (Multi-Form-Factor Transition: Phone $\leftrightarrow$ Foldable $\leftrightarrow$ Tablet / Landscape)**:
+   - Whether on a compact phone (`360dp`), standard phone (`411dp`), large phone (`480dp`), foldable unfolded (`701dp`), tablet (`800dp`), or landscape (`914dp`/`1600dp`), `FlickPopupGeometry.computeTwelveKeyGrid` scales `sidePaddingPx`, `marginX`, and divider placement proportionally with Gboard's APK and live rendered metrics.
+
+### 7.4 Empirical Gboard APK & Live ARCVM Measurements (7 Screen Sizes)
+Inspection of Gboard's installed APK on ARCVM (`res/5aF.xml`, `res/VA-.xml`, `res/1SV.xml`, `res/3eV.xml`, `res/kxO.xml`, `res/EAM.xml`, `res/IUs.xml`, `res/d1f.xml`) confirmed strict `200 : 200 : 200 : 200 : 200` (`20.0% × 5`) column weights and uniform vertical column alignment (`style_sheet_default_border.binarypb` adds vertical-only extra padding `+2dp` on `.keytop.pill-shaped.extra-padding`). Live captures on ARCVM (`arc:5555`) measured:
+
+| Device Profile | Resolution & Density | Width (`dp`) | Measured Gboard 5-Keycap Widths (`px` / `dp`) | Horizontal Gap (`dp`) | Outer Body Pad (`dp`) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Compact Phone | `1080×1920 @ 480dpi` (`3.0x`) | `360dp` | `[152, 153, 153, 154, 153]` px (`~60.5dp`) | `~10.3dp` | `~3.2dp` |
+| Standard Phone | `1080×2400 @ 420dpi` (`2.625x`) | `411dp` | `[156, 157, 157, 157, 157]` px (`~70.9dp`) | `~10.3dp` | `~3.0dp` |
+| Large Phone | `1440×3120 @ 480dpi` (`3.0x`) | `480dp` | `[213, 214, 213, 214, 214]` px (`~84.4dp`) | `~10.4dp` | `~3.1dp` |
+| Foldable Unfolded | `1840×2208 @ 420dpi` (`2.625x`) | `701dp` | `[282, 281, 281, 282, 282]` px (`~127.1dp`) | `~10.3dp` | `~7.1dp` |
+| Tablet Portrait | `1600×2560 @ 320dpi` (`2.0x`) | `800dp` | `[247, 247, 247, 249, 248]` px (`~146.8dp`) | `~10.4dp` | `~7.3dp` |
+| Phone Landscape | `2400×1080 @ 420dpi` (`2.625x`) | `914dp` | `[199, 199, 199, 199, 199]` px (`~168.9dp`) | `~12.3dp` | `~4.0dp` |
+| Tablet / ARCVM Default | `2560×1600 @ 160dpi` (`1.0x`) | `1600dp` | Equal 5-col `20%` weights | `~11–12dp` | `~8dp` |

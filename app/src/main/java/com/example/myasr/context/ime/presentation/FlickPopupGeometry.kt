@@ -29,6 +29,72 @@ object FlickPopupGeometry {
         val petals: List<PetalPoint>
     )
 
+    data class TwelveKeyGridSpec(
+        val widthPx: Float,
+        val heightPx: Float,
+        val rowHeight: Float,
+        val sidePaddingPx: Float,
+        val colWidth: Float,
+        val marginX: Float,
+        val marginY: Float,
+        val pillMarginY: Float,
+        val leftDividerX: Float,
+        val rightDividerX: Float
+    ) {
+        val visualKeyWidth: Float
+            get() = colWidth - 2f * marginX
+
+        fun colLeft(col: Int): Float = sidePaddingPx + col * colWidth
+        fun colRight(col: Int): Float = sidePaddingPx + (col + 1) * colWidth
+        fun hitLeft(col: Int): Float = if (col == 0) 0f else colLeft(col)
+        fun hitRight(col: Int): Float = if (col == 4) widthPx else colRight(col)
+    }
+
+    /**
+     * Computes Gboard-aligned 5-column x 4-row 12-key geometry (20% equal column weights)
+     * for Japanese 12-key Flick and Numpad layouts across phone, foldable, tablet, and landscape sizes.
+     */
+    fun computeTwelveKeyGrid(
+        widthPx: Float,
+        heightPx: Float,
+        density: Float
+    ): TwelveKeyGridSpec {
+        val safeDensity = if (density > 0f) density else 1f
+        val safeWidthPx = widthPx.coerceAtLeast(0f)
+        val safeHeightPx = heightPx.coerceAtLeast(0f)
+        val widthDp = safeWidthPx / safeDensity
+        val rowHeight = safeHeightPx / 4f
+        // Root keyboard container in keyboard_view.xml already provides 4dp start/end padding;
+        // on sw600dp+ displays (view width >= 590dp), add 4dp per side so outer body pad matches Gboard (~8dp).
+        val sidePaddingPx = if (widthDp >= 590f) 4.0f * safeDensity else 0f
+        val innerWidth = (safeWidthPx - sidePaddingPx * 2f).coerceAtLeast(5f)
+        val colWidth = innerWidth / 5f
+
+        val marginXDp = when {
+            widthDp < 370f -> 4.2f
+            widthDp < 830f -> 4.8f
+            else -> 5.5f
+        }
+        val marginX = (marginXDp * safeDensity).coerceAtMost(colWidth * 0.10f)
+        val marginY = (4.2f * safeDensity).coerceAtMost(rowHeight * 0.11f)
+        val pillMarginY = (marginY + 1.5f * safeDensity).coerceAtMost(rowHeight * 0.14f)
+        val leftDividerX = sidePaddingPx + colWidth
+        val rightDividerX = safeWidthPx - sidePaddingPx - colWidth
+
+        return TwelveKeyGridSpec(
+            widthPx = safeWidthPx,
+            heightPx = safeHeightPx,
+            rowHeight = rowHeight,
+            sidePaddingPx = sidePaddingPx,
+            colWidth = colWidth,
+            marginX = marginX,
+            marginY = marginY,
+            pillMarginY = pillMarginY,
+            leftDividerX = leftDividerX,
+            rightDividerX = rightDividerX
+        )
+    }
+
     /**
      * Computes popup dimensions, local petal coordinates, and popup window (x, y) placement.
      *
