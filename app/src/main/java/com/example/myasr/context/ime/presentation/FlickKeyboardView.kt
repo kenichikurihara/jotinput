@@ -229,6 +229,17 @@ class FlickKeyboardView @JvmOverloads constructor(
         textAlign = Paint.Align.CENTER
         textSize = 22f
     }
+    private val iconStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+    }
+    private val iconFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.FILL
+    }
+    private val iconPath = Path()
+    private var currentIconSizePx: Float = 24f * resources.displayMetrics.density
+    private var currentIconStrokeWidthPx: Float = 2.2f * resources.displayMetrics.density
 
     // Fallback In-Canvas Popup Preview Paints
     private val popupBgPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -307,7 +318,7 @@ class FlickKeyboardView @JvmOverloads constructor(
             dividerPaint.color = Color.parseColor("#3C4043")
             keyTextPaint.color = Color.parseColor("#E8EAED")
             keyFnTextPaint.color = Color.parseColor("#E8EAED")
-            keyMutedTextPaint.color = Color.parseColor("#5F6368")
+            keyMutedTextPaint.color = Color.parseColor("#6E7378")
             keyActionTextPaint.color = Color.parseColor("#041E49")
             keySubTextPaint.color = Color.parseColor("#9AA0A6")
             keyCenterSubTextPaint.color = Color.parseColor("#9AA0A6")
@@ -325,7 +336,7 @@ class FlickKeyboardView @JvmOverloads constructor(
             dividerPaint.color = Color.parseColor("#CBD0D6")
             keyTextPaint.color = Color.parseColor("#202124")
             keyFnTextPaint.color = Color.parseColor("#3C4043")
-            keyMutedTextPaint.color = Color.parseColor("#9AA0A6")
+            keyMutedTextPaint.color = Color.parseColor("#787E84")
             keyActionTextPaint.color = Color.parseColor("#FFFFFF")
             keySubTextPaint.color = Color.parseColor("#5F6368")
             keyCenterSubTextPaint.color = Color.parseColor("#5F6368")
@@ -480,6 +491,39 @@ class FlickKeyboardView @JvmOverloads constructor(
         )
     }
 
+    private fun applyTwelveKeyTypography(
+        grid: FlickPopupGeometry.TwelveKeyGridSpec,
+        density: Float
+    ) {
+        val typo = FlickPopupGeometry.computeTwelveKeyTypography(grid, density)
+        keyTextPaint.textSize = typo.mainTextSizePx
+        keyFnTextPaint.textSize = typo.fnTextSizePx
+        keyMutedTextPaint.textSize = typo.fnTextSizePx
+        keyActionTextPaint.textSize = typo.actionTextSizePx
+        keyCenterSubTextPaint.textSize = typo.centerSubTextSizePx
+        popupTextPaint.textSize = typo.popupTextSizePx
+        currentIconSizePx = typo.iconSizePx
+        currentIconStrokeWidthPx = typo.iconStrokeWidthPx
+    }
+
+    private fun applyQwertyTypography(
+        rowHeight: Float,
+        marginY: Float,
+        density: Float
+    ) {
+        val safeDensity = if (density > 0f) density else 1f
+        val keyHeight = (rowHeight - 2f * marginY).coerceAtLeast(1f)
+        keyTextPaint.textSize = (keyHeight * 0.52f).coerceIn(15f * safeDensity, 24f * safeDensity)
+        keyFnTextPaint.textSize = (keyHeight * 0.36f).coerceIn(11f * safeDensity, 17f * safeDensity)
+        keyMutedTextPaint.textSize = keyFnTextPaint.textSize
+        keyActionTextPaint.textSize = (keyHeight * 0.38f).coerceIn(12f * safeDensity, 18f * safeDensity)
+        keySubTextPaint.textSize = (keyHeight * 0.22f).coerceIn(8.5f * safeDensity, 12f * safeDensity)
+        keyCenterSubTextPaint.textSize = keySubTextPaint.textSize
+        popupTextPaint.textSize = (keyHeight * 0.48f).coerceIn(16f * safeDensity, 24f * safeDensity)
+        currentIconSizePx = (keyHeight * 0.50f).coerceIn(16f * safeDensity, 24f * safeDensity)
+        currentIconStrokeWidthPx = (currentIconSizePx * 0.095f).coerceIn(1.6f * safeDensity, 2.4f * safeDensity)
+    }
+
     /**
      * Gboard-inspired 12-key Flick-Only Japanese Layout (5 equal columns, 20.0% each):
      * - Left Function Column (20%): Undo (↶), Cursor Left (◀), ?123, Mode Toggle Pill (あa)
@@ -489,14 +533,7 @@ class FlickKeyboardView @JvmOverloads constructor(
     private fun MutableList<Key>.layoutGboardFlickKeys(width: Float, height: Float) {
         val density = resources.displayMetrics.density
         val grid = FlickPopupGeometry.computeTwelveKeyGrid(width, height, density)
-        val rowHeight = grid.rowHeight
-
-        keyTextPaint.textSize = (rowHeight * 0.44f).coerceIn(24f, 48f)
-        keyFnTextPaint.textSize = (rowHeight * 0.34f).coerceIn(18f, 36f)
-        keyMutedTextPaint.textSize = keyFnTextPaint.textSize
-        keyActionTextPaint.textSize = (rowHeight * 0.35f).coerceIn(20f, 40f)
-        keyCenterSubTextPaint.textSize = (rowHeight * 0.20f).coerceIn(13f, 22f)
-        popupTextPaint.textSize = (rowHeight * 0.36f).coerceIn(20f, 38f)
+        applyTwelveKeyTypography(grid, density)
 
         // Col 0: Left Function Column (all keys share marginX so vertical column edges align cleanly)
         addTwelveGridKey(grid, col = 0, row = 0, KeyType.UNDO, "↶", isFunctionKey = true)
@@ -546,13 +583,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         val marginX = 2.2f * density
         val marginY = 3.0f * density
 
-        keyTextPaint.textSize = (rowHeight * 0.45f).coerceIn(20f, 42f)
-        keyFnTextPaint.textSize = (rowHeight * 0.34f).coerceIn(16f, 32f)
-        keyMutedTextPaint.textSize = keyFnTextPaint.textSize
-        keyActionTextPaint.textSize = (rowHeight * 0.36f).coerceIn(18f, 36f)
-        keySubTextPaint.textSize = (rowHeight * 0.22f).coerceIn(11f, 20f)
-        keyCenterSubTextPaint.textSize = keySubTextPaint.textSize
-        popupTextPaint.textSize = (rowHeight * 0.42f).coerceIn(22f, 40f)
+        applyQwertyTypography(rowHeight, marginY, density)
 
         var currentRow = 0
         val col10Width = width / 10f
@@ -748,10 +779,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         val marginY = 3.0f * density
         val col10Width = width / 10f
 
-        keyTextPaint.textSize = (rowHeight * 0.42f).coerceIn(20f, 40f)
-        keyFnTextPaint.textSize = (rowHeight * 0.32f).coerceIn(16f, 32f)
-        keyActionTextPaint.textSize = (rowHeight * 0.36f).coerceIn(18f, 36f)
-        keySubTextPaint.textSize = (rowHeight * 0.20f).coerceIn(11f, 18f)
+        applyQwertyTypography(rowHeight, marginY, density)
 
         // Row 0: 1..0
         for (i in 0 until 10) {
@@ -835,11 +863,7 @@ class FlickKeyboardView @JvmOverloads constructor(
     private fun MutableList<Key>.layoutGboardNumpadKeys(width: Float, height: Float) {
         val density = resources.displayMetrics.density
         val grid = FlickPopupGeometry.computeTwelveKeyGrid(width, height, density)
-        val rowHeight = grid.rowHeight
-
-        keyTextPaint.textSize = (rowHeight * 0.44f).coerceIn(24f, 48f)
-        keyFnTextPaint.textSize = (rowHeight * 0.34f).coerceIn(18f, 36f)
-        keyActionTextPaint.textSize = (rowHeight * 0.35f).coerceIn(20f, 40f)
+        applyTwelveKeyTypography(grid, density)
 
         // Left Column: +, -, *, あいう/ABC Pill (all share marginX for aligned edges)
         val backLabel = if (previousAlphaOrKanaMode == JapaneseKanaUtils.KeyboardMode.QWERTY) "ABC" else "あいう"
@@ -891,6 +915,7 @@ class FlickKeyboardView @JvmOverloads constructor(
             val cx = key.rect.centerX()
             val cy = key.rect.centerY()
             val rowH = key.rect.height()
+            val keyIconSize = minOf(currentIconSizePx, key.rect.width() * 0.62f, rowH * 0.62f)
 
             when (key.type) {
                 KeyType.MODE_KANA_ALPHA -> {
@@ -906,30 +931,44 @@ class FlickKeyboardView @JvmOverloads constructor(
                 KeyType.PUNCTUATION_FLICK -> {
                     // Gboard-style 5-direction punctuation graphic (? top, 。 left, 、 center, ! right, … bottom)
                     val subOffset = (keyCenterSubTextPaint.descent() + keyCenterSubTextPaint.ascent()) / 2f
-                    val dx = key.rect.width() * 0.24f
-                    val dy = rowH * 0.26f
+                    val dx = minOf(key.rect.width() * 0.21f, rowH * 0.26f)
+                    val dy = rowH * 0.27f
                     canvas.drawText("?", cx, cy - dy - subOffset, keyCenterSubTextPaint)
                     canvas.drawText("。", cx - dx, cy + dy * 0.15f - subOffset, keyCenterSubTextPaint)
                     canvas.drawText("、", cx, cy + dy * 0.15f - subOffset, keyFnTextPaint)
                     canvas.drawText("!", cx + dx, cy + dy * 0.15f - subOffset, keyCenterSubTextPaint)
                     canvas.drawText("…", cx, cy + dy * 1.05f - subOffset, keyCenterSubTextPaint)
                 }
+                KeyType.DELETE -> {
+                    drawBackspaceIcon(canvas, cx, cy, keyIconSize, currentIconStrokeWidthPx, keyFnTextPaint.color)
+                }
+                KeyType.UNDO -> {
+                    val color = if (canUndoState) keyFnTextPaint.color else keyMutedTextPaint.color
+                    drawUndoIcon(canvas, cx, cy, keyIconSize, currentIconStrokeWidthPx, color)
+                }
+                KeyType.CURSOR_LEFT, KeyType.CURSOR_RIGHT -> {
+                    drawCursorArrowIcon(
+                        canvas, cx, cy, keyIconSize,
+                        isLeft = (key.type == KeyType.CURSOR_LEFT),
+                        color = keyFnTextPaint.color
+                    )
+                }
+                KeyType.SPACE -> {
+                    if (key.label == "␣") {
+                        drawSpaceIcon(canvas, cx, cy, keyIconSize, currentIconStrokeWidthPx, keyFnTextPaint.color)
+                    } else {
+                        drawKeyLabel(canvas, key, density)
+                    }
+                }
+                KeyType.ENTER -> {
+                    if (key.label == "↵") {
+                        drawReturnIcon(canvas, cx, cy, keyIconSize, currentIconStrokeWidthPx, keyActionTextPaint.color)
+                    } else {
+                        drawKeyLabel(canvas, key, density)
+                    }
+                }
                 else -> {
-                    val paint = when {
-                        key.isAccent -> keyActionTextPaint
-                        key.type == KeyType.UNDO && !canUndoState -> keyMutedTextPaint
-                        key.isFunctionKey -> keyFnTextPaint
-                        else -> keyTextPaint
-                    }
-                    val textOffset = (paint.descent() + paint.ascent()) / 2f
-                    canvas.drawText(key.label, cx, cy - textOffset, paint)
-
-                    // Top-right secondary symbol on QWERTY keys
-                    if (key.subLabel.isNotEmpty()) {
-                        val subX = key.rect.right - 5f * density
-                        val subY = key.rect.top + keySubTextPaint.textSize + 2.5f * density
-                        canvas.drawText(key.subLabel, subX, subY, keySubTextPaint)
-                    }
+                    drawKeyLabel(canvas, key, density)
                 }
             }
         }
@@ -961,14 +1000,174 @@ class FlickKeyboardView @JvmOverloads constructor(
         }
     }
 
+    private fun drawKeyLabel(canvas: Canvas, key: Key, density: Float) {
+        val paint = when {
+            key.isAccent -> keyActionTextPaint
+            key.type == KeyType.UNDO && !canUndoState -> keyMutedTextPaint
+            key.isFunctionKey -> keyFnTextPaint
+            else -> keyTextPaint
+        }
+        val cx = key.rect.centerX()
+        val cy = key.rect.centerY()
+        val textOffset = (paint.descent() + paint.ascent()) / 2f
+        canvas.drawText(key.label, cx, cy - textOffset, paint)
+
+        // Top-right secondary symbol on QWERTY keys
+        if (key.subLabel.isNotEmpty()) {
+            val subX = key.rect.right - 5f * density
+            val subY = key.rect.top + keySubTextPaint.textSize + 2.5f * density
+            canvas.drawText(key.subLabel, subX, subY, keySubTextPaint)
+        }
+    }
+
+    private fun drawBackspaceIcon(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        size: Float,
+        strokeWidth: Float,
+        color: Int
+    ) {
+        val w = size * 0.86f
+        val h = size * 0.64f
+        val left = cx - w * 0.50f
+        val right = cx + w * 0.50f
+        val top = cy - h * 0.50f
+        val bottom = cy + h * 0.50f
+        val kneeX = left + w * 0.26f
+
+        iconStrokePaint.color = color
+        iconStrokePaint.strokeWidth = strokeWidth * 0.92f
+        iconPath.reset()
+        iconPath.moveTo(left, cy)
+        iconPath.lineTo(kneeX, top)
+        iconPath.lineTo(right, top)
+        iconPath.lineTo(right, bottom)
+        iconPath.lineTo(kneeX, bottom)
+        iconPath.close()
+        canvas.drawPath(iconPath, iconStrokePaint)
+
+        val xMid = (kneeX + right) * 0.5f + w * 0.02f
+        val r = minOf((right - kneeX) * 0.23f, h * 0.24f)
+        canvas.drawLine(xMid - r, cy - r, xMid + r, cy + r, iconStrokePaint)
+        canvas.drawLine(xMid - r, cy + r, xMid + r, cy - r, iconStrokePaint)
+    }
+
+    private fun drawUndoIcon(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        size: Float,
+        strokeWidth: Float,
+        color: Int
+    ) {
+        val w = size * 0.60f
+        val h = size * 0.52f
+        val r = h * 0.34f
+        val topY = cy - r * 0.72f
+        val botY = topY + 2f * r
+        val tipX = cx - w * 0.45f
+        val arcRight = cx + w * 0.45f
+        val arcCx = arcRight - r
+
+        iconStrokePaint.color = color
+        iconStrokePaint.strokeWidth = strokeWidth
+        iconPath.reset()
+        iconPath.moveTo(tipX, topY)
+        iconPath.lineTo(arcCx, topY)
+        iconPath.arcTo(arcCx - r, topY, arcRight, botY, -90f, 180f, false)
+        iconPath.lineTo(cx - w * 0.14f, botY)
+
+        val head = r * 0.78f
+        iconPath.moveTo(tipX + head, topY - head)
+        iconPath.lineTo(tipX, topY)
+        iconPath.lineTo(tipX + head, topY + head)
+        canvas.drawPath(iconPath, iconStrokePaint)
+    }
+
+    private fun drawSpaceIcon(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        size: Float,
+        strokeWidth: Float,
+        color: Int
+    ) {
+        val w = size * 0.64f
+        val h = size * 0.22f
+        val left = cx - w * 0.50f
+        val right = cx + w * 0.50f
+        val top = cy - h * 0.50f
+        val bottom = cy + h * 0.50f
+
+        iconStrokePaint.color = color
+        iconStrokePaint.strokeWidth = strokeWidth
+        iconPath.reset()
+        iconPath.moveTo(left, top)
+        iconPath.lineTo(left, bottom)
+        iconPath.lineTo(right, bottom)
+        iconPath.lineTo(right, top)
+        canvas.drawPath(iconPath, iconStrokePaint)
+    }
+
+    private fun drawReturnIcon(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        size: Float,
+        strokeWidth: Float,
+        color: Int
+    ) {
+        val w = size * 0.68f
+        val h = size * 0.48f
+        val topStem = cy - h * 0.50f
+        val shaftY = cy + h * 0.16f
+        val tipX = cx - w * 0.50f
+        val stemX = cx + w * 0.50f
+        val head = h * 0.34f
+
+        iconStrokePaint.color = color
+        iconStrokePaint.strokeWidth = strokeWidth
+        iconPath.reset()
+        iconPath.moveTo(stemX, topStem)
+        iconPath.lineTo(stemX, shaftY)
+        iconPath.lineTo(tipX, shaftY)
+        iconPath.moveTo(tipX + head, shaftY - head)
+        iconPath.lineTo(tipX, shaftY)
+        iconPath.lineTo(tipX + head, shaftY + head)
+        canvas.drawPath(iconPath, iconStrokePaint)
+    }
+
+    private fun drawCursorArrowIcon(
+        canvas: Canvas,
+        cx: Float,
+        cy: Float,
+        size: Float,
+        isLeft: Boolean,
+        color: Int
+    ) {
+        val w = size * 0.34f
+        val h = size * 0.42f
+        val tipX = if (isLeft) cx - w * 0.50f else cx + w * 0.50f
+        val baseX = if (isLeft) cx + w * 0.50f else cx - w * 0.50f
+
+        iconFillPaint.color = color
+        iconPath.reset()
+        iconPath.moveTo(tipX, cy)
+        iconPath.lineTo(baseX, cy - h * 0.50f)
+        iconPath.lineTo(baseX, cy + h * 0.50f)
+        iconPath.close()
+        canvas.drawPath(iconPath, iconFillPaint)
+    }
+
     private fun drawAaPillText(canvas: Canvas, cx: Float, cy: Float) {
         val activePaint = Paint(keyFnTextPaint).apply {
-            color = Color.parseColor("#202124")
+            color = keyTextPaint.color
             isFakeBoldText = true
             textSize = keyFnTextPaint.textSize * 1.05f
         }
         val inactivePaint = Paint(keyFnTextPaint).apply {
-            color = Color.parseColor("#80868B")
+            color = keyMutedTextPaint.color
             isFakeBoldText = false
             textSize = keyFnTextPaint.textSize * 0.90f
         }
@@ -976,7 +1175,7 @@ class FlickKeyboardView @JvmOverloads constructor(
         val pLeft = if (isKana) activePaint else inactivePaint
         val pRight = if (!isKana) activePaint else inactivePaint
         val offset = (activePaint.descent() + activePaint.ascent()) / 2f
-        val gap = activePaint.textSize * 0.46f
+        val gap = activePaint.textSize * 0.48f
         canvas.drawText("あ", cx - gap, cy - offset, pLeft)
         canvas.drawText("a", cx + gap, cy - offset, pRight)
     }

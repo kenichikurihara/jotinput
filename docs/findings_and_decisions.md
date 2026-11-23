@@ -2331,6 +2331,23 @@ We benchmarked two non-invasive vocabulary expansion architectures on top of fro
 - **Debug & Release Native Builds**: `./gradlew assembleDebug assembleRelease --max-workers=2` succeeded (`app-debug.apk`: `40,208,522` bytes / ~38.35 MiB; `app-release-unsigned.apk`: `29,652,065` bytes / ~28.28 MiB).
 - **Dual-Target On-Device Logcat**: Deployed via `./deploy.sh` to **Pixel 10 Pro** (`<device-ip>:44609`, `arm64-v8a`) and **ARCVM** (`arc:5555`, `x86_64`) + `emulator-5554`. Both Pixel 10 Pro and ARCVM logged `MainActivity` start, `AsrManager` (`ReazonSpeech` + `Parakeet` on Pixel), `FutoSwipeEngine initialized successfully. Vocab=32768`, and `Loaded extended swipe CSR Trie: words=67909, nodes=199719, edges=199718` cleanly with zero crashes.
 
+---
+
+## 57. Gboard-Aligned Keytop Typography Scaling & Material Vector Icons (`⌫`, `␣`, `↶`, `↵`, `◀`, `▶`)
+
+### 1. Root Causes of Undersized Keytop Glyphs & Action Icons
+1. **Unscaled Raw-Pixel `textSize` Clamps**: [`FlickKeyboardView.kt`](app/src/main/java/com/example/myasr/context/ime/presentation/FlickKeyboardView.kt) previously clamped `textSize` using raw pixels (`48f`, `36f`, `40f`, `22f`) without multiplying by `density`, compressing kana glyphs (`あ..わ`) on `420–480dpi` phones to `14–16dp` (`h/kh = 0.25–0.30` vs. Gboard's `0.46–0.49`) and function text to `12dp`.
+2. **Small Unicode Font Glyphs for Action Controls**: Rendering Unicode `↵`, `↶`, `␣`, `⌫`, `◀`, `▶` via system font glyphs produced undersized hairline symbols (e.g., `↵` at `4.0×4.7dp`, `␣` width `0.12–0.17×kh`, `⌫` height `0.15–0.20×kh`).
+3. **Unbounded Punctuation Diamond Spread**: `KeyType.PUNCTUATION_FLICK` computed `dx = key.rect.width() * 0.24f`, stretching `。` and `!` across wide foldable/tablet keycaps (`w/kh = 1.14–1.25`).
+
+### 2. Solution & Dual-Target Verification
+1. **Density-Aware Typography Spec (`FlickPopupGeometry.kt`)**: Added `TwelveKeyTypographySpec` and `computeTwelveKeyTypography(grid, density)` scaling typography and icon geometry in `dp` (`16–31dp` main kana, `12–20dp` function labels, `13–20dp` action `"確定"`, `10–14.5dp` sub-labels, `17–27dp` vector icon bounding box with `1.7–2.6dp` stroke). Applied the same `dp`-scaled bounds cleanly to `QWERTY` and `QWERTY_SYMBOLS` layouts.
+2. **Material Canvas Vector Icons (`FlickKeyboardView.kt`)**: Replaced small Unicode glyphs on `KeyType.DELETE`, `KeyType.UNDO`, `KeyType.SPACE` (`"␣"`), `KeyType.ENTER` (`"↵"`), and `KeyType.CURSOR_LEFT` / `KeyType.CURSOR_RIGHT` with reusable zero-allocation Canvas vector paths (`drawBackspaceIcon`, `drawUndoIcon`, `drawSpaceIcon`, `drawReturnIcon`, `drawCursorArrowIcon`), kept `PUNCTUATION_FLICK` horizontal spread compact (`dx = minOf(key.rect.width() * 0.21f, rowH * 0.26f)`), and made `drawAaPillText` theme-aware.
+3. **JVM & On-Device Multi-Screen Verification**:
+   - [`FlickPopupGeometryTest`](app/src/test/java/com/example/myasr/FlickPopupGeometryTest.kt) verifies density-scaled `dp` bounds across all 7 device profiles (`360dp`–`1600dp`).
+   - [`FlickKeyboardMultiScreenInstrumentedTest`](app/src/androidTest/java/com/example/myasr/FlickKeyboardMultiScreenInstrumentedTest.kt) passed 100% (`OK (1 test)`) on **both** ARCVM (`arc:5555`, `0.718s`) and physical **Pixel 10 Pro** (`<device-ip>:44609`, `0.874s`), validating rendered pixel ink proportions across `360dp`, `411dp` (idle & composing `"確定"`), `480dp`, `701dp`, `800dp`, and `914dp` landscape renders.
+
+
 
 
 

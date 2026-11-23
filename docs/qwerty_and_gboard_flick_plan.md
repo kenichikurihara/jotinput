@@ -133,13 +133,14 @@ We update `KeyboardMode` to represent the active layout cleanly:
      - Right function column (`Col 4`): `20.0%` (`colWidth`)
    - 4 equal-height rows (`height / 4f`).
    - All 4 keys in `Col 0` (`↶`, `◀`, `?123`, `あa`) and all 4 keys in `Col 4` (`⌫`, `▶`, `␣`, `↵`) share identical horizontal `marginX` so their vertical left and right edges align strictly down each column (the bottom-right stadium pill only adds `+1.5dp` top/bottom vertical padding, matching Gboard's `.keytop.pill-shaped.extra-padding`).
-2. **Clean Key Rendering**:
-   - Kana keys (`あ`..`わ`) render **only** the main character (no `いうえお` sub-labels), using clean, slightly larger typography (`rowHeight * 0.44f`).
+2. **Clean Key Rendering & Material Vector Icons**:
+   - Kana keys (`あ`..`わ`) render **only** the main character (no `いうえお` sub-labels), using density-scaled typography (`FlickPopupGeometry.computeTwelveKeyTypography`, ~`0.56 * keyHeight` coerced cleanly in `dp` rather than unscaled raw `px`).
+   - Function icons (`↶` Undo, `⌫` Delete, `◀`/`▶` Cursor, `␣` Space, `↵` Return) are rendered via crisp Canvas vector paths/strokes (`iconSizePx = minOf(keyHeight * 0.50f, visualKeyWidth * 0.56f).coerceIn(17f * density, 27f * density)`) instead of tiny Unicode font glyphs, matching Gboard's stroke weight and visual balance.
    - Vertical divider lines (`1dp` stroke, `14dp` top/bottom margin) sit between `Col 0 | Col 1` (`sidePaddingPx + colWidth`) and `Col 3 | Col 4` (`widthPx - sidePaddingPx - colWidth`).
-   - **Row 3, Col 0 (`あa` Mode Toggle Pill)**: Drawn as a stadium pill (`rx = height / 2`) with dual-tone text (`あ` highlighted in `KANA` mode, `a` highlighted in `QWERTY` mode).
+   - **Row 3, Col 0 (`あa` Mode Toggle Pill)**: Drawn as a stadium pill (`rx = height / 2`) with dual-tone theme-aware text (`あ` highlighted in `KANA` mode, `a` highlighted in `QWERTY` mode).
    - **Row 3, Col 1 (`゛゜ / 大⇔小` Modifier Key)**: Custom canvas rendering showing `゛` and `゜` on the upper line and `大⇔小` on the lower line, matching Gboard's icon.
-   - **Row 3, Col 3 (`、。？！…` Punctuation Key)**: Custom canvas rendering placing `?` at top, `。` at left, `、` at center-right, `!` at right, and `…` at bottom, matching Gboard's 5-direction punctuation key.
-   - **Row 3, Col 4 (`↵` / `確定` Enter Key)**: Drawn as a stadium pill with accent fill (`#1A73E8` / Gboard accent).
+   - **Row 3, Col 3 (`、。？！…` Punctuation Key)**: Custom canvas rendering placing `?` at top, `。` at left, `、` at center, `!` at right, and `…` at bottom with horizontal spread capped relative to row height (`minOf(width * 0.21f, rowH * 0.26f)`) so wide foldable/tablet keys stay compact.
+   - **Row 3, Col 4 (`↵` / `確定` Enter Key)**: Drawn as a stadium pill with accent fill (`#1A73E8` / Gboard accent), rendering the crisp vector return icon (`↵`) when idle and `"確定"` when composing.
 3. **Key Repeat on Hold (`⌫`, `◀`, `▶`)**:
    - Holding down `⌫` (Delete), `◀` (Cursor Left), or `▶` (Cursor Right) triggers an initial 400ms delay followed by a 65ms repeat interval using `Handler` / `postDelayed`, stopping immediately on `ACTION_UP` / `ACTION_CANCEL`.
 
@@ -248,3 +249,22 @@ Inspection of Gboard's installed APK on ARCVM (`res/5aF.xml`, `res/VA-.xml`, `re
 | Tablet Portrait | `1600×2560 @ 320dpi` (`2.0x`) | `800dp` | `[247, 247, 247, 249, 248]` px (`~146.8dp`) | `~10.4dp` | `~7.3dp` |
 | Phone Landscape | `2400×1080 @ 420dpi` (`2.625x`) | `914dp` | `[199, 199, 199, 199, 199]` px (`~168.9dp`) | `~12.3dp` | `~4.0dp` |
 | Tablet / ARCVM Default | `2560×1600 @ 160dpi` (`1.0x`) | `1600dp` | Equal 5-col `20%` weights | `~11–12dp` | `~8dp` |
+
+### 7.5 Keytop Typography & Material Vector Icon Sizing Specification
+- **Problem**:
+  1. `FlickKeyboardView` previously clamped all `textSize` values using raw unscaled pixels (`48f`, `36f`, `40f`, `22f`), which shrank text to `14–16dp` (`h/kh = 0.25–0.30`) on high-DPI phones/foldables (`420–480dpi`) instead of Gboard's `~21–22dp` (`h/kh = 0.47–0.49`).
+  2. Function keys (`⌫`, `␣`, `↶`, `↵`) drew tiny Roboto/Noto Unicode font glyphs (`↵` `4.0×4.7dp`, `w/kh = 0.07`; `↶` `7.3×5.3dp`; `␣` `7.0×3.0dp`, `w/kh = 0.12`; `⌫` `12.0×8.3dp`, `h/kh = 0.15`), looking disproportionately small next to Gboard's Material vector icons.
+- **JTBD & CUJ**:
+  - **When** visually scanning 12-key or QWERTY keycaps on high-DPI phones, foldables, or tablets, **I want** kana labels, function text (`?123`, `あa`, `確定`), and action icons (`⌫`, `␣`, `↶`, `↵`, `◀`, `▶`) to have balanced Material proportions matching Gboard, **so that** every key is immediately legible and scannable at a glance.
+  - **CUJ-3 (Icon & Label Readability)**: Both idle symbols (`↵`, `␣`, muted `↶`, `⌫`) and composing controls (`確定`, active `↶`) scale cleanly by `dp` (`density`) and keycap height without horizontal stretching on `゛゜/大⇔小` or `、。?!…`.
+- **Empirical Gboard Glyph/Icon Proportions (Normalized to Keycap Height `kh`) & JotInput Targets**:
+
+| Keytop Element | Gboard Measured (`h/kh`, `w/kh`) | Old JotInput (`h/kh`, `w/kh`) | Updated JotInput Design Spec |
+| :--- | :--- | :--- | :--- |
+| Kana main (`あ`–`わ`) | `h/kh = 0.46–0.49` | `h/kh = 0.24–0.34` | `mainTextSizePx = (keyHeight * 0.56f).coerceIn(16dp, 31dp)` (`h/kh ≈ 0.44–0.47`) |
+| Enter (`↵`) | `h/kh = 0.18–0.25`, `w/kh = 0.27–0.40` | `h/kh = 0.09–0.16`, `w/kh = 0.07–0.13` | Crisp Material return vector (`w ≈ 0.68*S`, `h ≈ 0.48*S`) |
+| Backspace (`⌫`) | `h/kh = 0.28–0.34`, `w/kh = 0.34–0.42` | `h/kh = 0.15–0.20`, `w/kh = 0.21–0.30` | Crisp Material backspace pentagon + `×` (`w ≈ 0.86*S`, `h ≈ 0.64*S`) |
+| Undo (`↶`) | `h/kh = 0.20–0.23`, `w/kh = 0.21–0.27` | `h/kh = 0.09–0.13`, `w/kh = 0.13–0.18` | Crisp curved U-turn undo vector (`w ≈ 0.62*S`, `h ≈ 0.56*S`) |
+| Space (`␣`) | `h/kh = 0.09–0.10`, `w/kh = 0.21–0.25` | `h/kh = 0.05–0.07`, `w/kh = 0.12–0.17` | Crisp U-bracket space vector (`w ≈ 0.64*S`, `h ≈ 0.24*S`) |
+| Function labels (`?123`, `あa`, `確定`) | `h/kh = 0.22–0.33` | `h/kh = 0.16–0.28` | `fnTextSizePx = (keyHeight * 0.36f).coerceIn(12dp, 20dp)`, `actionTextSizePx` in `13–20dp` |
+| Punctuation diamond (`、。?!…`) | `w/kh = 0.53–0.64` | `w/kh = 0.66–1.25` (stretched on fold/tablet) | `dx = minOf(key.rect.width() * 0.21f, rowH * 0.26f)`, `dy = rowH * 0.27f` |

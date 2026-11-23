@@ -170,4 +170,54 @@ class FlickPopupGeometryTest {
             assertTrue(grid.pillMarginY > grid.marginY)
         }
     }
+
+    @Test
+    fun testTwelveKeyTypographyScalesWithDensityWithoutRawPixelClamping() {
+        data class TypoProfile(
+            val name: String,
+            val viewWidthDp: Float,
+            val heightDp: Float,
+            val density: Float,
+            val isPortrait: Boolean
+        )
+
+        val profiles = listOf(
+            TypoProfile("CompactPhone360dp", 352f, 236f, 3.0f, true),
+            TypoProfile("StandardPhone411dp", 403f, 248f, 2.625f, true),
+            TypoProfile("LargePhone480dp", 472f, 260f, 3.0f, true),
+            TypoProfile("Foldable701dp", 693f, 264f, 2.625f, true),
+            TypoProfile("TabletPortrait800dp", 792f, 280f, 2.0f, true),
+            TypoProfile("PhoneLandscape914dp", 906f, 184f, 2.625f, false),
+            TypoProfile("TabletLandscape1600dp", 1592f, 280f, 1.0f, false)
+        )
+
+        for (p in profiles) {
+            val grid = FlickPopupGeometry.computeTwelveKeyGrid(
+                p.viewWidthDp * p.density,
+                p.heightDp * p.density,
+                p.density
+            )
+            val typo = FlickPopupGeometry.computeTwelveKeyTypography(grid, p.density)
+
+            val mainDp = typo.mainTextSizePx / p.density
+            val fnDp = typo.fnTextSizePx / p.density
+            val actionDp = typo.actionTextSizePx / p.density
+            val centerSubDp = typo.centerSubTextSizePx / p.density
+            val iconDp = typo.iconSizePx / p.density
+            val strokeDp = typo.iconStrokeWidthPx / p.density
+
+            assertTrue("${p.name} mainDp=$mainDp must be in [20, 31]", mainDp in 20f..31f)
+            assertTrue("${p.name} iconDp=$iconDp must be in [17, 27]", iconDp in 17f..27f)
+            assertTrue("${p.name} strokeDp=$strokeDp must be >= 1.7dp", strokeDp >= 1.7f)
+            assertTrue("${p.name} fnDp=$fnDp must be in [12, 20]", fnDp in 12f..20f)
+            assertTrue("${p.name} actionDp=$actionDp must be in [13, 20]", actionDp in 13f..20f)
+            assertTrue("${p.name} centerSubDp=$centerSubDp must be in [10, 14.5]", centerSubDp in 10f..14.5f)
+
+            if (p.isPortrait) {
+                // High-DPI portrait phones/tablets must never be capped down to raw 48px (~16dp)
+                assertTrue("${p.name} portrait mainDp=$mainDp must stay in [26, 31]", mainDp in 26f..31f)
+                assertTrue("${p.name} portrait iconDp=$iconDp must be >= 24dp", iconDp >= 24f)
+            }
+        }
+    }
 }

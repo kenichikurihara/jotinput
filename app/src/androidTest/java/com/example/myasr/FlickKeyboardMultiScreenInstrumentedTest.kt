@@ -30,6 +30,43 @@ class FlickKeyboardMultiScreenInstrumentedTest {
         val keyboardHeightDp: Int
     )
 
+    private fun measureInkRatio(
+        bitmap: Bitmap,
+        rect: RectF,
+        offsetPx: Float
+    ): Pair<Float, Float> {
+        val kh = rect.height()
+        val kw = rect.width()
+        val padX = (kw * 0.10f).toInt().coerceAtLeast(3)
+        val padY = (kh * 0.10f).toInt().coerceAtLeast(3)
+        val x0 = (rect.left + offsetPx).toInt() + padX
+        val x1 = (rect.right + offsetPx).toInt() - padX
+        val y0 = (rect.top + offsetPx).toInt() + padY
+        val y1 = (rect.bottom + offsetPx).toInt() - padY
+        val bg = bitmap.getPixel(x0, y0)
+        val bgR = Color.red(bg)
+        val bgG = Color.green(bg)
+        val bgB = Color.blue(bg)
+        var minX = Int.MAX_VALUE
+        var maxX = Int.MIN_VALUE
+        var minY = Int.MAX_VALUE
+        var maxY = Int.MIN_VALUE
+        for (y in y0..y1) {
+            for (x in x0..x1) {
+                val p = bitmap.getPixel(x, y)
+                val diff = abs(Color.red(p) - bgR) + abs(Color.green(p) - bgG) + abs(Color.blue(p) - bgB)
+                if (diff > 90) {
+                    if (x < minX) minX = x
+                    if (x > maxX) maxX = x
+                    if (y < minY) minY = y
+                    if (y > maxY) maxY = y
+                }
+            }
+        }
+        if (maxX < minX || maxY < minY) return 0f to 0f
+        return (maxX - minX + 1) / kh to (maxY - minY + 1) / kh
+    }
+
     @Test
     fun verifyAndRenderTwelveKeyFlickAcrossTypicalDeviceScreens() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -126,7 +163,36 @@ class FlickKeyboardMultiScreenInstrumentedTest {
                 FileOutputStream(File(outDir, "jotinput_${profile.name}.png")).use { fos ->
                     bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
                 }
+
+                // Verify actual rendered ink proportions for Kana and key function icons (Undo, Delete, Space, Enter)
+                val (undoW, undoH) = measureInkRatio(bitmap, rects[0], rootPadPx.toFloat())
+                val (_, kanaH) = measureInkRatio(bitmap, rects[4], rootPadPx.toFloat())
+                val (puncW, _) = measureInkRatio(bitmap, rects[15], rootPadPx.toFloat())
+                val (delW, delH) = measureInkRatio(bitmap, rects[16], rootPadPx.toFloat())
+                val (spaceW, spaceH) = measureInkRatio(bitmap, rects[18], rootPadPx.toFloat())
+                val (enterW, enterH) = measureInkRatio(bitmap, rects[19], rootPadPx.toFloat())
+
+                assertTrue("${profile.name} Kana 'あ' h/kh=$kanaH too small", kanaH >= 0.36f)
+                assertTrue("${profile.name} Undo '↶' w/kh=$undoW h/kh=$undoH too small", undoW >= 0.22f && undoH >= 0.20f)
+                assertTrue("${profile.name} Del '⌫' w/kh=$delW h/kh=$delH too small", delW >= 0.34f && delH >= 0.25f)
+                assertTrue("${profile.name} Space '␣' w/kh=$spaceW h/kh=$spaceH too small", spaceW >= 0.24f && spaceH >= 0.08f)
+                assertTrue("${profile.name} Enter '↵' w/kh=$enterW h/kh=$enterH too small", enterW >= 0.26f && enterH >= 0.18f)
+                assertTrue("${profile.name} Punc '、。?!' w/kh=$puncW stretched too wide", puncW <= 0.72f)
+
                 bitmap.recycle()
+
+                if (profile.name == "411dp_standard_phone") {
+                    keyboardView.setComposingState(isComposing = true, canUndo = true, hasVoiceComposing = false)
+                    val compBitmap = Bitmap.createBitmap(profile.screenWidthPx, viewHeightPx + rootPadPx * 2, Bitmap.Config.ARGB_8888)
+                    val compCanvas = Canvas(compBitmap)
+                    compCanvas.drawColor(Color.parseColor("#EEF1F6"))
+                    compCanvas.translate(rootPadPx.toFloat(), rootPadPx.toFloat())
+                    keyboardView.draw(compCanvas)
+                    FileOutputStream(File(outDir, "jotinput_${profile.name}_composing.png")).use { fos ->
+                        compBitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+                    }
+                    compBitmap.recycle()
+                }
             }
         }
     }

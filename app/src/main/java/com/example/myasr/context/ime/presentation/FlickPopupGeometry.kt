@@ -95,6 +95,42 @@ object FlickPopupGeometry {
         )
     }
 
+    data class TwelveKeyTypographySpec(
+        val mainTextSizePx: Float,
+        val fnTextSizePx: Float,
+        val actionTextSizePx: Float,
+        val centerSubTextSizePx: Float,
+        val popupTextSizePx: Float,
+        val iconSizePx: Float,
+        val iconStrokeWidthPx: Float
+    )
+
+    /**
+     * Computes density-scaled typography and Material vector icon dimensions for 12-key Flick
+     * and Numpad layouts so keytop glyphs and icons scale consistently with Gboard across DPIs.
+     */
+    fun computeTwelveKeyTypography(
+        grid: TwelveKeyGridSpec,
+        density: Float
+    ): TwelveKeyTypographySpec {
+        val safeDensity = if (density > 0f) density else 1f
+        val keyHeight = (grid.rowHeight - 2f * grid.marginY).coerceAtLeast(1f)
+        val iconSizePx = minOf(keyHeight * 0.50f, grid.visualKeyWidth * 0.56f)
+            .coerceIn(17f * safeDensity, 27f * safeDensity)
+        val iconStrokeWidthPx = (iconSizePx * 0.095f)
+            .coerceIn(1.7f * safeDensity, 2.6f * safeDensity)
+
+        return TwelveKeyTypographySpec(
+            mainTextSizePx = (keyHeight * 0.56f).coerceIn(16f * safeDensity, 31f * safeDensity),
+            fnTextSizePx = (keyHeight * 0.36f).coerceIn(12f * safeDensity, 20f * safeDensity),
+            actionTextSizePx = (keyHeight * 0.36f).coerceIn(13f * safeDensity, 20f * safeDensity),
+            centerSubTextSizePx = (keyHeight * 0.25f).coerceIn(10f * safeDensity, 14.5f * safeDensity),
+            popupTextSizePx = (keyHeight * 0.44f).coerceIn(16f * safeDensity, 26f * safeDensity),
+            iconSizePx = iconSizePx,
+            iconStrokeWidthPx = iconStrokeWidthPx
+        )
+    }
+
     /**
      * Computes popup dimensions, local petal coordinates, and popup window (x, y) placement.
      *
