@@ -3,8 +3,6 @@ package com.example.myasr.context.provisioning.infrastructure
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -82,12 +80,13 @@ class EnglishAsrModelDownloader(private val targetDir: File) {
 
     private fun extractModelFiles(archiveFile: File) {
         val extracted = mutableSetOf<String>()
-        TarArchiveInputStream(
-            BZip2CompressorInputStream(
-                BufferedInputStream(FileInputStream(archiveFile), 65536)
+        TarInputStream(
+            BZip2InputStream(
+                BufferedInputStream(FileInputStream(archiveFile), 65536),
+                decompressConcatenated = true
             )
         ).use { tarIn ->
-            var entry = tarIn.nextEntry
+            var entry = tarIn.nextEntry()
             while (entry != null) {
                 if (!entry.isDirectory) {
                     val baseName = File(entry.name).name
@@ -110,7 +109,7 @@ class EnglishAsrModelDownloader(private val targetDir: File) {
                         Log.i(TAG, "Extracted $baseName (${finalDest.length()} bytes)")
                     }
                 }
-                entry = tarIn.nextEntry
+                entry = tarIn.nextEntry()
             }
         }
         val missing = REQUIRED_FILES - extracted

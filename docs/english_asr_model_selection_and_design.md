@@ -61,7 +61,7 @@ We evaluated open-source English ASR models compatible with JotInput's existing 
       - `OfflineModelConfig(nemo = OfflineNemoEncDecCtcModelConfig(model = ...), tokens = ..., numThreads = getOptimalThreadCount(), provider = "cpu")`
       - `OfflineRecognizerConfig(modelConfig = ..., decodingMethod = "greedy_search")`
 - **`context/provisioning/infrastructure/`**:
-  - `EnglishAsrModelDownloader.kt`: Downloads `sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2` from the official `k2-fsa/sherpa-onnx` GitHub release over HTTPS, streams through `BZip2CompressorInputStream` + `TarArchiveInputStream` (via `commons-compress`), and atomically writes `model.int8.onnx` and `tokens.txt` into `parakeet-en-110m/`.
+  - `EnglishAsrModelDownloader.kt`: Downloads `sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2` from the official `k2-fsa/sherpa-onnx` GitHub release over HTTPS, streams through zero-dependency pure-Kotlin `BZip2InputStream` + `TarInputStream`, and atomically writes `model.int8.onnx` and `tokens.txt` into `parakeet-en-110m/`.
 - **`context/provisioning/domain/`**:
   - `ModelWarmUpManager.kt`: Warms up the English ASR model alongside Japanese ASR during background initialization when installed.
 

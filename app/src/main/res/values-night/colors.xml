@@ -3,22 +3,14 @@
     <!-- Google Material Brand Colors (Dark Mode) -->
     <color name="primary">#8AB4F8</color> <!-- Google Blue 300 -->
     <color name="primary_dark">#669DF6</color> <!-- Google Blue 400 -->
-    <color name="primary_light">#174EA6</color> <!-- Google Blue 900 -->
     <color name="on_primary">#041E49</color> <!-- High Contrast on #8AB4F8 -->
 
     <!-- Semantic Status Colors -->
     <color name="accent_red">#F28B82</color> <!-- Google Red 300 -->
-    <color name="accent_red_light">#5C1D1D</color> <!-- Google Red 900 -->
-    <color name="on_accent_red">#3C0A0A</color> <!-- High Contrast on #F28B82 -->
-
-    <color name="accent_green">#81C995</color> <!-- Google Green 300 -->
-    <color name="accent_green_light">#0D4722</color> <!-- Google Green 900 -->
-    <color name="on_accent_green">#072711</color>
 
     <!-- Surfaces & Backgrounds -->
     <color name="background">#121212</color> <!-- Material Standard Dark Background -->
     <color name="surface">#1E1F22</color> <!-- Material Dark Surface (Cards) -->
-    <color name="surface_light">#2D2F31</color> <!-- Material Dark Surface 2 -->
     <color name="input_background">#121212</color>
     <color name="border">#3C4043</color> <!-- Google Dark Outline / Divider -->
 
@@ -37,30 +29,16 @@
 
     <!-- Keyboard (Gboard Dark Style) -->
     <color name="keyboard_background">#1E1F22</color>
-    <color name="key_background">#2D2F31</color>
     <color name="key_text">#E8EAED</color>
-    <color name="key_subtext">#9AA0A6</color>
-    <color name="key_ripple">#484B4F</color>
-    <color name="action_key_text">#041E49</color>
     <color name="action_key_ripple">#AECBFA</color>
-    <color name="voice_toggle_text">#041E49</color>
     <color name="voice_toggle_idle_text">#041E49</color>
     <color name="voice_toggle_recording_text">#3C0A0A</color>
     <color name="recording_key_ripple">#F6AEA9</color>
 
     <!-- Candidate Strip (Gboard Dark Style - High Contrast & Material Dark) -->
-    <color name="candidate_strip_bg">#1E1F22</color>
     <color name="candidate_text">#F1F3F4</color>
-    <color name="candidate_text_top">#8AB4F8</color>
     <color name="candidate_pill_bg">#2D2F31</color>
-    <color name="candidate_pill_bg_top">#1A365D</color>
     <color name="candidate_pill_border">#3C4043</color>
-    <color name="candidate_pill_border_top">#669DF6</color>
     <color name="candidate_pill_ripple">#484B4F</color>
-    <color name="candidate_user_text">#8AB4F8</color>
-    <color name="candidate_user_pill_bg">#1E3A5F</color>
-    <color name="candidate_user_pill_border">#669DF6</color>
     <color name="candidate_empty_text">#9AA0A6</color>
-
-    <color name="white">#FFFFFF</color>
 </resources>

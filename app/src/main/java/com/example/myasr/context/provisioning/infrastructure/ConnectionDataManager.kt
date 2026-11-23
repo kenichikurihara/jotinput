@@ -28,6 +28,7 @@ class ConnectionDataManager(private val context: Context) {
             "https://raw.githubusercontent.com/google/mozc/master/src/data/dictionary_oss/connection_single_column.txt"
         const val BINARY_FILENAME = "connection_data.bin"
         const val TEXT_FILENAME = "connection_single_column.txt"
+        const val BUNDLED_BINARY_SIZE_BYTES = 14_279_174L
 
         @Volatile
         private var instance: ConnectionDataManager? = null
@@ -123,11 +124,7 @@ class ConnectionDataManager(private val context: Context) {
 
     fun getInstalledSizeBytes(): Long {
         if (binaryFile.exists()) return binaryFile.length()
-        return try {
-            context.assets.openFd("mozc/$BINARY_FILENAME").length
-        } catch (e: Exception) {
-            if (isInstalled()) 14_279_174L else 0L
-        }
+        return if (isInstalled()) BUNDLED_BINARY_SIZE_BYTES else 0L
     }
 
     @Synchronized

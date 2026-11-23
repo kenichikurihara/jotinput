@@ -2263,4 +2263,41 @@ Inspecting Gboard's installed APK (`res/5aF.xml`, `res/1SV.xml`, `res/3eV.xml`, 
    - [`FlickPopupGeometryTest`](app/src/test/java/com/example/myasr/FlickPopupGeometryTest.kt) verifies identical 5-column visual key widths, seamless `hitRect` tiling, and divider centering across 7 typical device profiles; `./gradlew testDebugUnitTest` passed 100%.
    - [`FlickKeyboardMultiScreenInstrumentedTest`](app/src/androidTest/java/com/example/myasr/FlickKeyboardMultiScreenInstrumentedTest.kt) ran on ARCVM (`arc:5555`), verifying real `FlickKeyboardView` `RectF` parity across `360dp`, `411dp`, `480dp`, `701dp`, `800dp`, and `914dp` screens and visually inspecting all 6 rendered PNGs. *(Note: Live `VoiceInputMethodService` IME window projection on ARCVM in laptop mode is overridden within ~100ms by ChromeOS host `ArcInputMethodManagerService`, and physical Pixel 10 Pro was offline during deployment.)*
 
+---
+
+## 55. Unused Library Removal & APK Size Optimization (111.75 MB → 36.87 MB Debug / 29.53 MB Release)
+
+### 1. Audit Findings (Baseline `app-debug.apk`: 111.75 MB / 106.57 MiB)
+1. **Unused Sherpa-ONNX Shared Libraries (`10.28 MB` raw)**: Bytecode analysis (`javap`) of `sherpa-onnx-1.13.8.aar` and ELF `NEEDED` analysis (`readelf -d`) confirmed the AAR only loads `libsherpa-onnx-jni.so`, which depends solely on `libonnxruntime.so` and Android system libraries. `libsherpa-onnx-c-api.so` (`9.40 MB` across `arm64-v8a` + `x86_64`) and `libsherpa-onnx-cxx-api.so` (`0.88 MB`) had zero runtime references.
+2. **Apache Commons Compress & Transitive Bloat (`1.02 MB` compressed `classes4.dex`, 2,050 DEX classes + `0.10 MB` Phonetic Rules)**: `org.apache.commons:commons-compress:1.26.2` pulled in `commons-codec`, `commons-io`, and `commons-lang3` solely for `BZip2CompressorInputStream` and `TarArchiveInputStream`.
+3. **Uncompressed Assets & Native Libraries**:
+   - `assets/mozc/connection_data.bin` (`14.28 MB` stored uncompressed via `noCompress`) compresses via DEFLATE to `~2.18 MB` (debug) / `~1.95 MB` (release).
+   - Both `arm64-v8a` and `x86_64` `.so` files were stored uncompressed (`useLegacyPackaging` default `false`), consuming `82.77 MB` across the universal 2-ABI APK even though every `.so` already satisfies `0x4000` (16 KB) ELF `PT_LOAD` alignment.
+4. **`libmyasr_llm.so` Dynamic Symbol & Unused Section Bloat (`14.70 MB` across 2 ABIs)**: Compiled `llama.cpp` / `ggml` without hidden symbol visibility, `--gc-sections`, `--exclude-libs,ALL`, or `--icf=safe` (`8,971` exported dynamic symbols).
+5. **Unused Material Transitives, Locales & Disabled Release R8**: `com.google.android.material:material:1.12.0` pulled unused AndroidX transitive modules (`viewpager2`, `legacy-support-core-utils`, `documentfile`, `localbroadcastmanager`, `print`), `resources.arsc` bundled `120` resource configs (~80 unused locales), `values-night/colors.xml` had 20 dead unreferenced color entries failing `lintVitalRelease`, and `buildTypes.release` had `isMinifyEnabled = false`.
+
+### 2. Implemented Optimizations
+1. **Zero-Dependency BZip2 & Tar Streaming (`BZip2InputStream.kt`, `TarInputStream.kt`)**:
+   - Implemented pure-Kotlin `BZip2InputStream` (single & concatenated streams, `BZh1`–`BZh9`, multi-block, RLE2, block randomization, MSB-first CRC-32 verification) and `TarInputStream` (ustar, GNU `'L'` longname, PAX `'x'` headers, 512-byte padding skip), updating `MultiDictionaryManager.kt` and `EnglishAsrModelDownloader.kt` and removing `org.apache.commons:commons-compress`.
+   - Verified with [`BZip2AndTarInputStreamTest`](app/src/test/java/com/example/myasr/BZip2AndTarInputStreamTest.kt).
+2. **Compressed `connection_data.bin` Asset (`app/build.gradle.kts`, `ConnectionDataManager.kt`)**:
+   - Removed `noCompress += listOf("bin")` and replaced `assets.openFd(...)` in `ConnectionDataManager.getInstalledSizeBytes()` with `BUNDLED_BINARY_SIZE_BYTES = 14_279_174L` (`getConnectionMatrix()` already streams via `assets.open(...)` to internal storage for zero-copy `FileChannel.map`).
+3. **Native Linker & CMake Stripping (`app/src/main/cpp/CMakeLists.txt`)**:
+   - Enabled hidden C/C++ visibility (`CMAKE_C_VISIBILITY_PRESET hidden`, `CMAKE_CXX_VISIBILITY_PRESET hidden`, `CMAKE_VISIBILITY_INLINES_HIDDEN ON`), `-ffunction-sections -fdata-sections`, `LLAMA_BUILD_COMMON=OFF`, `LLAMA_CURL=OFF`, `GGML_BUILD_TESTS=OFF`, `GGML_BUILD_EXAMPLES=OFF`, and linker flags `-Wl,--gc-sections`, `-Wl,--exclude-libs,ALL`, `-Wl,--icf=safe` while preserving `-Wl,-z,max-page-size=16384`.
+   - Dynamic symbols in `libmyasr_llm.so` dropped from `8,971` to `28` (with all `20` `Java_*` JNI entry points preserved) and raw size shrunk from `6.79 MB` → `4.78 MB` (`arm64-v8a`, debug) / `4.48 MB` (release) and `7.91 MB` → `5.75 MB` (`x86_64`, debug) / `5.39 MB` (release).
+4. **Gradle Packaging, Dependency Exclusions, Locale & R8 Shrinking (`app/build.gradle.kts`, `app/proguard-rules.pro`, `values-night/colors.xml`)**:
+   - Set `resourceConfigurations += listOf("en", "ja")`.
+   - Added `packaging.jniLibs.useLegacyPackaging = true` and excluded `**/libsherpa-onnx-c-api.so`, `**/libsherpa-onnx-cxx-api.so`, `DebugProbesKt.bin`, `META-INF/*.version`, `META-INF/LICENSE*`, `META-INF/NOTICE*` (preserving `META-INF/services/**` for `kotlinx.coroutines`).
+   - Excluded unused Material transitives (`viewpager2`, `legacy-support-core-utils`, `documentfile`, `localbroadcastmanager`, `print`) and pinned `androidx.recyclerview:recyclerview:1.1.0` (eliminating `legacy-support-core-ui` transitives).
+   - Enabled `isMinifyEnabled = true` and `isShrinkResources = true` for `release` with Sherpa-ONNX and `native <methods>` keep rules, and removed 20 dead unreferenced `<color>` entries from `values-night/colors.xml`.
+
+### 3. Measured Results & Verification
+- **APK Size Reduction**:
+  - `app-debug.apk`: **111.75 MB (106.57 MiB) → 36.87 MB (35.17 MiB)** (**-74.88 MB / -67.0%**).
+  - `app-release-unsigned.apk`: **29.53 MB (28.16 MiB)** (**-73.6%** vs baseline debug, single `classes.dex` of `1.12 MB`, `resources.arsc` `0.37 MB`).
+- **16 KB Alignment & Binary Purity**: `readelf -lW` confirmed `0x4000` `PT_LOAD` segment alignment across all 6 `.so` files in both debug and release APKs; `:app:dependencies` confirmed zero excluded libraries remain.
+- **Unit Tests & Release Build**: `./gradlew testDebugUnitTest --rerun-tasks --max-workers=2` passed 100% (`80` suites, `494` tests, `0` failures, `0` errors); `./gradlew assembleDebug assembleRelease` passed including `:app:lintVitalRelease` and R8.
+- **Dual-Target On-Device Verification**: Deployed via `./deploy.sh` and verified via `logcat` on both **Pixel 10 Pro** (`<device-ip>:39667`, `arm64-v8a`) and **ARCVM** (`arc:5555`, `x86_64`). Both devices loaded `libmyasr_llm.so`, `libsherpa-onnx-jni.so`, `ConnectionMatrix` (7,139,584 transitions), `KanaKanjiEngine`, `AsrManager` (ReazonSpeech JA + Parakeet EN on Pixel 10 Pro), `LlmReranker`, `FutoSwipeEngine`, `EnglishSpellEngine`, `MainActivity`, and `DictionaryActivity` with zero crashes or 16 KB alignment errors.
+
+
 

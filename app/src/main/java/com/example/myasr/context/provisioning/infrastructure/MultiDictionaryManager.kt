@@ -13,7 +13,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
-import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import java.io.BufferedReader
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -324,7 +323,7 @@ class MultiDictionaryManager(private val context: Context) {
 
             val rawStream = conn.inputStream
             val inputStream: InputStream = if (isBz2) {
-                BZip2CompressorInputStream(rawStream, true)
+                BZip2InputStream(rawStream, decompressConcatenated = true)
             } else if (conn.contentEncoding?.equals("gzip", ignoreCase = true) == true) {
                 GZIPInputStream(rawStream)
             } else {

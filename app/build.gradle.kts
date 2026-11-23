@@ -15,6 +15,7 @@ android {
         versionCode = 2
         versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        resourceConfigurations += listOf("en", "ja")
 
         ndk {
             abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
@@ -47,7 +48,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -64,11 +66,25 @@ android {
         jvmTarget = "1.8"
     }
 
-    androidResources {
-        noCompress += listOf("bin")
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+            excludes += setOf(
+                "**/libsherpa-onnx-c-api.so",
+                "**/libsherpa-onnx-cxx-api.so"
+            )
+        }
+        resources {
+            excludes += setOf(
+                "DebugProbesKt.bin",
+                "META-INF/*.version",
+                "META-INF/LICENSE*",
+                "META-INF/NOTICE*"
+            )
+        }
     }
 
-    // Assets are kept external to maintain lightweight APK (~86 MB vs ~261 MB)
+    // Assets and native libs are compressed & unused transitive libraries stripped for compact APK (~36.9 MB debug / ~29.5 MB release)
     testOptions {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
@@ -80,10 +96,16 @@ dependencies {
 
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
-    implementation("com.google.android.material:material:1.12.0")
+    implementation("com.google.android.material:material:1.12.0") {
+        exclude(group = "androidx.viewpager2", module = "viewpager2")
+        exclude(group = "androidx.legacy", module = "legacy-support-core-utils")
+        exclude(group = "androidx.documentfile", module = "documentfile")
+        exclude(group = "androidx.localbroadcastmanager", module = "localbroadcastmanager")
+        exclude(group = "androidx.print", module = "print")
+    }
+    implementation("androidx.recyclerview:recyclerview:1.1.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
-    implementation("org.apache.commons:commons-compress:1.26.2")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

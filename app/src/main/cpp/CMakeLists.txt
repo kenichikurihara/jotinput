@@ -9,6 +9,9 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_VISIBILITY_PRESET hidden)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 
 set(LLAMA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../tools/llama_cpp_src")
 set(ONNX_INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../tools/onnxruntime_include")
@@ -19,7 +22,12 @@ set(LLAMA_BUILD_TESTS OFF CACHE BOOL "Disable tests" FORCE)
 set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "Disable examples" FORCE)
 set(LLAMA_BUILD_SERVER OFF CACHE BOOL "Disable server" FORCE)
 set(LLAMA_BUILD_TOOLS OFF CACHE BOOL "Disable tools" FORCE)
+set(LLAMA_BUILD_COMMON OFF CACHE BOOL "Disable llama common" FORCE)
+set(LLAMA_CURL OFF CACHE BOOL "Disable curl" FORCE)
+set(GGML_BUILD_TESTS OFF CACHE BOOL "Disable ggml tests" FORCE)
+set(GGML_BUILD_EXAMPLES OFF CACHE BOOL "Disable ggml examples" FORCE)
 set(GGML_OPENMP OFF CACHE BOOL "Disable OpenMP" FORCE)
+add_compile_options(-ffunction-sections -fdata-sections)
 
 if (ANDROID_ABI STREQUAL "arm64-v8a")
     set(GGML_CPU_ARM_ARCH "armv8.2-a+fp16+dotprod" CACHE STRING "CPU architecture for ARM" FORCE)
@@ -72,4 +80,7 @@ target_link_libraries(myasr_llm
 target_link_options(myasr_llm
     PRIVATE
     "-Wl,-z,max-page-size=16384"
+    "-Wl,--gc-sections"
+    "-Wl,--exclude-libs,ALL"
+    "-Wl,--icf=safe"
 )
