@@ -9,6 +9,7 @@ import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
 import com.example.myasr.context.kanakanji.domain.NextPhrasePredictor
 import com.example.myasr.context.provisioning.domain.DictionaryUpdateTracker
 import com.example.myasr.context.provisioning.domain.ModelWarmUpManager
+import com.example.myasr.context.provisioning.infrastructure.AppUpdateRepository
 import com.example.myasr.context.provisioning.infrastructure.BaseDictionaryDownloader
 import com.example.myasr.context.provisioning.infrastructure.ConnectionDataManager
 import com.example.myasr.context.provisioning.infrastructure.MultiDictionaryManager
@@ -56,6 +57,8 @@ class AsrApp : Application() {
         private set
     lateinit var dictionaryUpdateTracker: DictionaryUpdateTracker
         private set
+    lateinit var appUpdateRepository: AppUpdateRepository
+        private set
     lateinit var connectionDataManager: ConnectionDataManager
         private set
     lateinit var kanaKanjiEngine: KanaKanjiEngine
@@ -98,6 +101,7 @@ class AsrApp : Application() {
         multiDictionaryManager = MultiDictionaryManager(this)
         EnglishCaseModel.configureOtaOverlayFile(multiDictionaryManager.getEnglishOtaLexiconFile())
         dictionaryUpdateTracker = DictionaryUpdateTracker(this)
+        appUpdateRepository = AppUpdateRepository(this)
         connectionDataManager = ConnectionDataManager(this)
         llmReranker = LlmReranker.getInstance(this)
         modelWarmUpManager = ModelWarmUpManager.getInstance(this)

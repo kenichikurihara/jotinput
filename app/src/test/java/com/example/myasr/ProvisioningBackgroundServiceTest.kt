@@ -36,6 +36,12 @@ class ProvisioningBackgroundServiceTest {
         assertFalse(state.isTaskActiveOrQueued(ProvisioningTaskKind.SINGLE_DICTIONARY, DictionaryType.JAWIKI.id))
         assertTrue(state.isTaskActiveOrQueued(ProvisioningTaskKind.ENGLISH_ASR_MODEL))
         assertFalse(state.isTaskActiveOrQueued(ProvisioningTaskKind.JAPANESE_ASR_MODEL))
+        assertFalse(state.isTaskActiveOrQueued(ProvisioningTaskKind.APP_UPDATE_APK))
+
+        val appUpdateState = state.copy(
+            queuedTasks = listOf(queued, ProvisioningTaskRequest(ProvisioningTaskKind.APP_UPDATE_APK))
+        )
+        assertTrue(appUpdateState.isTaskActiveOrQueued(ProvisioningTaskKind.APP_UPDATE_APK))
     }
 
     @Test
@@ -45,12 +51,14 @@ class ProvisioningBackgroundServiceTest {
             ProvisioningTaskRequest(ProvisioningTaskKind.SINGLE_DICTIONARY, DictionaryType.MOZC_GENERAL.id),
             ProvisioningTaskRequest(ProvisioningTaskKind.ALL_OR_OUTDATED_DICTIONARIES),
             ProvisioningTaskRequest(ProvisioningTaskKind.ENGLISH_SPELLING_MODEL),
-            ProvisioningTaskRequest(ProvisioningTaskKind.ENGLISH_ASR_MODEL)
+            ProvisioningTaskRequest(ProvisioningTaskKind.ENGLISH_ASR_MODEL),
+            ProvisioningTaskRequest(ProvisioningTaskKind.APP_UPDATE_APK)
         )
         kinds.forEach { req ->
             assertTrue("Title should not be blank for $req", req.displayTitle().isNotBlank())
         }
         assertEquals(DictionaryType.MOZC_GENERAL.displayName, kinds[1].displayTitle())
+        assertEquals("アプリ最新ビルド", kinds.last().displayTitle())
     }
 
     @Test

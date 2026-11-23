@@ -70,7 +70,7 @@
 ```mermaid
 flowchart TD
     Main["MainActivity (Toolbar + Global Progress Banner + BottomNavigationView)"]
-    TabHome["Tab 1: ホーム (Home)\n- DMN駆動スマートガイドカード (次の1アクション)\n- すぐ試せる入力テスト欄 (クリアボタン付)\n- クイックアクション (単語登録 / 入力方法切替)"]
+    TabHome["Tab 1: ホーム (Home)\n- DMN駆動スマートガイドカード (次の1アクション)\n- すぐ試せる入力テスト欄 (クリアボタン付)\n- クイックアクション (単語登録 / 入力方法切替)\n- [Debug限定] GitHub 開発ビルド更新チェック・バックグラウンドDLカード"]
     TabSettings["Tab 2: 設定 (Settings)\n- キーボード (高さ5段階 / QWERTY数字行)\n- 入力アシスト (英語スワイプ / リアルタイム音声)\n- AI変換エンジン (ON/OFF & 0.5B/1.5B)\n- [折りたたみ] 詳細設定・開発者ツール + OSSライセンス"]
     TabData["Tab 3: データ (Data)\n- 推奨拡張辞書 一括取得/更新 + 更新日バナー\n- 音声・スペルAIモデル (日ASR / 英ASR / 英スペル)\n- 個別拡張辞書リスト (7種) + 連接行列ステータス"]
 

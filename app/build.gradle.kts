@@ -8,6 +8,34 @@ android {
     compileSdk = 34
     ndkVersion = "26.3.11579264"
 
+    buildFeatures {
+        buildConfig = true
+    }
+
+    val gitShaProvider = providers.environmentVariable("GITHUB_SHA")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .orElse(
+            providers.exec {
+                commandLine("git", "rev-parse", "HEAD")
+                isIgnoreExitValue = true
+            }.standardOutput.asText.map { it.trim() }
+        )
+        .map { raw ->
+            raw.replace(Regex("[^0-9a-fA-F]"), "").ifEmpty { "unknown" }
+        }
+
+    val gitCommitEpochMsProvider = providers.exec {
+        commandLine("git", "show", "-s", "--format=%ct", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.map { out ->
+        (out.trim().toLongOrNull() ?: 0L) * 1000L
+    }
+
+    val githubRunIdProvider = providers.environmentVariable("GITHUB_RUN_ID")
+        .map { it.trim().toLongOrNull() ?: 0L }
+        .orElse(0L)
+
     defaultConfig {
         applicationId = "com.example.myasr"
         minSdk = 26
@@ -16,6 +44,14 @@ android {
         versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("en", "ja")
+
+        buildConfigField("String", "BUILD_GIT_SHA", "\"${gitShaProvider.get()}\"")
+        buildConfigField("long", "BUILD_GIT_COMMIT_EPOCH_MS", "${gitCommitEpochMsProvider.get()}L")
+        buildConfigField("long", "BUILD_GITHUB_RUN_ID", "${githubRunIdProvider.get()}L")
+        buildConfigField("String", "GITHUB_REPO_OWNER", "\"kenichikurihara\"")
+        buildConfigField("String", "GITHUB_REPO_NAME", "\"jotinput\"")
+        buildConfigField("String", "GITHUB_ARTIFACT_NAME", "\"app-debug\"")
+        buildConfigField("String", "GITHUB_TARGET_BRANCH", "\"main\"")
 
         ndk {
             abiFilters.addAll(listOf("arm64-v8a", "x86_64"))

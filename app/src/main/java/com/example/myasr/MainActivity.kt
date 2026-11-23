@@ -21,9 +21,16 @@ import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel.Setti
 import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel.SyncBadgeTone
 import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel.SyncCardState
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.provisioning.domain.AppUpdateBadgeTone
+import com.example.myasr.context.provisioning.domain.AppUpdateCardState
+import com.example.myasr.context.provisioning.domain.AppUpdateCheckErrorKind
+import com.example.myasr.context.provisioning.domain.AppUpdateCheckResult
+import com.example.myasr.context.provisioning.domain.AppUpdateDecisionModel
+import com.example.myasr.context.provisioning.domain.AppUpdatePrimaryAction
 import com.example.myasr.context.provisioning.domain.DictUpdateState
 import com.example.myasr.context.provisioning.domain.DictionaryStatusInfo
 import com.example.myasr.context.provisioning.domain.DictionaryUpdateTracker
+import com.example.myasr.context.provisioning.infrastructure.AppUpdateInstaller
 import com.example.myasr.context.provisioning.infrastructure.DictionaryType
 import com.example.myasr.context.provisioning.infrastructure.EnglishAsrModelDownloader
 import com.example.myasr.context.provisioning.infrastructure.EnglishSpellDownloader
@@ -74,6 +81,10 @@ import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        const val EXTRA_TRIGGER_APP_UPDATE_INSTALL = "extra_trigger_app_update_install"
+    }
+
     // Shell Navigation & Global Provisioning Banner
     private lateinit var coordinatorRoot: View
     private lateinit var bottomNav: BottomNavigationView
@@ -98,6 +109,13 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etKeyboardTest: EditText
     private lateinit var cardQuickDictionary: View
     private lateinit var cardQuickSwitchIme: View
+    private lateinit var cardAppUpdate: View
+    private lateinit var tvAppUpdateBadge: TextView
+    private lateinit var btnAppUpdateToken: TextView
+    private lateinit var tvAppUpdateSummary: TextView
+    private lateinit var appUpdateProgress: LinearProgressIndicator
+    private lateinit var btnAppUpdatePrimary: MaterialButton
+    private lateinit var btnAppUpdateSecondary: MaterialButton
     private lateinit var btnEnableIme: MaterialButton
     private lateinit var tvOssLicenses: TextView
 
@@ -211,6 +229,28 @@ class MainActivity : AppCompatActivity() {
     private var isSettingsSyncing = false
     private var lastSettingsSyncError: String? = null
 
+    private var isCheckingAppUpdate = false
+    private var lastAppUpdateErrorKind: AppUpdateCheckErrorKind? = null
+    private var lastAppUpdateErrorMessage: String? = null
+    private var pendingInstallAfterPermissionGrant = false
+
+    private val unknownSourcesPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (pendingInstallAfterPermissionGrant) {
+            pendingInstallAfterPermissionGrant = false
+            if (AppUpdateInstaller.canRequestPackageInstalls(this)) {
+                triggerInstallDownloadedApk()
+            } else {
+                Toast.makeText(
+                    this,
+                    "インストール権限が許可されませんでした（設定から後から有効にできます）",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
     private val selectSettingsSyncFileLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri: android.net.Uri? ->
@@ -268,6 +308,7 @@ class MainActivity : AppCompatActivity() {
         checkAndInitializeModel()
         refreshHomeHeroCard()
         checkBenchmarkIntent(intent)
+        handleAppUpdateInstallIntent(intent)
 
         val launchedOnboarding = maybeLaunchOnboarding(savedInstanceState)
         if (!launchedOnboarding &&
@@ -587,6 +628,7 @@ class MainActivity : AppCompatActivity() {
         updateModelStatusBadge()
         updateKeyboardHeightUI()
         refreshHomeHeroCard()
+        refreshAppUpdateCard()
         isUpdatingUiFromPrefs = true
         try {
             switchStreamingVoiceInput.isChecked = KeyboardHeightManager.isStreamingVoiceInputEnabled(this)
@@ -671,6 +713,13 @@ class MainActivity : AppCompatActivity() {
         etKeyboardTest = findViewById(R.id.etKeyboardTest)
         cardQuickDictionary = findViewById(R.id.cardQuickDictionary)
         cardQuickSwitchIme = findViewById(R.id.cardQuickSwitchIme)
+        cardAppUpdate = findViewById(R.id.cardAppUpdate)
+        tvAppUpdateBadge = findViewById(R.id.tvAppUpdateBadge)
+        btnAppUpdateToken = findViewById(R.id.btnAppUpdateToken)
+        tvAppUpdateSummary = findViewById(R.id.tvAppUpdateSummary)
+        appUpdateProgress = findViewById(R.id.appUpdateProgress)
+        btnAppUpdatePrimary = findViewById(R.id.btnAppUpdatePrimary)
+        btnAppUpdateSecondary = findViewById(R.id.btnAppUpdateSecondary)
         btnEnableIme = findViewById(R.id.btnEnableIme)
         tvSettingsSyncBadge = findViewById(R.id.tvSettingsSyncBadge)
         tvSettingsSyncSummary = findViewById(R.id.tvSettingsSyncSummary)
@@ -820,7 +869,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         layoutGlobalProvisioningBanner.setOnClickListener {
-            bottomNav.selectedItemId = R.id.nav_data
+            val activeKind = ProvisioningForegroundService.state.value.activeTask?.kind
+            bottomNav.selectedItemId = if (activeKind == ProvisioningTaskKind.APP_UPDATE_APK) {
+                R.id.nav_home
+            } else {
+                R.id.nav_data
+            }
         }
 
         btnClearTestInput.setOnClickListener {
@@ -842,6 +896,7 @@ class MainActivity : AppCompatActivity() {
         setupEnglishSpellingUI()
         setupEnglishAsrUI()
         setupSlmModelsUI()
+        setupAppUpdateUI()
         btnSettingsDownloadSlm.setOnClickListener {
             val selected = KeyboardHeightManager.getRerankEngineType(this)
             if (selected != RerankEngineType.NONE) {
@@ -1388,6 +1443,9 @@ class MainActivity : AppCompatActivity() {
         }
         updateSlmStatusBadge()
 
+        // 5.5 App build update card (debug-only GitHub artifact check / download)
+        refreshAppUpdateCard(state)
+
         // 6. Handle completion / error event once
         val event = state.lastEvent
         if (event != null && event.eventId > lastHandledProvisioningEventId) {
@@ -1428,6 +1486,16 @@ class MainActivity : AppCompatActivity() {
                         }
                     }
                     updateSlmStatusBadge()
+                }
+                ProvisioningTaskKind.APP_UPDATE_APK -> {
+                    if (event.success || event.message.contains("キャンセル")) {
+                        lastAppUpdateErrorKind = null
+                        lastAppUpdateErrorMessage = null
+                    } else {
+                        lastAppUpdateErrorKind = event.errorKind ?: AppUpdateCheckErrorKind.DOWNLOAD_FAILED
+                        lastAppUpdateErrorMessage = event.message
+                    }
+                    refreshAppUpdateCard(state)
                 }
             }
             refreshHomeHeroCard()
@@ -1847,6 +1915,283 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         checkBenchmarkIntent(intent)
+        handleAppUpdateInstallIntent(intent)
+    }
+
+    private fun setupAppUpdateUI() {
+        btnAppUpdateToken.setOnClickListener {
+            showGitHubTokenDialog()
+        }
+        refreshAppUpdateCard()
+    }
+
+    private fun refreshAppUpdateCard(
+        provisioningState: ProvisioningUiState = ProvisioningForegroundService.state.value
+    ) {
+        val repo = AsrApp.instance.appUpdateRepository
+        val installed = repo.getInstalledBuildInfo()
+        val activeKind = provisioningState.activeTask?.kind
+        val isDownloadActive = activeKind == ProvisioningTaskKind.APP_UPDATE_APK
+        val isDownloadQueued = !isDownloadActive &&
+            provisioningState.isTaskActiveOrQueued(ProvisioningTaskKind.APP_UPDATE_APK)
+        val cachedRemote = repo.getCachedRemoteArtifact()
+        val freshness = repo.getCurrentFreshnessStatus()
+        val downloadedApk = repo.getMatchingDownloadedApk(cachedRemote)
+
+        val decision = AppUpdateDecisionModel.evaluateUi(
+            AppUpdateDecisionModel.AppUpdateUiInput(
+                isDebugBuild = installed.isDebugBuild,
+                hasGitHubToken = repo.hasToken(),
+                isChecking = isCheckingAppUpdate,
+                isDownloadActive = isDownloadActive,
+                isDownloadQueued = isDownloadQueued,
+                freshnessStatus = freshness,
+                hasMatchingDownloadedApk = downloadedApk != null,
+                lastErrorKind = lastAppUpdateErrorKind
+            )
+        )
+
+        cardAppUpdate.visibility = if (decision.isCardVisible) View.VISIBLE else View.GONE
+        if (!decision.isCardVisible) return
+
+        tvAppUpdateBadge.text = decision.badgeText
+        val tone = when (decision.badgeTone) {
+            AppUpdateBadgeTone.SUCCESS -> StatusTone.SUCCESS
+            AppUpdateBadgeTone.INFO -> StatusTone.INFO
+            AppUpdateBadgeTone.WARNING -> StatusTone.WARNING
+            AppUpdateBadgeTone.NEUTRAL -> StatusTone.NEUTRAL
+        }
+        applyBadgeTone(tvAppUpdateBadge, tone)
+
+        btnAppUpdateToken.text = if (repo.hasToken()) "トークン変更" else "トークン設定"
+        appUpdateProgress.visibility = if (decision.showProgressBar) View.VISIBLE else View.GONE
+        if (decision.showProgressBar) {
+            appUpdateProgress.isIndeterminate = isDownloadQueued
+            if (!isDownloadQueued) {
+                appUpdateProgress.progress = provisioningState.progress
+            }
+        }
+
+        val localRunSuffix = if (installed.githubRunId > 0L) " #${installed.githubRunId}" else ""
+        val localLine = "現在: v${installed.versionName} (${installed.shortSha})$localRunSuffix"
+        val dateFormat = java.text.SimpleDateFormat("MM/dd HH:mm", java.util.Locale.getDefault())
+
+        tvAppUpdateSummary.text = when (decision.cardState) {
+            AppUpdateCardState.HIDDEN -> ""
+            AppUpdateCardState.DOWNLOADING ->
+                provisioningState.statusText.ifEmpty { "バックグラウンドで最新ビルドを取得中..." }
+            AppUpdateCardState.QUEUED ->
+                "他の処理の完了後にバックグラウンド取得を開始します..."
+            AppUpdateCardState.CHECKING ->
+                "GitHub Actions の最新ビルドを確認中..."
+            AppUpdateCardState.READY_TO_INSTALL -> {
+                val dlMb = String.format(
+                    java.util.Locale.US,
+                    "%.1f",
+                    (downloadedApk?.sizeInBytes ?: 0L) / (1024.0 * 1024.0)
+                )
+                val sha = downloadedApk?.shortSha ?: "unknown"
+                "展開済み APK 準備完了 ($sha / ${dlMb} MB)。タップして更新できます。\n$localLine"
+            }
+            AppUpdateCardState.TOKEN_MISSING ->
+                "GitHub 未連携です (Fail-Safe)。確認するには開発用トークン (Actions: Read-only) を設定してください。\n$localLine"
+            AppUpdateCardState.AUTH_ERROR ->
+                "${lastAppUpdateErrorMessage ?: "GitHub 認証に失敗しました"}。\nトークン権限 (Actions: Read-only) を確認してください。"
+            AppUpdateCardState.NETWORK_ERROR ->
+                "${lastAppUpdateErrorMessage ?: "GitHub へ接続できませんでした"}。\n$localLine"
+            AppUpdateCardState.UPDATE_AVAILABLE -> {
+                val sizeMb = String.format(
+                    java.util.Locale.US,
+                    "%.1f",
+                    (cachedRemote?.sizeInBytes ?: 0L) / (1024.0 * 1024.0)
+                )
+                val remoteTime = cachedRemote?.createdAtMs?.takeIf { it > 0L }
+                    ?.let { dateFormat.format(java.util.Date(it)) } ?: "時刻不明"
+                "新しいビルドがあります: ${cachedRemote?.shortSha ?: "unknown"} ($remoteTime / ZIP ${sizeMb} MB)\n$localLine"
+            }
+            AppUpdateCardState.UP_TO_DATE -> {
+                val checkedStr = repo.getLastCheckEpochMs().takeIf { it > 0L }
+                    ?.let { dateFormat.format(java.util.Date(it)) } ?: "たった今"
+                "実行中のビルドは最新です (最終確認: $checkedStr)\n$localLine"
+            }
+            AppUpdateCardState.NO_ARTIFACT ->
+                "main ブランチに有効な最新ビルドが見つかりません (期限切れ等)。\n$localLine"
+            AppUpdateCardState.IDLE ->
+                "main ブランチの最新ビルドが GitHub にあるか確認できます。\n$localLine"
+        }
+
+        btnAppUpdatePrimary.text = decision.primaryButtonLabel
+        btnAppUpdatePrimary.isEnabled = decision.primaryButtonEnabled
+        btnAppUpdatePrimary.setOnClickListener {
+            when (decision.primaryAction) {
+                AppUpdatePrimaryAction.CONFIGURE_TOKEN -> showGitHubTokenDialog()
+                AppUpdatePrimaryAction.CHECK_UPDATE -> triggerAppUpdateCheck()
+                AppUpdatePrimaryAction.DOWNLOAD_UPDATE -> startAppUpdateDownload()
+                AppUpdatePrimaryAction.CANCEL_DOWNLOAD ->
+                    ProvisioningForegroundService.cancelKind(this, ProvisioningTaskKind.APP_UPDATE_APK)
+                AppUpdatePrimaryAction.INSTALL_APK -> triggerInstallDownloadedApk()
+                AppUpdatePrimaryAction.NONE -> {}
+            }
+        }
+
+        btnAppUpdateSecondary.visibility = if (decision.showSecondaryCheckButton) View.VISIBLE else View.GONE
+        btnAppUpdateSecondary.setOnClickListener {
+            triggerAppUpdateCheck()
+        }
+    }
+
+    private fun triggerAppUpdateCheck() {
+        val repo = AsrApp.instance.appUpdateRepository
+        if (!repo.hasToken()) {
+            lastAppUpdateErrorKind = AppUpdateCheckErrorKind.TOKEN_REQUIRED
+            lastAppUpdateErrorMessage = "GitHub トークンが未設定です"
+            refreshAppUpdateCard()
+            showGitHubTokenDialog()
+            return
+        }
+        if (isCheckingAppUpdate) return
+
+        isCheckingAppUpdate = true
+        lastAppUpdateErrorKind = null
+        lastAppUpdateErrorMessage = null
+        refreshAppUpdateCard()
+
+        lifecycleScope.launch {
+            try {
+                when (val result = repo.checkLatestBuild()) {
+                    is AppUpdateCheckResult.Checked -> {
+                        lastAppUpdateErrorKind = null
+                        lastAppUpdateErrorMessage = null
+                        val toastMsg = when (result.freshness) {
+                            com.example.myasr.context.provisioning.domain.BuildFreshnessStatus.UPDATE_AVAILABLE ->
+                                "新しいビルド (${result.artifact?.shortSha ?: ""}) が見つかりました"
+                            com.example.myasr.context.provisioning.domain.BuildFreshnessStatus.UP_TO_DATE ->
+                                "実行中のアプリは最新ビルドです"
+                            com.example.myasr.context.provisioning.domain.BuildFreshnessStatus.NO_ARTIFACT ->
+                                "有効な最新アーティファクトが見つかりませんでした"
+                        }
+                        Toast.makeText(this@MainActivity, toastMsg, Toast.LENGTH_SHORT).show()
+                    }
+                    is AppUpdateCheckResult.Failure -> {
+                        lastAppUpdateErrorKind = result.errorKind
+                        lastAppUpdateErrorMessage = result.message
+                        Toast.makeText(this@MainActivity, result.message, Toast.LENGTH_LONG).show()
+                    }
+                }
+            } finally {
+                isCheckingAppUpdate = false
+                refreshAppUpdateCard()
+            }
+        }
+    }
+
+    private fun startAppUpdateDownload() {
+        val repo = AsrApp.instance.appUpdateRepository
+        if (!repo.hasToken()) {
+            showGitHubTokenDialog()
+            return
+        }
+        lastAppUpdateErrorKind = null
+        lastAppUpdateErrorMessage = null
+        startBackgroundProvisioning(ProvisioningTaskKind.APP_UPDATE_APK)
+    }
+
+    private fun showGitHubTokenDialog() {
+        val repo = AsrApp.instance.appUpdateRepository
+        val masked = repo.tokenStore.getMaskedPreview()
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val pad = (20 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, 0)
+        }
+        val input = EditText(this).apply {
+            hint = "github_pat_..."
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+            setSingleLine(true)
+        }
+        container.addView(input)
+
+        val currentLine = if (masked != null) "\n現在設定中: $masked" else ""
+        val msg = "kenichikurihara/jotinput の Fine-Grained PAT (Actions: Read-only) を入力してください。\n" +
+            "Android Keystore で暗号化保存され、未設定・アクセス不可時は安全に Fail-Safe します。" +
+            currentLine
+
+        val builder = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle("開発用 GitHub トークン設定")
+            .setMessage(msg)
+            .setView(container)
+            .setPositiveButton("保存して確認") { _, _ ->
+                val raw = input.text?.toString()?.trim().orEmpty()
+                if (raw.isEmpty()) {
+                    Toast.makeText(this, "トークンが空のため保存しませんでした", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                if (repo.tokenStore.saveToken(raw)) {
+                    lastAppUpdateErrorKind = null
+                    lastAppUpdateErrorMessage = null
+                    refreshAppUpdateCard()
+                    triggerAppUpdateCheck()
+                } else {
+                    Toast.makeText(this, "トークンの保存に失敗しました", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("キャンセル", null)
+
+        if (repo.hasToken()) {
+            builder.setNeutralButton("削除") { _, _ ->
+                repo.tokenStore.clearToken()
+                repo.clearCachedRemoteState()
+                lastAppUpdateErrorKind = null
+                lastAppUpdateErrorMessage = null
+                refreshAppUpdateCard()
+                Toast.makeText(this, "GitHub トークンを削除しました", Toast.LENGTH_SHORT).show()
+            }
+        }
+        builder.show()
+    }
+
+    private fun triggerInstallDownloadedApk() {
+        val repo = AsrApp.instance.appUpdateRepository
+        val downloaded = repo.getMatchingDownloadedApk()
+        if (downloaded == null) {
+            Toast.makeText(this, "インストール可能な更新 APK が見つかりません", Toast.LENGTH_SHORT).show()
+            refreshAppUpdateCard()
+            return
+        }
+        val apkFile = File(downloaded.filePath)
+        if (!AppUpdateInstaller.canRequestPackageInstalls(this)) {
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("アプリのインストール許可が必要です")
+                .setMessage("ダウンロード済み APK を更新インストールするため、このアプリの「不明なアプリのインストール」を許可してください。")
+                .setPositiveButton("設定を開く") { _, _ ->
+                    pendingInstallAfterPermissionGrant = true
+                    unknownSourcesPermissionLauncher.launch(
+                        AppUpdateInstaller.buildUnknownSourcesSettingsIntent(this)
+                    )
+                }
+                .setNegativeButton("あとで", null)
+                .show()
+            return
+        }
+        val launchRes = runCatching {
+            startActivity(AppUpdateInstaller.buildInstallIntent(this, apkFile))
+        }
+        if (launchRes.isFailure) {
+            Toast.makeText(
+                this,
+                "インストーラの起動に失敗しました: ${launchRes.exceptionOrNull()?.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun handleAppUpdateInstallIntent(intent: Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_TRIGGER_APP_UPDATE_INSTALL, false) == true) {
+            intent.removeExtra(EXTRA_TRIGGER_APP_UPDATE_INSTALL)
+            bottomNav.selectedItemId = R.id.nav_home
+            triggerInstallDownloadedApk()
+        }
     }
 
     private fun checkBenchmarkIntent(intent: Intent?) {

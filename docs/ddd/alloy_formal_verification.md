@@ -122,6 +122,16 @@ IME ヘッダーバーのユーティリティアイコン表示裁定（[`ImeHe
 - **`UserCustomDictionaryIsolatedFromOtaOps`**: OTA 導入・更新・削除が `custom_dictionary.json`（ユーザー辞書）から完全に隔離されていること。
 - **`OtaDeleteRestoresBundledLexicon`**: OTA 削除後に即座に内蔵辞書のみのクリーン状態へ復元されること。
 
+### 3.15 [`github_app_update_lifecycle.als`](app/src/test/resources/alloy/github_app_update_lifecycle.als)
+Debug 限定 GitHub Actions ビルド更新チェック・バックグラウンドダウンロード・インストール導線（[`AppUpdateDecisionModel`](app/src/main/java/com/example/myasr/context/provisioning/domain/AppUpdateDecisionModel.kt)）をモデル化し、以下を検証する：
+- **`ReleaseBuildNeverShowsCard`**: 非 Debug ビルドでは更新カードが常に非表示であること。
+- **`NoTokenFailSafeNeverOffersDownload`**: GitHub トークン未設定時は（一致済ローカル APK 不在時）ダウンロードやインストールを提示せず Fail-Safe すること。
+- **`ErrorStateNeverOffersDownloadOrInstall`**: 認証・ネットワーク・ダウンロード失敗状態において誤ってダウンロードやインストールを提示しないこと。
+- **`DownloadOnlyWhenTokenAndUpdateAvailable`**: ダウンロード CTA は Debug かつトークン有効かつ更新検知時のみ提示されること。
+- **`InstallOnlyWhenMatchingApkExistsAndDebug`**: インストール CTA は Debug かつ整合 APK 保持時のみ提示されること。
+- **`UpToDateNeverOffersDownloadOrInstall`**: 最新判定時は再確認のみを提示すること。
+- **`ActiveDownloadAlwaysShowsProgressAndCancel`**: バックグラウンド DL/待機中は進捗バーとキャンセル CTA を必ず表示すること。
+
 ---
 
 ## 4. 自動同期ルール

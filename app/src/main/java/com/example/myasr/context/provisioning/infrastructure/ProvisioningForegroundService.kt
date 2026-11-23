@@ -24,6 +24,7 @@ import com.example.myasr.R
 import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
 import com.example.myasr.context.ime.presentation.KeyboardHeightManager
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.provisioning.domain.AppUpdateCheckErrorKind
 import com.example.myasr.context.provisioning.domain.DictUpdateState
 import com.example.myasr.context.provisioning.domain.DictionaryUpdateTracker
 import com.example.myasr.context.reranking.domain.RerankEngineType
@@ -48,7 +49,8 @@ enum class ProvisioningTaskKind {
     ALL_OR_OUTDATED_DICTIONARIES,
     ENGLISH_SPELLING_MODEL,
     ENGLISH_ASR_MODEL,
-    SLM_MODEL
+    SLM_MODEL,
+    APP_UPDATE_APK
 }
 
 data class ProvisioningTaskRequest(
@@ -65,6 +67,7 @@ data class ProvisioningTaskRequest(
             val engine = RerankEngineType.fromId(dictId ?: "")
             if (engine != RerankEngineType.NONE) "${engine.displayName} AIモデル" else "AI変換モデル"
         }
+        ProvisioningTaskKind.APP_UPDATE_APK -> "アプリ最新ビルド"
     }
 }
 
@@ -72,7 +75,8 @@ data class ProvisioningEvent(
     val eventId: Long,
     val task: ProvisioningTaskRequest,
     val success: Boolean,
-    val message: String
+    val message: String,
+    val errorKind: AppUpdateCheckErrorKind? = null
 )
 
 data class ProvisioningUiState(
@@ -104,8 +108,10 @@ class ProvisioningForegroundService : Service() {
         private const val CHANNEL_ID_COMPLETE = "provisioning_complete_channel"
         private const val PROGRESS_NOTIFICATION_ID = 4201
         private const val COMPLETE_NOTIFICATION_ID = 4202
+        private const val APP_UPDATE_COMPLETE_NOTIFICATION_ID = 4203
         private const val ACTION_ENQUEUE = "com.example.myasr.action.ENQUEUE_PROVISIONING"
         private const val ACTION_CANCEL = "com.example.myasr.action.CANCEL_PROVISIONING"
+        private const val ACTION_CANCEL_KIND = "com.example.myasr.action.CANCEL_PROVISIONING_KIND"
         private const val EXTRA_TASK_KIND = "extra_task_kind"
         private const val EXTRA_DICT_ID = "extra_dict_id"
         private const val WAKELOCK_TIMEOUT_MS = 30L * 60L * 1000L
@@ -125,11 +131,27 @@ class ProvisioningForegroundService : Service() {
             ContextCompat.startForegroundService(context.applicationContext, intent)
         }
 
+        fun cancelKind(context: Context, kind: ProvisioningTaskKind) {
+            val current = _state.value
+            if (!current.isRunning && current.activeTask == null && current.queuedTasks.isEmpty()) {
+                return
+            }
+            val intent = Intent(context, ProvisioningForegroundService::class.java).apply {
+                action = ACTION_CANCEL_KIND
+                putExtra(EXTRA_TASK_KIND, kind.name)
+            }
+            runCatching {
+                context.applicationContext.startService(intent)
+            }
+        }
+
         fun cancelAll(context: Context) {
             val intent = Intent(context, ProvisioningForegroundService::class.java).apply {
                 action = ACTION_CANCEL
             }
-            context.applicationContext.startService(intent)
+            runCatching {
+                context.applicationContext.startService(intent)
+            }
         }
     }
 
@@ -137,6 +159,7 @@ class ProvisioningForegroundService : Service() {
     private val queueLock = Any()
     private val taskQueue = ArrayDeque<ProvisioningTaskRequest>()
     private var activeTask: ProvisioningTaskRequest? = null
+    private var activeTaskJob: Job? = null
     private var workerJob: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var lastNotificationUpdateMs = 0L
@@ -153,6 +176,14 @@ class ProvisioningForegroundService : Service() {
         when (intent?.action) {
             ACTION_CANCEL -> {
                 cancelAndStop()
+                return START_NOT_STICKY
+            }
+            ACTION_CANCEL_KIND -> {
+                val kindName = intent.getStringExtra(EXTRA_TASK_KIND)
+                val kind = kindName?.let { runCatching { ProvisioningTaskKind.valueOf(it) }.getOrNull() }
+                if (kind != null) {
+                    cancelTaskKind(kind)
+                }
                 return START_NOT_STICKY
             }
             ACTION_ENQUEUE -> {
@@ -220,7 +251,28 @@ class ProvisioningForegroundService : Service() {
                         next
                     } ?: break
 
-                    val event = executeTask(nextTask)
+                    var taskEvent: ProvisioningEvent? = null
+                    val job = serviceScope.launch {
+                        taskEvent = executeTask(nextTask)
+                    }
+                    synchronized(queueLock) {
+                        activeTaskJob = job
+                    }
+                    job.join()
+                    val wasCancelled = job.isCancelled
+                    synchronized(queueLock) {
+                        activeTaskJob = null
+                    }
+                    val event = taskEvent ?: ProvisioningEvent(
+                        eventId = eventCounter.incrementAndGet(),
+                        task = nextTask,
+                        success = false,
+                        message = if (wasCancelled) {
+                            "${nextTask.displayTitle()} のダウンロードをキャンセルしました"
+                        } else {
+                            "${nextTask.displayTitle()} の処理が中断されました"
+                        }
+                    )
                     synchronized(queueLock) {
                         activeTask = null
                         val hasMore = taskQueue.isNotEmpty()
@@ -233,7 +285,9 @@ class ProvisioningForegroundService : Service() {
                             lastEvent = event
                         )
                     }
-                    postCompletionNotification(event)
+                    if (!wasCancelled) {
+                        postCompletionNotification(event)
+                    }
                 }
             } catch (_: CancellationException) {
                 Log.i(TAG, "Provisioning worker cancelled")
@@ -264,6 +318,7 @@ class ProvisioningForegroundService : Service() {
                 ProvisioningTaskKind.ENGLISH_SPELLING_MODEL -> runEnglishSpellingDownload(task)
                 ProvisioningTaskKind.ENGLISH_ASR_MODEL -> runEnglishAsrDownload(task)
                 ProvisioningTaskKind.SLM_MODEL -> runSlmModelDownload(task)
+                ProvisioningTaskKind.APP_UPDATE_APK -> runAppUpdateDownload(task)
             }
         } catch (e: CancellationException) {
             throw e
@@ -522,6 +577,38 @@ class ProvisioningForegroundService : Service() {
         }
     }
 
+    private suspend fun runAppUpdateDownload(task: ProvisioningTaskRequest): ProvisioningEvent {
+        val repo = AsrApp.instance.appUpdateRepository
+        val result = repo.downloadLatestArtifact { pct, statusText ->
+            reportProgress(
+                task = task,
+                percent = pct,
+                statusText = statusText,
+                notifTitle = "JotInput 最新ビルドをダウンロード中"
+            )
+        }
+        return if (result.isSuccess) {
+            val info = result.getOrThrow()
+            ProvisioningEvent(
+                eventId = eventCounter.incrementAndGet(),
+                task = task,
+                success = true,
+                message = "最新ビルド (${info.shortSha}) の準備が完了しました。タップしてインストールできます。"
+            )
+        } else {
+            val ex = result.exceptionOrNull()
+            val errKind = (ex as? GitHubArtifactUpdateClient.DownloadHttpException)?.errorKind
+                ?: AppUpdateCheckErrorKind.DOWNLOAD_FAILED
+            ProvisioningEvent(
+                eventId = eventCounter.incrementAndGet(),
+                task = task,
+                success = false,
+                message = "アプリビルド取得失敗: ${ex?.message ?: "Unknown error"}",
+                errorKind = errKind
+            )
+        }
+    }
+
     private fun reportProgress(
         task: ProvisioningTaskRequest,
         percent: Int,
@@ -564,6 +651,55 @@ class ProvisioningForegroundService : Service() {
         )
     }
 
+    private fun cancelTaskKind(targetKind: ProvisioningTaskKind) {
+        Log.i(TAG, "Cancelling background provisioning task for kind=$targetKind")
+        var removedFromQueue: ProvisioningTaskRequest? = null
+        var jobToCancel: Job? = null
+        val remainingEmpty: Boolean
+        synchronized(queueLock) {
+            val it = taskQueue.iterator()
+            while (it.hasNext()) {
+                val req = it.next()
+                if (req.kind == targetKind) {
+                    if (removedFromQueue == null) {
+                        removedFromQueue = req
+                    }
+                    it.remove()
+                }
+            }
+            if (activeTask?.kind == targetKind) {
+                jobToCancel = activeTaskJob
+            }
+            remainingEmpty = activeTask == null && taskQueue.isEmpty()
+            val removed = removedFromQueue
+            if (jobToCancel == null && removed != null) {
+                _state.value = _state.value.copy(
+                    isRunning = !remainingEmpty,
+                    queuedTasks = taskQueue.toList(),
+                    lastEvent = ProvisioningEvent(
+                        eventId = eventCounter.incrementAndGet(),
+                        task = removed,
+                        success = false,
+                        message = "${removed.displayTitle()} の待機をキャンセルしました"
+                    )
+                )
+            } else {
+                _state.value = _state.value.copy(
+                    queuedTasks = taskQueue.toList()
+                )
+            }
+        }
+        if (jobToCancel != null) {
+            jobToCancel?.cancel()
+            return
+        }
+        if (remainingEmpty) {
+            releaseWakeLock()
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
+    }
+
     private fun cancelAndStop() {
         Log.i(TAG, "Cancelling background provisioning tasks by user request")
         val cancelledTask = synchronized(queueLock) {
@@ -571,6 +707,7 @@ class ProvisioningForegroundService : Service() {
             taskQueue.clear()
             current
         }
+        activeTaskJob?.cancel()
         workerJob?.cancel()
         if (cancelledTask != null) {
             _state.value = _state.value.copy(
@@ -698,12 +835,16 @@ class ProvisioningForegroundService : Service() {
         ) {
             return
         }
+        val isAppUpdateReady = event.task.kind == ProvisioningTaskKind.APP_UPDATE_APK && event.success
         val openIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            if (isAppUpdateReady) {
+                putExtra(MainActivity.EXTRA_TRIGGER_APP_UPDATE_INSTALL, true)
+            }
         }
         val pendingIntent = PendingIntent.getActivity(
             this,
-            2,
+            if (isAppUpdateReady) 3 else 2,
             openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -712,16 +853,27 @@ class ProvisioningForegroundService : Service() {
         } else {
             "JotInput: ${event.task.displayTitle()} エラー"
         }
-        val notification = NotificationCompat.Builder(this, CHANNEL_ID_COMPLETE)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID_COMPLETE)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
             .setContentText(event.message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(event.message))
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .build()
+        if (isAppUpdateReady) {
+            builder.addAction(
+                android.R.drawable.stat_sys_download_done,
+                "インストール",
+                pendingIntent
+            )
+        }
+        val notificationId = if (isAppUpdateReady) {
+            APP_UPDATE_COMPLETE_NOTIFICATION_ID
+        } else {
+            COMPLETE_NOTIFICATION_ID
+        }
         try {
-            NotificationManagerCompat.from(this).notify(COMPLETE_NOTIFICATION_ID, notification)
+            NotificationManagerCompat.from(this).notify(notificationId, builder.build())
         } catch (e: SecurityException) {
             Log.w(TAG, "Cannot post completion notification: ${e.message}")
         }
