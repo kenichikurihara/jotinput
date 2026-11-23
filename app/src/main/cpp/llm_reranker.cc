@@ -4,10 +4,13 @@
 #include <cctype>
 #include <climits>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#ifdef __ANDROID__
 #include <android/log.h>
+#endif
 
 #if defined(__linux__) || defined(__ANDROID__)
 #include <sched.h>
@@ -17,9 +20,15 @@
 #include "llama.h"
 
 #define TAG "MyAsrLlm"
+#ifdef __ANDROID__
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 #define LOGW(...) __android_log_print(ANDROID_LOG_WARN, TAG, __VA_ARGS__)
+#else
+#define LOGI(...) do { std::fprintf(stderr, "[INFO] " TAG ": " __VA_ARGS__); std::fprintf(stderr, "\n"); } while (0)
+#define LOGE(...) do { std::fprintf(stderr, "[ERROR] " TAG ": " __VA_ARGS__); std::fprintf(stderr, "\n"); } while (0)
+#define LOGW(...) do { std::fprintf(stderr, "[WARN] " TAG ": " __VA_ARGS__); std::fprintf(stderr, "\n"); } while (0)
+#endif
 
 namespace myasr {
 
@@ -210,11 +219,14 @@ void LlmReranker::Release() {
   cached_candidate_nlls_.clear();
   cached_context_log_denom_ = 0.0f;
   valid_token_bitmask_.clear();
+  valid_token_ids_.clear();
   token_cache_.clear();
   partial_seq_rm_supported_ = true;
   seq_pos_add_supported_ = true;
   has_checkpoint_ = false;
+  kv_cache_synced_with_context_ = true;
   affinity_applied_ = false;
+  stats_ = LlmRerankerStats{};
   abort_prediction_.store(true);
   abort_scoring_.store(true);
   {
@@ -231,6 +243,60 @@ void LlmReranker::Release() {
     snapshot_access_counter_ = 0;
   }
   LOGI("LlmReranker released.");
+}
+
+void LlmReranker::SetConfig(const LlmRerankerConfig& config) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  std::string prev_model_path = config_.model_path;
+  config_ = config;
+  if (config_.model_path.empty()) {
+    config_.model_path = prev_model_path;
+  }
+}
+
+void LlmReranker::ResetCaches() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (ctx_) {
+    llama_memory_t mem = llama_get_memory(ctx_);
+    llama_memory_clear(mem, true);
+  }
+  cached_context_hash_ = 0;
+  cached_context_n_tokens_ = 0;
+  cached_context_tokens_.clear();
+  cached_context_logits_.clear();
+  cached_candidate_nlls_.clear();
+  cached_context_log_denom_ = 0.0f;
+  token_cache_.clear();
+  has_checkpoint_ = false;
+  kv_cache_synced_with_context_ = true;
+  cache_hits_ = 0;
+  cache_misses_ = 0;
+  stats_ = LlmRerankerStats{};
+  {
+    std::lock_guard<std::mutex> s_lock(snapshot_mutex_);
+    for (auto& snap : snapshot_ring_) {
+      snap.context_hash = 0;
+      snap.last_access_seq = 0;
+      snap.n_tokens = 0;
+      snap.tokens.clear();
+      snap.logits.clear();
+      snap.candidate_nlls.clear();
+      snap.log_denom = 0.0f;
+    }
+    snapshot_access_counter_ = 0;
+  }
+}
+
+LlmRerankerStats LlmReranker::GetStats() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return stats_;
+}
+
+void LlmReranker::ResetStats() {
+  std::lock_guard<std::mutex> lock(mutex_);
+  cache_hits_ = 0;
+  cache_misses_ = 0;
+  stats_ = LlmRerankerStats{};
 }
 
 void LlmReranker::RequestAbortScoring() {
@@ -307,6 +373,8 @@ void LlmReranker::ApplyThreadAffinityAndScaling(int batch_token_count) {
 void LlmReranker::BuildValidTargetTokenBitmask() {
   int n_vocab = llama_vocab_n_tokens(vocab_);
   valid_token_bitmask_.assign((n_vocab + 63) / 64, 0ULL);
+  valid_token_ids_.clear();
+  valid_token_ids_.reserve(32768);
 
   char buf[256];
   for (int32_t v = 0; v < n_vocab; ++v) {
@@ -346,6 +414,7 @@ void LlmReranker::BuildValidTargetTokenBitmask() {
     }
     if (valid && has_content) {
       valid_token_bitmask_[static_cast<size_t>(v) >> 6] |= (1ULL << (v & 63));
+      valid_token_ids_.push_back(v);
     }
   }
 }
@@ -425,9 +494,11 @@ bool LlmReranker::Initialize(const std::string& model_path, int n_threads) {
   partial_seq_rm_supported_ = true;
   seq_pos_add_supported_ = true;
   has_checkpoint_ = false;
+  kv_cache_synced_with_context_ = true;
   affinity_applied_ = false;
   cache_hits_ = 0;
   cache_misses_ = 0;
+  stats_ = LlmRerankerStats{};
   abort_scoring_.store(false);
   abort_prediction_.store(false);
   LOGI("LlmReranker initialized successfully (n_ctx=%d, n_seq_max=%d, perf_cores=%zu): %s",
@@ -448,6 +519,41 @@ float LlmReranker::ComputeLogDenominator(const float* logits, int n_vocab) {
     }
   }
   return max_l + std::log(sum_exp);
+}
+
+float LlmReranker::ComputeLogDenominatorAdaptive(
+    const float* logits,
+    int n_vocab,
+    const std::vector<int32_t>* extra_tokens) const {
+  if (!config_.use_fast_subvocab_lse || valid_token_ids_.empty()) {
+    return ComputeLogDenominator(logits, n_vocab);
+  }
+  float max_l = -1e9f;
+  for (int32_t v : valid_token_ids_) {
+    if (logits[v] > max_l) max_l = logits[v];
+  }
+  if (extra_tokens) {
+    for (int32_t v : *extra_tokens) {
+      if (v >= 0 && v < n_vocab && !IsTokenValidForPrediction(v) && logits[v] > max_l) {
+        max_l = logits[v];
+      }
+    }
+  }
+  float sum_exp = 0.0f;
+  const float threshold = max_l - 16.0f;
+  for (int32_t v : valid_token_ids_) {
+    if (logits[v] >= threshold) {
+      sum_exp += std::exp(logits[v] - max_l);
+    }
+  }
+  if (extra_tokens) {
+    for (int32_t v : *extra_tokens) {
+      if (v >= 0 && v < n_vocab && !IsTokenValidForPrediction(v) && logits[v] >= threshold) {
+        sum_exp += std::exp(logits[v] - max_l);
+      }
+    }
+  }
+  return max_l + std::log(std::max(1e-12f, sum_exp));
 }
 
 const std::vector<int32_t>& LlmReranker::GetOrTokenizeCandidate(const std::string& surface) {
@@ -489,6 +595,28 @@ const ContextLogitsSnapshot* LlmReranker::FindSnapshotByTokensLocked(
     }
   }
   return nullptr;
+}
+
+const ContextLogitsSnapshot* LlmReranker::FindSnapshotBySuffixLocked(
+    const std::vector<int32_t>& tokens,
+    int min_suffix_tokens) const {
+  if (min_suffix_tokens <= 0 || static_cast<int>(tokens.size()) < min_suffix_tokens) {
+    return nullptr;
+  }
+  const size_t suffix_len = static_cast<size_t>(min_suffix_tokens);
+  const ContextLogitsSnapshot* best = nullptr;
+  uint64_t best_seq = 0;
+  for (const auto& snap : snapshot_ring_) {
+    if (snap.logits.empty() || snap.tokens.size() < suffix_len) continue;
+    bool match = std::equal(
+        tokens.end() - suffix_len, tokens.end(),
+        snap.tokens.end() - suffix_len);
+    if (match && snap.last_access_seq >= best_seq) {
+      best = &snap;
+      best_seq = snap.last_access_seq;
+    }
+  }
+  return best;
 }
 
 void LlmReranker::UpsertSnapshot(
@@ -555,15 +683,55 @@ bool LlmReranker::RollbackOrRestoreContextState() {
   return true;
 }
 
+bool LlmReranker::DecodeFullContextIntoKvLocked(const std::vector<int32_t>& context_tokens) {
+  if (!ctx_ || context_tokens.empty()) return false;
+  llama_memory_t mem = llama_get_memory(ctx_);
+  llama_memory_clear(mem, true);
+  has_checkpoint_ = false;
+
+  const int n_tokens = static_cast<int>(context_tokens.size());
+  ApplyThreadAffinityAndScaling(n_tokens);
+  llama_batch batch = llama_batch_init(n_tokens, 0, 1);
+  for (int i = 0; i < n_tokens; ++i) {
+    batch.token[i] = context_tokens[i];
+    batch.pos[i] = i;
+    batch.n_seq_id[i] = 1;
+    batch.seq_id[i][0] = 0;
+    batch.logits[i] = (i == n_tokens - 1);
+  }
+  batch.n_tokens = n_tokens;
+  int ret = llama_decode(ctx_, batch);
+  llama_batch_free(batch);
+  if (ret != 0) return false;
+
+  stats_.prefill_tokens_decoded += static_cast<uint64_t>(n_tokens);
+  float* raw_logits = llama_get_logits_ith(ctx_, -1);
+  if (!raw_logits) return false;
+  const int n_vocab = llama_vocab_n_tokens(vocab_);
+  cached_context_logits_.assign(raw_logits, raw_logits + n_vocab);
+  cached_context_log_denom_ = ComputeLogDenominatorAdaptive(cached_context_logits_.data(), n_vocab);
+  cached_context_n_tokens_ = n_tokens;
+  cached_context_tokens_ = context_tokens;
+  kv_cache_synced_with_context_ = true;
+  if (!partial_seq_rm_supported_) {
+    llama_memory_seq_rm(mem, kCheckpointSeqId, -1, -1);
+    llama_memory_seq_cp(mem, 0, kCheckpointSeqId, -1, -1);
+    has_checkpoint_ = true;
+  }
+  UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
+                 cached_context_log_denom_, cached_candidate_nlls_);
+  return true;
+}
+
 bool LlmReranker::EnsureContextCached(const std::string& context) {
   std::string effective_context = context.empty() ? "<s>" : context;
   uint64_t current_hash = ComputeContextHash(effective_context);
   if (current_hash == cached_context_hash_ && cached_context_n_tokens_ > 0 && !cached_context_tokens_.empty()) {
     cache_hits_++;
+    stats_.cache_hits++;
     return true;
   }
 
-  cache_misses_++;
   llama_memory_t mem = llama_get_memory(ctx_);
 
   std::vector<llama_token> context_tokens(config_.n_ctx);
@@ -576,12 +744,15 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     cached_context_n_tokens_ = 0;
     cached_context_tokens_.clear();
     has_checkpoint_ = false;
+    kv_cache_synced_with_context_ = true;
+    cache_misses_++;
+    stats_.cache_misses++;
     return false;
   }
   context_tokens.resize(n_tokens);
 
-  // 1. Compute standard Longest Common Prefix (LCP) from index 0
-  int old_n = static_cast<int>(cached_context_tokens_.size());
+  // If the KV cache was not synced due to a prior suffix-approx hit, LCP/seq_add cannot reuse KV directly
+  int old_n = kv_cache_synced_with_context_ ? static_cast<int>(cached_context_tokens_.size()) : 0;
   int common_prefix_len = 0;
   int max_check = std::min(old_n, n_tokens);
   while (common_prefix_len < max_check &&
@@ -590,7 +761,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
   }
 
   // CASE A: Exact token sequence match
-  if (common_prefix_len == n_tokens && old_n == n_tokens) {
+  if (kv_cache_synced_with_context_ && common_prefix_len == n_tokens && old_n == n_tokens) {
     if (!partial_seq_rm_supported_ && !has_checkpoint_) {
       llama_memory_seq_rm(mem, kCheckpointSeqId, -1, -1);
       llama_memory_seq_cp(mem, 0, kCheckpointSeqId, -1, -1);
@@ -598,11 +769,12 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     }
     cached_context_hash_ = current_hash;
     cache_hits_++;
+    stats_.cache_hits++;
     return true;
   }
 
   // CASE B (Idea 7): Prefix Truncation on Undo / Backspace (common_prefix_len == n_tokens < old_n)
-  if (common_prefix_len == n_tokens && n_tokens < old_n && partial_seq_rm_supported_) {
+  if (kv_cache_synced_with_context_ && common_prefix_len == n_tokens && n_tokens < old_n && partial_seq_rm_supported_) {
     const ContextLogitsSnapshot* ring_snap = nullptr;
     {
       std::lock_guard<std::mutex> s_lock(snapshot_mutex_);
@@ -618,7 +790,9 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
         cached_context_log_denom_ = ring_snap->log_denom;
         cached_candidate_nlls_ = ring_snap->candidate_nlls;
         has_checkpoint_ = false;
+        kv_cache_synced_with_context_ = true;
         cache_hits_++;
+        stats_.cache_hits++;
         return true;  // 0ms instant Undo recovery without llama_decode!
       }
     }
@@ -628,7 +802,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
   }
 
   // CASE C (Idea 2): Sliding Window Overlap Detection & RoPE Position-Shift (seq_add)
-  if (common_prefix_len <= 1 && old_n >= 6 && n_tokens >= 6 &&
+  if (kv_cache_synced_with_context_ && common_prefix_len <= 1 && old_n >= 6 && n_tokens >= 6 &&
       partial_seq_rm_supported_ && seq_pos_add_supported_ &&
       cached_context_tokens_[0] == context_tokens[0]) {
     int best_shift_k = 0;
@@ -670,6 +844,30 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     }
   }
 
+  // CASE D (Idea C1): Suffix-Approx Cache Hit on cold KV miss (reuses snapshot logits without decode)
+  if (config_.enable_suffix_approx_cache && common_prefix_len <= 1 &&
+      n_tokens >= config_.suffix_approx_min_tokens) {
+    std::lock_guard<std::mutex> s_lock(snapshot_mutex_);
+    const ContextLogitsSnapshot* approx_snap =
+        FindSnapshotBySuffixLocked(context_tokens, config_.suffix_approx_min_tokens);
+    if (approx_snap != nullptr) {
+      cached_context_hash_ = current_hash;
+      cached_context_n_tokens_ = n_tokens;
+      cached_context_tokens_ = std::move(context_tokens);
+      cached_context_logits_ = approx_snap->logits;
+      cached_context_log_denom_ = approx_snap->log_denom;
+      cached_candidate_nlls_.clear();
+      has_checkpoint_ = false;
+      kv_cache_synced_with_context_ = false;
+      cache_hits_++;
+      stats_.cache_hits++;
+      stats_.suffix_approx_hits++;
+      return true;
+    }
+  }
+
+  cache_misses_++;
+  stats_.cache_misses++;
   cached_candidate_nlls_.clear();
 
   int n_new_tokens = n_tokens - common_prefix_len;
@@ -714,9 +912,12 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     cached_context_n_tokens_ = 0;
     cached_context_tokens_.clear();
     has_checkpoint_ = false;
+    kv_cache_synced_with_context_ = true;
     llama_memory_clear(mem, true);
     return false;
   }
+
+  stats_.prefill_tokens_decoded += static_cast<uint64_t>(n_new_tokens);
 
   float* raw_logits = llama_get_logits_ith(ctx_, -1);
   if (!raw_logits) {
@@ -726,16 +927,18 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     cached_context_tokens_.clear();
     cached_context_logits_.clear();
     has_checkpoint_ = false;
+    kv_cache_synced_with_context_ = true;
     return false;
   }
 
   int n_vocab = llama_vocab_n_tokens(vocab_);
   cached_context_logits_.assign(raw_logits, raw_logits + n_vocab);
-  cached_context_log_denom_ = ComputeLogDenominator(cached_context_logits_.data(), n_vocab);
+  cached_context_log_denom_ = ComputeLogDenominatorAdaptive(cached_context_logits_.data(), n_vocab);
 
   cached_context_hash_ = current_hash;
   cached_context_n_tokens_ = n_tokens;
   cached_context_tokens_ = std::move(context_tokens);
+  kv_cache_synced_with_context_ = true;
   if (!partial_seq_rm_supported_) {
     llama_memory_seq_rm(mem, kCheckpointSeqId, -1, -1);
     llama_memory_seq_cp(mem, 0, kCheckpointSeqId, -1, -1);
@@ -797,12 +1000,17 @@ bool LlmReranker::TryFastScoreCandidates(
   out_is_complete->assign(candidates.size(), false);
 
   std::vector<llama_token> ctokens(32);
+  std::vector<llama_token> first_tokens(candidates.size(), -1);
+  std::vector<float> surrogate_nlls(candidates.size(), 20.0f);
+  bool has_incomplete = false;
+
   for (size_t i = 0; i < candidates.size(); ++i) {
     const std::string& cand_str = candidates[i];
     auto it = snap->candidate_nlls.find(cand_str);
     if (it != snap->candidate_nlls.end()) {
       (*out_neg_logprobs)[i] = it->second;
       (*out_is_complete)[i] = true;
+      surrogate_nlls[i] = it->second;
       continue;
     }
 
@@ -811,13 +1019,78 @@ bool LlmReranker::TryFastScoreCandidates(
                                        false, false);
     if (n_cand_tokens > 0) {
       llama_token t0 = ctokens[0];
-      float t0_nll = -(logits[t0] - log_denom);
+      first_tokens[i] = t0;
+      float t0_nll = std::max(0.0f, -(logits[t0] - log_denom));
       if (n_cand_tokens == 1) {
         (*out_neg_logprobs)[i] = t0_nll;
         (*out_is_complete)[i] = true;
+        surrogate_nlls[i] = t0_nll;
       } else {
-        (*out_neg_logprobs)[i] = t0_nll + static_cast<float>(n_cand_tokens - 1) * 0.8f;
-        (*out_is_complete)[i] = false;
+        size_t extra_toks = std::min<size_t>(3, static_cast<size_t>(n_cand_tokens - 1));
+        float s_nll = t0_nll + config_.token0_extra_token_nll_prior * static_cast<float>(extra_toks);
+        (*out_neg_logprobs)[i] = s_nll;
+        surrogate_nlls[i] = s_nll;
+        if (config_.stage2_policy == Stage2Policy::NEVER_TOKEN0_ONLY) {
+          (*out_is_complete)[i] = true;
+        } else {
+          (*out_is_complete)[i] = false;
+          has_incomplete = true;
+        }
+      }
+    }
+  }
+
+  if (has_incomplete &&
+      (config_.stage2_policy == Stage2Policy::COLLISION_AND_CLOSE_ONLY ||
+       config_.stage2_policy == Stage2Policy::EXACT_COLLISION_ONLY)) {
+    std::vector<size_t> order(candidates.size());
+    for (size_t i = 0; i < candidates.size(); ++i) order[i] = i;
+    std::sort(order.begin(), order.end(), [&](size_t a, size_t b) {
+      return surrogate_nlls[a] < surrogate_nlls[b];
+    });
+    if (config_.stage2_policy == Stage2Policy::EXACT_COLLISION_ONLY) {
+      bool top1_collides = false;
+      if (!order.empty() && first_tokens[order[0]] >= 0) {
+        llama_token t0_top1 = first_tokens[order[0]];
+        float cutoff = surrogate_nlls[order[0]] + config_.stage2_close_gap_nats + 1.0f;
+        for (size_t b = 1; b < order.size(); ++b) {
+          if (surrogate_nlls[order[b]] > cutoff) break;
+          if (first_tokens[order[b]] == t0_top1 &&
+              (!(*out_is_complete)[order[0]] || !(*out_is_complete)[order[b]])) {
+            top1_collides = true;
+            break;
+          }
+        }
+      }
+      if (!top1_collides) {
+        for (size_t i = 0; i < candidates.size(); ++i) {
+          if (first_tokens[i] >= 0) {
+            (*out_is_complete)[i] = true;
+          }
+        }
+      }
+    } else {
+      bool has_collision = false;
+      size_t top_check = std::min<size_t>(order.size(), 6);
+      for (size_t a = 0; a < top_check && !has_collision; ++a) {
+        llama_token ta = first_tokens[order[a]];
+        if (ta < 0) continue;
+        for (size_t b = a + 1; b < top_check; ++b) {
+          if (first_tokens[order[b]] == ta &&
+              (!(*out_is_complete)[order[a]] || !(*out_is_complete)[order[b]])) {
+            has_collision = true;
+            break;
+          }
+        }
+      }
+      bool wide_gap = (order.size() < 2) ||
+                      ((surrogate_nlls[order[1]] - surrogate_nlls[order[0]]) >= (config_.stage2_close_gap_nats + 1.5f));
+      if (!has_collision && wide_gap) {
+        for (size_t i = 0; i < candidates.size(); ++i) {
+          if (first_tokens[i] >= 0) {
+            (*out_is_complete)[i] = true;
+          }
+        }
       }
     }
   }
@@ -864,8 +1137,10 @@ bool LlmReranker::ScoreCandidatesWithPriors(
     std::string surface;
     std::vector<llama_token> tokens;
     float token0_nll = 20.0f;
+    float surrogate_nll = 20.0f;
     float prior_penalty = 0.0f;
     float lower_bound_total = 20.0f;
+    float surrogate_total = 20.0f;
     bool is_complete = false;
     std::vector<int> tree_node_path;
   };
@@ -873,6 +1148,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
   std::vector<CandidateInfo> cand_infos;
   cand_infos.reserve(candidates.size());
   float best_completed_total_score = 999.0f;
+  const bool use_approx_policy = (config_.stage2_policy != Stage2Policy::ALWAYS_FULL);
 
   // --- STAGE 1: Token-0 Evaluation & Memoized Cache Lookup ---
   for (size_t i = 0; i < candidates.size(); ++i) {
@@ -884,7 +1160,9 @@ bool LlmReranker::ScoreCandidatesWithPriors(
     auto it = cached_candidate_nlls_.find(info.surface);
     if (it != cached_candidate_nlls_.end()) {
       info.token0_nll = it->second;
+      info.surrogate_nll = it->second;
       info.lower_bound_total = it->second + info.prior_penalty;
+      info.surrogate_total = info.lower_bound_total;
       info.is_complete = true;
       (*out_neg_logprobs)[i] = it->second;
       if (info.lower_bound_total < best_completed_total_score) {
@@ -898,7 +1176,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
     float best_t0_nll = 20.0f;
     if (!base_tokens.empty()) {
       info.tokens = base_tokens;
-      best_t0_nll = -(logits[info.tokens[0]] - log_denom);
+      best_t0_nll = std::max(0.0f, -(logits[info.tokens[0]] - log_denom));
     }
 
     // Space-adaptive BPE check for Latin / ASCII alphanumeric words
@@ -906,7 +1184,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
         !info.surface.empty() && std::isalnum(static_cast<unsigned char>(info.surface.front()))) {
       const auto& spaced_tokens = GetOrTokenizeCandidate(" " + info.surface);
       if (!spaced_tokens.empty()) {
-        float s_nll = -(logits[spaced_tokens[0]] - log_denom);
+        float s_nll = std::max(0.0f, -(logits[spaced_tokens[0]] - log_denom));
         if (s_nll < best_t0_nll) {
           best_t0_nll = s_nll;
           info.tokens = spaced_tokens;
@@ -916,14 +1194,20 @@ bool LlmReranker::ScoreCandidatesWithPriors(
 
     info.token0_nll = best_t0_nll;
     info.lower_bound_total = best_t0_nll + info.prior_penalty;
-    (*out_neg_logprobs)[i] = best_t0_nll;
-
     if (info.tokens.size() <= 1) {
+      info.surrogate_nll = best_t0_nll;
+      info.surrogate_total = info.lower_bound_total;
       info.is_complete = true;
+      (*out_neg_logprobs)[i] = best_t0_nll;
       cached_candidate_nlls_[info.surface] = best_t0_nll;
       if (info.lower_bound_total < best_completed_total_score) {
         best_completed_total_score = info.lower_bound_total;
       }
+    } else {
+      size_t extra_toks = std::min<size_t>(3, info.tokens.size() - 1);
+      info.surrogate_nll = best_t0_nll + config_.token0_extra_token_nll_prior * static_cast<float>(extra_toks);
+      info.surrogate_total = info.surrogate_nll + info.prior_penalty;
+      (*out_neg_logprobs)[i] = use_approx_policy ? info.surrogate_nll : best_t0_nll;
     }
     cand_infos.push_back(std::move(info));
   }
@@ -932,18 +1216,163 @@ bool LlmReranker::ScoreCandidatesWithPriors(
   std::vector<int> eval_order(cand_infos.size());
   for (size_t i = 0; i < cand_infos.size(); ++i) eval_order[i] = static_cast<int>(i);
   std::sort(eval_order.begin(), eval_order.end(), [&](int a, int b) {
+    if (use_approx_policy) {
+      return cand_infos[a].surrogate_total < cand_infos[b].surrogate_total;
+    }
     return cand_infos[a].lower_bound_total < cand_infos[b].lower_bound_total;
   });
 
   if (eval_order.size() >= 2) {
     const auto& top1 = cand_infos[eval_order[0]];
     const auto& top2 = cand_infos[eval_order[1]];
-    if (top1.is_complete &&
-        (top2.lower_bound_total - top1.lower_bound_total) >= config_.decisive_top1_gap_nats) {
+    float gap = use_approx_policy
+        ? (top2.surrogate_total - top1.surrogate_total)
+        : (top2.lower_bound_total - top1.lower_bound_total);
+    if (top1.is_complete && gap >= config_.decisive_top1_gap_nats) {
+      stats_.stage2_skipped_calls++;
       UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
                      cached_context_log_denom_, cached_candidate_nlls_);
       return true;
     }
+  }
+
+  // --- IDEA A2: Zero-Stage-2 / Collision-Only Stage 2 Gating ---
+  if (config_.stage2_policy == Stage2Policy::NEVER_TOKEN0_ONLY) {
+    for (const auto& info : cand_infos) {
+      if (!info.is_complete) {
+        cached_candidate_nlls_[info.surface] = info.surrogate_nll;
+      }
+    }
+    stats_.stage2_skipped_calls++;
+    if (kv_cache_synced_with_context_) {
+      UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
+                     cached_context_log_denom_, cached_candidate_nlls_);
+    }
+    return true;
+  }
+
+  llama_token exact_collision_filter_tok = -1;
+  if (config_.stage2_policy == Stage2Policy::EXACT_COLLISION_ONLY) {
+    bool need_stage2 = false;
+    if (!eval_order.empty()) {
+      const auto& top1 = cand_infos[eval_order[0]];
+      if (!top1.tokens.empty()) {
+        llama_token t0_top1 = top1.tokens[0];
+        float cutoff = top1.surrogate_total + config_.stage2_close_gap_nats;
+        for (size_t b = 1; b < eval_order.size(); ++b) {
+          const auto& cb = cand_infos[eval_order[b]];
+          if (cb.surrogate_total > cutoff) break;
+          if (!cb.tokens.empty() && cb.tokens[0] == t0_top1 &&
+              (!top1.is_complete || !cb.is_complete)) {
+            need_stage2 = true;
+            exact_collision_filter_tok = t0_top1;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!need_stage2) {
+      for (const auto& info : cand_infos) {
+        if (!info.is_complete) {
+          cached_candidate_nlls_[info.surface] = info.surrogate_nll;
+        }
+      }
+      stats_.stage2_skipped_calls++;
+      if (kv_cache_synced_with_context_) {
+        UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
+                       cached_context_log_denom_, cached_candidate_nlls_);
+      }
+      return true;
+    }
+  } else if (config_.stage2_policy == Stage2Policy::COLLISION_AND_CLOSE_ONLY) {
+    bool need_stage2 = false;
+    float best_surrogate = !eval_order.empty() ? cand_infos[eval_order[0]].surrogate_total : 0.0f;
+    size_t max_check = std::min<size_t>(eval_order.size(),
+        static_cast<size_t>(std::max(6, config_.max_stage2_candidates)));
+
+    // 1. Check token-0 prefix collision among top close candidates (with >= 1 multi-token candidate)
+    for (size_t a = 0; a < max_check && !need_stage2; ++a) {
+      const auto& ca = cand_infos[eval_order[a]];
+      if (ca.tokens.empty() || ca.surrogate_total > best_surrogate + config_.stage2_prune_margin_nats) {
+        continue;
+      }
+      for (size_t b = a + 1; b < max_check; ++b) {
+        const auto& cb = cand_infos[eval_order[b]];
+        if (cb.tokens.empty() || cb.surrogate_total > best_surrogate + config_.stage2_prune_margin_nats) {
+          continue;
+        }
+        if (ca.tokens[0] == cb.tokens[0] && (!ca.is_complete || !cb.is_complete)) {
+          need_stage2 = true;
+          break;
+        }
+      }
+    }
+
+    // 2. Check close ambiguous race where multi-token candidates are within stage2_close_gap_nats
+    if (!need_stage2 && eval_order.size() >= 2) {
+      float second_surrogate = cand_infos[eval_order[1]].surrogate_total;
+      if ((second_surrogate - best_surrogate) < config_.stage2_close_gap_nats) {
+        for (size_t k = 0; k < max_check; ++k) {
+          const auto& ck = cand_infos[eval_order[k]];
+          if (ck.surrogate_total > best_surrogate + config_.stage2_close_gap_nats) break;
+          if (!ck.is_complete && ck.tokens.size() >= 2) {
+            need_stage2 = true;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!need_stage2) {
+      for (const auto& info : cand_infos) {
+        if (!info.is_complete) {
+          cached_candidate_nlls_[info.surface] = info.surrogate_nll;
+        }
+      }
+      stats_.stage2_skipped_calls++;
+      if (kv_cache_synced_with_context_) {
+        UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
+                       cached_context_log_denom_, cached_candidate_nlls_);
+      }
+      return true;
+    }
+  }
+
+  // Ensure KV cache is genuinely materialized if a suffix-approx cache hit deferred Prefill
+  if (!kv_cache_synced_with_context_) {
+    if (!DecodeFullContextIntoKvLocked(cached_context_tokens_)) {
+      return true;  // Return Stage-1 surrogate scores safely if decode fails
+    }
+    const float* exact_logits = cached_context_logits_.data();
+    const float exact_denom = cached_context_log_denom_;
+    best_completed_total_score = 999.0f;
+    for (auto& info : cand_infos) {
+      if (!info.tokens.empty()) {
+        info.token0_nll = std::max(0.0f, -(exact_logits[info.tokens[0]] - exact_denom));
+        info.lower_bound_total = info.token0_nll + info.prior_penalty;
+        if (info.tokens.size() <= 1) {
+          info.surrogate_nll = info.token0_nll;
+          info.surrogate_total = info.lower_bound_total;
+          (*out_neg_logprobs)[info.index] = info.token0_nll;
+          cached_candidate_nlls_[info.surface] = info.token0_nll;
+          if (info.lower_bound_total < best_completed_total_score) {
+            best_completed_total_score = info.lower_bound_total;
+          }
+        } else {
+          size_t extra_toks = std::min<size_t>(3, info.tokens.size() - 1);
+          info.surrogate_nll = info.token0_nll + config_.token0_extra_token_nll_prior * static_cast<float>(extra_toks);
+          info.surrogate_total = info.surrogate_nll + info.prior_penalty;
+          (*out_neg_logprobs)[info.index] = use_approx_policy ? info.surrogate_nll : info.token0_nll;
+        }
+      }
+    }
+    std::sort(eval_order.begin(), eval_order.end(), [&](int a, int b) {
+      if (use_approx_policy) {
+        return cand_infos[a].surrogate_total < cand_infos[b].surrogate_total;
+      }
+      return cand_infos[a].lower_bound_total < cand_infos[b].lower_bound_total;
+    });
   }
 
   float dynamic_prune_cutoff = best_completed_total_score + config_.stage2_prune_margin_nats;
@@ -961,18 +1390,35 @@ bool LlmReranker::ScoreCandidatesWithPriors(
   std::vector<int> active_cand_indices;
   int next_branch_seq_id = 1;  // Branch seq_ids: 1 .. (kCheckpointSeqId - 1) = 1..14
   const int max_branch_seqs = kCheckpointSeqId - 1;
+  const int effective_max_cands = use_approx_policy
+      ? std::min(max_branch_seqs, std::max(1, config_.max_stage2_candidates))
+      : max_branch_seqs;
+  const size_t effective_max_toks = use_approx_policy
+      ? static_cast<size_t>(std::max(2, config_.max_stage2_tree_depth + 1))
+      : static_cast<size_t>(8);
 
   for (int ord_idx : eval_order) {
     auto& info = cand_infos[ord_idx];
     if (info.is_complete || info.tokens.size() <= 1) continue;
-
-    if (info.lower_bound_total > dynamic_prune_cutoff) {
-      cached_candidate_nlls_[info.surface] = info.token0_nll;
+    if (exact_collision_filter_tok >= 0 &&
+        (info.tokens.empty() || info.tokens[0] != exact_collision_filter_tok)) {
+      cached_candidate_nlls_[info.surface] = info.surrogate_nll;
       continue;
     }
-    if (next_branch_seq_id > max_branch_seqs) break;
 
-    size_t max_toks = std::min<size_t>(8, info.tokens.size());
+    if (info.lower_bound_total > dynamic_prune_cutoff) {
+      cached_candidate_nlls_[info.surface] = use_approx_policy ? info.surrogate_nll : info.token0_nll;
+      continue;
+    }
+    if (static_cast<int>(active_cand_indices.size()) >= effective_max_cands ||
+        next_branch_seq_id > max_branch_seqs) {
+      if (use_approx_policy) {
+        cached_candidate_nlls_[info.surface] = info.surrogate_nll;
+      }
+      continue;
+    }
+
+    size_t max_toks = std::min<size_t>(effective_max_toks, info.tokens.size());
     int n_prefix = static_cast<int>(max_toks) - 1;  // Last-Token Elision
 
     int curr_parent = -1;
@@ -1031,6 +1477,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
 
   // --- STAGE 2 EXECUTION: Single-Pass Packed Prefix-Tree Decode ---
   if (!tree_nodes.empty() && !active_cand_indices.empty() && !abort_scoring_.load()) {
+    stats_.stage2_calls++;
     llama_memory_t mem = llama_get_memory(ctx_);
     const int start_pos = cached_context_n_tokens_;
     const int num_assigned_seqs = next_branch_seq_id - 1;
@@ -1045,6 +1492,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
       }
 
       const int n_batch_nodes = static_cast<int>(tree_nodes.size());
+      stats_.stage2_tree_nodes_decoded += static_cast<uint64_t>(n_batch_nodes);
       ApplyThreadAffinityAndScaling(n_batch_nodes);
 
       llama_batch tree_batch = llama_batch_init(n_batch_nodes, 0, max_branch_seqs + 1);
@@ -1067,7 +1515,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
       tree_batch.n_tokens = n_batch_nodes;
 
       if (llama_decode(ctx_, tree_batch) == 0 && !abort_scoring_.load()) {
-        // Idea 4: Compute log_denom at most once per internal tree node and share across edges
+        // Idea 4 & B3: Compute adaptive log_denom once per internal tree node
         for (int ord_idx : active_cand_indices) {
           auto& info = cand_infos[ord_idx];
           float total_nll = info.token0_nll;
@@ -1078,11 +1526,15 @@ bool LlmReranker::ScoreCandidatesWithPriors(
             float* step_logits = llama_get_logits_ith(ctx_, node.batch_order_idx);
             if (!step_logits) continue;
             if (!node.log_denom_ready) {
-              node.computed_log_denom = ComputeLogDenominator(step_logits, n_vocab);
+              node.computed_log_denom = ComputeLogDenominatorAdaptive(step_logits, n_vocab);
               node.log_denom_ready = true;
             }
             llama_token next_tok = info.tokens[d + 1];
-            total_nll += -(step_logits[next_tok] - node.computed_log_denom);
+            total_nll += std::max(0.0f, -(step_logits[next_tok] - node.computed_log_denom));
+          }
+          if (use_approx_policy && info.tokens.size() > static_cast<size_t>(n_prefix + 1)) {
+            total_nll += config_.token0_extra_token_nll_prior *
+                         static_cast<float>(info.tokens.size() - static_cast<size_t>(n_prefix + 1));
           }
           (*out_neg_logprobs)[info.index] = total_nll;
           cached_candidate_nlls_[info.surface] = total_nll;
@@ -1103,6 +1555,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
         if (abort_scoring_.load()) break;
         auto& info = cand_infos[ord_idx];
         int n_prefix = static_cast<int>(info.tree_node_path.size());
+        stats_.stage2_tree_nodes_decoded += static_cast<uint64_t>(n_prefix);
         ApplyThreadAffinityAndScaling(n_prefix);
 
         llama_batch b = llama_batch_init(n_prefix, 0, 1);
@@ -1120,8 +1573,12 @@ bool LlmReranker::ScoreCandidatesWithPriors(
           for (int d = 0; d < n_prefix; ++d) {
             float* step_logits = llama_get_logits_ith(ctx_, d);
             if (!step_logits) continue;
-            float s_denom = ComputeLogDenominator(step_logits, n_vocab);
-            total_nll += -(step_logits[info.tokens[d + 1]] - s_denom);
+            float s_denom = ComputeLogDenominatorAdaptive(step_logits, n_vocab);
+            total_nll += std::max(0.0f, -(step_logits[info.tokens[d + 1]] - s_denom));
+          }
+          if (use_approx_policy && info.tokens.size() > static_cast<size_t>(n_prefix + 1)) {
+            total_nll += config_.token0_extra_token_nll_prior *
+                         static_cast<float>(info.tokens.size() - static_cast<size_t>(n_prefix + 1));
           }
           (*out_neg_logprobs)[info.index] = total_nll;
           cached_candidate_nlls_[info.surface] = total_nll;
@@ -1130,6 +1587,8 @@ bool LlmReranker::ScoreCandidatesWithPriors(
         RollbackOrRestoreContextState();
       }
     }
+  } else {
+    stats_.stage2_skipped_calls++;
   }
 
   UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
@@ -1146,6 +1605,7 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
   if (!initialized_ || !ctx_ || !model_ || !vocab_) {
     return false;
   }
+  stats_.next_phrase_calls++;
   out_predictions->clear();
   if (!EnsureContextCached(context) || cached_context_logits_.empty()) {
     return false;
@@ -1154,14 +1614,21 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
   const int n_vocab = llama_vocab_n_tokens(vocab_);
   const float* logits = cached_context_logits_.data();
 
-  // Filter initial tokens using precomputed valid_token_bitmask_ (Idea 6)
+  // Filter initial tokens using precomputed valid_token_ids_ (Idea 6 & B3)
   std::vector<std::pair<float, llama_token>> scored_tokens;
-  scored_tokens.reserve(4096);
-  for (llama_token v = 0; v < n_vocab; ++v) {
-    if (!IsTokenValidForPrediction(v)) continue;
-    scored_tokens.emplace_back(logits[v], v);
+  if (!valid_token_ids_.empty()) {
+    scored_tokens.reserve(valid_token_ids_.size());
+    for (int32_t v : valid_token_ids_) {
+      scored_tokens.emplace_back(logits[v], v);
+    }
+  } else {
+    scored_tokens.reserve(4096);
+    for (llama_token v = 0; v < n_vocab; ++v) {
+      if (!IsTokenValidForPrediction(v)) continue;
+      scored_tokens.emplace_back(logits[v], v);
+    }
   }
-  size_t top_k_init = std::min<size_t>(scored_tokens.size(), 16);
+  size_t top_k_init = std::min<size_t>(scored_tokens.size(), 24);
   std::partial_sort(scored_tokens.begin(),
                     scored_tokens.begin() + top_k_init,
                     scored_tokens.end(),
@@ -1174,7 +1641,9 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
     bool finished = false;
   };
 
-  const int target_beams = std::min(max_candidates, 6);
+  const int target_beams = config_.enable_zero_decode_next_phrase
+      ? std::min(max_candidates, 12)
+      : std::min(max_candidates, 6);
   std::vector<ActiveBeam> beams;
   beams.reserve(target_beams);
 
@@ -1196,8 +1665,48 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
 
   if (beams.empty()) return false;
 
+  if (config_.enable_zero_decode_next_phrase || max_tokens <= 1) {
+    for (auto& beam : beams) {
+      SanitizeIncompleteUtf8Tail(&beam.text);
+      std::string cleaned = TrimWhitespace(beam.text);
+      if (!cleaned.empty() &&
+          std::find(out_predictions->begin(), out_predictions->end(), cleaned) == out_predictions->end()) {
+        out_predictions->push_back(std::move(cleaned));
+      }
+    }
+    return !out_predictions->empty();
+  }
+
+  if (!kv_cache_synced_with_context_) {
+    if (!DecodeFullContextIntoKvLocked(cached_context_tokens_)) {
+      return false;
+    }
+  }
+
   llama_memory_t mem = llama_get_memory(ctx_);
   const int start_pos = cached_context_n_tokens_;
+
+  auto select_best_next = [&](const float* next_logits) -> llama_token {
+    llama_token best_next = -1;
+    float best_next_l = -1e9f;
+    if (!valid_token_ids_.empty()) {
+      for (int32_t v : valid_token_ids_) {
+        if (next_logits[v] > best_next_l) {
+          best_next_l = next_logits[v];
+          best_next = v;
+        }
+      }
+    } else {
+      for (llama_token v = 0; v < n_vocab; ++v) {
+        if (!IsTokenValidForPrediction(v)) continue;
+        if (next_logits[v] > best_next_l) {
+          best_next_l = next_logits[v];
+          best_next = v;
+        }
+      }
+    }
+    return best_next;
+  };
 
   if (partial_seq_rm_supported_) {
     // PARALLEL LOCKSTEP DECODING across all K beams (Idea 6)
@@ -1226,6 +1735,7 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
       }
       batch.n_tokens = n_active;
 
+      stats_.next_phrase_decode_calls++;
       int ret = llama_decode(ctx_, batch);
       llama_batch_free(batch);
       if (ret != 0 || abort_prediction_.load()) break;
@@ -1238,15 +1748,7 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
           continue;
         }
 
-        llama_token best_next = -1;
-        float best_next_l = -1e9f;
-        for (llama_token v = 0; v < n_vocab; ++v) {
-          if (!IsTokenValidForPrediction(v)) continue;
-          if (next_logits[v] > best_next_l) {
-            best_next_l = next_logits[v];
-            best_next = v;
-          }
-        }
+        llama_token best_next = select_best_next(next_logits);
         if (best_next < 0 || llama_vocab_is_eog(vocab_, best_next)) {
           beam.finished = true;
           continue;
@@ -1273,6 +1775,7 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
         b.logits[0]    = true;
         b.n_tokens     = 1;
 
+        stats_.next_phrase_decode_calls++;
         if (llama_decode(ctx_, b) != 0) {
           llama_batch_free(b);
           break;
@@ -1282,15 +1785,7 @@ bool LlmReranker::PredictNextPhrases(const std::string& context,
         float* next_logits = llama_get_logits_ith(ctx_, -1);
         if (!next_logits) break;
 
-        llama_token best_next = -1;
-        float best_next_l = -1e9f;
-        for (llama_token v = 0; v < n_vocab; ++v) {
-          if (!IsTokenValidForPrediction(v)) continue;
-          if (next_logits[v] > best_next_l) {
-            best_next_l = next_logits[v];
-            best_next = v;
-          }
-        }
+        llama_token best_next = select_best_next(next_logits);
         if (best_next < 0 || llama_vocab_is_eog(vocab_, best_next)) break;
         AppendTokenPieceAndCheckTermination(vocab_, best_next, &beam.tokens, &beam.text, &beam.finished);
       }

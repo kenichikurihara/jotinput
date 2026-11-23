@@ -521,6 +521,147 @@ object CandidateRerankJudgement {
         )
     }
 
+    const val SLM_GATE_COMPOSING_CLEAR_MARGIN = 1500
+    const val SLM_GATE_SHORT_READING_LEN = 2
+
+    data class SlmInvocationGateInput(
+        val isRerankEnabled: Boolean,
+        val isSlmReady: Boolean,
+        val effectiveCandidateCount: Int,
+        val userDictCandidateCount: Int,
+        val top1IsUserDict: Boolean,
+        val hasTypoObservation: Boolean,
+        val top4KanjiOrKatakanaCount: Int,
+        val top2CostMargin: Int,
+        val readingLength: Int,
+        val isExplicitConversion: Boolean
+    )
+
+    data class SlmInvocationGateDecision(
+        val shouldInvokeSlm: Boolean,
+        val reason: String
+    )
+
+    private fun isAllHiraganaForGate(s: String): Boolean {
+        if (s.isEmpty()) return false
+        return s.all { ch -> ch in '\u3040'..'\u309F' || ch == 'ー' }
+    }
+
+    private fun hasKanjiOrKatakanaForGate(s: String): Boolean {
+        return s.any { ch ->
+            ch in '\u4E00'..'\u9FFF' ||
+                ch in '\u3400'..'\u4DBF' ||
+                ch in '\u30A1'..'\u30FA' ||
+                ch == '々'
+        }
+    }
+
+    private fun baseGateSortKey(c: ConversionCandidate): Int {
+        if (c.source == "user" && c.obsPenalty == 0.0f) {
+            return -100_000 - (c.priority * 1000f).toInt()
+        }
+        return c.dictCost + (c.obsPenalty * 12_000f).toInt()
+    }
+
+    fun extractSlmInvocationGateInput(
+        candidates: List<ConversionCandidate>,
+        reading: String,
+        isExplicitConversion: Boolean,
+        isRerankEnabled: Boolean,
+        isSlmReady: Boolean
+    ): SlmInvocationGateInput {
+        val effCands = candidates.filter { c ->
+            !(isAllHiraganaForGate(c.surface) && c.surface == reading && c.source != "user")
+        }
+        if (effCands.size <= 1) {
+            val singleUserCount = effCands.count { it.source == "user" && it.obsPenalty == 0.0f }
+            val hasObs = effCands.any { it.obsPenalty > 0.0f }
+            val kanjiCount = effCands.count { hasKanjiOrKatakanaForGate(it.surface) }
+            return SlmInvocationGateInput(
+                isRerankEnabled = isRerankEnabled,
+                isSlmReady = isSlmReady,
+                effectiveCandidateCount = effCands.size,
+                userDictCandidateCount = singleUserCount,
+                top1IsUserDict = singleUserCount == 1,
+                hasTypoObservation = hasObs,
+                top4KanjiOrKatakanaCount = kanjiCount,
+                top2CostMargin = Int.MAX_VALUE,
+                readingLength = reading.length,
+                isExplicitConversion = isExplicitConversion
+            )
+        }
+
+        val ordered = effCands.sortedBy { baseGateSortKey(it) }
+        val top1 = ordered[0]
+        val top2 = ordered[1]
+        val userCands = effCands.filter { it.source == "user" && it.obsPenalty == 0.0f }
+        val hasTypoObs = effCands.take(8).any { it.obsPenalty > 0.0f }
+        val top4KanjiCount = ordered.take(4).count { hasKanjiOrKatakanaForGate(it.surface) }
+        val top2Margin = (top2.dictCost - top1.dictCost).coerceAtLeast(0)
+
+        return SlmInvocationGateInput(
+            isRerankEnabled = isRerankEnabled,
+            isSlmReady = isSlmReady,
+            effectiveCandidateCount = effCands.size,
+            userDictCandidateCount = userCands.size,
+            top1IsUserDict = userCands.size == 1 && top1.source == "user" && top1.obsPenalty == 0.0f,
+            hasTypoObservation = hasTypoObs,
+            top4KanjiOrKatakanaCount = top4KanjiCount,
+            top2CostMargin = top2Margin,
+            readingLength = reading.length,
+            isExplicitConversion = isExplicitConversion
+        )
+    }
+
+    /**
+     * DMN Decision Table (BC-2): SlmInvocationGate (Idea A1 Smart-Safe Gate)
+     *
+     * Skips SLM inference on unambiguous non-competing candidates and uncontested
+     * custom-dictionary Top-1 entries while preserving SLM reranking for competing
+     * homophones, typo observations, and competing user-dictionary entries.
+     */
+    val slmInvocationGateDecisionTable: DecisionTable<SlmInvocationGateInput, SlmInvocationGateDecision> = decisionTable(
+        name = "SlmInvocationGate",
+        hitPolicy = HitPolicy.FIRST
+    ) {
+        rule(id = "SLM_GATE_R1", description = "Skip when rerank is disabled or SLM is not ready") {
+            `when` { !it.isRerankEnabled || !it.isSlmReady }
+            thenValue(SlmInvocationGateDecision(shouldInvokeSlm = false, reason = "rerank_disabled_or_not_ready"))
+        }
+        rule(id = "SLM_GATE_R2", description = "Skip when at most one effective candidate remains") {
+            `when` { it.effectiveCandidateCount <= 1 }
+            thenValue(SlmInvocationGateDecision(shouldInvokeSlm = false, reason = "single_effective_candidate"))
+        }
+        rule(id = "SLM_GATE_R3", description = "Skip when an uncontested user dictionary word is already Top-1") {
+            `when` { it.userDictCandidateCount == 1 && it.top1IsUserDict && !it.hasTypoObservation }
+            thenValue(SlmInvocationGateDecision(shouldInvokeSlm = false, reason = "uncontested_user_dict_top1"))
+        }
+        rule(id = "SLM_GATE_R4", description = "Invoke SLM to disambiguate competing user dictionary entries") {
+            `when` { it.userDictCandidateCount >= 2 }
+            thenValue(SlmInvocationGateDecision(shouldInvokeSlm = true, reason = "competing_user_dict"))
+        }
+        rule(id = "SLM_GATE_R5", description = "Invoke SLM when QWERTY/Flick typo observation candidates exist") {
+            `when` { it.hasTypoObservation }
+            thenValue(SlmInvocationGateDecision(shouldInvokeSlm = true, reason = "typo_observation_candidate"))
+        }
+        rule(id = "SLM_GATE_R6", description = "Skip when there are no competing Kanji/Katakana homophones in Top-4") {
+            `when` { it.top4KanjiOrKatakanaCount <= 1 }
+            thenValue(SlmInvocationGateDecision(shouldInvokeSlm = false, reason = "no_kanji_homophone_competition"))
+        }
+        rule(id = "SLM_GATE_R7", description = "Skip during incremental composing on short readings or clear Viterbi margins") {
+            `when` {
+                !it.isExplicitConversion &&
+                    (it.readingLength <= SLM_GATE_SHORT_READING_LEN || it.top2CostMargin >= SLM_GATE_COMPOSING_CLEAR_MARGIN)
+            }
+            thenValue(SlmInvocationGateDecision(shouldInvokeSlm = false, reason = "composing_short_or_clear_margin"))
+        }
+        defaultValue(
+            id = "SLM_GATE_DEFAULT",
+            description = "Invoke SLM for ambiguous Kanji/Katakana homophone competition",
+            value = SlmInvocationGateDecision(shouldInvokeSlm = true, reason = "ambiguous_homophone_race")
+        )
+    }
+
     val executionJudgement: Judgement<ExecutionInput, ExecutionDecision> = executionDecisionTable
     val tapSafeOrderingJudgement: Judgement<TapSafeOrderingInput, TapSafeOrderingDecision> = tapSafeOrderingDecisionTable
     val nextPhraseRerankJudgement: Judgement<NextPhraseRerankInput, JudgementResult<Boolean>> = nextPhraseRerankDecisionTable
@@ -528,6 +669,7 @@ object CandidateRerankJudgement {
     val viewportAwareOrderingJudgement: Judgement<ViewportAwareOrderingInput, ViewportAwareOrderingDecision> = viewportAwareOrderingDecisionTable
     val zeroQueryHorizonJudgement: Judgement<ZeroQueryHorizonInput, ZeroQueryHorizonDecision> = zeroQueryHorizonDecisionTable
     val predictionRestorationJudgement: Judgement<PredictionRestorationInput, PredictionRestorationDecision> = predictionRestorationDecisionTable
+    val slmInvocationGateJudgement: Judgement<SlmInvocationGateInput, SlmInvocationGateDecision> = slmInvocationGateDecisionTable
 
     fun judgeExecution(input: ExecutionInput): ExecutionDecision = executionJudgement.judge(input)
 
@@ -569,6 +711,12 @@ object CandidateRerankJudgement {
 
     fun judgePredictionRestorationWithTrace(input: PredictionRestorationInput): DecisionTrace<PredictionRestorationDecision> =
         predictionRestorationDecisionTable.evaluateWithTrace(input)
+
+    fun judgeSlmInvocationGate(input: SlmInvocationGateInput): SlmInvocationGateDecision =
+        slmInvocationGateJudgement.judge(input)
+
+    fun judgeSlmInvocationGateWithTrace(input: SlmInvocationGateInput): DecisionTrace<SlmInvocationGateDecision> =
+        slmInvocationGateDecisionTable.evaluateWithTrace(input)
 
     /**
      * Applies ZeroQueryHorizonPolicy to fast-path zero-query candidates so Slot 2 preserves

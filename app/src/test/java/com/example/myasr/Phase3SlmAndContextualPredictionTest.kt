@@ -358,4 +358,32 @@ class Phase3SlmAndContextualPredictionTest {
         )
         assertEquals("進めます", ranked[0].surface)
     }
+
+    @Test
+    fun testZeroDecodeNextPhraseTokenExpansion() {
+        // 1. Dynamic sahen tail expansion for single token "し"
+        val sahenExpanded = engine.expandZeroDecodeNextPhraseToken("確認を", "し")
+        assertTrue(
+            "Expected dynamic sahen expansion like 'します'/'しました', got: $sahenExpanded",
+            sahenExpanded.any { it.startsWith("し") && it.length > 1 }
+        )
+
+        // 2. Canonical collocation expansion for particle context
+        val collocationExpanded = engine.expandZeroDecodeNextPhraseToken("資料を", "送")
+        assertTrue(
+            "Expected collocation expansion starting with '送', got: $collocationExpanded",
+            collocationExpanded.all { it.startsWith("送") } && collocationExpanded.isNotEmpty()
+        )
+
+        // 3. History expansion takes effect when user frequently types a continuation
+        engine.commitCandidate(ConversionCandidate(surface = "確認お願いします", reading = "かくにんおねがいします"))
+        val histExpanded = engine.expandZeroDecodeNextPhraseToken("会議で", "確")
+        assertTrue(
+            "Expected history expansion '確認お願いします', got: $histExpanded",
+            histExpanded.contains("確認お願いします")
+        )
+
+        // 4. Empty input stays safe
+        assertTrue(engine.expandZeroDecodeNextPhraseToken("資料を", "   ").isEmpty())
+    }
 }

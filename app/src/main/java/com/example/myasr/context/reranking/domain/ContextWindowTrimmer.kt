@@ -22,10 +22,11 @@ package com.example.myasr.context.reranking.domain
  */
 object ContextWindowTrimmer {
 
-    const val DEFAULT_TARGET_TOKENS = 24
-    const val DEFAULT_MIN_TOKENS = 10
-    const val DEFAULT_MAX_TOKENS = 36
-    const val STICKY_HIGH_WATER_MARK_TOKENS = 56
+    const val DEFAULT_TARGET_TOKENS = 12
+    const val DEFAULT_MIN_TOKENS = 5
+    const val DEFAULT_MAX_TOKENS = 18
+    const val STICKY_HIGH_WATER_MARK_TOKENS = 28
+    const val VOICE_CORRECTION_GATE_TARGET_TOKENS = 6
 
     @Volatile
     private var lastAnchorPrefixSignature: String = ""

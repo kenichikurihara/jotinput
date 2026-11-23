@@ -406,4 +406,132 @@ class CandidateRerankJudgementTest {
         )
         assertEquals(CandidateRerankJudgement.UiRenderStrategy.DEFER_WHILE_USER_TOUCHING, whileTouching.strategy)
     }
+
+    @Test
+    fun `slmInvocationGateDecisionTable covers all rules and protects homophones, user dict, and typos`() {
+        // R1: disabled or not ready
+        val r1 = CandidateRerankJudgement.judgeSlmInvocationGateWithTrace(
+            CandidateRerankJudgement.SlmInvocationGateInput(
+                isRerankEnabled = false,
+                isSlmReady = true,
+                effectiveCandidateCount = 4,
+                userDictCandidateCount = 0,
+                top1IsUserDict = false,
+                hasTypoObservation = false,
+                top4KanjiOrKatakanaCount = 3,
+                top2CostMargin = 200,
+                readingLength = 3,
+                isExplicitConversion = true
+            )
+        )
+        assertEquals("SLM_GATE_R1", r1.selectedRuleId)
+        assertFalse(r1.result.shouldInvokeSlm)
+
+        // R2: single effective candidate (trailing echo hiragana excluded)
+        val extractedSingle = CandidateRerankJudgement.extractSlmInvocationGateInput(
+            candidates = listOf(
+                ConversionCandidate(surface = "ある", reading = "ある", dictCost = 3000),
+                ConversionCandidate(surface = "有る", reading = "ある", dictCost = 3500)
+            ),
+            reading = "ある",
+            isExplicitConversion = true,
+            isRerankEnabled = true,
+            isSlmReady = true
+        )
+        val r2 = CandidateRerankJudgement.judgeSlmInvocationGateWithTrace(extractedSingle)
+        assertEquals("SLM_GATE_R2", r2.selectedRuleId)
+        assertFalse(r2.result.shouldInvokeSlm)
+
+        // R3: uncontested user dictionary Top-1 without typo observation
+        val extractedUserTop1 = CandidateRerankJudgement.extractSlmInvocationGateInput(
+            candidates = listOf(
+                ConversionCandidate(surface = "MyCustomTerm", reading = "まいかすたむ", source = "user", priority = 3.0f, dictCost = 10),
+                ConversionCandidate(surface = "舞カスタム", reading = "まいかすたむ", dictCost = 4500),
+                ConversionCandidate(surface = "毎日カスタム", reading = "まいかすたむ", dictCost = 5200)
+            ),
+            reading = "まいかすたむ",
+            isExplicitConversion = true,
+            isRerankEnabled = true,
+            isSlmReady = true
+        )
+        val r3 = CandidateRerankJudgement.judgeSlmInvocationGateWithTrace(extractedUserTop1)
+        assertEquals("SLM_GATE_R3", r3.selectedRuleId)
+        assertFalse(r3.result.shouldInvokeSlm)
+
+        // R4: competing user dictionary entries (must invoke SLM)
+        val extractedCompetingUser = CandidateRerankJudgement.extractSlmInvocationGateInput(
+            candidates = listOf(
+                ConversionCandidate(surface = "田中太郎", reading = "たなか", source = "user", priority = 3.0f, dictCost = 10),
+                ConversionCandidate(surface = "田中花子", reading = "たなか", source = "user", priority = 3.0f, dictCost = 10)
+            ),
+            reading = "たなか",
+            isExplicitConversion = false,
+            isRerankEnabled = true,
+            isSlmReady = true
+        )
+        val r4 = CandidateRerankJudgement.judgeSlmInvocationGateWithTrace(extractedCompetingUser)
+        assertEquals("SLM_GATE_R4", r4.selectedRuleId)
+        assertTrue(r4.result.shouldInvokeSlm)
+
+        // R5: typo observation candidates override margin/user skip
+        val extractedTypo = CandidateRerankJudgement.extractSlmInvocationGateInput(
+            candidates = listOf(
+                ConversionCandidate(surface = "今日", reading = "きょう", dictCost = 2000),
+                ConversionCandidate(surface = "教", reading = "きょう", dictCost = 2200, obsPenalty = 0.25f)
+            ),
+            reading = "きょう",
+            isExplicitConversion = false,
+            isRerankEnabled = true,
+            isSlmReady = true
+        )
+        val r5 = CandidateRerankJudgement.judgeSlmInvocationGateWithTrace(extractedTypo)
+        assertEquals("SLM_GATE_R5", r5.selectedRuleId)
+        assertTrue(r5.result.shouldInvokeSlm)
+
+        // R6: <= 1 Kanji/Katakana candidate in Top-4 (only one kanji + hiragana variations)
+        val extractedNoKanjiRace = CandidateRerankJudgement.extractSlmInvocationGateInput(
+            candidates = listOf(
+                ConversionCandidate(surface = "これ", reading = "これ", dictCost = 2000),
+                ConversionCandidate(surface = "此れ", reading = "これ", dictCost = 8500),
+                ConversionCandidate(surface = "これー", reading = "これ", dictCost = 9000)
+            ),
+            reading = "これ",
+            isExplicitConversion = true,
+            isRerankEnabled = true,
+            isSlmReady = true
+        )
+        val r6 = CandidateRerankJudgement.judgeSlmInvocationGateWithTrace(extractedNoKanjiRace)
+        assertEquals("SLM_GATE_R6", r6.selectedRuleId)
+        assertFalse(r6.result.shouldInvokeSlm)
+
+        // R7: incremental composing with clear margin (>= 1500) skips SLM, while explicit conversion invokes SLM
+        val homophonesClearMargin = listOf(
+            ConversionCandidate(surface = "医師", reading = "いし", dictCost = 3000),
+            ConversionCandidate(surface = "意志", reading = "いし", dictCost = 5000),
+            ConversionCandidate(surface = "石", reading = "いし", dictCost = 5500)
+        )
+        val composingTrace = CandidateRerankJudgement.judgeSlmInvocationGateWithTrace(
+            CandidateRerankJudgement.extractSlmInvocationGateInput(
+                candidates = homophonesClearMargin,
+                reading = "いし",
+                isExplicitConversion = false,
+                isRerankEnabled = true,
+                isSlmReady = true
+            )
+        )
+        assertEquals("SLM_GATE_R7", composingTrace.selectedRuleId)
+        assertFalse(composingTrace.result.shouldInvokeSlm)
+
+        val explicitTrace = CandidateRerankJudgement.judgeSlmInvocationGateWithTrace(
+            CandidateRerankJudgement.extractSlmInvocationGateInput(
+                candidates = homophonesClearMargin,
+                reading = "いし",
+                isExplicitConversion = true,
+                isRerankEnabled = true,
+                isSlmReady = true
+            )
+        )
+        assertEquals("SLM_GATE_DEFAULT", explicitTrace.selectedRuleId)
+        assertTrue(explicitTrace.result.shouldInvokeSlm)
+    }
 }

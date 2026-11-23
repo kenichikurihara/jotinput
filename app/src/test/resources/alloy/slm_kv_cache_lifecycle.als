@@ -71,13 +71,37 @@ pred ropeSlidingShift[s, sNext: CacheState] {
     sNext.positionsContiguous = True
 }
 
+// Transition 5: P1c Stage-2 Bypass via Token-0 Fast-Path Prior (NEVER_TOKEN0_ONLY)
+pred token0FastPathSkip[s, sNext: CacheState] {
+    s.activeBranchTokens = 0
+    s.logitsMatchContext = True
+    sNext.contextLen = s.contextLen
+    sNext.kvCacheLen = s.contextLen
+    sNext.activeBranchTokens = 0
+    sNext.logitsMatchContext = s.logitsMatchContext
+    sNext.positionsContiguous = s.positionsContiguous
+}
+
+// Transition 6: D2 Zero-Decode NextPhrase reads cached Step-0 logits with zero KV mutations
+pred zeroDecodeNextPhrase[s, sNext: CacheState] {
+    s.activeBranchTokens = 0
+    s.logitsMatchContext = True
+    sNext.contextLen = s.contextLen
+    sNext.kvCacheLen = s.contextLen
+    sNext.activeBranchTokens = 0
+    sNext.logitsMatchContext = s.logitsMatchContext
+    sNext.positionsContiguous = s.positionsContiguous
+}
+
 fact TraceTransitions {
     init[first]
     all s: CacheState - last | let sNext = s.next |
         treeBatchDecodeAndRollback[s, sNext] or
         prefixAppend[s, sNext] or
         prefixTruncateUndo[s, sNext] or
-        ropeSlidingShift[s, sNext]
+        ropeSlidingShift[s, sNext] or
+        token0FastPathSkip[s, sNext] or
+        zeroDecodeNextPhrase[s, sNext]
 }
 
 // Invariant 1: Tree rollback always leaves kvCacheLen == contextLen and zero branch tokens
@@ -105,7 +129,14 @@ pred canPerformUndoAndShift {
         prefixAppend[s, sNext] and prefixTruncateUndo[sNext, sNext2]
 }
 
+pred canRunToken0AndZeroDecodeNextPhrase {
+    some s, sNext, sNext2: CacheState |
+        sNext = s.next and sNext2 = sNext.next and
+        token0FastPathSkip[s, sNext] and zeroDecodeNextPhrase[sNext, sNext2]
+}
+
 check TreeRollbackRestoresExactContextLength for 6 but 5 Int
 check UndoPrefixTruncateNeverReturnsStaleLogits for 6 but 5 Int
 check RoPEShiftPreservesRelativePositions for 6 but 5 Int
 run canPerformUndoAndShift for 5 but 5 Int
+run canRunToken0AndZeroDecodeNextPhrase for 5 but 5 Int

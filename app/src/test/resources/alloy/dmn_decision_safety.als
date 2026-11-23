@@ -210,6 +210,145 @@ pred canApplyPhase2HeroAndOffscreen {
     some i: ViewportOrderingInput | evalViewportRule[i] = VpSafeR3
 }
 
+// --- Part 4: SlmInvocationGate (BC-2 Idea A1 Smart-Safe Gate) ---
+
+abstract sig SlmGateRule {}
+one sig SlmGateR1, SlmGateR2, SlmGateR3, SlmGateR4, SlmGateR5, SlmGateR6, SlmGateR7, SlmGateDefault extends SlmGateRule {}
+
+sig SlmGateInput {
+    isRerankEnabled: one Bool,
+    isSlmReady: one Bool,
+    hasMultipleEffectiveCands: one Bool,
+    hasSingleUserTop1: one Bool,
+    competingUserDict: one Bool,
+    hasTypoObservation: one Bool,
+    multipleKanjiHomophones: one Bool,
+    isExplicitConversion: one Bool,
+    isShortReading: one Bool,
+    hasClearViterbiMargin: one Bool
+}
+
+fact SlmGateInputConsistent {
+    all g: SlmGateInput |
+        not (g.hasSingleUserTop1 = True and g.competingUserDict = True)
+}
+
+pred slmGateR1Matches[g: SlmGateInput] {
+    g.isRerankEnabled = False or g.isSlmReady = False
+}
+
+pred slmGateR2Matches[g: SlmGateInput] {
+    not slmGateR1Matches[g] and
+    g.hasMultipleEffectiveCands = False
+}
+
+pred slmGateR3Matches[g: SlmGateInput] {
+    not slmGateR1Matches[g] and
+    not slmGateR2Matches[g] and
+    g.hasSingleUserTop1 = True and g.hasTypoObservation = False
+}
+
+pred slmGateR4Matches[g: SlmGateInput] {
+    not slmGateR1Matches[g] and
+    not slmGateR2Matches[g] and
+    not slmGateR3Matches[g] and
+    g.competingUserDict = True
+}
+
+pred slmGateR5Matches[g: SlmGateInput] {
+    not slmGateR1Matches[g] and
+    not slmGateR2Matches[g] and
+    not slmGateR3Matches[g] and
+    not slmGateR4Matches[g] and
+    g.hasTypoObservation = True
+}
+
+pred slmGateR6Matches[g: SlmGateInput] {
+    not slmGateR1Matches[g] and
+    not slmGateR2Matches[g] and
+    not slmGateR3Matches[g] and
+    not slmGateR4Matches[g] and
+    not slmGateR5Matches[g] and
+    g.multipleKanjiHomophones = False
+}
+
+pred slmGateR7Matches[g: SlmGateInput] {
+    not slmGateR1Matches[g] and
+    not slmGateR2Matches[g] and
+    not slmGateR3Matches[g] and
+    not slmGateR4Matches[g] and
+    not slmGateR5Matches[g] and
+    not slmGateR6Matches[g] and
+    g.isExplicitConversion = False and
+    (g.isShortReading = True or g.hasClearViterbiMargin = True)
+}
+
+fun evalSlmGateRule[g: SlmGateInput]: one SlmGateRule {
+    slmGateR1Matches[g] => SlmGateR1 else
+    slmGateR2Matches[g] => SlmGateR2 else
+    slmGateR3Matches[g] => SlmGateR3 else
+    slmGateR4Matches[g] => SlmGateR4 else
+    slmGateR5Matches[g] => SlmGateR5 else
+    slmGateR6Matches[g] => SlmGateR6 else
+    slmGateR7Matches[g] => SlmGateR7 else
+    SlmGateDefault
+}
+
+fun shouldInvokeSlmGate[g: SlmGateInput]: one Bool {
+    (evalSlmGateRule[g] = SlmGateR4 or
+     evalSlmGateRule[g] = SlmGateR5 or
+     evalSlmGateRule[g] = SlmGateDefault) => True else False
+}
+
+// Assertion 10: SlmInvocationGate is total
+assert SlmGateTableIsTotal {
+    all g: SlmGateInput | one evalSlmGateRule[g]
+}
+
+// Assertion 11: Never invokes SLM when disabled, unready, or single effective candidate
+assert SlmGateNeverInvokesWhenUnreadyOrSingle {
+    all g: SlmGateInput |
+        (g.isRerankEnabled = False or g.isSlmReady = False or g.hasMultipleEffectiveCands = False) implies
+            shouldInvokeSlmGate[g] = False
+}
+
+// Assertion 12: Always skips when an uncontested user dictionary word is Top-1 without typo observation
+assert SlmGateAlwaysSkipsUncontestedUserDictWithoutTypo {
+    all g: SlmGateInput |
+        (g.hasSingleUserTop1 = True and g.hasTypoObservation = False) implies
+            shouldInvokeSlmGate[g] = False
+}
+
+// Assertion 13: Never skips explicit 2+ Kanji/Katakana homophone conversion (unless disabled/unready/single/uncontested user Top-1)
+assert SlmGateNeverSkipsExplicitKanjiHomophone {
+    all g: SlmGateInput |
+        (g.isRerankEnabled = True and g.isSlmReady = True and
+         g.hasMultipleEffectiveCands = True and g.multipleKanjiHomophones = True and
+         g.isExplicitConversion = True and
+         not (g.hasSingleUserTop1 = True and g.hasTypoObservation = False)) implies
+            shouldInvokeSlmGate[g] = True
+}
+
+// Assertion 14: Never skips competing user dictionary entries or typo observation candidates when ready
+assert SlmGateNeverSkipsCompetingUserOrTypo {
+    all g: SlmGateInput |
+        (g.isRerankEnabled = True and g.isSlmReady = True and
+         g.hasMultipleEffectiveCands = True and
+         (g.competingUserDict = True or g.hasTypoObservation = True)) implies
+            shouldInvokeSlmGate[g] = True
+}
+
+pred canSkipNonCompetingOrComposingSafely {
+    some g1, g2: SlmGateInput |
+        evalSlmGateRule[g1] = SlmGateR6 and evalSlmGateRule[g2] = SlmGateR7 and
+        shouldInvokeSlmGate[g1] = False and shouldInvokeSlmGate[g2] = False
+}
+
+pred canInvokeOnAmbiguousHomophone {
+    some g: SlmGateInput |
+        evalSlmGateRule[g] = SlmGateDefault and shouldInvokeSlmGate[g] = True
+}
+
 check TapSafeTableIsTotal for 4
 check NeverPinsWhenTop1UnchangedOrAbsent for 4
 check NeverPinsWithinWindowUnlessTouching for 4
@@ -221,8 +360,15 @@ check ViewportTableIsTotal for 4
 check MicroWaitBypassesPlaceholder for 4
 check ActiveTouchDefersUpdate for 4
 check Phase2PreservesViewportWhenNotTouching for 4
+check SlmGateTableIsTotal for 4
+check SlmGateNeverInvokesWhenUnreadyOrSingle for 4
+check SlmGateAlwaysSkipsUncontestedUserDictWithoutTypo for 4
+check SlmGateNeverSkipsExplicitKanjiHomophone for 4
+check SlmGateNeverSkipsCompetingUserOrTypo for 4
 run canPinTop1Safely for 3
 run canPromoteHighUtilityPrediction for 3
 run canShowClipboardSuggestion for 3
 run canApplyPhase2HeroAndOffscreen for 3
+run canSkipNonCompetingOrComposingSafely for 4
+run canInvokeOnAmbiguousHomophone for 4
 

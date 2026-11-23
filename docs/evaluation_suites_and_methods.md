@@ -142,6 +142,7 @@ Qwen2.5-0.5B / 1.5B (GGUF INT4, `llama.cpp`) を用いた条件付き対数尤�
 - **LM-First チューニング & 評価**: `eval/tune_and_eval_lm_first.py`（NLLキャッシュ: `eval/lm_first_nll_cache.json`） / [`LmFirstJointEvaluationTest.kt`](../app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt)
 - **未消費スパン評価・多様性**: [`SpanAwareBayesianRerankingEvaluationTest.kt`](../app/src/test/java/com/example/myasr/SpanAwareBayesianRerankingEvaluationTest.kt)
 - **文脈トークン長 & 境界分割トレードオフ**: `eval/evaluate_context_length_tradeoff.py`（予算 0〜128 トークン × 3分割戦略）
+- **精度トレードオフ型 10倍以上高速化評価 (EIS-v1 Zero-Leakage)**: `eval/evaluate_slm_10x_speedup_profiles.py` + `tools/bench_slm_10x_profiles.cc` → [`eval/slm_10x_speedup_eval_results.json`](eval/slm_10x_speedup_eval_results.json) / レポート: [`slm_approximate_10x_speedup_evaluation_report.md`](docs/slm_approximate_10x_speedup_evaluation_report.md)（11プロファイル比較・選定結果 `P1c_a2_token0_c12_d2` でセッション結合 13.1x / KV-Hit 97.8x / Warm NextPhrase 611.3x）
 - **C++ ネイティブ高速ベンチマーク**:
   - `tools/slm_scorer_cli.cc`: 単体スコア検証 CLI
   - `tools/eval_context_free_slm.cc` / `tools/bench_1000_context_free.cc`: Context-Free 500/1,000件評価

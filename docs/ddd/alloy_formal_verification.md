@@ -32,6 +32,7 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`NeverPinsPartialOverFullSpan`**: 部分一致プレフィックスより完全スパン候補を優先すること。
 - **`NeverPinsHighUtilityPredictionWhenNotTouching` / `PinsPredictionWhenUserTouchingAfterWindow`**: 非タッチ時は高効用予測候補（`TAP_SAFE_R4`）の Slot 1 昇格を許可し、タッチ中は 100ms ウィンドウ経過後の予測昇格を確実にピン留め阻止すること。
 - **`ViewportTableIsTotal` / `MicroWaitBypassesPlaceholder` / `ActiveTouchDefersUpdate` / `Phase2PreservesViewportWhenNotTouching`**: ゼロ・ジッター候補UI（`ViewportAwareCandidateOrdering`）の 50ms マイクロ待機バイパス・タッチ中更新保留・可視領域凍結（画面外のみリランク）を網羅的に検証すること。
+- **`SlmGateTableIsTotal` / `SlmGateNeverInvokesWhenUnreadyOrSingle` / `SlmGateAlwaysSkipsUncontestedUserDictWithoutTypo` / `SlmGateNeverSkipsExplicitKanjiHomophone` / `SlmGateNeverSkipsCompetingUserOrTypo`**: Idea A1 動的 SLM 起動ゲート（`SlmInvocationGate`）の網羅性・単一/未準備スキップ・無競合ユーザー辞書Top1保護・明示的漢字同音異義語およびタイポ/競合ユーザー辞書の不変保証を検証すること。
 - **`ClipboardNeverIntrudesDuringActiveInput`**: 入力中・音声アクティブ時にクリップボード提案が割り込まないこと。
 
 ### 3.3 [`custom_dictionary_ui.als`](app/src/test/resources/alloy/custom_dictionary_ui.als)
@@ -83,6 +84,7 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`TreeRollbackRestoresExactContextLength`**: Prefix-Tree Stage 2 一括デコードとロールバック後、常に `kvCacheLen = contextLen` に戻り投機ブランチトークンが残留しないこと。
 - **`UndoPrefixTruncateNeverReturnsStaleLogits`**: Undo による文脈短縮時、`SnapshotRing` からの復元により古い文脈の Logits を返さないこと。
 - **`RoPEShiftPreservesRelativePositions`**: 先頭トリミング時の RoPE 位置シフト（`seq_add`）後も位置インデックスの連続性が保たれること。
+- **`token0FastPathSkip` / `zeroDecodeNextPhrase` (`canRunToken0AndZeroDecodeNextPhrase`)**: `NEVER_TOKEN0_ONLY` による Stage 2 バイパスおよび 0-decode `NextPhrase` が KV キャッシュ長・位置連続性・Logits 整合性を一切破壊せず実行到達可能であること。
 
 ### 3.10 [`ime_header_visibility.als`](app/src/test/resources/alloy/ime_header_visibility.als)
 IME ヘッダーバーのユーティリティアイコン表示裁定（[`ImeHeaderDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/ImeHeaderDecisionModel.kt) / `ImeHeaderVisibilityDecisionTable`）をモデル化し、以下を検証する：

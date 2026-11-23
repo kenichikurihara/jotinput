@@ -1321,7 +1321,16 @@ class VoiceInputMethodService : InputMethodService() {
                 readingLength = reading.length
             )
         )
-        val canRerank = execDecision.shouldRerank
+        val gateDecision = CandidateRerankJudgement.judgeSlmInvocationGate(
+            CandidateRerankJudgement.extractSlmInvocationGateInput(
+                candidates = baseCandidates,
+                reading = reading,
+                isExplicitConversion = true,
+                isRerankEnabled = isRerankEnabled,
+                isSlmReady = isSlmReady
+            )
+        )
+        val canRerank = execDecision.shouldRerank && gateDecision.shouldInvokeSlm
 
         // 1. FAST ZERO-JITTER PATH (< 0.1ms synchronous on Main Thread, Policies ① & ②):
         var renderedCandidates = baseCandidates
@@ -1565,9 +1574,10 @@ class VoiceInputMethodService : InputMethodService() {
                 val combinedCtx = contextBeforeCursor + top1
                 slm.speculativePrepareNextPhrases(
                     contextPlusTop1 = combinedCtx,
-                    maxCandidates = 3,
-                    maxTokens = 5,
-                    readingResolver = kanaKanjiEngine::inferReading
+                    maxCandidates = 5,
+                    maxTokens = 1,
+                    readingResolver = kanaKanjiEngine::inferReading,
+                    prefixExpander = kanaKanjiEngine::expandZeroDecodeNextPhraseToken
                 )
                 lastWarmedContextText = ContextWindowTrimmer.trimToOptimalContextSticky(combinedCtx)
             }
@@ -2227,9 +2237,10 @@ class VoiceInputMethodService : InputMethodService() {
                     val slmContinuations = prewarmedSlm
                         ?: slm.predictNextPhrases(
                             contextPrefix = textBeforeCursor,
-                            maxCandidates = 3,
-                            maxTokens = 5,
-                            readingResolver = kanaKanjiEngine::inferReading
+                            maxCandidates = 5,
+                            maxTokens = 1,
+                            readingResolver = kanaKanjiEngine::inferReading,
+                            prefixExpander = kanaKanjiEngine::expandZeroDecodeNextPhraseToken
                         )
 
                     val combined = mergeZeroQueryCandidates(fastPredictions, slmContinuations)

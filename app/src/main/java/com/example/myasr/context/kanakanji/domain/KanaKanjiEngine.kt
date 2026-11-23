@@ -2562,4 +2562,88 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
 
         return results.take(8)
     }
+
+    /**
+     * Expands a 0-decode Step-0 SLM token prefix into complete Japanese next-phrase candidates
+     * using canonical collocations, dynamic sahen tails, and recent user history without running
+     * multi-step autoregressive KV decoding.
+     */
+    fun expandZeroDecodeNextPhraseToken(contextPrefix: String, rawToken: String): List<String> {
+        val token = rawToken.trim { ch -> ch.isWhitespace() || ch == '\u3000' }
+        if (token.isEmpty()) return emptyList()
+
+        val expansions = ArrayList<String>(4)
+        fun addUnique(surface: String) {
+            if (surface.isNotEmpty() && surface !in expansions) {
+                expansions.add(surface)
+            }
+        }
+
+        val cleanContext = contextPrefix.trimEnd()
+        if (cleanContext.isNotEmpty()) {
+            val lookupKeys = LinkedHashSet<String>(6)
+            val extracted = JapaneseKanaUtils.extractLastWordOrParticle(cleanContext)
+            if (extracted.isNotEmpty()) {
+                lookupKeys.add(extracted)
+            }
+            for (len in 1..minOf(4, cleanContext.length)) {
+                lookupKeys.add(cleanContext.substring(cleanContext.length - len))
+            }
+            for (key in lookupKeys) {
+                val collocs = NextPhrasePredictor.CANONICAL_COLLOCATIONS[key] ?: continue
+                for (entry in collocs) {
+                    if (entry.surface.length > token.length && entry.surface.startsWith(token)) {
+                        addUnique(entry.surface)
+                        if (expansions.size >= 2) break
+                    }
+                }
+                if (expansions.size >= 2) break
+            }
+        }
+
+        if (expansions.size < 2) {
+            for (tail in DYNAMIC_SAHEN_TAILS) {
+                if (tail.surface.length > token.length && tail.surface.startsWith(token)) {
+                    addUnique(tail.surface)
+                    if (expansions.size >= 2) break
+                }
+            }
+        }
+
+        if (expansions.size < 2) {
+            synchronized(historyLock) {
+                var recent1 = ""
+                var recent2 = ""
+                for (entry in historyMap.entries) {
+                    val surface = entry.key.substringAfter(':', "")
+                    if (surface.length > token.length && surface.startsWith(token)) {
+                        if (surface != recent1 && surface != recent2) {
+                            recent2 = recent1
+                            recent1 = surface
+                        }
+                    }
+                }
+                if (recent1.isNotEmpty()) addUnique(recent1)
+                if (expansions.size < 2 && recent2.isNotEmpty()) addUnique(recent2)
+            }
+        }
+
+        val isHiraganaOrPunct = token.all { ch ->
+            ch in '\u3040'..'\u309F' || ch == 'ー' ||
+                ch in charArrayOf('。', '、', '！', '？', '!', '?', '.', ',')
+        }
+        val results = ArrayList<String>(2)
+        for (exp in expansions) {
+            if (exp !in results) {
+                results.add(exp)
+                if (results.size >= 2) break
+            }
+        }
+        if (results.isEmpty() || (results.size < 2 && (token.length >= 2 || isHiraganaOrPunct))) {
+            if (token !in results) {
+                results.add(token)
+            }
+        }
+        return results.take(2)
+    }
 }

@@ -16,6 +16,25 @@ struct llama_vocab;
 
 namespace myasr {
 
+enum class Stage2Policy {
+  ALWAYS_FULL = 0,
+  COLLISION_AND_CLOSE_ONLY = 1,
+  NEVER_TOKEN0_ONLY = 2,
+  EXACT_COLLISION_ONLY = 3,
+};
+
+struct LlmRerankerStats {
+  uint64_t cache_hits = 0;
+  uint64_t cache_misses = 0;
+  uint64_t suffix_approx_hits = 0;
+  uint64_t stage2_calls = 0;
+  uint64_t stage2_skipped_calls = 0;
+  uint64_t stage2_tree_nodes_decoded = 0;
+  uint64_t prefill_tokens_decoded = 0;
+  uint64_t next_phrase_calls = 0;
+  uint64_t next_phrase_decode_calls = 0;
+};
+
 struct LlmRerankerConfig {
   std::string model_path;
   int n_ctx = 256;                        // Idea 8: Tightened from 512 to 256 for L3/SLC cache residency
@@ -28,6 +47,17 @@ struct LlmRerankerConfig {
   float decisive_top1_gap_nats = 3.5f;    // Idea 3: Early exit when Top-1 leads by >= 3.5 nats
   float stage2_prune_margin_nats = 4.5f;  // Idea 3: Admissible lower-bound pruning margin
   int max_tree_batch_tokens = 32;         // Idea 1: Cap total nodes in single-pass prefix tree batch
+
+  // Approximate inference speedup defaults (P1c winning profile on dev split)
+  Stage2Policy stage2_policy = Stage2Policy::NEVER_TOKEN0_ONLY;
+  float token0_extra_token_nll_prior = 1.0f;
+  float stage2_close_gap_nats = 1.8f;
+  int max_stage2_candidates = 6;
+  int max_stage2_tree_depth = 3;
+  bool use_fast_subvocab_lse = true;         // Idea B3: scan valid JP/EN sub-vocabulary for LSE
+  bool enable_suffix_approx_cache = false;   // Idea C1: tail token match reuse on KV miss (disabled; 0 dev hits)
+  int suffix_approx_min_tokens = 3;
+  bool enable_zero_decode_next_phrase = true;  // Idea D2: 0-decode top-K valid tokens for next phrase
 };
 
 // Idea 7: Multi-Slot Context Snapshot for 0ms Undo / Backspace / Cursor bounce
@@ -65,6 +95,12 @@ class LlmReranker {
   bool Initialize(const std::string& model_path, int n_threads = 4);
   void Release();
 
+  void SetConfig(const LlmRerankerConfig& config);
+  const LlmRerankerConfig& GetConfig() const { return config_; }
+  void ResetCaches();
+  LlmRerankerStats GetStats() const;
+  void ResetStats();
+
   bool ScoreCandidates(const std::string& context,
                        const std::vector<std::string>& candidates,
                        std::vector<float>* out_neg_logprobs);
@@ -101,8 +137,12 @@ class LlmReranker {
 
   uint64_t ComputeContextHash(const std::string& context) const;
   bool EnsureContextCached(const std::string& context);
+  bool DecodeFullContextIntoKvLocked(const std::vector<int32_t>& context_tokens);
   bool RollbackOrRestoreContextState();
   static float ComputeLogDenominator(const float* logits, int n_vocab);
+  float ComputeLogDenominatorAdaptive(const float* logits,
+                                      int n_vocab,
+                                      const std::vector<int32_t>* extra_tokens = nullptr) const;
 
   // Idea 6: Precompute bitmask of valid Japanese/English tokens to filter multilingual noise
   void BuildValidTargetTokenBitmask();
@@ -123,6 +163,8 @@ class LlmReranker {
   // Idea 7: Snapshot ring management
   const ContextLogitsSnapshot* FindSnapshotByHashLocked(uint64_t hash) const;
   const ContextLogitsSnapshot* FindSnapshotByTokensLocked(const std::vector<int32_t>& tokens) const;
+  const ContextLogitsSnapshot* FindSnapshotBySuffixLocked(const std::vector<int32_t>& tokens,
+                                                          int min_suffix_tokens) const;
   void UpsertSnapshot(uint64_t hash,
                       const std::vector<int32_t>& tokens,
                       const std::vector<float>& logits,
@@ -145,11 +187,14 @@ class LlmReranker {
   bool partial_seq_rm_supported_ = true;
   bool seq_pos_add_supported_ = true;    // Idea 2: Whether llama_memory_seq_add is supported
   bool has_checkpoint_ = false;
+  bool kv_cache_synced_with_context_ = true;
   int cache_hits_ = 0;
   int cache_misses_ = 0;
+  LlmRerankerStats stats_;
 
-  // Idea 6: Precomputed valid JP/EN token bitmask (~19 KB)
+  // Idea 6 & B3: Precomputed valid JP/EN token bitmask (~19 KB) and dense ID list
   std::vector<uint64_t> valid_token_bitmask_;
+  std::vector<int32_t> valid_token_ids_;
 
   // Idea 7: 4-slot LRU Snapshot Ring Buffer for lock-free UI fast path & 0ms Undo recovery
   mutable std::mutex snapshot_mutex_;

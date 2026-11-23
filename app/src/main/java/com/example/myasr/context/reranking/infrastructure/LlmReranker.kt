@@ -1433,7 +1433,10 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             return null
         }
         return try {
-            val trimmedContext = ContextWindowTrimmer.trimToOptimalContextSticky(contextPrefix)
+            val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(
+                contextPrefix,
+                targetTokens = ContextWindowTrimmer.VOICE_CORRECTION_GATE_TARGET_TOKENS
+            )
             val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
             val scores = nativeScoreCandidates(effectiveContext, arrayOf(origText, corrText))
             if (scores != null && scores.size == 2) {
@@ -1465,8 +1468,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
     fun predictNextPhrases(
         contextPrefix: String,
         maxCandidates: Int = 3,
-        maxTokens: Int = 5,
-        readingResolver: ((String) -> String)? = null
+        maxTokens: Int = 1,
+        readingResolver: ((String) -> String)? = null,
+        prefixExpander: ((String, String) -> List<String>)? = null
     ): List<ConversionCandidate> {
         if (state != State.READY || !nativeLibraryLoaded) {
             return emptyList()
@@ -1474,11 +1478,18 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
         try {
             val trimmedContext = ContextWindowTrimmer.trimToOptimalContextSticky(contextPrefix)
             val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
-            val surfaces = nativePredictNextPhrases(effectiveContext, maxCandidates, maxTokens) ?: return emptyList()
-            return surfaces
+            val requestCandidates = if (prefixExpander != null) maxOf(maxCandidates, 8) else maxCandidates
+            val surfaces = nativePredictNextPhrases(effectiveContext, requestCandidates, maxTokens) ?: return emptyList()
+            val expanded = if (prefixExpander != null) {
+                surfaces.flatMap { raw -> prefixExpander(effectiveContext, raw) }
+            } else {
+                surfaces.toList()
+            }
+            return expanded
                 .map { it.trim { ch -> ch.isWhitespace() || ch == '\u3000' } }
                 .filter { it.isNotEmpty() }
                 .distinct()
+                .take(maxCandidates)
                 .map { surface ->
                     val resolvedReading = readingResolver?.invoke(surface)?.takeIf { it.isNotEmpty() } ?: surface
                     ConversionCandidate(
@@ -1501,8 +1512,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
     fun speculativePrepareNextPhrases(
         contextPlusTop1: String,
         maxCandidates: Int = 3,
-        maxTokens: Int = 5,
-        readingResolver: ((String) -> String)? = null
+        maxTokens: Int = 1,
+        readingResolver: ((String) -> String)? = null,
+        prefixExpander: ((String, String) -> List<String>)? = null
     ) {
         if (state != State.READY || !nativeLibraryLoaded || contextPlusTop1.isBlank()) return
         val trimmed = ContextWindowTrimmer.trimToOptimalContextSticky(contextPlusTop1)
@@ -1514,7 +1526,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             contextPrefix = trimmed,
             maxCandidates = maxCandidates,
             maxTokens = maxTokens,
-            readingResolver = readingResolver
+            readingResolver = readingResolver,
+            prefixExpander = prefixExpander
         )
         if (preds.isNotEmpty()) {
             speculativeZeroQueryCache = Pair(trimmed, preds)

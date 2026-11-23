@@ -191,4 +191,32 @@ class ContextWindowTrimmerTest {
         assertTrue(trimmed2.isNotEmpty())
         assertTrue(trimmed2.endsWith("議論を始めます。"))
     }
+
+    @Test
+    fun testOptimalP1cAndVoiceGateTokenBudgets() {
+        assertEquals(12, ContextWindowTrimmer.DEFAULT_TARGET_TOKENS)
+        assertEquals(5, ContextWindowTrimmer.DEFAULT_MIN_TOKENS)
+        assertEquals(18, ContextWindowTrimmer.DEFAULT_MAX_TOKENS)
+        assertEquals(28, ContextWindowTrimmer.STICKY_HIGH_WATER_MARK_TOKENS)
+        assertEquals(6, ContextWindowTrimmer.VOICE_CORRECTION_GATE_TARGET_TOKENS)
+
+        val longSentence = "昨日は新宿のオフィスで設計レビューを実施しました。本日の午後はパフォーマンス測定とデプロイ手順を確認します。"
+        val defaultTrimmed = ContextWindowTrimmer.trimToOptimalContext(longSentence)
+        assertTrue(
+            "Default C1 (target=12) trimmed context must stay compact, got '$defaultTrimmed'",
+            ContextWindowTrimmer.estimateTokenCount(defaultTrimmed) <= ContextWindowTrimmer.DEFAULT_MAX_TOKENS.toFloat()
+        )
+        assertTrue(defaultTrimmed.endsWith("確認します。"))
+
+        val voiceGateTrimmed = ContextWindowTrimmer.trimToOptimalContext(
+            longSentence,
+            targetTokens = ContextWindowTrimmer.VOICE_CORRECTION_GATE_TARGET_TOKENS
+        )
+        assertTrue(
+            "Voice correction D3 gate context (target=6) must be strictly shorter than default, got '$voiceGateTrimmed'",
+            voiceGateTrimmed.length <= defaultTrimmed.length &&
+                ContextWindowTrimmer.estimateTokenCount(voiceGateTrimmed) <= 12f
+        )
+        assertTrue(voiceGateTrimmed.endsWith("確認します。"))
+    }
 }
