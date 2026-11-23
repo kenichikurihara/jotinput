@@ -14,6 +14,7 @@ import com.example.myasr.context.english.domain.EnglishCaseModel
 import com.example.myasr.context.english.domain.EnglishDictionaryUtils
 import com.example.myasr.context.english.domain.InputFieldCapPolicy
 import com.example.myasr.context.english.domain.SentenceBoundaryDetector
+import com.example.myasr.context.english.domain.SwipeVocabularyJudgement
 import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
 import com.example.myasr.context.english.infrastructure.FutoSwipeEngine
 import com.example.myasr.context.ime.domain.InputConnectionEditorBridge
@@ -792,6 +793,10 @@ class VoiceInputMethodService : InputMethodService() {
                             onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() }
                         )
                         syncKeyboardState()
+                        recordEnglishForAdaptiveSwipe(
+                            committedSurface,
+                            SwipeVocabularyJudgement.SwipeLearnSource.TAP_CANDIDATE_SELECTED
+                        )
                     }
                     candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                     return
@@ -844,6 +849,10 @@ class VoiceInputMethodService : InputMethodService() {
                 if (isPartialCommit) {
                     updateCandidates()
                 } else if (candidate.source == "futo_swipe") {
+                    recordEnglishForAdaptiveSwipe(
+                        committedSurface,
+                        SwipeVocabularyJudgement.SwipeLearnSource.SWIPE_COMMITTED
+                    )
                     candidateStripView?.showEmptyStatus(getActiveIdleStatusPrompt())
                     triggerSpeculativeContextWarm(CandidateRerankJudgement.WarmTrigger.TEXT_COMMITTED)
                 } else {
@@ -1012,6 +1021,12 @@ class VoiceInputMethodService : InputMethodService() {
                     currentMode == JapaneseKanaUtils.KeyboardMode.QWERTY_SYMBOLS
                 val autoPeriodEnabled = isEnglishMode &&
                     KeyboardHeightManager.isEnglishAutoPeriodEnabled(this@VoiceInputMethodService)
+                val trailingWordBeforeSpace = if (currentMode == JapaneseKanaUtils.KeyboardMode.ALPHABET) {
+                    val textBeforeSpace = currentInputConnection?.getTextBeforeCursor(128, 0)?.toString() ?: ""
+                    EnglishAssistJudgement.extractTrailingWord(textBeforeSpace).rawWord
+                } else {
+                    ""
+                }
 
                 val outcome = arbitrator.onSpacePressed(
                     editor = editorBridge,
@@ -1028,6 +1043,14 @@ class VoiceInputMethodService : InputMethodService() {
             rerankJob?.cancel()
                 isCurrentCandidatesReranked = false
                 syncKeyboardState()
+                if (trailingWordBeforeSpace.isNotEmpty() &&
+                    outcome != VoiceTouchInputArbitrator.SpaceOutcome.CONVERTED_DOUBLE_SPACE_TO_PERIOD
+                ) {
+                    recordEnglishForAdaptiveSwipe(
+                        trailingWordBeforeSpace,
+                        SwipeVocabularyJudgement.SwipeLearnSource.TAP_SPACE_COMMITTED
+                    )
+                }
 
                 when (outcome) {
                     VoiceTouchInputArbitrator.SpaceOutcome.CONVERTED_DOUBLE_SPACE_TO_PERIOD -> {
@@ -1191,23 +1214,11 @@ class VoiceInputMethodService : InputMethodService() {
                         } else {
                             SentenceBoundaryDetector.computeBosProbability("", textBeforeCursor, fieldPolicy)
                         }
-                        val rankedSwipe = ArrayList<BayesianCaseRanker.RankedCaseCandidate>()
-                        for ((idx, cand) in candidates.withIndex()) {
-                            val swipeObsPenalty = idx * 0.08f
-                            rankedSwipe.addAll(
-                                BayesianCaseRanker.generateCaseVariants(
-                                    baseWord = cand,
-                                    bosProb = bosProb,
-                                    policy = fieldPolicy,
-                                    source = "futo_swipe",
-                                    obsPenalty = swipeObsPenalty,
-                                    isRawWord = (idx == 0)
-                                )
-                            )
-                        }
-                        val stripCandidates = BayesianCaseRanker.toConversionCandidates(
-                            ranked = rankedSwipe,
-                            reading = candidates[0],
+                        val stripCandidates = BayesianCaseRanker.buildSwipeCandidates(
+                            swipeCandidates = candidates,
+                            bosProb = bosProb,
+                            fieldPolicy = fieldPolicy,
+                            isShiftActive = isShiftActive,
                             maxCandidates = 5
                         )
                         val top1 = stripCandidates.firstOrNull()?.surface ?: candidates[0]
@@ -1221,6 +1232,10 @@ class VoiceInputMethodService : InputMethodService() {
                                 onResetStreamingUtterance = { resetStreamingUtteranceInRecorder() }
                             )
                             syncKeyboardState()
+                            recordEnglishForAdaptiveSwipe(
+                                top1,
+                                SwipeVocabularyJudgement.SwipeLearnSource.SWIPE_COMMITTED
+                            )
 
                             updateDebugSlmBadge("FUTO")
                             candidateStripView?.setCandidates(stripCandidates)
@@ -1751,6 +1766,12 @@ class VoiceInputMethodService : InputMethodService() {
                             deletePrecedingChars = deletePreceding
                         )
                         syncKeyboardState()
+                        if (committedImmediately && asrLanguage == AsrLanguage.ENGLISH) {
+                            recordEnglishForAdaptiveSwipe(
+                                recognizedText,
+                                SwipeVocabularyJudgement.SwipeLearnSource.VOICE_ENGLISH_COMMITTED
+                            )
+                        }
                         if (arbitrator.isKeyboardComposing()) {
                             // If pre-typing voice was prepended before active keyboard composing,
                             // refresh conversion candidates so SLM reranking uses the newly prepended context!
@@ -1778,6 +1799,41 @@ class VoiceInputMethodService : InputMethodService() {
         val textBeforeCursor = currentInputConnection?.getTextBeforeCursor(64, 0)?.toString() ?: ""
         val isFieldBypassed = EnglishCapitalizationAnalyzer.shouldBypassAutoAssist(currentInputEditorInfo, textBeforeCursor)
         return EnglishAssistJudgement.judgeAutoAssistBypass(mode, isFieldBypassed).decision
+    }
+
+    private fun isSensitiveOrPasswordForSwipeLearning(): Boolean {
+        val inputType = currentInputEditorInfo?.inputType ?: 0
+        if (ClipboardUtils.isPasswordInputType(inputType)) return true
+        val variation = inputType and EditorInfo.TYPE_MASK_VARIATION
+        return variation == EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+    }
+
+    private fun recordEnglishForAdaptiveSwipe(
+        text: String,
+        source: SwipeVocabularyJudgement.SwipeLearnSource
+    ) {
+        if (text.isBlank()) return
+        val isSensitive = isSensitiveOrPasswordForSwipeLearning()
+        if (isSensitive || source == SwipeVocabularyJudgement.SwipeLearnSource.SENSITIVE_OR_BYPASS) return
+        val app = AsrApp.instanceOrNull ?: return
+        serviceScope.launch(Dispatchers.Default) {
+            val swipeEngine = FutoSwipeEngine.getInstance(this@VoiceInputMethodService)
+            val explicitUserDictSwipeKeys = app.dictionaryRepository.getActive()
+                .filter { it.isEnabled && it.hasEnglishSurface }
+                .map { EnglishDictionaryUtils.toSwipeTrieKey(it.word) }
+                .filter { it.isNotEmpty() }
+                .toSet()
+            val mutated = app.swipeAdaptiveCacheRepository.recordCommittedText(
+                text = text,
+                source = source,
+                isSensitiveOrPasswordField = false,
+                explicitUserDictSwipeKeys = explicitUserDictSwipeKeys,
+                isInBase32kFn = { lower -> swipeEngine.containsBaseWord(lower) }
+            )
+            if (mutated) {
+                app.syncSwipeAdaptiveCache()
+            }
+        }
     }
 
     private fun mergeZeroQueryCandidates(
@@ -2690,6 +2746,7 @@ class VoiceInputMethodService : InputMethodService() {
         if (hadStreamingComposing) {
             var streamingChips: List<VoiceCorrectionSuggestion> = emptyList()
             var streamingApplied: List<VoiceCorrectionSuggestion> = emptyList()
+            var streamingFormattedText = ""
             arbitrator.commitActiveStreamingComposing(
                 editor = editorBridge,
                 onResetAudioUtterance = {},
@@ -2697,9 +2754,16 @@ class VoiceInputMethodService : InputMethodService() {
                     val res = formatVoiceTextWithCorrections(raw, textBeforeCursor, asrLanguage, useSlmGate = false)
                     streamingChips = res.suggestedChips
                     streamingApplied = res.appliedCorrections
+                    streamingFormattedText = res.formattedText
                     res.formattedText
                 }
             )
+            if (asrLanguage == AsrLanguage.ENGLISH && streamingFormattedText.isNotEmpty()) {
+                recordEnglishForAdaptiveSwipe(
+                    streamingFormattedText,
+                    SwipeVocabularyJudgement.SwipeLearnSource.VOICE_ENGLISH_COMMITTED
+                )
+            }
             if (streamingApplied.isNotEmpty()) {
                 synchronized(recentAutoAppliedCorrections) {
                     for (a in streamingApplied) {
@@ -2828,6 +2892,12 @@ class VoiceInputMethodService : InputMethodService() {
                                     decodeId = decodeId,
                                     deletePrecedingChars = deletePreceding
                                 )
+                                if (committedImmediately && asrLanguage == AsrLanguage.ENGLISH) {
+                                    recordEnglishForAdaptiveSwipe(
+                                        recognizedText,
+                                        SwipeVocabularyJudgement.SwipeLearnSource.VOICE_ENGLISH_COMMITTED
+                                    )
+                                }
                                 if (arbitrator.isKeyboardComposing()) {
                                     if (committedImmediately) {
                                         updateCandidates()
@@ -3051,6 +3121,12 @@ class VoiceInputMethodService : InputMethodService() {
 
             if (!suppressLearning && hadKeyboardComposing && prevPhrase.isNotEmpty() && readingBefore.isNotEmpty()) {
                 nextPhrasePredictor.recordTransition(prevPhrase, readingBefore)
+            }
+            if (!suppressLearning && text.length <= 256) {
+                recordEnglishForAdaptiveSwipe(
+                    text,
+                    SwipeVocabularyJudgement.SwipeLearnSource.CLIPBOARD_PASTE_NON_SENSITIVE
+                )
             }
             syncKeyboardState()
             if (!suppressLearning) {

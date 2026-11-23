@@ -2,12 +2,15 @@
 
 #include <android/log.h>
 #include <cmath>
+#include <cstdint>
 #include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <cstring>
 #include <chrono>
+#include <limits>
 #include <mutex>
+#include <unordered_set>
 
 #include "onnxruntime_cxx_api.h"
 
@@ -28,6 +31,33 @@ constexpr int FUTO_CONTEXT_LENGTH = 16;
 constexpr int FUTO_CONTEXT_DIM = 16;
 constexpr int FUTO_CONTEXT_VOCAB_SIZE = 32768;
 constexpr int64_t FUTO_CONTEXT_HASHED_TOKEN_ID = 32768;
+
+constexpr float kExtPass2GateBaseTot = -0.50f;
+constexpr int kExtPass2BeamWidth = 40;
+constexpr float kExtOovPenaltySpatial = 1.50f;
+constexpr float kExtOovPenaltyContext = 2.50f;
+constexpr float kExtLogFreqWeight = 0.20f;
+constexpr int kExtMinWordLen = 3;
+constexpr int kExtMaxWordLen = 28;
+constexpr float kAdaptiveBoost = 1.20f;
+constexpr float kAdaptiveMaxBaseGap = 4.50f;
+constexpr float kAdaptiveBiasFloor = -4.20f;
+
+std::string NormalizeSwipeTrieKey(const std::string& surface) {
+    std::string key;
+    key.reserve(surface.size());
+    for (unsigned char uc : surface) {
+        if (uc == '\'' || uc == '-') continue;
+        if (uc >= 'A' && uc <= 'Z') {
+            key.push_back(static_cast<char>(uc + 32));
+        } else if (uc >= 'a' && uc <= 'z') {
+            key.push_back(static_cast<char>(uc));
+        } else {
+            return "";
+        }
+    }
+    return key;
+}
 
 constexpr uint64_t MASK_64 = 0xFFFFFFFFFFFFFFFFULL;
 constexpr uint64_t CONSTANTS[4] = {
@@ -285,6 +315,21 @@ struct PrefixMass {
     }
 };
 
+// Idea A: Compact CSR Trie node (16 bytes/node) & entry for ~68k OOV extended lexicon
+struct ExtEntry {
+    std::string surface;
+    float log_freq = 0.0f;
+};
+
+struct ExtTrieNode {
+    uint32_t edge_start = 0;
+    uint32_t edge_end = 0;
+    int32_t entry_idx = -1;
+    int8_t first = -1;
+    int8_t last = -1;
+    uint8_t depth = 0;
+};
+
 } // namespace
 
 class FutoSwipeEngine::Impl {
@@ -342,6 +387,8 @@ public:
             exact_ids_.reserve(35000);
             lowercase_ids_.clear();
             lowercase_ids_.reserve(35000);
+            base_lowercase_set_.clear();
+            base_lowercase_set_.reserve(35000);
 
             std::string line;
             int vocab_idx = 0;
@@ -398,58 +445,194 @@ public:
 
     bool IsReady() const { return ready_; }
 
+    size_t ExtendedWordCount() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return ext_entries_.size();
+    }
+
+    bool ContainsBaseWord(const std::string& lower_word) const {
+        std::string key = NormalizeSwipeTrieKey(lower_word);
+        if (key.empty()) return false;
+        std::lock_guard<std::mutex> lock(mutex_);
+        return base_lowercase_set_.find(key) != base_lowercase_set_.end();
+    }
+
+    bool LoadExtendedLexicon(const std::string& tsv_path) {
+        std::unordered_set<std::string> base_copy;
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (!ready_) return false;
+            base_copy = base_lowercase_set_;
+        }
+
+        std::ifstream tf(tsv_path);
+        if (!tf.is_open()) {
+            LOGW("Failed to open extended swipe lexicon: %s", tsv_path.c_str());
+            return false;
+        }
+
+        std::vector<ExtEntry> new_entries;
+        std::vector<std::string> entry_keys;
+        new_entries.reserve(75000);
+        entry_keys.reserve(75000);
+        std::unordered_map<std::string, int32_t> seen_keys;
+        seen_keys.reserve(75000);
+
+        std::string line;
+        while (std::getline(tf, line)) {
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
+            if (line.empty() || line[0] == '#') continue;
+
+            size_t t1 = line.find('\t');
+            if (t1 == std::string::npos || t1 < static_cast<size_t>(kExtMinWordLen) || t1 > static_cast<size_t>(kExtMaxWordLen)) {
+                continue;
+            }
+            size_t t2 = line.find('\t', t1 + 1);
+            if (t2 == std::string::npos || t2 <= t1 + 1 || t2 + 1 >= line.size()) {
+                continue;
+            }
+
+            std::string key = line.substr(0, t1);
+            bool valid_alpha = true;
+            for (char c : key) {
+                if (c < 'a' || c > 'z') {
+                    valid_alpha = false;
+                    break;
+                }
+            }
+            if (!valid_alpha) continue;
+            if (base_copy.find(key) != base_copy.end()) continue;
+
+            std::string surf = line.substr(t1 + 1, t2 - (t1 + 1));
+            if (surf.empty()) continue;
+
+            float lf = 0.0f;
+            try {
+                lf = std::stof(line.substr(t2 + 1));
+            } catch (...) {
+                continue;
+            }
+            if (!std::isfinite(lf) || lf <= 0.0f) continue;
+
+            auto sit = seen_keys.find(key);
+            if (sit != seen_keys.end()) {
+                if (lf > new_entries[sit->second].log_freq) {
+                    new_entries[sit->second].surface = std::move(surf);
+                    new_entries[sit->second].log_freq = lf;
+                }
+            } else {
+                int32_t idx = static_cast<int32_t>(new_entries.size());
+                seen_keys.emplace(key, idx);
+                entry_keys.push_back(std::move(key));
+                new_entries.push_back(ExtEntry{std::move(surf), lf});
+            }
+        }
+
+        if (new_entries.empty()) {
+            LOGW("Extended swipe lexicon contained 0 eligible OOV words: %s", tsv_path.c_str());
+            return false;
+        }
+
+        struct TempExtNode {
+            int32_t entry_idx = -1;
+            int8_t first = -1;
+            int8_t last = -1;
+            uint8_t depth = 0;
+            std::vector<std::pair<uint8_t, int32_t>> edges;
+        };
+
+        std::vector<TempExtNode> temp_nodes;
+        temp_nodes.reserve(new_entries.size() * 3 + 16);
+        temp_nodes.emplace_back(); // Root at 0
+
+        for (size_t e_idx = 0; e_idx < new_entries.size(); ++e_idx) {
+            const std::string& key = entry_keys[e_idx];
+            int32_t curr = 0;
+            int8_t first_ch = static_cast<int8_t>(key[0] - 'a');
+            for (size_t pos = 0; pos < key.size(); ++pos) {
+                uint8_t ch = static_cast<uint8_t>(key[pos] - 'a');
+                int32_t next_idx = -1;
+                for (const auto& edge : temp_nodes[curr].edges) {
+                    if (edge.first == ch) {
+                        next_idx = edge.second;
+                        break;
+                    }
+                }
+                if (next_idx < 0) {
+                    next_idx = static_cast<int32_t>(temp_nodes.size());
+                    temp_nodes.emplace_back();
+                    temp_nodes[next_idx].first = first_ch;
+                    temp_nodes[next_idx].last = static_cast<int8_t>(ch);
+                    temp_nodes[next_idx].depth = static_cast<uint8_t>(pos + 1);
+                    temp_nodes[curr].edges.emplace_back(ch, next_idx);
+                }
+                curr = next_idx;
+            }
+            temp_nodes[curr].entry_idx = static_cast<int32_t>(e_idx);
+        }
+
+        size_t total_edges = 0;
+        for (const auto& tn : temp_nodes) {
+            total_edges += tn.edges.size();
+        }
+
+        std::vector<ExtTrieNode> new_nodes(temp_nodes.size());
+        std::vector<int32_t> new_edge_child;
+        std::vector<uint8_t> new_edge_char;
+        new_edge_child.reserve(total_edges);
+        new_edge_char.reserve(total_edges);
+
+        for (size_t i = 0; i < temp_nodes.size(); ++i) {
+            auto& edges = temp_nodes[i].edges;
+            if (edges.size() > 1) {
+                std::sort(edges.begin(), edges.end(), [](const auto& a, const auto& b) {
+                    return a.first < b.first;
+                });
+            }
+            new_nodes[i].edge_start = static_cast<uint32_t>(new_edge_child.size());
+            for (const auto& edge : edges) {
+                new_edge_char.push_back(edge.first);
+                new_edge_child.push_back(edge.second);
+            }
+            new_nodes[i].edge_end = static_cast<uint32_t>(new_edge_child.size());
+            new_nodes[i].entry_idx = temp_nodes[i].entry_idx;
+            new_nodes[i].first = temp_nodes[i].first;
+            new_nodes[i].last = temp_nodes[i].last;
+            new_nodes[i].depth = temp_nodes[i].depth;
+        }
+
+        size_t words_loaded = new_entries.size();
+        size_t nodes_loaded = new_nodes.size();
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            ext_nodes_.swap(new_nodes);
+            ext_edge_child_.swap(new_edge_child);
+            ext_edge_char_.swap(new_edge_char);
+            ext_entries_.swap(new_entries);
+            ext_stamp_.assign(ext_nodes_.size(), 0);
+            ext_mass_.resize(ext_nodes_.size());
+            ext_stamp_gen_ = 0;
+        }
+
+        LOGI("Loaded extended swipe CSR Trie: words=%zu, nodes=%zu, edges=%zu",
+             words_loaded, nodes_loaded, total_edges);
+        return true;
+    }
+
     void SyncUserDictionary(const std::vector<UserSwipeWord>& user_words) {
         std::lock_guard<std::mutex> lock(mutex_);
         if (base_trie_nodes_.empty()) return;
-        if (user_words.empty() && user_word_priorities_.empty()) {
-            return;
-        }
-        trie_nodes_ = base_trie_nodes_;
-        user_word_priorities_.clear();
+        cached_user_words_ = user_words;
+        RebuildActiveTrieLocked();
+    }
 
-        for (const auto& uw : user_words) {
-            std::string key = uw.surface;
-            std::transform(key.begin(), key.end(), key.begin(), ::tolower);
-            key.erase(std::remove_if(key.begin(), key.end(), [](char c) {
-                return c < 'a' || c > 'z';
-            }), key.end());
-
-            if (key.length() < 2) continue;
-
-            user_word_priorities_[uw.surface] = uw.priority_score;
-
-            int curr = 0;
-            trie_nodes_[curr].has_user_subtree = true;
-            for (char ch : key) {
-                int idx = ch - 'a';
-                if (trie_nodes_[curr].children[idx] < 0) {
-                    int next_idx = static_cast<int>(trie_nodes_.size());
-                    trie_nodes_[curr].children[idx] = next_idx;
-                    trie_nodes_.emplace_back(trie_nodes_[curr].text + ch, idx);
-                }
-                curr = trie_nodes_[curr].children[idx];
-                trie_nodes_[curr].has_user_subtree = true;
-            }
-
-            bool has_apos = (uw.surface.find('\'') != std::string::npos);
-            auto it = std::find_if(
-                trie_nodes_[curr].surfaces.begin(),
-                trie_nodes_[curr].surfaces.end(),
-                [&](const SurfaceEntry& se) { return se.surface == uw.surface; }
-            );
-            if (it != trie_nodes_[curr].surfaces.end()) {
-                trie_nodes_[curr].surfaces.erase(it);
-            }
-            trie_nodes_[curr].surfaces.insert(
-                trie_nodes_[curr].surfaces.begin(),
-                SurfaceEntry{uw.surface, 0, 255.0f, has_apos}
-            );
-            if (!has_apos) {
-                trie_nodes_[curr].has_plain_surface = true;
-            }
-            trie_nodes_[curr].max_user_priority = std::max(trie_nodes_[curr].max_user_priority, uw.priority_score);
-        }
-        LOGI("Synced %zu user swipe words into Trie (nodes=%zu)", user_words.size(), trie_nodes_.size());
+    void SyncAdaptiveCache(const std::vector<std::string>& adaptive_words) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (base_trie_nodes_.empty()) return;
+        cached_adaptive_words_ = adaptive_words;
+        RebuildActiveTrieLocked();
     }
 
     void SetLayoutKeys(const std::vector<float>& key_centers_xy) {
@@ -610,6 +793,7 @@ public:
         }
 
         float max_base = -1e9f;
+        float best_base_tot = -1e9f;
         float best_common_tot = -1e9f;
         for (const auto& kv : states) {
             int node_idx = kv.first;
@@ -617,6 +801,9 @@ public:
             if (node.surfaces.empty()) continue;
 
             float tot = kv.second.Total();
+            if (tot > best_base_tot) {
+                best_base_tot = tot;
+            }
             for (const auto& se : node.surfaces) {
                 if (se.vocab_rank < 6000) {
                     if (tot > best_common_tot) best_common_tot = tot;
@@ -658,9 +845,16 @@ public:
                     total_score -= 2.5f;
                 }
 
+                auto u_it = user_word_priorities_.find(se.surface);
+                bool is_user_word = (u_it != user_word_priorities_.end());
+                bool is_adaptive_word = (!is_user_word && adaptive_word_surfaces_.find(se.surface) != adaptive_word_surfaces_.end());
+
                 if (!use_context) {
                     // Idea 2: Unigram frequency prior + embedding unigram bias in spatial mode
                     float uni_bias = LookupUnigramBias(se.surface);
+                    if ((is_user_word || is_adaptive_word) && uni_bias < kAdaptiveBiasFloor) {
+                        uni_bias = kAdaptiveBiasFloor;
+                    }
                     total_score += 0.004f * se.zipf_freq + 0.25f * uni_bias;
                 } else {
                     // Idea 2: Mild Zipf rank prior in context mode (exact_biases_ already in ScoreWordInContext)
@@ -676,14 +870,133 @@ public:
                     }
                 }
 
-                auto u_it = user_word_priorities_.find(se.surface);
-                if (u_it != user_word_priorities_.end()) {
+                if (is_user_word) {
                     if (base >= max_base - 6.5f) {
                         float boost = (u_it->second >= 4.0f) ? 5.5f : ((u_it->second >= 2.5f) ? 3.8f : 2.0f);
                         total_score += boost;
                     }
+                } else if (is_adaptive_word) {
+                    if (base >= max_base - kAdaptiveMaxBaseGap) {
+                        total_score += kAdaptiveBoost;
+                    }
                 }
                 candidates.push_back({se.surface, total_score});
+            }
+        }
+
+        // Idea A + E: Confidence-gated Pass 2 over Compact CSR Dual-Trie (68k+ OOV words)
+        if (!ext_nodes_.empty() && best_base_tot < kExtPass2GateBaseTot) {
+            if (ext_stamp_gen_ > std::numeric_limits<int32_t>::max() - 128) {
+                std::fill(ext_stamp_.begin(), ext_stamp_.end(), 0);
+                ext_stamp_gen_ = 0;
+            }
+
+            std::vector<int32_t> cur_ids;
+            std::vector<int32_t> next_ids;
+            std::vector<PrefixMass> cur_masses;
+            std::vector<std::pair<int32_t, float>> ext_prios;
+            cur_ids.reserve(kExtPass2BeamWidth);
+            next_ids.reserve(256);
+            cur_masses.reserve(kExtPass2BeamWidth);
+            ext_prios.reserve(256);
+
+            const int32_t init_stamp = ++ext_stamp_gen_;
+            ext_stamp_[0] = init_stamp;
+            ext_mass_[0].blank = 0.0f;
+            ext_mass_[0].letter = -std::numeric_limits<float>::infinity();
+            cur_ids.push_back(0);
+
+            for (int t = 0; t < FUTO_SWIPE_TIME_STEPS; ++t) {
+                const float* row = &refined_logits[t * FUTO_SWIPE_CLASS_COUNT];
+                const int blank = FUTO_SWIPE_CLASS_COUNT - 1;
+                const int32_t next_stamp = ++ext_stamp_gen_;
+                next_ids.clear();
+
+                cur_masses.resize(cur_ids.size());
+                for (size_t i = 0; i < cur_ids.size(); ++i) {
+                    cur_masses[i] = ext_mass_[cur_ids[i]];
+                }
+
+                auto touch_next = [&](int32_t node_id) {
+                    if (ext_stamp_[node_id] != next_stamp) {
+                        ext_stamp_[node_id] = next_stamp;
+                        ext_mass_[node_id].blank = -std::numeric_limits<float>::infinity();
+                        ext_mass_[node_id].letter = -std::numeric_limits<float>::infinity();
+                        next_ids.push_back(node_id);
+                    }
+                };
+
+                for (size_t i = 0; i < cur_ids.size(); ++i) {
+                    const int32_t node_idx = cur_ids[i];
+                    const PrefixMass& old = cur_masses[i];
+                    const float old_total = old.Total();
+                    const ExtTrieNode& node = ext_nodes_[node_idx];
+
+                    touch_next(node_idx);
+                    ext_mass_[node_idx].blank = LogAdd(ext_mass_[node_idx].blank, old_total + row[blank]);
+
+                    if (node.last >= 0) {
+                        ext_mass_[node_idx].letter = LogAdd(
+                            ext_mass_[node_idx].letter,
+                            old.letter + row[static_cast<int>(node.last)]
+                        );
+                    }
+
+                    for (uint32_t e = node.edge_start; e < node.edge_end; ++e) {
+                        const int c = static_cast<int>(ext_edge_char_[e]);
+                        const int32_t child_idx = ext_edge_child_[e];
+                        touch_next(child_idx);
+                        const float prev = (c == static_cast<int>(node.last)) ? old.blank : old_total;
+                        ext_mass_[child_idx].letter = LogAdd(ext_mass_[child_idx].letter, prev + row[c]);
+                    }
+                }
+
+                ext_prios.clear();
+                for (int32_t nid : next_ids) {
+                    const int l = static_cast<int>(ext_nodes_[nid].depth);
+                    const float div = divisors[std::min(l, FUTO_SWIPE_TIME_STEPS)];
+                    const float prio = ext_mass_[nid].Total() / div + beta_prune * static_cast<float>(l);
+                    ext_prios.emplace_back(nid, prio);
+                }
+
+                if (ext_prios.size() > static_cast<size_t>(kExtPass2BeamWidth)) {
+                    std::partial_sort(
+                        ext_prios.begin(),
+                        ext_prios.begin() + kExtPass2BeamWidth,
+                        ext_prios.end(),
+                        [](const auto& a, const auto& b) { return a.second > b.second; }
+                    );
+                    ext_prios.resize(kExtPass2BeamWidth);
+                }
+
+                cur_ids.clear();
+                for (const auto& kv : ext_prios) {
+                    cur_ids.push_back(kv.first);
+                }
+            }
+
+            const float oov_penalty = use_context ? kExtOovPenaltyContext : kExtOovPenaltySpatial;
+            for (int32_t nid : cur_ids) {
+                const ExtTrieNode& node = ext_nodes_[nid];
+                if (node.entry_idx < 0 || node.depth < kExtMinWordLen) continue;
+                if (node.first < 0 || node.last < 0) continue;
+
+                const float l = static_cast<float>(node.depth);
+                const float tot = ext_mass_[nid].Total();
+
+                const int c0 = static_cast<int>(node.first);
+                const int c1 = static_cast<int>(node.last);
+                const float dx0 = px0 - key_centers_[c0][0];
+                const float dy0 = py0 - key_centers_[c0][1];
+                const float d0_sq = dx0 * dx0 + dy0 * dy0;
+                const float dx1 = px1 - key_centers_[c1][0];
+                const float dy1 = py1 - key_centers_[c1][1];
+                const float d1_sq = dx1 * dx1 + dy1 * dy1;
+
+                const float base = tot / std::pow(l, gamma) + beta * l - 2.0f * d0_sq - 3.5f * d1_sq;
+                const ExtEntry& ee = ext_entries_[node.entry_idx];
+                const float total_score = base + kExtLogFreqWeight * ee.log_freq - oov_penalty;
+                candidates.push_back({ee.surface, total_score});
             }
         }
 
@@ -707,6 +1020,103 @@ public:
     }
 
 private:
+    void RebuildActiveTrieLocked() {
+        if (base_trie_nodes_.empty()) return;
+        trie_nodes_ = base_trie_nodes_;
+        user_word_priorities_.clear();
+        adaptive_word_surfaces_.clear();
+
+        // 1. Adaptive LRU Cache entries (Idea C: mild boost, NO has_user_subtree propagation)
+        std::unordered_set<std::string> seen_adaptive_keys;
+        seen_adaptive_keys.reserve(cached_adaptive_words_.size() + 16);
+        for (const auto& surf : cached_adaptive_words_) {
+            std::string key = NormalizeSwipeTrieKey(surf);
+            if (key.size() < static_cast<size_t>(kExtMinWordLen) ||
+                key.size() > static_cast<size_t>(kExtMaxWordLen)) {
+                continue;
+            }
+            if (base_lowercase_set_.find(key) != base_lowercase_set_.end()) {
+                continue;
+            }
+            if (!seen_adaptive_keys.insert(key).second) {
+                continue;
+            }
+
+            int curr = 0;
+            for (char ch : key) {
+                int idx = ch - 'a';
+                if (trie_nodes_[curr].children[idx] < 0) {
+                    int next_idx = static_cast<int>(trie_nodes_.size());
+                    trie_nodes_[curr].children[idx] = next_idx;
+                    trie_nodes_.emplace_back(trie_nodes_[curr].text + ch, idx);
+                }
+                curr = trie_nodes_[curr].children[idx];
+            }
+
+            bool has_apos = (surf.find('\'') != std::string::npos);
+            auto it = std::find_if(
+                trie_nodes_[curr].surfaces.begin(),
+                trie_nodes_[curr].surfaces.end(),
+                [&](const SurfaceEntry& se) { return se.surface == surf; }
+            );
+            if (it == trie_nodes_[curr].surfaces.end()) {
+                trie_nodes_[curr].surfaces.push_back(SurfaceEntry{surf, 35000, 0.0f, has_apos});
+            }
+            if (!has_apos) {
+                trie_nodes_[curr].has_plain_surface = true;
+            }
+            adaptive_word_surfaces_.insert(surf);
+        }
+
+        // 2. Explicit custom user dictionary entries (full priority boost & subtree protection)
+        for (const auto& uw : cached_user_words_) {
+            std::string key = uw.surface;
+            std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+            key.erase(std::remove_if(key.begin(), key.end(), [](char c) {
+                return c < 'a' || c > 'z';
+            }), key.end());
+
+            if (key.length() < 2) continue;
+
+            user_word_priorities_[uw.surface] = uw.priority_score;
+            adaptive_word_surfaces_.erase(uw.surface);
+
+            int curr = 0;
+            trie_nodes_[curr].has_user_subtree = true;
+            for (char ch : key) {
+                int idx = ch - 'a';
+                if (trie_nodes_[curr].children[idx] < 0) {
+                    int next_idx = static_cast<int>(trie_nodes_.size());
+                    trie_nodes_[curr].children[idx] = next_idx;
+                    trie_nodes_.emplace_back(trie_nodes_[curr].text + ch, idx);
+                }
+                curr = trie_nodes_[curr].children[idx];
+                trie_nodes_[curr].has_user_subtree = true;
+            }
+
+            bool has_apos = (uw.surface.find('\'') != std::string::npos);
+            auto it = std::find_if(
+                trie_nodes_[curr].surfaces.begin(),
+                trie_nodes_[curr].surfaces.end(),
+                [&](const SurfaceEntry& se) { return se.surface == uw.surface; }
+            );
+            if (it != trie_nodes_[curr].surfaces.end()) {
+                trie_nodes_[curr].surfaces.erase(it);
+            }
+            trie_nodes_[curr].surfaces.insert(
+                trie_nodes_[curr].surfaces.begin(),
+                SurfaceEntry{uw.surface, 0, 255.0f, has_apos}
+            );
+            if (!has_apos) {
+                trie_nodes_[curr].has_plain_surface = true;
+            }
+            trie_nodes_[curr].max_user_priority = std::max(trie_nodes_[curr].max_user_priority, uw.priority_score);
+        }
+
+        LOGI("Rebuilt active swipe Trie: user=%zu, adaptive=%zu, nodes=%zu",
+             cached_user_words_.size(), adaptive_word_surfaces_.size(), trie_nodes_.size());
+    }
+
     void AddWordToTrie(const std::string& surface, int vocab_rank) {
         std::string key = surface;
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
@@ -725,6 +1135,7 @@ private:
             curr = trie_nodes_[curr].children[idx];
         }
 
+        base_lowercase_set_.insert(key);
         float zipf_freq = std::max(
             0.0f,
             static_cast<float>(255.0 * (1.0 - std::log(static_cast<double>(vocab_rank) + 1.0) / std::log(32768.0)))
@@ -834,7 +1245,8 @@ private:
             return score;
         } else {
             auto u_it = user_word_priorities_.find(word);
-            bool is_user_word = (u_it != user_word_priorities_.end());
+            bool is_user_word = (u_it != user_word_priorities_.end()) ||
+                                (adaptive_word_surfaces_.find(word) != adaptive_word_surfaces_.end());
             auto [b0, b1] = FutoContextBuckets(word);
             int64_t buckets[2] = {b0, b1};
             float score = 0.0f;
@@ -874,8 +1286,22 @@ private:
 
     std::vector<TrieNode> trie_nodes_;
     std::vector<TrieNode> base_trie_nodes_;
+    std::unordered_set<std::string> base_lowercase_set_;
+    std::vector<UserSwipeWord> cached_user_words_;
+    std::vector<std::string> cached_adaptive_words_;
     std::unordered_map<std::string, float> user_word_priorities_;
-    std::mutex mutex_;
+    std::unordered_set<std::string> adaptive_word_surfaces_;
+
+    // Idea A Compact CSR Extended Lexicon & Flat Search Scratch Buffers
+    std::vector<ExtTrieNode> ext_nodes_;
+    std::vector<int32_t> ext_edge_child_;
+    std::vector<uint8_t> ext_edge_char_;
+    std::vector<ExtEntry> ext_entries_;
+    std::vector<int32_t> ext_stamp_;
+    std::vector<PrefixMass> ext_mass_;
+    int32_t ext_stamp_gen_ = 0;
+
+    mutable std::mutex mutex_;
     float key_centers_[26][2] = {};
     std::vector<float> layout_keys_;
     std::vector<uint8_t> layout_mask_;
@@ -894,8 +1320,24 @@ bool FutoSwipeEngine::IsReady() const {
     return impl_->IsReady();
 }
 
+bool FutoSwipeEngine::LoadExtendedLexicon(const std::string& tsv_path) {
+    return impl_->LoadExtendedLexicon(tsv_path);
+}
+
+size_t FutoSwipeEngine::ExtendedWordCount() const {
+    return impl_->ExtendedWordCount();
+}
+
+bool FutoSwipeEngine::ContainsBaseWord(const std::string& lower_word) const {
+    return impl_->ContainsBaseWord(lower_word);
+}
+
 void FutoSwipeEngine::SyncUserDictionary(const std::vector<UserSwipeWord>& user_words) {
     impl_->SyncUserDictionary(user_words);
+}
+
+void FutoSwipeEngine::SyncAdaptiveCache(const std::vector<std::string>& adaptive_words) {
+    impl_->SyncAdaptiveCache(adaptive_words);
 }
 
 void FutoSwipeEngine::SetLayoutKeys(const std::vector<float>& key_centers_xy) {

@@ -46,6 +46,8 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishCandidateBadge` | `PRIORITY` | 候補バッジ選択（`SLM`(100) > `USER`(80) > `CAPS`(60) > `SPELL`） |
 | **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishPrefixCompletionPolicy` | `FIRST` | 英語プレフィックス補完と既知短語保護（`NONE` / `PROTECT_EXACT_WORD` / `PROMOTE_PREFIX_COMPLETION` / `RAW_AND_TYPO_ONLY`） |
 | **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishOtaOverlayAdmissionPolicy` | `FIRST` | OTA 拡張英語語彙の安全受入・コア短語（4文字以下）保護・容量上限制御（`REJECT_*` / `ADMIT_NEW_WORD` / `UPGRADE_EXISTING_FREQ` / `KEEP_BUNDLED`） |
+| **BC-4: English Typing** | `SwipeVocabularyJudgement` | `SwipeExtendedPass2TriggerPolicy` | `FIRST` | スワイプ Pass 1 確信度（`-0.50`）による Compact CSR 拡張 68k+ 語彙第 2 探索トリガー裁定（`SKIP_NO_LEXICON` / `SKIP_BASE_CONFIDENT` / `RUN_EXTENDED_PASS2`） |
+| **BC-4: English Typing** | `SwipeVocabularyJudgement` | `SwipeAdaptiveCacheAdmissionPolicy` | `FIRST` | スワイプ適応 LRU キャッシュ（最大 500 語）への機密除外・1 発タイポガード・ユーザー辞書/32k 隔離裁定（`REJECT_*` / `SKIP_*` / `DEFER_*` / `ADMIT_TO_ADAPTIVE_CACHE`） |
 | **BC-8: Clipboard** | `ClipboardSuggestionJudgement` | `ClipboardSuggestionEligibility` | `FIRST` | アイドル時のクリップボード提案チップ表示可否 |
 | **BC-8: Clipboard** | `ClipboardSuggestionJudgement` | `SafeClipboardHandling` | `FIRST` | 機密クリップ（`EXTRA_IS_SENSITIVE`）・パスワード欄での非永続化・マスク表示・非学習裁定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `HomeHeroActionDecisionTable` | `FIRST` | ホーム画面のスマートガイド（次の唯一アクション / 準備完了）決定 |

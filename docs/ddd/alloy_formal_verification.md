@@ -132,6 +132,15 @@ Debug 限定 GitHub Actions ビルド更新チェック・バックグラウン�
 - **`UpToDateNeverOffersDownloadOrInstall`**: 最新判定時は再確認のみを提示すること。
 - **`ActiveDownloadAlwaysShowsProgressAndCancel`**: バックグラウンド DL/待機中は進捗バーとキャンセル CTA を必ず表示すること。
 
+### 3.16 [`swipe_extended_lexicon_and_cache.als`](app/src/test/resources/alloy/swipe_extended_lexicon_and_cache.als)
+スワイプ大規模語彙拡張（Idea A Compact CSR Dual-Trie + Idea C Adaptive LRU Cache）の DMN 決定表（[`SwipeVocabularyJudgement`](app/src/main/java/com/example/myasr/context/english/domain/SwipeVocabularyJudgement.kt)）および状態遷移不変条件をモデル化し、以下を検証する：
+- **`Pass2TriggerTableIsTotal`**: `SwipeExtendedPass2TriggerPolicy` が全入力組み合わせに対して一意のルール・アクションへ解決されること。
+- **`ConfidentBaseNeverTriggersPass2` / `MissingLexiconNeverTriggersPass2`**: Base 32k 高確信一致時および拡張辞書不在時に Pass 2 CSR 探索が決して発火しないこと。
+- **`AdaptiveAdmissionTableIsTotal`**: `SwipeAdaptiveCacheAdmissionPolicy` が全入力に対して一意に解決されること。
+- **`SensitiveOrPasswordNeverCached`**: パスワード欄・機密クリップからの確定語が適応キャッシュにも保留バッファにも絶対に入らないこと。
+- **`SingleUnverifiedRawTypoNeverEntersActiveCache`**: 未検証スペース確定の単発入力が即座にアクティブキャッシュに入らず 1-shot ガードに留保されること。
+- **`CustomDictAndBaseVocabIsolatedFromAdaptiveCache`**: `custom_dictionary.json` および Base 32k 語彙が適応キャッシュから厳格に隔離・維持されること。
+
 ---
 
 ## 4. 自動同期ルール

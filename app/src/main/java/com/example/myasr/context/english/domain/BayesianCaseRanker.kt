@@ -253,6 +253,146 @@ object BayesianCaseRanker {
     }
 
     /**
+     * Adapts casing of ranked neural swipe candidates from [FutoSwipeEngine] while strictly
+     * preserving swipe Rank 1 ordering so rare OOV/technical words (e.g. `Tailscale`, `JotInput`,
+     * `Anthropic`) are never overtaken by higher-frequency Rank 2 words (e.g. `table`) or stripped
+     * of mixed casing.
+     */
+    fun buildSwipeCandidates(
+        swipeCandidates: List<String>,
+        bosProb: Float,
+        fieldPolicy: InputFieldCapPolicy,
+        isShiftActive: Boolean,
+        maxCandidates: Int = 5
+    ): List<ConversionCandidate> {
+        if (swipeCandidates.isEmpty() || maxCandidates <= 0) return emptyList()
+        val reading = swipeCandidates[0]
+
+        if (fieldPolicy == InputFieldCapPolicy.BYPASS) {
+            val bypassOut = ArrayList<ConversionCandidate>(minOf(swipeCandidates.size, maxCandidates))
+            val seen = HashSet<String>()
+            for ((idx, cand) in swipeCandidates.withIndex()) {
+                if (seen.add(cand)) {
+                    bypassOut.add(
+                        ConversionCandidate(
+                            surface = cand,
+                            reading = reading,
+                            isPrediction = false,
+                            source = "futo_swipe",
+                            obsPenalty = idx * 0.08f
+                        )
+                    )
+                    if (bypassOut.size >= maxCandidates) break
+                }
+            }
+            return bypassOut
+        }
+
+        val primaries = ArrayList<ConversionCandidate>(swipeCandidates.size)
+        var topSecondary: ConversionCandidate? = null
+
+        for ((idx, cand) in swipeCandidates.withIndex()) {
+            if (cand.isEmpty()) continue
+            val penalty = idx * 0.08f
+            val lower = cand.lowercase()
+            val lexEntry = EnglishCaseModel.lookupLexicon(lower)
+            val hasExplicitUpper = cand.any { it.isUpperCase() }
+            val unknownMixedOrUserSurface = hasExplicitUpper &&
+                (lexEntry == null || !lexEntry.variants.any { it.surface == cand })
+
+            if (fieldPolicy == InputFieldCapPolicy.CAP_CHARACTERS && lower.length >= 2) {
+                primaries.add(
+                    ConversionCandidate(
+                        surface = cand.uppercase(),
+                        reading = reading,
+                        isPrediction = false,
+                        source = "futo_swipe",
+                        obsPenalty = penalty
+                    )
+                )
+            } else if (unknownMixedOrUserSurface) {
+                val shaped = if ((isShiftActive || bosProb >= 0.5f || fieldPolicy == InputFieldCapPolicy.CAP_WORDS) &&
+                    cand[0].isLowerCase() &&
+                    classifyShape(cand) == CaseShape.LOWER
+                ) {
+                    cand.replaceFirstChar { it.uppercase() }
+                } else {
+                    cand
+                }
+                primaries.add(
+                    ConversionCandidate(
+                        surface = shaped,
+                        reading = reading,
+                        isPrediction = false,
+                        source = "futo_swipe",
+                        obsPenalty = penalty
+                    )
+                )
+            } else {
+                val variants = generateCaseVariants(
+                    baseWord = cand,
+                    bosProb = bosProb,
+                    policy = fieldPolicy,
+                    source = "futo_swipe",
+                    obsPenalty = penalty,
+                    isRawWord = false
+                )
+                val topVariant = variants.firstOrNull()
+                val rawPrimary = topVariant?.surface ?: cand
+                val adaptedPrimary = if (isShiftActive &&
+                    rawPrimary.isNotEmpty() &&
+                    rawPrimary[0].isLowerCase() &&
+                    classifyShape(rawPrimary) == CaseShape.LOWER
+                ) {
+                    rawPrimary.replaceFirstChar { it.uppercase() }
+                } else {
+                    rawPrimary
+                }
+                primaries.add(
+                    ConversionCandidate(
+                        surface = adaptedPrimary,
+                        reading = reading,
+                        isPrediction = false,
+                        source = "futo_swipe",
+                        obsPenalty = penalty
+                    )
+                )
+                if (idx == 0 && topSecondary == null) {
+                    val alt = variants.firstOrNull {
+                        it.surface != adaptedPrimary && it.posteriorProb >= 0.25f
+                    }
+                    if (alt != null) {
+                        topSecondary = ConversionCandidate(
+                            surface = alt.surface,
+                            reading = reading,
+                            isPrediction = false,
+                            source = "futo_swipe",
+                            obsPenalty = penalty
+                        )
+                    }
+                }
+            }
+        }
+
+        val out = ArrayList<ConversionCandidate>(maxCandidates)
+        val seenSurfaces = HashSet<String>()
+        if (primaries.isNotEmpty() && seenSurfaces.add(primaries[0].surface)) {
+            out.add(primaries[0])
+        }
+        if (topSecondary != null && out.size < maxCandidates && seenSurfaces.add(topSecondary.surface)) {
+            out.add(topSecondary)
+        }
+        for (i in 1 until primaries.size) {
+            if (out.size >= maxCandidates) break
+            val item = primaries[i]
+            if (seenSurfaces.add(item.surface)) {
+                out.add(item)
+            }
+        }
+        return out
+    }
+
+    /**
      * Builds and ranks English candidate list combining user dictionary entries,
      * Bayesian truecasing variants of [rawWord], and prefix/typo suggestions.
      */

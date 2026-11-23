@@ -118,14 +118,15 @@ DDD Crew の **Bounded Context Canvas** 形式に基づき、JotInput の全 8 �
 1. **Spatial-Gated User Boost**: スワイプデコードでは空間尤度が閾値（`max_base - 6.5f`）を満たす場合のみユーザー辞書ブーストを許可し、誤認識を防止する。
 2. **Symmetric English Sync**: `DictionaryRepository` の英語エントリ変更時、FUTO Swipe Trie と SymSpell の双方へ同期する。
 3. **Corpus-Derived Algorithmic Truecasing & Exact-Surface Dedup**: 大文字化候補はハードコード語彙リストを排し、コーパス統計 $P_{\text{lex}}(s \mid w)$・2-state 文字バイグラム LM（OOV アクロニム）・Punkt 型文境界確率 $P(\text{BOS} \mid \text{ctx})$ のベイズ混合で順位付けし、表層の正確一致で重複排除することで `US`/`us` や `May`/`may` を候補バーに共存させる。
+4. **Extended Swipe Dual-Trie & Adaptive Cache Isolation**: スワイプ認識の 32k ベース辞書を超える 68k+ OOV 語彙（OTA 増分含む）は、Pass 1 高確信判定（`best_base_tot >= -0.50`）で 0ms バイパスする Compact CSR 第 2 Trie に隔離して日常語非退行を保証し、適応型 LRU キャッシュ（`SwipeAdaptiveCacheRepository`、上限 500 語）は機密/パスワード欄除外・1 発誤字ガード・`custom_dictionary.json` 厳格隔離の下で運用する。
 
 ### Inbound / Outbound Communication
-- **Inbound**: `decodeSwipe(points)`, `suggestTypo(word)`, `analyzeCapitalization(word, context)`, `generateCaseVariants(word, bosProb, policy)`, `UserDictionaryChangedEvent`
+- **Inbound**: `decodeSwipe(points)`, `reloadExtendedLexicon()`, `syncAdaptiveCache(words)`, `suggestTypo(word)`, `analyzeCapitalization(word, context)`, `generateCaseVariants(word, bosProb, policy)`, `UserDictionaryChangedEvent`
 - **Outbound**: `List<ConversionCandidate>`
 
 ### Tactical Building Blocks
-- **Domain Services / Judgement / Policy**: `EnglishCapitalizationAnalyzer`, `EnglishCaseModel`, `SentenceBoundaryDetector`, `BayesianCaseRanker`, `InputFieldCapPolicy`, `EnglishDictionaryUtils`, `EnglishAssistJudgement`
-- **Infrastructure (JNI)**: `FutoSwipeEngine` (`libfuto_swipe.so`), `EnglishSpellEngine` (`libenglish_spell.so`)
+- **Domain Services / Judgement / Policy**: `EnglishCapitalizationAnalyzer`, `EnglishCaseModel`, `SentenceBoundaryDetector`, `BayesianCaseRanker`, `InputFieldCapPolicy`, `EnglishDictionaryUtils`, `EnglishAssistJudgement`, `SwipeVocabularyJudgement`
+- **Infrastructure (JNI / Repository)**: `FutoSwipeEngine` (`libmyasr_llm.so` Compact CSR Dual-Trie), `EnglishSpellEngine`, `SwipeAdaptiveCacheRepository` (`filesDir/swipe_adaptive_cache.json`)
 
 ---
 

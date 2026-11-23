@@ -538,6 +538,79 @@ object EnglishCaseModel {
         }
     }
 
+    /**
+     * Exports pure ASCII alphabetic entries (length 3..28) with canonical casing and corpus
+     * log-frequency to external storage so the native C++ Compact CSR extended swipe Trie
+     * stays synchronized with bundled + OTA English vocabularies.
+     */
+    fun exportSwipeExtendedLexiconIfNeeded(targetFile: File, force: Boolean = false): Int {
+        val snap = getSnapshot()
+        if (snap.sortedKeys.isEmpty()) return 0
+
+        var eligibleCount = 0
+        for (idx in snap.sortedKeys.indices) {
+            val key = snap.sortedKeys[idx]
+            if (isSwipeExtendedAsciiKey(key)) {
+                eligibleCount++
+            }
+        }
+        if (eligibleCount == 0) return 0
+
+        val expectedHeader = "# jotinput_swipe_ext_v1 count=$eligibleCount ota=${snap.otaOverlayEntryCount}"
+        if (!force && targetFile.exists() && targetFile.length() > 100_000L) {
+            val existingHeader = try {
+                targetFile.bufferedReader(Charsets.UTF_8).use { reader ->
+                    reader.readLine()
+                }
+            } catch (_: Exception) {
+                null
+            }
+            if (existingHeader == expectedHeader) {
+                return eligibleCount
+            }
+        }
+
+        try {
+            targetFile.parentFile?.mkdirs()
+            val tmpFile = File(targetFile.parentFile, "${targetFile.name}.tmp")
+            tmpFile.bufferedWriter(Charsets.UTF_8).use { writer ->
+                writer.write(expectedHeader)
+                writer.newLine()
+                for (idx in snap.sortedKeys.indices) {
+                    val key = snap.sortedKeys[idx]
+                    if (!isSwipeExtendedAsciiKey(key)) continue
+                    val surface = snap.sortedSurfaces[idx]
+                    val formattedFreq = String.format(java.util.Locale.US, "%.3f", snap.sortedLogFreqs[idx])
+                    writer.write(key)
+                    writer.write('\t'.code)
+                    writer.write(surface)
+                    writer.write('\t'.code)
+                    writer.write(formattedFreq)
+                    writer.newLine()
+                }
+            }
+            if (targetFile.exists()) {
+                targetFile.delete()
+            }
+            if (!tmpFile.renameTo(targetFile)) {
+                tmpFile.copyTo(targetFile, overwrite = true)
+                tmpFile.delete()
+            }
+        } catch (_: Exception) {
+            return 0
+        }
+        return eligibleCount
+    }
+
+    private fun isSwipeExtendedAsciiKey(key: String): Boolean {
+        if (key.length < 3 || key.length > 28) return false
+        for (i in 0 until key.length) {
+            val ch = key[i]
+            if (ch < 'a' || ch > 'z') return false
+        }
+        return true
+    }
+
     private fun openResource(path: String): InputStream? {
         return EnglishCaseModel::class.java.classLoader?.getResourceAsStream(path)
             ?: Thread.currentThread().contextClassLoader?.getResourceAsStream(path)

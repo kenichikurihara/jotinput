@@ -4,6 +4,7 @@ import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryReposi
 import com.example.myasr.context.english.domain.EnglishCaseModel
 import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
 import com.example.myasr.context.english.infrastructure.FutoSwipeEngine
+import com.example.myasr.context.english.infrastructure.SwipeAdaptiveCacheRepository
 import com.example.myasr.context.kanakanji.application.KanaKanjiVocabularySyncAdapter
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
 import com.example.myasr.context.kanakanji.domain.NextPhrasePredictor
@@ -73,6 +74,8 @@ class AsrApp : Application() {
         private set
     lateinit var clipboardHistoryRepository: ClipboardHistoryRepository
         private set
+    lateinit var swipeAdaptiveCacheRepository: SwipeAdaptiveCacheRepository
+        private set
 
     companion object {
         lateinit var instance: AsrApp
@@ -106,6 +109,7 @@ class AsrApp : Application() {
         llmReranker = LlmReranker.getInstance(this)
         modelWarmUpManager = ModelWarmUpManager.getInstance(this)
         clipboardHistoryRepository = ClipboardHistoryRepository.getInstance(this)
+        swipeAdaptiveCacheRepository = SwipeAdaptiveCacheRepository(this)
 
         eventBus.subscribe<VoiceCorrectionLearnedEvent> { event ->
             CoroutineScope(Dispatchers.Default).launch {
@@ -147,6 +151,21 @@ class AsrApp : Application() {
 
     @Volatile
     private var lastSyncedDictionarySignature: Int? = null
+
+    fun buildCombinedEnglishSwipeEntries(): List<DictionaryEntry> {
+        return buildCombinedEnglishEntries(dictionaryRepository.getActive())
+    }
+
+    fun syncSwipeAdaptiveCache() {
+        try {
+            val swipeEngine = FutoSwipeEngine.getInstance(this)
+            if (swipeEngine.isReady()) {
+                swipeEngine.syncAdaptiveCache(swipeAdaptiveCacheRepository.getActiveSurfaces())
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Sync adaptive swipe cache skipped: ${e.message}")
+        }
+    }
 
     private fun buildCombinedEnglishEntries(activeEntries: List<DictionaryEntry>): List<DictionaryEntry> {
         val learnedEn = voiceCorrectionRepository.getActiveBoostEntries(AsrLanguage.ENGLISH)

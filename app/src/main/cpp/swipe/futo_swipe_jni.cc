@@ -74,6 +74,79 @@ Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeSync
     g_swipe_engine->SyncUserDictionary(user_words);
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeLoadExtendedLexicon(
+    JNIEnv* env,
+    jobject /* this */,
+    jstring tsv_path_jstr
+) {
+    if (g_swipe_engine == nullptr || tsv_path_jstr == nullptr || !g_swipe_engine->IsReady()) {
+        return JNI_FALSE;
+    }
+    const char* path_cstr = env->GetStringUTFChars(tsv_path_jstr, nullptr);
+    if (path_cstr == nullptr) return JNI_FALSE;
+    std::string path(path_cstr);
+    env->ReleaseStringUTFChars(tsv_path_jstr, path_cstr);
+    return g_swipe_engine->LoadExtendedLexicon(path) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeSyncAdaptiveCache(
+    JNIEnv* env,
+    jobject /* this */,
+    jobjectArray words_jarr
+) {
+    if (g_swipe_engine == nullptr || !g_swipe_engine->IsReady()) {
+        return;
+    }
+    if (words_jarr == nullptr) {
+        g_swipe_engine->SyncAdaptiveCache({});
+        return;
+    }
+    jsize len = env->GetArrayLength(words_jarr);
+    std::vector<std::string> adaptive_words;
+    adaptive_words.reserve(len);
+    for (jsize i = 0; i < len; ++i) {
+        jstring w_jstr = static_cast<jstring>(env->GetObjectArrayElement(words_jarr, i));
+        if (w_jstr != nullptr) {
+            const char* w_cstr = env->GetStringUTFChars(w_jstr, nullptr);
+            if (w_cstr != nullptr) {
+                adaptive_words.emplace_back(w_cstr);
+                env->ReleaseStringUTFChars(w_jstr, w_cstr);
+            }
+            env->DeleteLocalRef(w_jstr);
+        }
+    }
+    g_swipe_engine->SyncAdaptiveCache(adaptive_words);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeContainsBaseWord(
+    JNIEnv* env,
+    jobject /* this */,
+    jstring word_jstr
+) {
+    if (g_swipe_engine == nullptr || word_jstr == nullptr || !g_swipe_engine->IsReady()) {
+        return JNI_FALSE;
+    }
+    const char* w_cstr = env->GetStringUTFChars(word_jstr, nullptr);
+    if (w_cstr == nullptr) return JNI_FALSE;
+    std::string word(w_cstr);
+    env->ReleaseStringUTFChars(word_jstr, w_cstr);
+    return g_swipe_engine->ContainsBaseWord(word) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeGetExtendedWordCount(
+    JNIEnv* /* env */,
+    jobject /* this */
+) {
+    if (g_swipe_engine == nullptr || !g_swipe_engine->IsReady()) {
+        return 0;
+    }
+    return static_cast<jint>(g_swipe_engine->ExtendedWordCount());
+}
+
 JNIEXPORT void JNICALL
 Java_com_example_myasr_context_english_infrastructure_FutoSwipeEngine_nativeSetLayoutKeys(
     JNIEnv* env,

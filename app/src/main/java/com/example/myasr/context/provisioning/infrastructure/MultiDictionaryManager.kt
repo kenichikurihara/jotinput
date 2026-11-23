@@ -219,6 +219,13 @@ class MultiDictionaryManager(private val context: Context) {
         if (spellDir.isDirectory) {
             EnglishCaseModel.exportVocabularyIfNeeded(java.io.File(spellDir, "vocab.txt"), force = true)
         }
+        try {
+            com.example.myasr.context.english.infrastructure.FutoSwipeEngine
+                .getInstance(context)
+                .reloadExtendedLexicon(forceExport = true)
+        } catch (e: Exception) {
+            Log.w(TAG, "Hot-reload extended swipe lexicon skipped: ${e.message}")
+        }
     }
 
     private suspend fun downloadEnglishOtaLexicon(

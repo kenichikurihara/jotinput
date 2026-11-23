@@ -33,8 +33,16 @@ public:
     bool Initialize(const std::string& model_dir);
     bool IsReady() const;
 
-    // Sync active user dictionary entries into Trie
+    // Load extended OOV swipe vocabulary (Idea A Compact CSR Trie + Idea E freq/surface)
+    bool LoadExtendedLexicon(const std::string& tsv_path);
+    size_t ExtendedWordCount() const;
+    bool ContainsBaseWord(const std::string& lower_word) const;
+
+    // Sync active user dictionary entries into Pass 1 Trie
     void SyncUserDictionary(const std::vector<UserSwipeWord>& user_words);
+
+    // Sync adaptive OOV LRU cache entries (Idea C) into Pass 1 Trie
+    void SyncAdaptiveCache(const std::vector<std::string>& adaptive_words);
 
     // Update normalized (x, y) centers for the 26 QWERTY alphabet keys ('a'..'z', size = 52)
     void SetLayoutKeys(const std::vector<float>& key_centers_xy);

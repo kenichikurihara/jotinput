@@ -2299,5 +2299,38 @@ Inspecting Gboard's installed APK (`res/5aF.xml`, `res/1SV.xml`, `res/3eV.xml`, 
 - **Unit Tests & Release Build**: `./gradlew testDebugUnitTest --rerun-tasks --max-workers=2` passed 100% (`80` suites, `494` tests, `0` failures, `0` errors); `./gradlew assembleDebug assembleRelease` passed including `:app:lintVitalRelease` and R8.
 - **Dual-Target On-Device Verification**: Deployed via `./deploy.sh` and verified via `logcat` on both **Pixel 10 Pro** (`<device-ip>:39667`, `arm64-v8a`) and **ARCVM** (`arc:5555`, `x86_64`). Both devices loaded `libmyasr_llm.so`, `libsherpa-onnx-jni.so`, `ConnectionMatrix` (7,139,584 transitions), `KanaKanjiEngine`, `AsrManager` (ReazonSpeech JA + Parakeet EN on Pixel 10 Pro), `LlmReranker`, `FutoSwipeEngine`, `EnglishSpellEngine`, `MainActivity`, and `DictionaryActivity` with zero crashes or 16 KB alignment errors.
 
+---
+
+## 56. Extended English Swipe Vocabulary: Confidence-Gated Compact CSR Dual-Trie (Idea A + E) & Adaptive LRU Cache (Idea C)
+
+### 1. Problem & Quantitative Evaluation (Idea A vs Idea B)
+Previously, QWERTY swipe decoding (`FutoSwipeEngine` / `futo_swipe_engine.cc`) searched only the 32,768-word FUTO base vocabulary tied to frozen `embeddings.onnx` weights plus explicit custom user dictionary entries, leaving ~68k additional words in `EnglishCaseModel` (`Tailscale`, `Kubernetes`, `PostgreSQL`, `WireGuard`, etc.) and newly typed OOV proper nouns un-swipeable without manual registration.
+
+We benchmarked two non-invasive vocabulary expansion architectures on top of frozen ONNX `refined_logits` using [`eval/futo_swipe/eval_extended_vocab_ab.py`](eval/futo_swipe/eval_extended_vocab_ab.py) (`eval/futo_swipe/extended_vocab_ab_results.json`, operating point `gate = -0.50`, `beam = 40`, `p_ctx = 2.5`, `p_sp = 1.5`, `lf_w = 0.20`):
+- **Idea A (Confidence-Gated Compact CSR Dual-Trie) + Idea E (Corpus `logFreq` & Truecasing) — SELECTED**:
+  - `ds_1000` (Context, 1,000 real swipes): **Top-1 `92.60%` (+1.70% vs `90.90%`), Top-3 `94.50%` (+1.70%), In-Vocab Regressions = `0 / 932`**, Pass 2 trigger rate `31.7%` (`0 ms` overhead on `68.3%` of swipes).
+  - `ds_1000` (Spatial): **Top-1 `91.70%` (+1.60% vs `90.10%`), In-Vocab Regressions = `0 / 932`**.
+  - `ds_real_oov` (119 real human OOV-ext swipes >= 3 chars): **Context Top-1 `83.19%` (99/119) / Top-3 `92.44%` / Top-5 `93.28%`** (`ExactCase 99/99`); **Spatial Top-1 `73.11%` / Top-3 `91.60%`** (Python Pass 2 mean `29.66 ms`).
+  - `ds_tech_oov` (124 noisy synthetic swipes across 62 modern tech terms): **Spatial Top-1 `73.39%` (91/124) / Top-3 `91.13%` / Top-5 `93.55%`**.
+- **Idea B (Anchor Bucket Prefilter + Exact CTC Forward, `top_k=4`, `shortlist=50`) + Idea E**:
+  - Trailed Idea A across all OOV sets (`81.51%` on `ds_real_oov` Context, `71.43%` Spatial, `70.97%` on `ds_tech_oov`) and ran ~2x slower in Python (`58.76 ms` vs `29.66 ms` on `ds_real_oov`).
+- **Idea C (Adaptive On-Device LRU Cache, max 500 entries)**:
+  - Verified on 300 real swipes with 500 OOV entries injected into Pass 1 without `has_user_subtree` propagation (`boost = +1.2f`, `hashed_bias >= -4.2f`): `0 / 300` In-Vocab regression (`90.33%` -> `90.33%`) and `16 / 16` Exact-Case Top-1 on custom/tech OOVs (`Anthropic`, `Supabase`, `Konsist`, `JotInput`, `TailwindCSS`, `NextJS`).
+
+### 2. Implemented Architecture & Rank-Preservation Fix
+1. **PRD, DMN & Alloy 6 Spec**: Authored [`docs/prd_and_design_extended_swipe_vocabulary.md`](docs/prd_and_design_extended_swipe_vocabulary.md), [`SwipeVocabularyJudgement`](app/src/main/java/com/example/myasr/context/english/domain/SwipeVocabularyJudgement.kt) (`SwipeExtendedPass2TriggerPolicy`, `SwipeAdaptiveCacheAdmissionPolicy`), and [`swipe_extended_lexicon_and_cache.als`](app/src/test/resources/alloy/swipe_extended_lexicon_and_cache.als), synchronized with `docs/ddd/`.
+2. **Native Compact CSR Dual-Trie (`futo_swipe_engine.cc` / `futo_swipe_jni.cc` / `FutoSwipeEngine.kt`)**:
+   - Exported canonical ASCII entries from [`EnglishCaseModel.exportSwipeExtendedLexiconIfNeeded`](app/src/main/java/com/example/myasr/context/english/domain/EnglishCaseModel.kt) with header-based fast skip and OTA hot-reload via [`MultiDictionaryManager`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/MultiDictionaryManager.kt).
+   - Built lock-free 16-byte CSR nodes + contiguous edge arrays (`ExtTrieNode`, `ext_stamp_` / `ext_mass_` scratch buffers) for Pass 2 CTC beam search when `best_base_tot < -0.50f`.
+3. **Adaptive Cache Repository & Safe Learning Hooks**:
+   - Implemented [`SwipeAdaptiveCacheRepository`](app/src/main/java/com/example/myasr/context/english/infrastructure/SwipeAdaptiveCacheRepository.kt) (`filesDir/swipe_adaptive_cache.json`, isolated from `custom_dictionary.json`) with password/email/sensitive-clip rejection and a 1-shot unverified raw-typo guard.
+   - Wired commit hooks in [`VoiceInputMethodService`](app/src/main/java/com/example/myasr/VoiceInputMethodService.kt) and replaced the prior re-sorting loop in `onSwipeInput` with rank-preserving [`BayesianCaseRanker.buildSwipeCandidates`](app/src/main/java/com/example/myasr/context/english/domain/BayesianCaseRanker.kt) so low-frequency Rank 1 words (`Tailscale`) are not overtaken by Rank 2 common words (`table`) and mixed-case OOVs (`JotInput`, `Anthropic`) retain exact casing.
+
+### 3. Verification
+- **JVM Unit, Konsist & Alloy 6 Tests**: `./gradlew testDebugUnitTest --max-workers=2` passed 100% (`84` suites, `522` tests, `0` failures, `0` errors, `0` skipped), including [`ExtendedSwipeVocabularyTest`](app/src/test/java/com/example/myasr/ExtendedSwipeVocabularyTest.kt).
+- **Debug & Release Native Builds**: `./gradlew assembleDebug assembleRelease --max-workers=2` succeeded (`app-debug.apk`: `40,208,522` bytes / ~38.35 MiB; `app-release-unsigned.apk`: `29,652,065` bytes / ~28.28 MiB).
+- **Dual-Target On-Device Logcat**: Deployed via `./deploy.sh` to **Pixel 10 Pro** (`<device-ip>:44609`, `arm64-v8a`) and **ARCVM** (`arc:5555`, `x86_64`) + `emulator-5554`. Both Pixel 10 Pro and ARCVM logged `MainActivity` start, `AsrManager` (`ReazonSpeech` + `Parakeet` on Pixel), `FutoSwipeEngine initialized successfully. Vocab=32768`, and `Loaded extended swipe CSR Trie: words=67909, nodes=199719, edges=199718` cleanly with zero crashes.
+
+
 
 

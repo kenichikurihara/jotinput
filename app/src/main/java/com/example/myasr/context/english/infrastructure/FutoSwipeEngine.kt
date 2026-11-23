@@ -1,6 +1,7 @@
 package com.example.myasr.context.english.infrastructure
 
 import com.example.myasr.AsrApp
+import com.example.myasr.context.english.domain.EnglishCaseModel
 import com.example.myasr.context.vocabulary.domain.DictionaryEntry
 
 import android.content.Context
@@ -81,10 +82,22 @@ class FutoSwipeEngine private constructor(private val context: Context) {
                     }
                 }
                 try {
-                    val active = AsrApp.instanceOrNull?.dictionaryRepository?.getActive() ?: emptyList()
+                    reloadExtendedLexicon(forceExport = false)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Load extended swipe lexicon on init skipped: ${e.message}")
+                }
+                try {
+                    val app = AsrApp.instanceOrNull
+                    val active = app?.buildCombinedEnglishSwipeEntries() ?: emptyList()
                     syncUserDictionary(active)
                 } catch (e: Exception) {
                     Log.w(TAG, "Sync user dictionary on init skipped: ${e.message}")
+                }
+                try {
+                    val adaptive = AsrApp.instanceOrNull?.swipeAdaptiveCacheRepository?.getActiveSurfaces() ?: emptyList()
+                    syncAdaptiveCache(adaptive)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Sync adaptive cache on init skipped: ${e.message}")
                 }
             } else {
                 Log.w(TAG, "nativeInitialize returned false")
@@ -163,6 +176,52 @@ class FutoSwipeEngine private constructor(private val context: Context) {
         }
     }
 
+    fun syncAdaptiveCache(words: List<String>) {
+        if (!isReady()) return
+        try {
+            nativeSyncAdaptiveCache(words.toTypedArray())
+            Log.d(TAG, "Synced ${words.size} adaptive cache entries to native FUTO Swipe")
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to sync adaptive cache to FUTO Swipe: ${t.message}", t)
+        }
+    }
+
+    fun reloadExtendedLexicon(forceExport: Boolean = false): Boolean {
+        if (!isLibraryLoaded) return false
+        val modelDir = File(context.getExternalFilesDir(null), "futo_swipe")
+        if (!modelDir.isDirectory) return false
+        val extFile = File(modelDir, "extended_lexicon.tsv")
+        return try {
+            val exported = EnglishCaseModel.exportSwipeExtendedLexiconIfNeeded(extFile, force = forceExport)
+            if (!isReady() || exported <= 0 || !extFile.exists() || extFile.length() == 0L) {
+                false
+            } else {
+                nativeLoadExtendedLexicon(extFile.absolutePath)
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to reload extended swipe lexicon: ${t.message}", t)
+            false
+        }
+    }
+
+    fun containsBaseWord(lowerWord: String): Boolean {
+        if (!isReady() || lowerWord.isBlank()) return false
+        return try {
+            nativeContainsBaseWord(lowerWord.trim())
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
+    fun getExtendedWordCount(): Int {
+        if (!isReady()) return 0
+        return try {
+            nativeGetExtendedWordCount()
+        } catch (_: Throwable) {
+            0
+        }
+    }
+
     fun release() {
         if (isLibraryLoaded && isInitialized) {
             try {
@@ -177,6 +236,10 @@ class FutoSwipeEngine private constructor(private val context: Context) {
     private external fun nativeInitialize(modelDir: String): Boolean
     private external fun nativeIsReady(): Boolean
     private external fun nativeSyncUserDictionary(words: Array<String>, priorities: FloatArray)
+    private external fun nativeSyncAdaptiveCache(words: Array<String>)
+    private external fun nativeLoadExtendedLexicon(tsvPath: String): Boolean
+    private external fun nativeContainsBaseWord(word: String): Boolean
+    private external fun nativeGetExtendedWordCount(): Int
     private external fun nativeSetLayoutKeys(keyCentersXy: FloatArray)
     private external fun nativeDecode(
         xs: FloatArray,
