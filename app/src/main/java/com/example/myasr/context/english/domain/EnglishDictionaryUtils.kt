@@ -16,30 +16,6 @@ object EnglishDictionaryUtils {
     // Valid English word/token pattern: Starts with a letter, followed by letters, digits, apostrophes, hyphens
     private val ENGLISH_WORD_REGEX = Regex("^[A-Za-z][A-Za-z0-9'\\-]*$")
 
-    // QWERTY key coordinates for physical key distance calculations
-    private data class KeyCoord(val x: Float, val y: Float)
-
-    private val QWERTY_KEY_MAP: Map<Char, KeyCoord> by lazy {
-        val map = mutableMapOf<Char, KeyCoord>()
-        val rows = arrayOf(
-            "qwertyuiop",
-            "asdfghjkl",
-            "zxcvbnm"
-        )
-        for (r in rows.indices) {
-            val offset = when (r) {
-                0 -> 0.0f
-                1 -> 0.5f
-                else -> 1.0f
-            }
-            val rowStr = rows[r]
-            for (c in rowStr.indices) {
-                map[rowStr[c]] = KeyCoord(c + offset, r.toFloat())
-            }
-        }
-        map
-    }
-
     /**
      * Checks if the given text is a valid English word or token.
      */
@@ -68,44 +44,54 @@ object EnglishDictionaryUtils {
             .filter { it in 'a'..'z' }
     }
 
-    private val KEY_DIST_TABLE: FloatArray by lazy {
-        val table = FloatArray(26 * 26)
-        for (i in 0 until 26) {
-            for (j in 0 until 26) {
-                if (i == j) {
-                    table[i * 26 + j] = 0.0f
-                } else {
-                    val k1 = QWERTY_KEY_MAP['a' + i]
-                    val k2 = QWERTY_KEY_MAP['a' + j]
-                    table[i * 26 + j] = if (k1 != null && k2 != null) {
-                        val dx = k1.x - k2.x
-                        val dy = k1.y - k2.y
-                        sqrt(dx * dx + dy * dy)
-                    } else {
-                        3.0f
-                    }
-                }
-            }
-        }
-        table
-    }
-
-    private fun keyDistance(c1: Char, c2: Char): Float {
-        val l1 = c1.lowercaseChar()
-        val l2 = c2.lowercaseChar()
-        if (l1 == l2) return 0.0f
-        if (l1 in 'a'..'z' && l2 in 'a'..'z') {
-            return KEY_DIST_TABLE[(l1 - 'a') * 26 + (l2 - 'a')]
-        }
-        return 3.0f
-    }
-
     internal const val SPATIAL_BOUNDARY_GAP_COST = 1.5f
     internal const val SPATIAL_INDEL_COST = 1.2f
     internal const val SPATIAL_SUB_BASE_COST = 0.8f
     internal const val SPATIAL_SUB_DIST_SLOPE = 0.3f
     internal const val SPATIAL_SUB_MAX_DIST = 2.0f
     internal const val SPATIAL_TRANSPOSITION_COST = 0.6f
+
+    private const val FALLBACK_SUB_COST =
+        SPATIAL_SUB_BASE_COST + SPATIAL_SUB_DIST_SLOPE * SPATIAL_SUB_MAX_DIST
+
+    // Precomputed 26x26 ASCII substitution cost table (zero lazy-init or math on hot path)
+    private val SUB_COST_TABLE = FloatArray(26 * 26).also { table ->
+        val rows = arrayOf("qwertyuiop", "asdfghjkl", "zxcvbnm")
+        val xs = FloatArray(26)
+        val ys = FloatArray(26)
+        val present = BooleanArray(26)
+        for (r in rows.indices) {
+            val offset = when (r) {
+                0 -> 0.0f
+                1 -> 0.5f
+                else -> 1.0f
+            }
+            val rowStr = rows[r]
+            for (c in rowStr.indices) {
+                val idx = rowStr[c] - 'a'
+                xs[idx] = c + offset
+                ys[idx] = r.toFloat()
+                present[idx] = true
+            }
+        }
+        for (i in 0 until 26) {
+            for (j in 0 until 26) {
+                if (i == j) {
+                    table[i * 26 + j] = 0.0f
+                } else {
+                    val kd = if (present[i] && present[j]) {
+                        val dx = xs[i] - xs[j]
+                        val dy = ys[i] - ys[j]
+                        sqrt(dx * dx + dy * dy)
+                    } else {
+                        3.0f
+                    }
+                    table[i * 26 + j] =
+                        SPATIAL_SUB_BASE_COST + SPATIAL_SUB_DIST_SLOPE * min(kd, SPATIAL_SUB_MAX_DIST)
+                }
+            }
+        }
+    }
 
     /**
      * Calculates QWERTY spatial edit distance with Damerau-Levenshtein transposition.
@@ -147,19 +133,25 @@ object EnglishDictionaryUtils {
 
         for (i in 1..m) {
             curr[0] = i * SPATIAL_BOUNDARY_GAP_COST
-            val tc = typed[i - 1]
-            val tcPrev = if (i > 1) typed[i - 2] else '\u0000'
+            val tcRaw = typed[i - 1]
+            val tc = if (tcRaw in 'A'..'Z') (tcRaw.code + 32).toChar() else tcRaw
+            val tcRowOffset = if (tc in 'a'..'z') (tc - 'a') * 26 else -1
+            val tcPrevRaw = if (i > 1) typed[i - 2] else '\u0000'
             for (j in 1..n) {
-                val cc = cand[j - 1]
-                val kd = keyDistance(tc, cc)
-                val subCost = if (kd == 0.0f) 0.0f else (SPATIAL_SUB_BASE_COST + SPATIAL_SUB_DIST_SLOPE * min(kd, SPATIAL_SUB_MAX_DIST))
+                val ccRaw = cand[j - 1]
+                val cc = if (ccRaw in 'A'..'Z') (ccRaw.code + 32).toChar() else ccRaw
+                val subCost = when {
+                    tc == cc -> 0.0f
+                    tcRowOffset >= 0 && cc in 'a'..'z' -> SUB_COST_TABLE[tcRowOffset + (cc - 'a')]
+                    else -> FALLBACK_SUB_COST
+                }
 
                 var minCost = prev1[j] + SPATIAL_INDEL_COST // deletion
                 minCost = min(minCost, curr[j - 1] + SPATIAL_INDEL_COST) // insertion
                 minCost = min(minCost, prev1[j - 1] + subCost) // substitution
 
                 // Transposition
-                if (i > 1 && j > 1 && tc == cand[j - 2] && tcPrev == cc) {
+                if (i > 1 && j > 1 && tcRaw == cand[j - 2] && tcPrevRaw == ccRaw) {
                     minCost = min(minCost, prev2[j - 2] + SPATIAL_TRANSPOSITION_COST)
                 }
 

@@ -361,24 +361,77 @@ class EnglishTruecasingEvaluationTest {
             }
         }
 
+        val batches = 5
         val timedRounds = 5
-        val startNs = System.nanoTime()
-        repeat(timedRounds) {
-            for ((typed, _) in prefixCases) {
-                rankEnglish(typed)
+        val prefixBatchAvgs = DoubleArray(batches)
+        for (b in 0 until batches) {
+            val startNs = System.nanoTime()
+            repeat(timedRounds) {
+                for ((typed, _) in prefixCases) {
+                    rankEnglish(typed)
+                }
             }
+            prefixBatchAvgs[b] = (System.nanoTime() - startNs) / 1_000_000.0 / (prefixCases.size * timedRounds)
         }
-        val avgMs = (System.nanoTime() - startNs) / 1_000_000.0 / (prefixCases.size * timedRounds)
-        assertTrue("Expected avg prefix lookup latency < 0.5ms, got ${avgMs}ms", avgMs < 0.5)
+        val sortedPrefix = prefixBatchAvgs.sorted()
+        val medianPrefixMs = sortedPrefix[batches / 2]
+        println("Prefix lookup batch latencies: median=${"%.3f".format(medianPrefixMs)}ms, max=${"%.3f".format(sortedPrefix.last())}ms")
+        assertTrue("Expected median prefix lookup latency < 0.5ms, got ${medianPrefixMs}ms (batches=${prefixBatchAvgs.toList()})", medianPrefixMs < 0.5)
 
-        val typoStartNs = System.nanoTime()
-        repeat(timedRounds) {
-            for (q in typoQueries) {
-                rankEnglish(q)
+        val typoBatchAvgs = DoubleArray(batches)
+        for (b in 0 until batches) {
+            val typoStartNs = System.nanoTime()
+            repeat(timedRounds) {
+                for (q in typoQueries) {
+                    rankEnglish(q)
+                }
+            }
+            typoBatchAvgs[b] = (System.nanoTime() - typoStartNs) / 1_000_000.0 / (typoQueries.size * timedRounds)
+        }
+        val sortedTypo = typoBatchAvgs.sorted()
+        val medianTypoMs = sortedTypo[batches / 2]
+        println("Typo bucket lookup batch latencies: median=${"%.3f".format(medianTypoMs)}ms, max=${"%.3f".format(sortedTypo.last())}ms")
+        assertTrue("Expected median typo bucket lookup latency < 0.8ms, got ${medianTypoMs}ms (batches=${typoBatchAvgs.toList()})", medianTypoMs < 0.8)
+    }
+
+    @Test
+    fun `CSR length-partitioned typo buckets keep worst-case dense-bucket lookups fast and accurate`() {
+        val denseCases = listOf(
+            "teh" to "the",
+            "helo" to "help",
+            "tailscle" to "Tailscale",
+            "kuberntes" to "Kubernetes",
+            "alredy" to "already",
+            "alwasy" to "always",
+            "therfore" to "therefore"
+        )
+        for ((typo, expected) in denseCases) {
+            val cands = EnglishCaseModel.suggestPrefixAndTypo(typo, maxCandidates = 6)
+            assertTrue("Expected '$expected' in Top-3 for dense-bucket typo '$typo', got $cands", expected in cands.take(3))
+        }
+
+        // Warm up JIT and measure median latency across batches
+        repeat(15) {
+            for ((typo, _) in denseCases) {
+                EnglishCaseModel.suggestPrefixAndTypo(typo, maxCandidates = 6)
             }
         }
-        val avgTypoMs = (System.nanoTime() - typoStartNs) / 1_000_000.0 / (typoQueries.size * timedRounds)
-        assertTrue("Expected avg typo bucket lookup latency < 0.8ms, got ${avgTypoMs}ms", avgTypoMs < 0.8)
+        val batches = 5
+        val rounds = 10
+        val batchAvgs = DoubleArray(batches)
+        for (b in 0 until batches) {
+            val t0 = System.nanoTime()
+            repeat(rounds) {
+                for ((typo, _) in denseCases) {
+                    EnglishCaseModel.suggestPrefixAndTypo(typo, maxCandidates = 6)
+                }
+            }
+            batchAvgs[b] = (System.nanoTime() - t0) / 1_000_000.0 / (denseCases.size * rounds)
+        }
+        val sorted = batchAvgs.sorted()
+        val medianMs = sorted[batches / 2]
+        println("Dense CSR typo bucket latencies: median=${"%.3f".format(medianMs)}ms, max=${"%.3f".format(sorted.last())}ms")
+        assertTrue("Expected median CSR typo lookup latency < 0.5ms, got ${medianMs}ms (batches=${batchAvgs.toList()})", medianMs < 0.5)
     }
 
     @Test
