@@ -1,6 +1,7 @@
 package com.example.myasr.context.provisioning.infrastructure
 
 import com.example.myasr.AsrApp
+import com.example.myasr.context.english.domain.EnglishCaseModel
 import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
 import com.example.myasr.context.kanakanji.domain.MozcPosCatalog
@@ -99,6 +100,19 @@ enum class DictionaryType(
         ),
         isBz2 = false,
         isCustomParser = true
+    ),
+    ENGLISH_LEXICON(
+        id = "english_lexicon",
+        displayName = "英語拡張・最新技術語彙辞書",
+        description = "最新のOSSツール・開発フレームワーク・クラウド/SaaS名などの英語補完語彙 (月次更新)",
+        estimatedWords = "約1.5万語",
+        estimatedDownloadSize = "約2.5 MB (圧縮)",
+        downloadUrls = listOf(
+            "https://formulae.brew.sh/api/formula.json",
+            "https://formulae.brew.sh/api/cask.json"
+        ),
+        isBz2 = false,
+        isCustomParser = true
     );
 
     companion object {
@@ -127,7 +141,15 @@ class MultiDictionaryManager(private val context: Context) {
         }
     }
 
+    fun getEnglishOtaLexiconFile(): java.io.File {
+        val dir = java.io.File(context.filesDir, "english")
+        return java.io.File(dir, "english_case_lexicon_ota.tsv")
+    }
+
     fun getDictFile(type: DictionaryType): java.io.File {
+        if (type == DictionaryType.ENGLISH_LEXICON) {
+            return getEnglishOtaLexiconFile()
+        }
         val dir = KanaKanjiEngine.getInstance(context).getMozcDir()
         return java.io.File(dir, "dict_${type.id}.bin")
     }
@@ -151,6 +173,9 @@ class MultiDictionaryManager(private val context: Context) {
     }
 
     fun getWordCount(type: DictionaryType): Int {
+        if (type == DictionaryType.ENGLISH_LEXICON) {
+            return EnglishOtaLexiconCompiler.countValidEntries(getEnglishOtaLexiconFile())
+        }
         val file = getDictFile(type)
         if (!file.exists() || file.length() < 64) {
             if (type == DictionaryType.MOZC_GENERAL) {
@@ -175,6 +200,12 @@ class MultiDictionaryManager(private val context: Context) {
     suspend fun deleteDictionary(type: DictionaryType) = withContext(Dispatchers.IO) {
         val file = getDictFile(type)
         if (file.exists()) file.delete()
+        if (type == DictionaryType.ENGLISH_LEXICON) {
+            EnglishCaseModel.reloadWithOtaOverlay(null)
+            syncEnglishSpellVocabIfInstalled()
+            AsrApp.instanceOrNull?.dictionaryUpdateTracker?.clearLocalUpdatedAt(type.id)
+            return@withContext
+        }
         if (type == DictionaryType.MOZC_GENERAL) {
             val legacy = java.io.File(file.parentFile, "system_dictionary.bin")
             if (legacy.exists()) legacy.delete()
@@ -183,11 +214,62 @@ class MultiDictionaryManager(private val context: Context) {
         KanaKanjiEngine.getInstance(context).reloadDictionaries()
     }
 
+    private fun syncEnglishSpellVocabIfInstalled() {
+        val spellDir = java.io.File(context.getExternalFilesDir(null), "english_spelling")
+        if (spellDir.isDirectory) {
+            EnglishCaseModel.exportVocabularyIfNeeded(java.io.File(spellDir, "vocab.txt"), force = true)
+        }
+    }
+
+    private suspend fun downloadEnglishOtaLexicon(
+        type: DictionaryType,
+        onProgress: (percent: Int, statusText: String) -> Unit
+    ): Result<Int> {
+        onProgress(5, "${type.displayName} を準備中...")
+        val accumulator = EnglishOtaLexiconCompiler.HomebrewAccumulator()
+        val urlCount = type.downloadUrls.size
+
+        type.downloadUrls.forEachIndexed { index, urlStr ->
+            val basePct = (index.toDouble() / urlCount * 75).toInt() + 10
+            onProgress(basePct, "${type.displayName} データ取得中 (${index + 1}/$urlCount)...")
+            openStreamForUrl(urlStr, isBz2 = false) { inputStream ->
+                if (urlStr.contains("cask.json")) {
+                    accumulator.ingestCaskStream(inputStream) { scanned ->
+                        onProgress((basePct + 10).coerceAtMost(84), "${type.displayName} 解析中... (${scanned}件)")
+                    }
+                } else {
+                    accumulator.ingestFormulaStream(inputStream) { scanned ->
+                        onProgress((basePct + 10).coerceAtMost(84), "${type.displayName} 解析中... (${scanned}件)")
+                    }
+                }
+            }
+        }
+
+        onProgress(88, "英語 OTA 語彙インデックスを構築中...")
+        val targetFile = getEnglishOtaLexiconFile()
+        val writtenCount = accumulator.writeToOtaTsvFile(targetFile)
+        if (writtenCount <= 0) {
+            return Result.failure(IllegalStateException("${type.displayName} の抽出語彙が0語でした"))
+        }
+
+        onProgress(95, "英語入力エンジンへホットリロード中...")
+        val admitted = EnglishCaseModel.reloadWithOtaOverlay(targetFile)
+        syncEnglishSpellVocabIfInstalled()
+        AsrApp.instanceOrNull?.dictionaryUpdateTracker?.markDictionaryUpdated(type.id)
+
+        onProgress(100, "完了 (${writtenCount}語 / 適用${admitted}語)")
+        Log.i(TAG, "Completed ${type.displayName}: wrote $writtenCount entries, admitted $admitted OTA entries")
+        return Result.success(writtenCount)
+    }
+
     suspend fun downloadDictionary(
         type: DictionaryType,
         onProgress: (percent: Int, statusText: String) -> Unit
     ): Result<Int> = withContext(Dispatchers.IO) {
         try {
+            if (type == DictionaryType.ENGLISH_LEXICON) {
+                return@withContext downloadEnglishOtaLexicon(type, onProgress)
+            }
             Log.i(TAG, "Starting download for ${type.displayName} (${type.id})")
             onProgress(5, "${type.displayName} を準備中...")
 

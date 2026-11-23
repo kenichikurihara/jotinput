@@ -114,6 +114,14 @@ IME ヘッダーバーのユーティリティアイコン表示裁定（[`ImeHe
 - **`DeadEndOovPrefixPromotesCompletionToRank1`**: 未完成 OOV プレフィックス（`tailsc` 等）で辞書補完候補が存在するときは、OOV 生断片や短縮タイポよりプレフィックス補完候補が Rank 1 へ昇格すること。
 - **`RawEscapeHatchAlwaysPresent`**: 生入力文字列が常にエスケープハッチとして候補プールへ保持されること。
 
+### 3.14 [`english_ota_overlay_lifecycle.als`](app/src/test/resources/alloy/english_ota_overlay_lifecycle.als)
+英語拡張辞書の OTA オーバーレイ適用・リロード・削除ライフサイクルおよび DMN 決定表（[`EnglishAssistJudgement`](app/src/main/java/com/example/myasr/context/english/domain/EnglishAssistJudgement.kt) `EnglishOtaOverlayAdmissionPolicy`）をモデル化し、以下を検証する：
+- **`OtaAdmissionTableIsTotal`**: 全入力組み合わせに対して一意のルール・アクションへ解決されること。
+- **`CoreShortLowerWordNeverHijackedByOta`**: 長さ 4 文字以下のコア基本語（`tail`, `the`, `an` 等）が OTA 語彙で決して上書きされないこと。
+- **`InvalidOrOverCapacityNeverAdmitted`**: 不正フォーマット・不正スコア・容量上限超過エントリが決して受理されないこと。
+- **`UserCustomDictionaryIsolatedFromOtaOps`**: OTA 導入・更新・削除が `custom_dictionary.json`（ユーザー辞書）から完全に隔離されていること。
+- **`OtaDeleteRestoresBundledLexicon`**: OTA 削除後に即座に内蔵辞書のみのクリーン状態へ復元されること。
+
 ---
 
 ## 4. 自動同期ルール

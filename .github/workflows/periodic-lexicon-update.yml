@@ -1,0 +1,77 @@
+name: Periodic Lexicon Update
+
+on:
+  schedule:
+    # Run monthly on the 1st at 03:00 UTC (12:00 JST), shortly after Mozc-UT monthly releases
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Run fetch, rebuild, audit, and tests without opening a PR'
+        required: false
+        default: 'false'
+
+concurrency:
+  group: periodic-lexicon-update
+  cancel-in-progress: true
+
+jobs:
+  update-english-lexicon:
+    name: Fetch Corpora, Rebuild Lexicon & Verify Quality Gates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Aspell and compression utilities
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends aspell aspell-en xz-utils bzip2
+
+      - name: Fetch Upstream Corpora (Debian Translation-en, Homebrew, Mozc-UT)
+        run: python3 tools/fetch_english_upstream_corpora.py --strict
+
+      - name: Rebuild English Case & Prefix/Typo Lexicon
+        run: python3 tools/build_english_case_model.py
+
+      - name: Audit Lexicon Diff & Safety Thresholds
+        run: python3 tools/audit_english_lexicon_diff.py --max-removal-pct 0.5 --output /tmp/lexicon_diff_report.md
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Run Focused English, DDD & Alloy Unit Tests
+        run: |
+          ./gradlew testDebugUnitTest --max-workers=2 --stacktrace \
+            --tests "com.example.myasr.EnglishTruecasingEvaluationTest" \
+            --tests "com.example.myasr.SpanAwareBayesianRerankingEvaluationTest" \
+            --tests "com.example.myasr.context.english.domain.EnglishAssistJudgementTest" \
+            --tests "com.example.myasr.EnglishOtaOverlayTest" \
+            --tests "com.example.myasr.ddd.DddArchitectureKonsistTest" \
+            --tests "com.example.myasr.formal.AlloyVerificationTest"
+
+      - name: Open Automated Pull Request with Audit Report
+        if: github.event.inputs.dry_run != 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: auto/monthly-lexicon-update
+          delete-branch: true
+          title: "chore(lexicon): monthly corpus-driven vocabulary update"
+          body-path: /tmp/lexicon_diff_report.md
+          commit-message: "chore(lexicon): monthly corpus-driven vocabulary update"
+          add-paths: |
+            app/src/main/resources/english/english_case_lexicon.tsv
+            app/src/main/resources/english/english_lower_vocab.txt
+            tools/models/english_spelling/vocab.txt

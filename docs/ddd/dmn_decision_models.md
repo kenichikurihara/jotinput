@@ -45,6 +45,7 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishGecClauseEligibility` | `FIRST` | GEC（文法/文脈修正）対象節の抽出と適格性判定 |
 | **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishCandidateBadge` | `PRIORITY` | 候補バッジ選択（`SLM`(100) > `USER`(80) > `CAPS`(60) > `SPELL`） |
 | **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishPrefixCompletionPolicy` | `FIRST` | 英語プレフィックス補完と既知短語保護（`NONE` / `PROTECT_EXACT_WORD` / `PROMOTE_PREFIX_COMPLETION` / `RAW_AND_TYPO_ONLY`） |
+| **BC-4: English Typing** | `EnglishAssistJudgement` | `EnglishOtaOverlayAdmissionPolicy` | `FIRST` | OTA 拡張英語語彙の安全受入・コア短語（4文字以下）保護・容量上限制御（`REJECT_*` / `ADMIT_NEW_WORD` / `UPGRADE_EXISTING_FREQ` / `KEEP_BUNDLED`） |
 | **BC-8: Clipboard** | `ClipboardSuggestionJudgement` | `ClipboardSuggestionEligibility` | `FIRST` | アイドル時のクリップボード提案チップ表示可否 |
 | **BC-8: Clipboard** | `ClipboardSuggestionJudgement` | `SafeClipboardHandling` | `FIRST` | 機密クリップ（`EXTRA_IS_SENSITIVE`）・パスワード欄での非永続化・マスク表示・非学習裁定 |
 | **BC-7: IME Session & UI** | `MainAppUiDecisionModel` | `HomeHeroActionDecisionTable` | `FIRST` | ホーム画面のスマートガイド（次の唯一アクション / 準備完了）決定 |

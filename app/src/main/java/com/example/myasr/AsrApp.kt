@@ -1,6 +1,7 @@
 package com.example.myasr
 
 import com.example.myasr.context.clipboard.infrastructure.ClipboardHistoryRepository
+import com.example.myasr.context.english.domain.EnglishCaseModel
 import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
 import com.example.myasr.context.english.infrastructure.FutoSwipeEngine
 import com.example.myasr.context.kanakanji.application.KanaKanjiVocabularySyncAdapter
@@ -95,6 +96,7 @@ class AsrApp : Application() {
         asrManager = AsrManager(this)
         baseDictionaryDownloader = BaseDictionaryDownloader(this)
         multiDictionaryManager = MultiDictionaryManager(this)
+        EnglishCaseModel.configureOtaOverlayFile(multiDictionaryManager.getEnglishOtaLexiconFile())
         dictionaryUpdateTracker = DictionaryUpdateTracker(this)
         connectionDataManager = ConnectionDataManager(this)
         llmReranker = LlmReranker.getInstance(this)

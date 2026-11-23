@@ -146,4 +146,100 @@ class EnglishAssistJudgementTest {
         assertEquals(EnglishAssistJudgement.PrefixCompletionStrategy.RAW_AND_TYPO_ONLY, unknownNoPrefix.result.decision)
         assertEquals("EN_PREFIX_DEFAULT", unknownNoPrefix.selectedRuleId)
     }
+
+    @Test
+    fun `DMN otaOverlayAdmissionDecisionTable enforces validation, capacity, short-word protection, and frequency upgrade`() {
+        // 1. Invalid variant or length -> REJECT_INVALID (EN_OTA_R1)
+        val invalidTrace = EnglishAssistJudgement.traceOtaOverlayAdmission(
+            EnglishAssistJudgement.OtaOverlayAdmissionInput(
+                keyLength = 1,
+                hasValidSurfaceVariants = true,
+                hasPositiveLogFreq = true,
+                isBundledCoreLowerWord = false,
+                existsInBundledLexicon = false,
+                otaLogFreqExceedsBundled = false,
+                withinCapacityCap = true
+            )
+        )
+        assertEquals(EnglishAssistJudgement.OtaOverlayAdmissionAction.REJECT_INVALID, invalidTrace.result.decision)
+        assertEquals("EN_OTA_R1", invalidTrace.selectedRuleId)
+
+        // 2. Over capacity -> REJECT_CAPACITY_EXCEEDED (EN_OTA_R2)
+        val overCap = EnglishAssistJudgement.traceOtaOverlayAdmission(
+            EnglishAssistJudgement.OtaOverlayAdmissionInput(
+                keyLength = 8,
+                hasValidSurfaceVariants = true,
+                hasPositiveLogFreq = true,
+                isBundledCoreLowerWord = false,
+                existsInBundledLexicon = false,
+                otaLogFreqExceedsBundled = false,
+                withinCapacityCap = false
+            )
+        )
+        assertEquals(EnglishAssistJudgement.OtaOverlayAdmissionAction.REJECT_CAPACITY_EXCEEDED, overCap.result.decision)
+        assertEquals("EN_OTA_R2", overCap.selectedRuleId)
+
+        // 3. Core short word (<= 4 chars) -> REJECT_PROTECT_CORE_SHORT_WORD (EN_OTA_R3)
+        val protectShort = EnglishAssistJudgement.traceOtaOverlayAdmission(
+            EnglishAssistJudgement.OtaOverlayAdmissionInput(
+                keyLength = 4,
+                hasValidSurfaceVariants = true,
+                hasPositiveLogFreq = true,
+                isBundledCoreLowerWord = true,
+                existsInBundledLexicon = false,
+                otaLogFreqExceedsBundled = false,
+                withinCapacityCap = true
+            )
+        )
+        assertEquals(
+            EnglishAssistJudgement.OtaOverlayAdmissionAction.REJECT_PROTECT_CORE_SHORT_WORD,
+            protectShort.result.decision
+        )
+        assertEquals("EN_OTA_R3", protectShort.selectedRuleId)
+
+        // 4. New OOV word -> ADMIT_NEW_WORD (EN_OTA_R4)
+        val admitNew = EnglishAssistJudgement.traceOtaOverlayAdmission(
+            EnglishAssistJudgement.OtaOverlayAdmissionInput(
+                keyLength = 8,
+                hasValidSurfaceVariants = true,
+                hasPositiveLogFreq = true,
+                isBundledCoreLowerWord = false,
+                existsInBundledLexicon = false,
+                otaLogFreqExceedsBundled = false,
+                withinCapacityCap = true
+            )
+        )
+        assertEquals(EnglishAssistJudgement.OtaOverlayAdmissionAction.ADMIT_NEW_WORD, admitNew.result.decision)
+        assertEquals("EN_OTA_R4", admitNew.selectedRuleId)
+
+        // 5. Existing bundled word with higher OTA freq -> UPGRADE_EXISTING_FREQ (EN_OTA_R5)
+        val upgrade = EnglishAssistJudgement.traceOtaOverlayAdmission(
+            EnglishAssistJudgement.OtaOverlayAdmissionInput(
+                keyLength = 9,
+                hasValidSurfaceVariants = true,
+                hasPositiveLogFreq = true,
+                isBundledCoreLowerWord = false,
+                existsInBundledLexicon = true,
+                otaLogFreqExceedsBundled = true,
+                withinCapacityCap = true
+            )
+        )
+        assertEquals(EnglishAssistJudgement.OtaOverlayAdmissionAction.UPGRADE_EXISTING_FREQ, upgrade.result.decision)
+        assertEquals("EN_OTA_R5", upgrade.selectedRuleId)
+
+        // 6. Existing bundled word with lower OTA freq -> KEEP_BUNDLED (EN_OTA_DEFAULT)
+        val keepBundled = EnglishAssistJudgement.traceOtaOverlayAdmission(
+            EnglishAssistJudgement.OtaOverlayAdmissionInput(
+                keyLength = 9,
+                hasValidSurfaceVariants = true,
+                hasPositiveLogFreq = true,
+                isBundledCoreLowerWord = false,
+                existsInBundledLexicon = true,
+                otaLogFreqExceedsBundled = false,
+                withinCapacityCap = true
+            )
+        )
+        assertEquals(EnglishAssistJudgement.OtaOverlayAdmissionAction.KEEP_BUNDLED, keepBundled.result.decision)
+        assertEquals("EN_OTA_DEFAULT", keepBundled.selectedRuleId)
+    }
 }

@@ -12,7 +12,7 @@ class MultiDictionaryTest {
     @Test
     fun testDictionaryTypesConfigured() {
         val types = DictionaryType.values()
-        assertEquals(6, types.size)
+        assertEquals(7, types.size)
 
         val mozcGeneral = DictionaryType.MOZC_GENERAL
         assertEquals(10, mozcGeneral.downloadUrls.size)
@@ -36,6 +36,10 @@ class MultiDictionaryTest {
         val emoji = DictionaryType.EMOJI_SYMBOLS
         assertTrue(emoji.isCustomParser)
         assertEquals(4, emoji.downloadUrls.size)
+
+        val englishLexicon = DictionaryType.ENGLISH_LEXICON
+        assertTrue(englishLexicon.isCustomParser)
+        assertEquals(2, englishLexicon.downloadUrls.size)
     }
 
     @Test
@@ -46,5 +50,6 @@ class MultiDictionaryTest {
         assertNotNull(DictionaryType.fromId("place_names"))
         assertNotNull(DictionaryType.fromId("personal_names"))
         assertNotNull(DictionaryType.fromId("emoji_symbols"))
+        assertNotNull(DictionaryType.fromId("english_lexicon"))
     }
 }

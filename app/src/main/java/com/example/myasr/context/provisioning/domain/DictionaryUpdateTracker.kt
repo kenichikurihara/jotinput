@@ -28,6 +28,7 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -101,6 +102,7 @@ class DictionaryUpdateTracker(private val context: Context) {
                 DictionaryType.PLACE_NAMES.id -> "https://github.com/utuhiro78/mozcdic-ut-place-names/commits/main.atom"
                 DictionaryType.PERSONAL_NAMES.id -> "https://github.com/utuhiro78/mozcdic-ut-personal-names/commits/main.atom"
                 DictionaryType.EMOJI_SYMBOLS.id -> "https://github.com/google/mozc/commits/master/src/data/emoji.atom"
+                DictionaryType.ENGLISH_LEXICON.id -> "https://formulae.brew.sh/api/formula.json"
                 else -> null
             }
         }
@@ -140,6 +142,43 @@ class DictionaryUpdateTracker(private val context: Context) {
                     val parsed = sdf.parse(trimmed)
                     if (parsed != null && parsed.time > 0L) {
                         return parsed.time
+                    }
+                } catch (_: Exception) {
+                }
+            }
+            return 0L
+        }
+
+        /**
+         * Parses an HTTP `Last-Modified` date header (RFC-1123/GMT) and floors it to
+         * the 1st of that UTC month (`YYYY-MM-01T00:00:00Z`) so hourly-rebuilt feeds
+         * like Homebrew metadata trigger a clean monthly update cadence without daily spam.
+         */
+        fun parseHttpDateToMonthlyFloorMillis(httpDateHeader: String): Long {
+            val trimmed = httpDateHeader.trim()
+            if (trimmed.isEmpty()) return 0L
+            val patterns = arrayOf(
+                "EEE, dd MMM yyyy HH:mm:ss zzz",
+                "EEE, dd MMM yyyy HH:mm:ss 'GMT'",
+                "EEEE, dd-MMM-yy HH:mm:ss zzz",
+                "EEE MMM d HH:mm:ss yyyy"
+            )
+            for (pattern in patterns) {
+                try {
+                    val sdf = SimpleDateFormat(pattern, Locale.US).apply {
+                        timeZone = TimeZone.getTimeZone("UTC")
+                    }
+                    val parsed = sdf.parse(trimmed)
+                    if (parsed != null && parsed.time > 0L) {
+                        val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                            time = parsed
+                            set(Calendar.DAY_OF_MONTH, 1)
+                            set(Calendar.HOUR_OF_DAY, 0)
+                            set(Calendar.MINUTE, 0)
+                            set(Calendar.SECOND, 0)
+                            set(Calendar.MILLISECOND, 0)
+                        }
+                        return cal.timeInMillis
                     }
                 } catch (_: Exception) {
                 }
@@ -277,7 +316,7 @@ class DictionaryUpdateTracker(private val context: Context) {
     }
 
     /**
-     * Returns status snapshots for all 7 dictionaries (Base + 6 Extended).
+     * Returns status snapshots for all 8 dictionaries (Base + 7 Extended).
      */
     fun getAllStatusInfo(): List<DictionaryStatusInfo> {
         return getAllSourceIds().map { getStatusInfo(it) }
@@ -339,16 +378,17 @@ class DictionaryUpdateTracker(private val context: Context) {
     private fun fetchRemoteTimestamp(sourceId: String, urlStr: String): Long {
         var conn: HttpURLConnection? = null
         return try {
+            val isHttpHeadSource = (sourceId == DictionaryType.ENGLISH_LEXICON.id)
             val url = URL(urlStr)
             conn = (url.openConnection() as HttpURLConnection).apply {
                 instanceFollowRedirects = true
                 connectTimeout = 8000
                 readTimeout = 8000
-                requestMethod = "GET"
+                requestMethod = if (isHttpHeadSource) "HEAD" else "GET"
                 setRequestProperty("User-Agent", "JotInput-Android/1.0")
                 if (sourceId == BASE_DICT_ID) {
                     setRequestProperty("Accept", "application/vnd.github+json")
-                } else {
+                } else if (!isHttpHeadSource) {
                     setRequestProperty("Accept", "application/atom+xml, application/xml, text/xml")
                 }
             }
@@ -357,6 +397,13 @@ class DictionaryUpdateTracker(private val context: Context) {
             if (code != HttpURLConnection.HTTP_OK) {
                 Log.w(TAG, "HTTP $code when checking remote update for $sourceId ($urlStr)")
                 return 0L
+            }
+
+            if (isHttpHeadSource) {
+                val lastMod = conn.getHeaderField("Last-Modified") ?: ""
+                val millis = parseHttpDateToMonthlyFloorMillis(lastMod)
+                Log.d(TAG, "Fetched monthly-floored HTTP HEAD date for $sourceId: ${formatDateMillis(millis)} ($millis)")
+                return millis
             }
 
             val content = StringBuilder()

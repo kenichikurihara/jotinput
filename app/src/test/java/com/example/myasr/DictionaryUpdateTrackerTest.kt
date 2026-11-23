@@ -119,13 +119,29 @@ class DictionaryUpdateTrackerTest {
     }
 
     @Test
-    fun testAllSevenSourcesHaveRemoteEndpoints() {
+    fun testAllEightSourcesHaveRemoteEndpoints() {
         val sources = DictionaryUpdateTracker.getAllSourceIds()
-        assertEquals(7, sources.size)
+        assertEquals(8, sources.size)
         for (sourceId in sources) {
             val endpoint = DictionaryUpdateTracker.getRemoteCheckEndpoint(sourceId)
             assertNotNull("Endpoint for $sourceId must not be null", endpoint)
             assertTrue("Endpoint for $sourceId must be HTTPS", endpoint!!.startsWith("https://"))
         }
+    }
+
+    @Test
+    fun testParseHttpDateToMonthlyFloorMillisPreventsDailySpam() {
+        val nov12 = DictionaryUpdateTracker.parseHttpDateToMonthlyFloorMillis("Thu, 12 Nov 2026 08:45:10 GMT")
+        val nov23 = DictionaryUpdateTracker.parseHttpDateToMonthlyFloorMillis("Mon, 23 Nov 2026 02:02:36 GMT")
+        val dec02 = DictionaryUpdateTracker.parseHttpDateToMonthlyFloorMillis("Wed, 02 Dec 2026 01:00:00 GMT")
+
+        assertTrue("Expected positive UTC millis for November date", nov12 > 0L)
+        // Same UTC month floors to exact same 1st-of-month timestamp -> no daily notification spam
+        assertEquals(nov12, nov23)
+        assertEquals("2026/11/01", DictionaryUpdateTracker.formatDateMillis(nov12, timeZone = TimeZone.getTimeZone("UTC")))
+
+        // Month rollover advances remote timestamp -> triggers clean monthly update notification
+        assertTrue("Expected December floor > November floor", dec02 > nov23)
+        assertEquals("2026/12/01", DictionaryUpdateTracker.formatDateMillis(dec02, timeZone = TimeZone.getTimeZone("UTC")))
     }
 }

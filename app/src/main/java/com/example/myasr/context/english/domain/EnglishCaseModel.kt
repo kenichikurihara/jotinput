@@ -29,68 +29,160 @@ object EnglishCaseModel {
     private const val ALPHABET_SIZE = 28 // '^', 'a'..'z', '$'
     private const val OOV_ACRO_THRESHOLD_LLR = 0.28f
     private const val TYPO_INDEX_MIN_LOG_FREQ = 2.1f
+    private const val MAX_OTA_ENTRIES = 20_000
     private const val BIGRAM_ALPHABET = 27 // 'a'..'z' -> 0..25, other -> 26
     private const val LEN_BUCKET_COUNT = 32 // length buckets 0..30 exact, 31 = 31+
     private const val TOTAL_CSR_SLOTS = BIGRAM_ALPHABET * BIGRAM_ALPHABET * LEN_BUCKET_COUNT
 
+    private class ModelSnapshot(
+        val lexicon: HashMap<String, LexiconEntry>,
+        val lowerVocabFreq: HashMap<String, Float>,
+        val abbrevEos: HashMap<String, Float>,
+        val charBigramLlr: FloatArray,
+        val sortedKeys: Array<String>,
+        val sortedKeyLengths: IntArray,
+        val sortedSurfaces: Array<String>,
+        val sortedLogFreqs: FloatArray,
+        val sortedCharMasks: IntArray,
+        val typoBucketOffsets: IntArray,
+        val typoBucketData: IntArray,
+        val otaOverlayEntryCount: Int
+    )
+
     @Volatile
-    private var loaded = false
+    private var baseLoaded = false
+
+    @Volatile
+    private var activeSnapshot: ModelSnapshot? = null
+
+    @Volatile
+    private var configuredOtaLexiconFile: File? = null
 
     private val lock = Any()
-    private val lexicon = HashMap<String, LexiconEntry>(40960)
-    private val lowerVocabFreq = HashMap<String, Float>(81920)
-    private val abbrevEos = HashMap<String, Float>(128)
+    private val baseLexicon = HashMap<String, LexiconEntry>(40960)
+    private val baseLowerVocabFreq = HashMap<String, Float>(81920)
+    private val baseAbbrevEos = HashMap<String, Float>(128)
     // Flattened 28x28 character bigram LLR table: log P_acro(b|a) - log P_word(b|a)
-    private val charBigramLlr = FloatArray(ALPHABET_SIZE * ALPHABET_SIZE)
-
-    private var sortedKeys: Array<String> = emptyArray()
-    private var sortedKeyLengths: IntArray = IntArray(0)
-    private var sortedSurfaces: Array<String> = emptyArray()
-    private var sortedLogFreqs: FloatArray = FloatArray(0)
-    private var sortedCharMasks: IntArray = IntArray(0)
-    private var typoBucketOffsets: IntArray = IntArray(0)
-    private var typoBucketData: IntArray = IntArray(0)
+    private val baseCharBigramLlr = FloatArray(ALPHABET_SIZE * ALPHABET_SIZE)
 
     private val dpBuffersTl = ThreadLocal.withInitial {
         arrayOf(FloatArray(48), FloatArray(48), FloatArray(48))
     }
 
-    fun ensureLoaded() {
-        if (loaded) return
+    /**
+     * Registers the optional OTA overlay TSV file location (safe to call on startup main thread).
+     */
+    fun configureOtaOverlayFile(lexiconOtaFile: File?) {
+        configuredOtaLexiconFile = lexiconOtaFile
+    }
+
+    private fun ensureBaseLoadedLocked() {
+        if (baseLoaded) return
+        loadLexiconInto(baseLexicon)
+        loadLowerVocabInto(baseLowerVocabFreq)
+        loadAbbrevEosInto(baseAbbrevEos)
+        loadCharBigramLmInto(baseCharBigramLlr)
+        baseLoaded = true
+    }
+
+    private fun getSnapshot(): ModelSnapshot {
+        activeSnapshot?.let { return it }
         synchronized(lock) {
-            if (loaded) return
-            loadLexicon()
-            loadLowerVocab()
-            loadAbbrevEos()
-            loadCharBigramLm()
-            buildSearchIndex()
-            loaded = true
+            activeSnapshot?.let { return it }
+            val snap = buildSnapshotLocked(configuredOtaLexiconFile)
+            activeSnapshot = snap
+            return snap
         }
     }
 
+    fun ensureLoaded() {
+        getSnapshot()
+    }
+
+    /**
+     * Atomically rebuilds the in-memory lexicon and CSR prefix/typo index with the given
+     * optional OTA overlay TSV file (or bundled-only if null/absent), returning the number
+     * of admitted OTA entries.
+     */
+    fun reloadWithOtaOverlay(lexiconOtaFile: File? = configuredOtaLexiconFile): Int {
+        synchronized(lock) {
+            configuredOtaLexiconFile = lexiconOtaFile
+            val snap = buildSnapshotLocked(lexiconOtaFile)
+            activeSnapshot = snap
+            return snap.otaOverlayEntryCount
+        }
+    }
+
+    fun getOtaOverlayEntryCount(): Int {
+        return getSnapshot().otaOverlayEntryCount
+    }
+
+    private fun buildSnapshotLocked(otaFile: File?): ModelSnapshot {
+        ensureBaseLoadedLocked()
+        val mergedLexicon = HashMap<String, LexiconEntry>(baseLexicon.size + 4096)
+        mergedLexicon.putAll(baseLexicon)
+        var admittedOtaCount = 0
+
+        if (otaFile != null && otaFile.isFile && otaFile.length() > 0L) {
+            try {
+                BufferedReader(InputStreamReader(otaFile.inputStream(), Charsets.UTF_8)).useLines { lines ->
+                    for (rawLine in lines) {
+                        if (rawLine.isEmpty() || rawLine.startsWith("#")) continue
+                        val parsed = parseLexiconRow(rawLine) ?: continue
+                        val (key, entry) = parsed
+                        val bundledEntry = baseLexicon[key]
+                        val action = EnglishAssistJudgement.judgeOtaOverlayAdmission(
+                            EnglishAssistJudgement.OtaOverlayAdmissionInput(
+                                keyLength = key.length,
+                                hasValidSurfaceVariants = entry.variants.isNotEmpty(),
+                                hasPositiveLogFreq = entry.logFreq > 0.0f,
+                                isBundledCoreLowerWord = baseLowerVocabFreq.containsKey(key),
+                                existsInBundledLexicon = bundledEntry != null,
+                                otaLogFreqExceedsBundled = bundledEntry != null && entry.logFreq > bundledEntry.logFreq,
+                                withinCapacityCap = admittedOtaCount < MAX_OTA_ENTRIES
+                            )
+                        ).decision
+                        if (action == EnglishAssistJudgement.OtaOverlayAdmissionAction.ADMIT_NEW_WORD ||
+                            action == EnglishAssistJudgement.OtaOverlayAdmissionAction.UPGRADE_EXISTING_FREQ
+                        ) {
+                            mergedLexicon[key] = entry
+                            admittedOtaCount++
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+            }
+        }
+
+        return buildSearchIndex(
+            lexiconMap = mergedLexicon,
+            lowerVocabMap = baseLowerVocabFreq,
+            abbrevMap = baseAbbrevEos,
+            bigramTable = baseCharBigramLlr,
+            otaCount = admittedOtaCount
+        )
+    }
+
     fun lookupLexicon(lowerWord: String): LexiconEntry? {
-        ensureLoaded()
-        return lexicon[lowerWord]
+        return getSnapshot().lexicon[lowerWord]
     }
 
     fun isKnownLowerWord(lowerWord: String): Boolean {
-        ensureLoaded()
-        return lowerVocabFreq.containsKey(lowerWord)
+        return getSnapshot().lowerVocabFreq.containsKey(lowerWord)
     }
 
     fun isKnownWord(lowerWord: String): Boolean {
-        ensureLoaded()
-        return lexicon.containsKey(lowerWord) || lowerVocabFreq.containsKey(lowerWord)
+        val snap = getSnapshot()
+        return snap.lexicon.containsKey(lowerWord) || snap.lowerVocabFreq.containsKey(lowerWord)
     }
 
     fun getWordLogFreq(lowerWord: String): Float? {
-        ensureLoaded()
-        return lexicon[lowerWord]?.logFreq ?: lowerVocabFreq[lowerWord]
+        val snap = getSnapshot()
+        return snap.lexicon[lowerWord]?.logFreq ?: snap.lowerVocabFreq[lowerWord]
     }
 
     fun abbreviationEosProbability(stemLower: String): Float? {
-        ensureLoaded()
-        return abbrevEos[stemLower]
+        return getSnapshot().abbrevEos[stemLower]
     }
 
     /**
@@ -100,7 +192,7 @@ object EnglishCaseModel {
      * phonotactics rather than standard English word phonotactics.
      */
     fun oovAcronymLogLikelihoodRatio(lowerWord: String): Float {
-        ensureLoaded()
+        val snap = getSnapshot()
         if (lowerWord.length < 2 || lowerWord.length > 6) return -10.0f
         for (ch in lowerWord) {
             if (ch !in 'a'..'z') return -10.0f
@@ -109,11 +201,11 @@ object EnglishCaseModel {
         var prevIdx = 0 // '^'
         for (ch in lowerWord) {
             val curIdx = (ch - 'a') + 1
-            llr += charBigramLlr[prevIdx * ALPHABET_SIZE + curIdx]
+            llr += snap.charBigramLlr[prevIdx * ALPHABET_SIZE + curIdx]
             prevIdx = curIdx
         }
         val endIdx = 27 // '$'
-        llr += charBigramLlr[prevIdx * ALPHABET_SIZE + endIdx]
+        llr += snap.charBigramLlr[prevIdx * ALPHABET_SIZE + endIdx]
         return llr
     }
 
@@ -134,7 +226,15 @@ object EnglishCaseModel {
      * Works 100% out-of-the-box without requiring the 27.5 MB external GEC ONNX model.
      */
     fun suggestPrefixAndTypo(rawWord: String, maxCandidates: Int = 6): List<String> {
-        ensureLoaded()
+        val snap = getSnapshot()
+        val sortedKeys = snap.sortedKeys
+        val sortedKeyLengths = snap.sortedKeyLengths
+        val sortedSurfaces = snap.sortedSurfaces
+        val sortedLogFreqs = snap.sortedLogFreqs
+        val sortedCharMasks = snap.sortedCharMasks
+        val offsets = snap.typoBucketOffsets
+        val data = snap.typoBucketData
+
         val typedLower = rawWord.trim().lowercase()
         val m = typedLower.length
         if (m < 2 || sortedKeys.isEmpty() || maxCandidates <= 0) return emptyList()
@@ -170,11 +270,11 @@ object EnglishCaseModel {
         }
 
         // 2. Exact match / apostrophe contraction alias match (e.g., dont -> don't, im -> I'm)
-        lexicon[typedLower]?.let { entry ->
+        snap.lexicon[typedLower]?.let { entry ->
             val topSurf = entry.variants.first().surface
             record(topSurf.lowercase(), topSurf, entry.logFreq + 1.0f)
         }
-        lowerVocabFreq[typedLower]?.let { lf ->
+        snap.lowerVocabFreq[typedLower]?.let { lf ->
             record(typedLower, typedLower, lf + 1.0f)
         }
 
@@ -237,8 +337,6 @@ object EnglishCaseModel {
             val maxLen3a = minOf(LEN_BUCKET_COUNT - 1, m + maxLenDiff3a)
             val minLen3b = m + maxLenDiff3a + 1
             val maxLen3b = minOf(LEN_BUCKET_COUNT - 1, m + 10)
-            val offsets = typoBucketOffsets
-            val data = typoBucketData
 
             for (bi in 0 until bkCount) {
                 val bk = bucketIds[bi]
@@ -401,32 +499,40 @@ object EnglishCaseModel {
      * Exports the unified frequency-sorted vocabulary to external storage so the native
      * C++ EnglishSpellEngine SymSpell/prefix engine stays synchronized with the enriched lexicon.
      */
-    fun exportVocabularyIfNeeded(targetFile: File) {
-        ensureLoaded()
-        if (sortedKeys.isEmpty()) return
-        if (targetFile.exists() && targetFile.length() > 100_000L) {
+    fun exportVocabularyIfNeeded(targetFile: File, force: Boolean = false) {
+        val snap = getSnapshot()
+        if (snap.sortedKeys.isEmpty()) return
+        if (!force && targetFile.exists() && targetFile.length() > 100_000L) {
             val existingLines = try {
                 targetFile.bufferedReader(Charsets.UTF_8).use { reader ->
                     var count = 0
                     while (reader.readLine() != null) {
                         count++
-                        if (count >= sortedKeys.size) break
+                        if (count >= snap.sortedKeys.size) break
                     }
                     count
                 }
             } catch (_: Exception) {
                 0
             }
-            if (existingLines >= sortedKeys.size) return
+            if (existingLines >= snap.sortedKeys.size) return
         }
         try {
             targetFile.parentFile?.mkdirs()
-            val indices = sortedKeys.indices.sortedByDescending { sortedLogFreqs[it] }
-            targetFile.bufferedWriter(Charsets.UTF_8).use { writer ->
+            val indices = snap.sortedKeys.indices.sortedByDescending { snap.sortedLogFreqs[it] }
+            val tmpFile = File(targetFile.parentFile, "${targetFile.name}.tmp")
+            tmpFile.bufferedWriter(Charsets.UTF_8).use { writer ->
                 for (idx in indices) {
-                    writer.write(sortedSurfaces[idx])
+                    writer.write(snap.sortedSurfaces[idx])
                     writer.newLine()
                 }
+            }
+            if (targetFile.exists()) {
+                targetFile.delete()
+            }
+            if (!tmpFile.renameTo(targetFile)) {
+                tmpFile.copyTo(targetFile, overwrite = true)
+                tmpFile.delete()
             }
         } catch (_: Exception) {
         }
@@ -437,32 +543,40 @@ object EnglishCaseModel {
             ?: Thread.currentThread().contextClassLoader?.getResourceAsStream(path)
     }
 
-    private fun loadLexicon() {
+    private fun parseLexiconRow(line: String): Pair<String, LexiconEntry>? {
+        val parts = line.split('\t')
+        if (parts.size < 3) return null
+        val key = parts[0].trim().lowercase()
+        if (key.length > 28 || (key.length < 2 && key != "i" && key != "a")) return null
+        val logFreq = parts[1].toFloatOrNull() ?: return null
+        if (!logFreq.isFinite() || logFreq <= 0.0f) return null
+        val varParts = parts[2].split(',')
+        val variants = ArrayList<CaseVariant>(varParts.size)
+        for (vp in varParts) {
+            val colon = vp.lastIndexOf(':')
+            if (colon <= 0 || colon >= vp.length - 1) continue
+            val surf = vp.substring(0, colon)
+            val prob = vp.substring(colon + 1).toFloatOrNull() ?: continue
+            if (surf.isEmpty() || !prob.isFinite() || prob <= 0.0f) continue
+            if (surf.any { it.isWhitespace() }) continue
+            variants.add(CaseVariant(surf, prob))
+        }
+        if (variants.isEmpty()) return null
+        return key to LexiconEntry(logFreq, variants)
+    }
+
+    private fun loadLexiconInto(target: HashMap<String, LexiconEntry>) {
         val stream = openResource("english/english_case_lexicon.tsv") ?: return
         BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).useLines { lines ->
             for (line in lines) {
                 if (line.isEmpty()) continue
-                val parts = line.split('\t')
-                if (parts.size < 3) continue
-                val key = parts[0]
-                val logFreq = parts[1].toFloatOrNull() ?: 1.0f
-                val varParts = parts[2].split(',')
-                val variants = ArrayList<CaseVariant>(varParts.size)
-                for (vp in varParts) {
-                    val colon = vp.lastIndexOf(':')
-                    if (colon <= 0 || colon >= vp.length - 1) continue
-                    val surf = vp.substring(0, colon)
-                    val prob = vp.substring(colon + 1).toFloatOrNull() ?: continue
-                    variants.add(CaseVariant(surf, prob))
-                }
-                if (variants.isNotEmpty()) {
-                    lexicon[key] = LexiconEntry(logFreq, variants)
-                }
+                val parsed = parseLexiconRow(line) ?: continue
+                target[parsed.first] = parsed.second
             }
         }
     }
 
-    private fun loadLowerVocab() {
+    private fun loadLowerVocabInto(target: HashMap<String, Float>) {
         val stream = openResource("english/english_lower_vocab.txt") ?: return
         BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).useLines { lines ->
             for (line in lines) {
@@ -473,16 +587,16 @@ object EnglishCaseModel {
                     val w = trimmed.substring(0, tab)
                     val lf = trimmed.substring(tab + 1).toFloatOrNull() ?: 2.0f
                     if (w.isNotEmpty()) {
-                        lowerVocabFreq[w] = lf
+                        target[w] = lf
                     }
                 } else {
-                    lowerVocabFreq[trimmed] = 2.0f
+                    target[trimmed] = 2.0f
                 }
             }
         }
     }
 
-    private fun loadAbbrevEos() {
+    private fun loadAbbrevEosInto(target: HashMap<String, Float>) {
         val stream = openResource("english/english_abbrev_eos.tsv") ?: return
         BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).useLines { lines ->
             for (line in lines) {
@@ -491,12 +605,12 @@ object EnglishCaseModel {
                 if (parts.size < 2) continue
                 val stem = parts[0]
                 val pEos = parts[1].toFloatOrNull() ?: continue
-                abbrevEos[stem] = pEos
+                target[stem] = pEos
             }
         }
     }
 
-    private fun loadCharBigramLm() {
+    private fun loadCharBigramLmInto(targetTable: FloatArray) {
         val stream = openResource("english/english_acro_char_lm.tsv") ?: return
         BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).useLines { lines ->
             for (line in lines) {
@@ -507,22 +621,28 @@ object EnglishCaseModel {
                 val b = charIndex(parts[0][1])
                 val llr = parts[1].toFloatOrNull() ?: continue
                 if (a >= 0 && b >= 0) {
-                    charBigramLlr[a * ALPHABET_SIZE + b] = llr
+                    targetTable[a * ALPHABET_SIZE + b] = llr
                 }
             }
         }
     }
 
-    private fun buildSearchIndex() {
-        val unified = HashMap<String, Pair<String, Float>>(lexicon.size + lowerVocabFreq.size)
-        for ((key, entry) in lexicon) {
+    private fun buildSearchIndex(
+        lexiconMap: HashMap<String, LexiconEntry>,
+        lowerVocabMap: HashMap<String, Float>,
+        abbrevMap: HashMap<String, Float>,
+        bigramTable: FloatArray,
+        otaCount: Int
+    ): ModelSnapshot {
+        val unified = HashMap<String, Pair<String, Float>>(lexiconMap.size + lowerVocabMap.size)
+        for ((key, entry) in lexiconMap) {
             if (key.length < 2 && key != "a" && key != "i") continue
             val topSurface = entry.variants.first().surface
             // Skip apostrophe-stripped contraction alias keys (e.g. dont -> don't); keep actual words
             if (key != topSurface.lowercase()) continue
             unified[key] = topSurface to entry.logFreq
         }
-        for ((key, lf) in lowerVocabFreq) {
+        for ((key, lf) in lowerVocabMap) {
             if (key.length < 2 && key != "a" && key != "i") continue
             val existing = unified[key]
             if (existing == null) {
@@ -598,13 +718,20 @@ object EnglishCaseModel {
             }
         }
 
-        sortedKeys = keys
-        sortedKeyLengths = keyLengths
-        sortedSurfaces = surfaces
-        sortedLogFreqs = logFreqs
-        sortedCharMasks = charMasks
-        typoBucketOffsets = offsets
-        typoBucketData = data
+        return ModelSnapshot(
+            lexicon = lexiconMap,
+            lowerVocabFreq = lowerVocabMap,
+            abbrevEos = abbrevMap,
+            charBigramLlr = bigramTable,
+            sortedKeys = keys,
+            sortedKeyLengths = keyLengths,
+            sortedSurfaces = surfaces,
+            sortedLogFreqs = logFreqs,
+            sortedCharMasks = charMasks,
+            typoBucketOffsets = offsets,
+            typoBucketData = data,
+            otaOverlayEntryCount = otaCount
+        )
     }
 
     private fun bigramId(c0: Char, c1: Char): Int {

@@ -58,6 +58,25 @@ object EnglishAssistJudgement {
         val hasPrefixCompletions: Boolean
     )
 
+    enum class OtaOverlayAdmissionAction {
+        REJECT_INVALID,
+        REJECT_CAPACITY_EXCEEDED,
+        REJECT_PROTECT_CORE_SHORT_WORD,
+        ADMIT_NEW_WORD,
+        UPGRADE_EXISTING_FREQ,
+        KEEP_BUNDLED
+    }
+
+    data class OtaOverlayAdmissionInput(
+        val keyLength: Int,
+        val hasValidSurfaceVariants: Boolean,
+        val hasPositiveLogFreq: Boolean,
+        val isBundledCoreLowerWord: Boolean,
+        val existsInBundledLexicon: Boolean,
+        val otaLogFreqExceedsBundled: Boolean,
+        val withinCapacityCap: Boolean
+    )
+
     val autoAssistBypassDecisionTable: DecisionTable<AutoAssistModeInput, JudgementResult<Boolean>> = decisionTable(
         name = "EnglishAutoAssistBypass",
         hitPolicy = HitPolicy.FIRST
@@ -168,6 +187,38 @@ object EnglishAssistJudgement {
             )
         }
 
+    val otaOverlayAdmissionDecisionTable: DecisionTable<OtaOverlayAdmissionInput, JudgementResult<OtaOverlayAdmissionAction>> =
+        decisionTable(
+            name = "EnglishOtaOverlayAdmissionPolicy",
+            hitPolicy = HitPolicy.FIRST
+        ) {
+            rule(id = "EN_OTA_R1", description = "Reject invalid OTA lexicon row or key length outside 2..28") {
+                `when` { !it.hasValidSurfaceVariants || !it.hasPositiveLogFreq || it.keyLength < 2 || it.keyLength > 28 }
+                thenValue(JudgementResult(OtaOverlayAdmissionAction.REJECT_INVALID, "invalid_ota_entry"))
+            }
+            rule(id = "EN_OTA_R2", description = "Reject OTA admission when memory/capacity budget cap is reached") {
+                `when` { !it.withinCapacityCap }
+                thenValue(JudgementResult(OtaOverlayAdmissionAction.REJECT_CAPACITY_EXCEEDED, "ota_capacity_exceeded"))
+            }
+            rule(id = "EN_OTA_R3", description = "Protect core short lowercase words (len <= 4) from OTA casing overwrite") {
+                `when` { it.keyLength <= 4 && it.isBundledCoreLowerWord }
+                thenValue(JudgementResult(OtaOverlayAdmissionAction.REJECT_PROTECT_CORE_SHORT_WORD, "protect_core_short_word"))
+            }
+            rule(id = "EN_OTA_R4", description = "Admit new OOV word from OTA overlay") {
+                `when` { !it.existsInBundledLexicon }
+                thenValue(JudgementResult(OtaOverlayAdmissionAction.ADMIT_NEW_WORD, "admit_new_ota_word"))
+            }
+            rule(id = "EN_OTA_R5", description = "Upgrade bundled lexicon entry when OTA entry has higher log frequency") {
+                `when` { it.otaLogFreqExceedsBundled }
+                thenValue(JudgementResult(OtaOverlayAdmissionAction.UPGRADE_EXISTING_FREQ, "upgrade_bundled_with_ota"))
+            }
+            defaultValue(
+                id = "EN_OTA_DEFAULT",
+                description = "Keep existing bundled lexicon entry",
+                value = JudgementResult(OtaOverlayAdmissionAction.KEEP_BUNDLED, "keep_bundled_entry")
+            )
+        }
+
     val autoAssistBypassJudgement: Judgement<AutoAssistModeInput, JudgementResult<Boolean>> =
         autoAssistBypassDecisionTable
     val wordCandidateEligibilityJudgement: Judgement<WordCandidateEligibilityInput, JudgementResult<Boolean>> =
@@ -176,6 +227,8 @@ object EnglishAssistJudgement {
     val candidateBadgeJudgement: Judgement<CandidateBadgeInput, String> = candidateBadgeDecisionTable
     val prefixCompletionPolicyJudgement: Judgement<PrefixCompletionPolicyInput, JudgementResult<PrefixCompletionStrategy>> =
         prefixCompletionPolicyDecisionTable
+    val otaOverlayAdmissionJudgement: Judgement<OtaOverlayAdmissionInput, JudgementResult<OtaOverlayAdmissionAction>> =
+        otaOverlayAdmissionDecisionTable
 
     private fun extractTrailingClause(textBeforeCursor: String): String {
         val lastSentenceStart = textBeforeCursor.lastIndexOfAny(SENTENCE_BOUNDARY_CHARS)
@@ -260,4 +313,13 @@ object EnglishAssistJudgement {
     ): DecisionTrace<JudgementResult<PrefixCompletionStrategy>> = prefixCompletionPolicyDecisionTable.evaluateWithTrace(
         PrefixCompletionPolicyInput(rawWordLength, isKnownExactWord, isOovAcronym, hasPrefixCompletions)
     )
+
+    fun judgeOtaOverlayAdmission(
+        input: OtaOverlayAdmissionInput
+    ): JudgementResult<OtaOverlayAdmissionAction> = otaOverlayAdmissionJudgement.judge(input)
+
+    fun traceOtaOverlayAdmission(
+        input: OtaOverlayAdmissionInput
+    ): DecisionTrace<JudgementResult<OtaOverlayAdmissionAction>> =
+        otaOverlayAdmissionDecisionTable.evaluateWithTrace(input)
 }

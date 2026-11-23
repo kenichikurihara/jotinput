@@ -42,6 +42,7 @@ tools/llama_bin/
 tools/mozc/
 tools/llama_cpp_src/
 tools/data_sources/KWDLC/
+tools/data_sources/english_corpora/
 tools/mozc_slm_integration_test
 tools/mozc_phase4_test
 tools/bench_ime_latency

@@ -24,7 +24,10 @@ unified prefix/typo vocabulary:
      for native C++ EnglishSpellEngine SymSpell & prefix completion.
 """
 
+import bz2
 import glob
+import json
+import lzma
 import math
 import os
 import re
@@ -33,6 +36,7 @@ import subprocess
 from collections import Counter, defaultdict
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPSTREAM_CORPORA_DIR = os.path.join(REPO_ROOT, "tools", "data_sources", "english_corpora")
 FUTO_VOCAB_PATH = os.path.join(REPO_ROOT, "tools", "futo_swipe", "vocab.txt")
 MOZC_OSS_DIR = os.path.join(REPO_ROOT, "tools", "mozc", "src", "data", "dictionary_oss")
 GGUF_VOCAB_GLOB = os.path.join(REPO_ROOT, "tools", "llama_cpp_src", "models", "ggml-vocab-*.gguf")
@@ -41,6 +45,10 @@ SEED_LEXICON_PATH = os.path.join(REPO_ROOT, "tools", "models", "english_spelling
 SEED_LOWER_PATH = os.path.join(REPO_ROOT, "tools", "models", "english_spelling", "nltk_lower_vocab_seed.txt")
 SPELL_VOCAB_PATH = os.path.join(REPO_ROOT, "tools", "models", "english_spelling", "vocab.txt")
 OUT_DIR = os.path.join(REPO_ROOT, "app", "src", "main", "resources", "english")
+
+MAX_CASE_LEXICON_ENTRIES = 45_000
+MAX_LOWER_VOCAB_ENTRIES = 85_000
+MAX_SPELL_VOCAB_ENTRIES = 120_000
 
 WORD_RE = re.compile(r"^[A-Za-z][A-Za-z0-9'\-]{1,28}$")
 ALPHA_ONLY_RE = re.compile(r"^[A-Za-z]+$")
@@ -244,7 +252,55 @@ def load_nltk_seed(case_counts, lower_prose_counts, seed_lower_set, contraction_
                 lower_prose_counts[w] += 3.0 * NLTK_PROSE_WEIGHT
 
 
+def process_prose_text(raw_text, case_counts, lower_prose_counts, contraction_keys):
+    full_text = URL_EMAIL_SLUG_RE.sub(" ", raw_text)
+    for sent in re.split(r"(?<=[.!?:;])\s+|\n+", full_text.strip()):
+        toks = PROSE_TOK_RE.findall(sent)
+        if is_all_caps_headline(toks):
+            continue
+        for idx, tok in enumerate(toks):
+            if idx == 0:
+                continue
+            low = tok.lower()
+            w_deb = 0.05 if low in contraction_keys else 1.0
+            case_counts[low][tok] += w_deb
+            if tok.islower() and ALPHA_ONLY_RE.match(tok):
+                lower_prose_counts[low] += w_deb
+            if "'" in tok and low in VALID_CONTRACTIONS:
+                case_counts[low.replace("'", "")][tok] += 1.0
+
+
+def parse_debian_description_lines(lines_iter, case_counts, lower_prose_counts, contraction_keys):
+    in_desc = False
+    buf = []
+    for line in lines_iter:
+        if line.startswith("Description:") or line.startswith("Description-en:"):
+            if in_desc and buf:
+                process_prose_text("".join(buf), case_counts, lower_prose_counts, contraction_keys)
+            in_desc = True
+            buf = [line.split(":", 1)[1]]
+        elif in_desc and line.startswith(" "):
+            stripped_line = line.strip()
+            if stripped_line == "." or stripped_line.startswith(("*", "-")):
+                buf.append("\n" + stripped_line)
+            else:
+                buf.append(" " + stripped_line)
+        else:
+            if in_desc and buf:
+                process_prose_text("".join(buf), case_counts, lower_prose_counts, contraction_keys)
+                buf = []
+            in_desc = False
+    if in_desc and buf:
+        process_prose_text("".join(buf), case_counts, lower_prose_counts, contraction_keys)
+
+
 def load_debian_prose(case_counts, lower_prose_counts, contraction_keys):
+    fetched_xz = os.path.join(UPSTREAM_CORPORA_DIR, "debian_translation_en.xz")
+    if os.path.exists(fetched_xz):
+        with lzma.open(fetched_xz, "rt", encoding="utf-8", errors="ignore") as f:
+            parse_debian_description_lines(f, case_counts, lower_prose_counts, contraction_keys)
+        return
+
     apt_files = sorted(glob.glob("/var/lib/apt/lists/*Translation-en"))
     for p in sorted(glob.glob("/var/lib/apt/lists/*Packages*")):
         if "deb.debian.org_debian_dists" not in os.path.basename(p):
@@ -252,37 +308,110 @@ def load_debian_prose(case_counts, lower_prose_counts, contraction_keys):
 
     for p in apt_files:
         with open(p, "r", encoding="utf-8", errors="ignore") as f:
-            in_desc = False
-            buf = []
-            for line in f:
-                if line.startswith("Description:") or line.startswith("Description-en:"):
-                    in_desc = True
-                    buf = [line.split(":", 1)[1]]
-                elif in_desc and line.startswith(" "):
-                    stripped_line = line.strip()
-                    if stripped_line == "." or stripped_line.startswith(("*", "-")):
-                        buf.append("\n" + stripped_line)
-                    else:
-                        buf.append(" " + stripped_line)
-                else:
-                    if in_desc and buf:
-                        full_text = URL_EMAIL_SLUG_RE.sub(" ", "".join(buf))
-                        for sent in re.split(r"(?<=[.!?:;])\s+|\n+", full_text.strip()):
-                            toks = PROSE_TOK_RE.findall(sent)
-                            if is_all_caps_headline(toks):
+            parse_debian_description_lines(f, case_counts, lower_prose_counts, contraction_keys)
+
+
+def load_homebrew_metadata(case_counts, lower_prose_counts, contraction_keys, seed_lower_set, aspell_low_set):
+    formula_path = os.path.join(UPSTREAM_CORPORA_DIR, "homebrew_formula.json")
+    if os.path.exists(formula_path):
+        try:
+            with open(formula_path, "r", encoding="utf-8", errors="ignore") as f:
+                formulas = json.load(f)
+            for item in formulas:
+                if not isinstance(item, dict):
+                    continue
+                desc = item.get("desc")
+                if isinstance(desc, str) and desc:
+                    process_prose_text(desc, case_counts, lower_prose_counts, contraction_keys)
+                name = item.get("name")
+                if isinstance(name, str) and ALPHA_ONLY_RE.match(name) and len(name) >= 5:
+                    low = name.lower()
+                    if (
+                        low not in seed_lower_set
+                        and low not in aspell_low_set
+                        and low not in contraction_keys
+                    ):
+                        case_counts[low][name] += 1.0
+        except Exception:
+            pass
+
+    cask_path = os.path.join(UPSTREAM_CORPORA_DIR, "homebrew_cask.json")
+    if os.path.exists(cask_path):
+        try:
+            with open(cask_path, "r", encoding="utf-8", errors="ignore") as f:
+                casks = json.load(f)
+            for item in casks:
+                if not isinstance(item, dict):
+                    continue
+                desc = item.get("desc")
+                if isinstance(desc, str) and desc:
+                    process_prose_text(desc, case_counts, lower_prose_counts, contraction_keys)
+                names = item.get("name")
+                if isinstance(names, list):
+                    for raw_name in names:
+                        if not isinstance(raw_name, str):
+                            continue
+                        tok = raw_name.strip()
+                        if (
+                            " " not in tok
+                            and len(tok) >= 4
+                            and WORD_RE.match(tok)
+                            and ALPHA_ONLY_RE.match(tok)
+                            and tok[0].isupper()
+                            and not tok.isupper()
+                        ):
+                            low = tok.lower()
+                            if low in contraction_keys or tok.endswith(KOTLIN_IDENTIFIER_SUFFIXES):
                                 continue
-                            for idx, tok in enumerate(toks):
-                                if idx == 0:
-                                    continue
-                                low = tok.lower()
-                                w_deb = 0.05 if low in contraction_keys else 1.0
-                                case_counts[low][tok] += w_deb
-                                if tok.islower() and ALPHA_ONLY_RE.match(tok):
-                                    lower_prose_counts[low] += w_deb
-                                if "'" in tok and low in VALID_CONTRACTIONS:
-                                    case_counts[low.replace("'", "")][tok] += 1.0
-                        buf = []
-                    in_desc = False
+                            if is_camel_or_mixed(tok) or (low not in seed_lower_set and low not in aspell_low_set):
+                                case_counts[low][tok] += 3.5
+        except Exception:
+            pass
+
+
+def load_mozc_ut_english(case_counts, contraction_keys, seed_lower_set, aspell_low_set):
+    ut_files = [
+        os.path.join(UPSTREAM_CORPORA_DIR, "mozcdic-ut-jawiki.txt.bz2"),
+        os.path.join(UPSTREAM_CORPORA_DIR, "mozcdic-ut-sudachidict.txt.bz2"),
+    ]
+    for path in ut_files:
+        if not os.path.exists(path):
+            continue
+        seen_surfs = set()
+        try:
+            with bz2.open(path, "rt", encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    parts = line.rstrip("\n").split("\t")
+                    if len(parts) < 5:
+                        continue
+                    try:
+                        cost = int(parts[3])
+                    except ValueError:
+                        continue
+                    if cost > 8500:
+                        continue
+                    surf = parts[4].strip()
+                    if (
+                        len(surf) < 4
+                        or len(surf) > 24
+                        or surf.islower()
+                        or surf.isupper()
+                        or not WORD_RE.match(surf)
+                        or not ALPHA_ONLY_RE.match(surf)
+                    ):
+                        continue
+                    if surf in seen_surfs:
+                        continue
+                    seen_surfs.add(surf)
+                    low = surf.lower()
+                    if low in contraction_keys or surf.endswith(KOTLIN_IDENTIFIER_SUFFIXES):
+                        continue
+                    if is_camel_or_mixed(surf):
+                        case_counts[low][surf] += 2.0
+                    elif surf[0].isupper() and low not in seed_lower_set and low not in aspell_low_set:
+                        case_counts[low][surf] += 1.5
+        except Exception:
+            pass
 
 
 def load_gguf_and_docs(case_counts, contraction_keys):
@@ -459,64 +588,85 @@ def main():
     load_gguf_and_docs(case_counts, contraction_keys)
     load_mozc_oss_english(case_counts, contraction_keys)
     aspell_low_set = load_futo_and_aspell(case_counts, lower_prose_counts, seed_lower_set)
+    load_homebrew_metadata(case_counts, lower_prose_counts, contraction_keys, seed_lower_set, aspell_low_set)
+    load_mozc_ut_english(case_counts, contraction_keys, seed_lower_set, aspell_low_set)
 
     lexicon_path = os.path.join(OUT_DIR, "english_case_lexicon.tsv")
     lower_vocab_path = os.path.join(OUT_DIR, "english_lower_vocab.txt")
 
-    lex_entries = 0
-    lower_entries = 0
+    lower_candidates = []
+    lexicon_candidates = []
     unified_vocab = []
 
-    with open(lexicon_path, "w", encoding="utf-8") as f_lex, \
-            open(lower_vocab_path, "w", encoding="utf-8") as f_low:
-        for low in sorted(case_counts.keys()):
-            if len(low) > 28:
-                continue
-            if low.endswith("'s") and low not in VALID_CONTRACTIONS:
-                continue
+    for low in sorted(case_counts.keys()):
+        if len(low) > 28:
+            continue
+        if low.endswith("'s") and low not in VALID_CONTRACTIONS:
+            continue
 
-            counts = case_counts[low]
-            total = sum(counts.values())
-            if total < 3.0:
-                continue
+        counts = case_counts[low]
+        total = sum(counts.values())
+        if total < 3.0:
+            continue
 
-            log_freq = math.log1p(total)
-            low_cnt = counts.get(low, 0.0)
-            lp_cnt = lower_prose_counts.get(low, 0.0)
+        log_freq = math.log1p(total)
+        low_cnt = counts.get(low, 0.0)
+        lp_cnt = lower_prose_counts.get(low, 0.0)
 
-            if ALPHA_ONLY_RE.match(low) and 2 <= len(low) <= 24:
-                in_general_lower = (low in seed_lower_set) or (low in aspell_low_set)
-                if (low_cnt / total >= 0.65 and (in_general_lower or lp_cnt >= 10.0)) or (
-                    low in seed_lower_set and low in aspell_low_set and low_cnt / total >= 0.20
-                ):
-                    f_low.write(f"{low}\t{log_freq:.3f}\n")
-                    lower_entries += 1
+        if ALPHA_ONLY_RE.match(low) and 2 <= len(low) <= 24:
+            in_general_lower = (low in seed_lower_set) or (low in aspell_low_set)
+            if (low_cnt / total >= 0.65 and (in_general_lower or lp_cnt >= 10.0)) or (
+                low in seed_lower_set and low in aspell_low_set and low_cnt / total >= 0.20
+            ):
+                lower_candidates.append((total, low, log_freq))
 
-            variants = []
-            has_non_lower = False
-            for surf, cnt in counts.most_common(4):
-                prob = cnt / total
-                if prob >= 0.03:
-                    variants.append((surf, prob))
-                    if surf != low:
-                        has_non_lower = True
+        variants = []
+        has_non_lower = False
+        for surf, cnt in counts.most_common(4):
+            prob = cnt / total
+            if prob >= 0.03:
+                variants.append((surf, prob))
+                if surf != low:
+                    has_non_lower = True
 
-            if has_non_lower:
-                v_sum = sum(p for _, p in variants)
-                var_str = ",".join(f"{s}:{p / v_sum:.4f}" for s, p in variants)
-                f_lex.write(f"{low}\t{log_freq:.3f}\t{var_str}\n")
-                lex_entries += 1
+        if has_non_lower:
+            v_sum = sum(p for _, p in variants)
+            var_str = ",".join(f"{s}:{p / v_sum:.4f}" for s, p in variants)
+            lexicon_candidates.append((total, low, log_freq, var_str))
 
-            top_surf = counts.most_common(1)[0][0]
-            # Exclude apostrophe-stripped contraction aliases (e.g., dont -> don't stays in lexicon only)
-            if top_surf.lower() == low:
-                unified_vocab.append((total, top_surf))
+        top_surf = counts.most_common(1)[0][0]
+        # Exclude apostrophe-stripped contraction aliases (e.g., dont -> don't stays in lexicon only)
+        if top_surf.lower() == low:
+            unified_vocab.append((total, top_surf))
+
+    if len(lexicon_candidates) > MAX_CASE_LEXICON_ENTRIES:
+        lexicon_candidates.sort(key=lambda item: (-item[0], item[1]))
+        lexicon_candidates = lexicon_candidates[:MAX_CASE_LEXICON_ENTRIES]
+    lexicon_candidates.sort(key=lambda item: item[1])
+
+    if len(lower_candidates) > MAX_LOWER_VOCAB_ENTRIES:
+        lower_candidates.sort(key=lambda item: (-item[0], item[1]))
+        lower_candidates = lower_candidates[:MAX_LOWER_VOCAB_ENTRIES]
+    lower_candidates.sort(key=lambda item: item[1])
+
+    with open(lexicon_path, "w", encoding="utf-8") as f_lex:
+        for _, low, log_freq, var_str in lexicon_candidates:
+            f_lex.write(f"{low}\t{log_freq:.3f}\t{var_str}\n")
+
+    with open(lower_vocab_path, "w", encoding="utf-8") as f_low:
+        for _, low, log_freq in lower_candidates:
+            f_low.write(f"{low}\t{log_freq:.3f}\n")
+
+    lex_entries = len(lexicon_candidates)
+    lower_entries = len(lower_candidates)
 
     unified_vocab.sort(key=lambda item: (-item[0], item[1]))
     seen_spell_lower = set()
     spell_count = 0
     with open(SPELL_VOCAB_PATH, "w", encoding="utf-8") as f_spell:
         for _, surf in unified_vocab:
+            if spell_count >= MAX_SPELL_VOCAB_ENTRIES:
+                break
             low = surf.lower()
             if len(low) < 2 and low not in ("a", "i"):
                 continue

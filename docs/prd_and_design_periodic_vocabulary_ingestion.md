@@ -276,8 +276,24 @@ jobs:
 | フェーズ | スコープ | 主な成果物・変更ファイル | 状態 |
 |---|---|---|---|
 | **Phase 1: 多段コーパス辞書ビルド基盤＆高速ドメイン検索** | ・不変 NLTK シード保存 (`nltk_*_seed.*`)<br>・Debian / GGUF / Mozc OSS / Aspell / FUTO 5 ソース統合 (`tools/build_english_case_model.py`)<br>・`EnglishCaseModel.suggestPrefixAndTypo()` 二分探索＋頻度降順タイポバケット＋上界枝刈り<br>・DMN `EnglishPrefixCompletionPolicy` & Alloy `english_prefix_completion.als`<br>・`EnglishTruecasingEvaluationTest`（Rank 1・レイテンシ $< 0.5\text{ ms} / < 0.8\text{ ms}$） | [`tools/build_english_case_model.py`](tools/build_english_case_model.py)<br>[`EnglishCaseModel.kt`](app/src/main/java/com/example/myasr/context/english/domain/EnglishCaseModel.kt)<br>[`BayesianCaseRanker.kt`](app/src/main/java/com/example/myasr/context/english/domain/BayesianCaseRanker.kt)<br>[`EnglishTruecasingEvaluationTest.kt`](app/src/test/java/com/example/myasr/EnglishTruecasingEvaluationTest.kt) | **完了・稼働中** |
-| **Phase 2: 再現可能な上流コーパス自動フェッチャー＆月次 CI パイプライン** | ・ローカル `/var/lib/apt/lists` 非依存の `tools/fetch_english_upstream_corpora.py`（Debian 公式ミラー `Translation-en.xz`、Homebrew `formula.jws.json`、Mozc-UT `jawiki`/`sudachidict` 英語固有名詞抽出）<br>・差分監査・異常検知スクリプト `tools/audit_english_lexicon_diff.py`<br>・GitHub Actions `.github/workflows/periodic-lexicon-update.yml` | `tools/fetch_english_upstream_corpora.py`<br>`tools/audit_english_lexicon_diff.py`<br>`.github/workflows/periodic-lexicon-update.yml` | **次期実装 (Next Up)** |
-| **Phase 3: 英語拡張語彙の OTA オンデマンド差分配信統合** | ・APK 再インストール不要で月次新語を端末へ配信するため、`EnglishCaseModel` が内蔵 TSV に加えて `{filesDir}/english/english_case_lexicon_ota.tsv` をオーバーレイ読込可能に拡張<br>・`DictionaryUpdateTracker` の更新チェック対象に英語拡張辞書を追加 | `EnglishCaseModel.kt`<br>`DictionaryUpdateTracker.kt` | **将来拡張 (Future)** |
+| **Phase 2: 再現可能な上流コーパス自動フェッチャー＆月次 CI パイプライン** | ・ローカル `/var/lib/apt/lists` 非依存の [`tools/fetch_english_upstream_corpora.py`](tools/fetch_english_upstream_corpora.py)（Debian 公式ミラー `Translation-en.xz`、Homebrew `formula.json`/`cask.json`、Mozc-UT `jawiki`/`sudachidict` 英語固有名詞抽出）<br>・差分監査・異常検知スクリプト [`tools/audit_english_lexicon_diff.py`](tools/audit_english_lexicon_diff.py)<br>・GitHub Actions [`.github/workflows/periodic-lexicon-update.yml`](.github/workflows/periodic-lexicon-update.yml) | [`tools/fetch_english_upstream_corpora.py`](tools/fetch_english_upstream_corpora.py)<br>[`tools/audit_english_lexicon_diff.py`](tools/audit_english_lexicon_diff.py)<br>[`.github/workflows/periodic-lexicon-update.yml`](.github/workflows/periodic-lexicon-update.yml) | **完了・稼働中** |
+| **Phase 3: 英語拡張語彙の OTA オンデマンド差分配信統合** | ・APK 再インストール不要で月次新語を端末へ配信するため、`EnglishCaseModel` に不変スナップショット＆`reloadWithOtaOverlay()`（`{filesDir}/english/english_case_lexicon_ota.tsv`）を実装<br>・純粋 Kotlin ストリーミング JSON コンパイラ [`EnglishOtaLexiconCompiler`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/EnglishOtaLexiconCompiler.kt) と `DictionaryType.ENGLISH_LEXICON` 統合<br>・DMN `EnglishOtaOverlayAdmissionPolicy` & Alloy [`english_ota_overlay_lifecycle.als`](app/src/test/resources/alloy/english_ota_overlay_lifecycle.als)<br>・`DictionaryUpdateTracker` に HTTP `HEAD` (`Last-Modified`) の月次フロア判定 (`parseHttpDateToMonthlyFloorMillis`) を追加し月1回の更新通知を実現 | [`EnglishCaseModel.kt`](app/src/main/java/com/example/myasr/context/english/domain/EnglishCaseModel.kt)<br>[`EnglishAssistJudgement.kt`](app/src/main/java/com/example/myasr/context/english/domain/EnglishAssistJudgement.kt)<br>[`EnglishOtaLexiconCompiler.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/EnglishOtaLexiconCompiler.kt)<br>[`MultiDictionaryManager.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/MultiDictionaryManager.kt)<br>[`DictionaryUpdateTracker.kt`](app/src/main/java/com/example/myasr/context/provisioning/domain/DictionaryUpdateTracker.kt) | **完了・稼働中** |
+
+---
+
+### Phase 3 DMN / Alloy 設計概要 (`EnglishOtaOverlayAdmissionPolicy`)
+
+- **DMN 決定表 (`EnglishOtaOverlayAdmissionPolicy`, Hit Policy: `FIRST`)**:
+  - `EN_OTA_R1`: 不正なバリエーション・非正対数頻度・長さ範囲外（`< 2` または `> 28`）は `REJECT_INVALID`
+  - `EN_OTA_R2`: OTA オーバーレイ容量上限（20,000 語）超過時は `REJECT_CAPACITY_EXCEEDED`
+  - `EN_OTA_R3`: 長さ 4 文字以下のコア基本小文字語（`tail`, `the`, `an` 等）は `REJECT_PROTECT_CORE_SHORT_WORD`（ケース乗っ取り防止）
+  - `EN_OTA_R4`: 内蔵辞書未収録の OOV 語は `ADMIT_NEW_WORD`
+  - `EN_OTA_R5`: 内蔵辞書既存語のうち OTA の対数頻度が上回る語は `UPGRADE_EXISTING_FREQ`
+  - `EN_OTA_DEFAULT`: それ以外は `KEEP_BUNDLED`
+- **Alloy 6 モデル検査 ([`english_ota_overlay_lifecycle.als`](app/src/test/resources/alloy/english_ota_overlay_lifecycle.als))**:
+  - `OtaAdmissionTableIsTotal`, `CoreShortLowerWordNeverHijackedByOta`, `InvalidOrOverCapacityNeverAdmitted`, `UserCustomDictionaryIsolatedFromOtaOps`, `OtaDeleteRestoresBundledLexicon` を全探索で検証済み。
+- **HTTP `HEAD` 月次更新検知 (`parseHttpDateToMonthlyFloorMillis`)**:
+  - Homebrew API (`formula.json`) は高頻度更新されるため、`HEAD` リクエストの `Last-Modified` ヘッダを UTC 当月 1 日（`YYYY-MM-01T00:00:00Z`）へ切り下げ（floor）て比較することで、不要な毎日通知を防ぎつつ毎月 1 回クリーンに「更新あり」を通知する。
 
 ---
 
