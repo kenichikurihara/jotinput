@@ -466,4 +466,90 @@ class FlickTypoAndMozcCorrectionEvaluationTest {
                 reranked.take(3).any { it.surface == "部費" })
         }
     }
+
+    @Test
+    fun testMonotonicCrfDictCostPropagationAndFullPoolTypoReranking() {
+        withMmapOnlyEngine { mmapEngine ->
+            // 1. Monotonic Mozc CRF dictCost propagation:
+            //    見つかりません must retain low dictCost (< 4000) while chimeric/rare alternatives retain high dictCost.
+            val mitsuCands = mmapEngine.getBaseCandidates("みつこりません")
+            val mitsuTarget = mitsuCands.first { it.surface == "見つかりません" }
+            val mitsuGarbage = mitsuCands.first { it.surface == "密こりません" }
+            val koushiLima = mitsuCands.firstOrNull { it.surface == "光子リマ線" }
+            assertTrue("'見つかりません' dictCost (${mitsuTarget.dictCost}) must be < 4000", mitsuTarget.dictCost < 4000)
+            assertTrue("'密こりません' dictCost (${mitsuGarbage.dictCost}) must be > 7500", mitsuGarbage.dictCost > 7500)
+            if (koushiLima != null) {
+                assertTrue("'光子リマ線' dictCost (${koushiLima.dictCost}) must be > 9000", koushiLima.dictCost > 9000)
+            }
+
+            //    さぎょうちゅうですので: 作業中ですので must have strictly lower dictCost than 作業虫ですので
+            val sagyouCands = mmapEngine.getBaseCandidates("さぎょうちゅうですので")
+            val sagyouChuu = sagyouCands.first { it.surface == "作業中ですので" }
+            val sagyouMushi = sagyouCands.first { it.surface == "作業虫ですので" }
+            assertTrue(
+                "'作業中ですので' dictCost (${sagyouChuu.dictCost}) must be < '作業虫ですので' dictCost (${sagyouMushi.dictCost})",
+                sagyouChuu.dictCost < sagyouMushi.dictCost
+            )
+
+            // 2. Exact Pixel 10 Pro config reproduction (weightAlpha = 0.0f, lambdaObs = 0.5f, 16-candidate pool)
+            //    Build the exact topPool partition used by LlmReranker.rerankWithStatus
+            val nonHiragana = mitsuCands.filter {
+                !(JapaneseKanaUtils.isAllHiragana(it.surface) && it.surface == it.reading && !it.isPrediction)
+            }
+            val fullCands = nonHiragana.filter { !it.isPrediction && (it.reading.isEmpty() || it.source != "viterbi_prefix") }
+            val prefixCands = nonHiragana.filter { it.source == "viterbi_prefix" || it.isPrediction }
+            val pool = (fullCands.take(8) + prefixCands).distinctBy { it.surface }.take(16)
+            assertTrue("Pool for 'みつこりません' should trigger targeted Stage 2", LlmReranker.hasFullSpanTypoCompetition(pool))
+
+            val stage2NllMap = mapOf(
+                "見つかりません" to 21.9564f,
+                "密こりません" to 37.2928f,
+                "蜜こりません" to 42.1157f,
+                "密凝りません" to 45.7389f,
+                "みつ凝りません" to 46.3834f,
+                "光子リマ線" to 45.0f,
+                "見たこりません" to 35.0f,
+                "見てこりません" to 36.0f,
+                "光子" to 14.2226f,
+                "美津子" to 24.1948f,
+                "みつ子" to 27.0390f,
+                "美都子" to 27.2765f
+            )
+            val scores = FloatArray(pool.size) { idx ->
+                val c = pool[idx]
+                val key = if (c.completedSurface.isNotEmpty()) c.completedSurface else c.surface
+                stage2NllMap[key] ?: 40.0f
+            }
+            val rerankedPhoneConfig = LlmReranker.scoreAndRankPool(
+                topPool = pool,
+                scores = scores,
+                currentShownTop1 = null,
+                weightAlpha = 0.0f,
+                lambdaObs = 0.5f,
+                gammaUser = 3.0f,
+                targetInputLength = "みつこりません".length
+            )
+            assertEquals(
+                "With phone config (alpha=0.0, lambdaObs=0.5) and Stage-2 full NLLs, '見つかりません' must rank #1, got: ${rerankedPhoneConfig.take(5).map { it.surface }}",
+                "見つかりません",
+                rerankedPhoneConfig.first().surface
+            )
+
+            // 3. hasFullSpanTypoCompetition selectivity gate
+            assertTrue(LlmReranker.hasFullSpanTypoCompetition(mmapEngine.getBaseCandidates("かんがいかい").take(16)))
+            assertTrue(LlmReranker.hasFullSpanTypoCompetition(mmapEngine.getBaseCandidates("てんくがよい").take(16)))
+            assertFalse(
+                "Exact reading 'きょうはいいてんき' must not trigger Stage 2 typo gate",
+                LlmReranker.hasFullSpanTypoCompetition(mmapEngine.getBaseCandidates("きょうはいいてんき").take(16))
+            )
+            assertFalse(
+                "Exact reading 'さぎょうちゅうですので' must not trigger Stage 2 typo gate",
+                LlmReranker.hasFullSpanTypoCompetition(sagyouCands.take(16))
+            )
+            assertFalse(
+                "Short exact reading 'きょう' must not trigger Stage 2 typo gate",
+                LlmReranker.hasFullSpanTypoCompetition(mmapEngine.getBaseCandidates("きょう").take(16))
+            )
+        }
+    }
 }

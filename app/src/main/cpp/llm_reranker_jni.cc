@@ -120,13 +120,12 @@ Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeScoreC
   return result;
 }
 
-JNIEXPORT jfloatArray JNICALL
-Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeScoreCandidatesWithPriors(
+static jfloatArray ScoreCandidatesWithPriorsJniImpl(
     JNIEnv* env,
-    jobject /* thiz */,
     jstring jContext,
     jobjectArray jCandidates,
-    jfloatArray jPriorPenalties) {
+    jfloatArray jPriorPenalties,
+    jint forceStage2Count) {
   if (jCandidates == nullptr) {
     return nullptr;
   }
@@ -165,7 +164,7 @@ Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeScoreC
 
   std::vector<float> neg_logprobs;
   bool success = myasr::LlmReranker::GetInstance().ScoreCandidatesWithPriors(
-      context_str, candidates, priors, &neg_logprobs);
+      context_str, candidates, priors, &neg_logprobs, static_cast<int>(forceStage2Count));
   if (!success || neg_logprobs.size() != static_cast<size_t>(num_candidates)) {
     return nullptr;
   }
@@ -177,6 +176,27 @@ Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeScoreC
 
   env->SetFloatArrayRegion(result, 0, num_candidates, neg_logprobs.data());
   return result;
+}
+
+JNIEXPORT jfloatArray JNICALL
+Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeScoreCandidatesWithPriors(
+    JNIEnv* env,
+    jobject /* thiz */,
+    jstring jContext,
+    jobjectArray jCandidates,
+    jfloatArray jPriorPenalties) {
+  return ScoreCandidatesWithPriorsJniImpl(env, jContext, jCandidates, jPriorPenalties, 0);
+}
+
+JNIEXPORT jfloatArray JNICALL
+Java_com_example_myasr_context_reranking_infrastructure_LlmReranker_nativeScoreCandidatesWithPriorsForceStage2(
+    JNIEnv* env,
+    jobject /* thiz */,
+    jstring jContext,
+    jobjectArray jCandidates,
+    jfloatArray jPriorPenalties,
+    jint jForceStage2Count) {
+  return ScoreCandidatesWithPriorsJniImpl(env, jContext, jCandidates, jPriorPenalties, jForceStage2Count);
 }
 
 JNIEXPORT jboolean JNICALL

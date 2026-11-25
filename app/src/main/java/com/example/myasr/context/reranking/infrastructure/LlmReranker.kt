@@ -25,8 +25,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
     private val TAG = "LlmReranker"
 
-    // Kotlin-level memoized NLL cache (contextHash:surface -> complete NLL)
+    // Kotlin-level memoized NLL cache (contextHash:surface -> NLL; exactMemoizedNllCache stores only Stage-2 / 1-token exact NLLs)
     private val memoizedNllCache = android.util.LruCache<String, Float>(512)
+    private val exactMemoizedNllCache = android.util.LruCache<String, Float>(512)
 
     data class FastRerankResult(
         val candidates: List<ConversionCandidate>,
@@ -199,6 +200,36 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
          * Evaluates candidates across full/partial/predictive spans with principled unconsumed penalties
          * and intra-word surprisal clamping for user dictionaries.
          */
+        private fun isFullSpanScoringTarget(cand: ConversionCandidate): Boolean {
+            return !cand.isPrediction && cand.source != "viterbi_prefix" && cand.source != "system"
+        }
+
+        internal fun hasFullSpanTypoCompetition(topPool: List<ConversionCandidate>): Boolean {
+            val hasTypoFull = topPool.any {
+                isFullSpanScoringTarget(it) && (it.source == "viterbi_typo" || it.obsPenalty > 0.0f)
+            }
+            if (!hasTypoFull) return false
+            val fullCount = topPool.count { isFullSpanScoringTarget(it) }
+            return fullCount >= 2
+        }
+
+        private fun computeObsDiscount(
+            rawNll: Float,
+            obsPenalty: Float,
+            isFullSpanCand: Boolean,
+            bestFullNll: Float,
+            bestPoolNll: Float,
+            hasNaturalExactFull: Boolean,
+            isDeadEndReading: Boolean
+        ): Float {
+            if (obsPenalty <= 0f) return 1.0f
+            val refNll = if (isFullSpanCand) bestFullNll else bestPoolNll
+            val deltaNll = rawNll - refNll
+            val baseDisc = 0.20f + 0.80f * ((deltaNll - 1.5f) / 3.0f).coerceIn(0.0f, 1.0f)
+            val isDeadEndForObs = if (isFullSpanCand) !hasNaturalExactFull else isDeadEndReading
+            return if (isDeadEndForObs) baseDisc * 0.35f else baseDisc
+        }
+
         internal fun scoreAndRankPool(
             topPool: List<ConversionCandidate>,
             scores: FloatArray,
@@ -270,6 +301,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             val fullSpanIndices = topPool.indices.filter {
                 unconsumedDeltas[it] == 0 && extDeltas[it] == 0 && !topPool[it].isPrediction
             }
+            val bestFullNll = fullSpanIndices.minOfOrNull { scores[it] } ?: bestPoolNll
 
             val isChimeraFull = BooleanArray(topPool.size)
             for (fIdx in fullSpanIndices) {
@@ -304,6 +336,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 cand.reading.isNotEmpty() && cand.reading.length == n
             }
             val isDeadEndReading = !isEnglishPool && n in 2..5 && !hasNaturalFullWord
+            val hasNaturalExactFull = fullSpanIndices.any {
+                topPool[it].obsPenalty == 0.0f && topPool[it].dictCost <= 5500
+            }
             val hasEnglishPrefixCompletionInPool = isEnglishPool && topPool.any {
                 it.isPrediction &&
                     it.surface.lowercase().startsWith(it.reading.lowercase()) &&
@@ -420,10 +455,17 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     rawBaseNll
                 }
 
-                val obsDiscount = if (!isEnglishPool && candidate.obsPenalty > 0f) {
-                    val deltaNll = rawNll - bestPoolNll
-                    val baseDisc = 0.20f + 0.80f * ((deltaNll - 1.5f) / 3.0f).coerceIn(0.0f, 1.0f)
-                    if (isDeadEndReading) baseDisc * 0.35f else baseDisc
+                val isFullSpanCand = deltaUnconsumed == 0 && deltaExt == 0 && !candidate.isPrediction
+                val obsDiscount = if (!isEnglishPool) {
+                    computeObsDiscount(
+                        rawNll = rawNll,
+                        obsPenalty = candidate.obsPenalty,
+                        isFullSpanCand = isFullSpanCand,
+                        bestFullNll = bestFullNll,
+                        bestPoolNll = bestPoolNll,
+                        hasNaturalExactFull = hasNaturalExactFull,
+                        isDeadEndReading = isDeadEndReading
+                    )
                 } else {
                     1.0f
                 }
@@ -456,13 +498,16 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     // Length-normalized surprisal for Japanese predictive probability estimation (B1)
                     val tokens = maxOf(1, (mLengths[i] + 1) / 2)
                     val normNll = scores[i] / tokens.toFloat().pow(0.85f)
-                    val obsDiscount = if (cand.obsPenalty > 0f) {
-                        val deltaNll = scores[i] - bestPoolNll
-                        val baseDisc = 0.20f + 0.80f * ((deltaNll - 1.5f) / 3.0f).coerceIn(0.0f, 1.0f)
-                        if (isDeadEndReading) baseDisc * 0.35f else baseDisc
-                    } else {
-                        1.0f
-                    }
+                    val isFullSpanCand = unconsumedDeltas[i] == 0 && extDeltas[i] == 0 && !cand.isPrediction
+                    val obsDiscount = computeObsDiscount(
+                        rawNll = scores[i],
+                        obsPenalty = cand.obsPenalty,
+                        isFullSpanCand = isFullSpanCand,
+                        bestFullNll = bestFullNll,
+                        bestPoolNll = bestPoolNll,
+                        hasNaturalExactFull = hasNaturalExactFull,
+                        isDeadEndReading = isDeadEndReading
+                    )
                     val obsEff = lambdaObs * cand.obsPenalty * 5.0f * obsDiscount
                     val dictCostNats = cand.dictCost.coerceIn(0, 15000) / 3000.0f
                     val countPrior = if (cand.historyCount > 0) minOf(3.0f, cand.historyCount.toFloat()) else 0.0f
@@ -1161,18 +1206,30 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             }
 
+            val needsExactStage2 = hasFullSpanTypoCompetition(topPool)
+
             // 1. Check if all candidates are already memoized in Kotlin cache
             var allCached = true
             val memoizedScores = FloatArray(topPool.size)
             for (i in topPool.indices) {
                 val key = "$effectiveContext:${evalSurfaces[i]}"
-                val cached = memoizedNllCache.get(key)
+                val cache = if (needsExactStage2 && isFullSpanScoringTarget(topPool[i])) {
+                    exactMemoizedNllCache
+                } else {
+                    memoizedNllCache
+                }
+                val cached = cache.get(key)
                 if (cached != null) {
                     memoizedScores[i] = cached
                 } else {
                     allCached = false
                     break
                 }
+            }
+
+            // Never render approximate Token-0 fast-path results over full-span typo candidates
+            if (needsExactStage2 && !allCached) {
+                return null
             }
 
             val scores: FloatArray
@@ -1195,21 +1252,21 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                         memoizedNllCache.put("$effectiveContext:${uniqueSurfaces[i]}", fastScores[i])
                     }
                 }
+                var complete = true
                 scores = FloatArray(topPool.size) { idx ->
                     val evalSurf = evalSurfaces[idx]
                     val baseNll = scoreMap[evalSurf] ?: 20.0f
                     val variants = latentVariantsMap[evalSurf]
                     val minLatentNll = variants?.mapNotNull { scoreMap[it] }?.minOrNull()
                     val finalNll = if (minLatentNll != null) minOf(baseNll, minLatentNll) else baseNll
-                    memoizedNllCache.put("$effectiveContext:$evalSurf", finalNll)
-                    finalNll
-                }
-                var complete = true
-                for (i in topPool.indices) {
-                    val key = "$effectiveContext:${evalSurfaces[i]}"
-                    if (memoizedNllCache.get(key) == null && completeMap[evalSurfaces[i]] != true) {
+                    val evalComplete = (completeMap[evalSurf] == true) &&
+                        (variants == null || variants.all { completeMap[it] == true })
+                    if (evalComplete) {
+                        memoizedNllCache.put("$effectiveContext:$evalSurf", finalNll)
+                    } else {
                         complete = false
                     }
+                    finalNll
                 }
                 isFullyComplete = complete
             }
@@ -1362,13 +1419,37 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
             }
 
-            val uniqueSurfaces = surfacesToScore.distinct().toTypedArray()
+            val needsExactStage2 = hasFullSpanTypoCompetition(topPool)
+            val forcedSurfaces = if (needsExactStage2) {
+                val s = ArrayList<String>(topPool.size * 2)
+                for (i in topPool.indices) {
+                    if (isFullSpanScoringTarget(topPool[i])) {
+                        val evalSurf = evalSurfaces[i]
+                        s.add(evalSurf)
+                        latentVariantsMap[evalSurf]?.let { s.addAll(it) }
+                    }
+                }
+                s.distinct()
+            } else {
+                emptyList()
+            }
+            val forcedSet = if (forcedSurfaces.isNotEmpty()) HashSet(forcedSurfaces) else emptySet()
+            val uniqueSurfaces = if (forcedSurfaces.isNotEmpty()) {
+                (forcedSurfaces + surfacesToScore.filter { it !in forcedSet }.distinct()).toTypedArray()
+            } else {
+                surfacesToScore.distinct().toTypedArray()
+            }
+            val forceStage2Count = forcedSurfaces.size
             val uniquePriors = FloatArray(uniqueSurfaces.size) { idx ->
                 surfaceMinPriorMap[uniqueSurfaces[idx]] ?: 0.0f
             }
             val trimmedContext = ContextWindowTrimmer.trimToOptimalContextSticky(contextPrefix)
             val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
-            val uniqueScores = nativeScoreCandidatesWithPriors(effectiveContext, uniqueSurfaces, uniquePriors)
+            val uniqueScores = if (forceStage2Count > 0) {
+                nativeScoreCandidatesWithPriorsForceStage2(effectiveContext, uniqueSurfaces, uniquePriors, forceStage2Count)
+            } else {
+                nativeScoreCandidatesWithPriors(effectiveContext, uniqueSurfaces, uniquePriors)
+            }
 
             if (uniqueScores == null || uniqueScores.size != uniqueSurfaces.size) {
                 // Safe fallback: user entries first
@@ -1382,6 +1463,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             for (i in uniqueSurfaces.indices) {
                 scoreMap[uniqueSurfaces[i]] = uniqueScores[i]
                 memoizedNllCache.put("$effectiveContext:${uniqueSurfaces[i]}", uniqueScores[i])
+                if (i < forceStage2Count) {
+                    exactMemoizedNllCache.put("$effectiveContext:${uniqueSurfaces[i]}", uniqueScores[i])
+                }
             }
             val scores = FloatArray(topPool.size) { idx ->
                 val evalSurf = evalSurfaces[idx]
@@ -1390,6 +1474,9 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 val minLatentNll = variants?.mapNotNull { scoreMap[it] }?.minOrNull()
                 val finalNll = if (minLatentNll != null) minOf(baseNll, minLatentNll) else baseNll
                 memoizedNllCache.put("$effectiveContext:$evalSurf", finalNll)
+                if (needsExactStage2 && isFullSpanScoringTarget(topPool[idx])) {
+                    exactMemoizedNllCache.put("$effectiveContext:$evalSurf", finalNll)
+                }
                 finalNll
             }
 
@@ -1578,6 +1665,12 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
     private external fun nativeInit(modelPath: String, nThreads: Int): Boolean
     private external fun nativeScoreCandidates(context: String, candidates: Array<String>): FloatArray?
     private external fun nativeScoreCandidatesWithPriors(context: String, candidates: Array<String>, priorPenalties: FloatArray): FloatArray?
+    private external fun nativeScoreCandidatesWithPriorsForceStage2(
+        context: String,
+        candidates: Array<String>,
+        priorPenalties: FloatArray,
+        forceStage2Count: Int
+    ): FloatArray?
     private external fun nativeTryFastScoreCandidates(context: String, candidates: Array<String>, outIsComplete: BooleanArray): FloatArray?
     private external fun nativeRequestAbortScoring()
     private external fun nativeWarmContext(context: String): Boolean

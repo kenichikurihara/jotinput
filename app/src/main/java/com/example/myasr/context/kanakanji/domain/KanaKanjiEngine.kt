@@ -2111,7 +2111,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         path: ViterbiPath,
         reading: String,
         sourceOverride: String? = null,
-        obsPenalty: Float = 0.0f
+        obsPenalty: Float = 0.0f,
+        bestLatticeCost: Int? = null,
+        eosCost: Int = 0
     ): ConversionCandidate {
         val fb = path.firstBunsetsuSurface.ifEmpty { path.surface }
         val lastCw = if (path.lastContentWordSurface.isNotEmpty() && path.lastContentWordSurface != fb) {
@@ -2127,11 +2129,17 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         } else {
             ""
         }
-        // Idea R1: Propagate structured lattice cost to SLM reranker on [0, 15000] scale
-        val avgWordCost = if (path.wordCount > 0) path.wordCostSum / path.wordCount else 5000
-        val maxExcess = maxOf(0, path.maxWordCost - 4500) / 2
-        val avgExcessTrans = if (path.wordCount > 0) path.excessTransCostSum / path.wordCount else 0
-        val effDictCost = (avgWordCost + maxExcess + avgExcessTrans).coerceIn(0, 15000)
+        // Idea R1: Propagate structured lattice excess cost relative to best lattice path
+        val effDictCost = if (bestLatticeCost != null) {
+            val ownAvgWordCost = if (path.wordCount > 0) path.wordCostSum / path.wordCount else 5000
+            val excessOverBest = maxOf(0, (path.cost + eosCost) - bestLatticeCost)
+            (ownAvgWordCost + excessOverBest).coerceIn(1, 15000)
+        } else {
+            val avgWordCost = if (path.wordCount > 0) path.wordCostSum / path.wordCount else 5000
+            val maxExcess = maxOf(0, path.maxWordCost - 4500) / 2
+            val avgExcessTrans = if (path.wordCount > 0) path.excessTransCostSum / path.wordCount else 0
+            (avgWordCost + maxExcess + avgExcessTrans).coerceIn(0, 15000)
+        }
 
         return ConversionCandidate(
             surface = path.surface,
@@ -2394,23 +2402,15 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         }
         scoredFullCandidates.sortBy { it.effectiveCost }
 
-        val fullCandidates = scoredFullCandidates.map {
-            toConversionCandidate(it.path, reading)
-        }
-
-        // 3-Tier Bayesian admission of Layer-1 typo-aware Viterbi paths
-        val tier1Typo = mutableListOf<ConversionCandidate>()
-        val tier2Typo = mutableListOf<ConversionCandidate>()
-        val tier3Typo = mutableListOf<ConversionCandidate>()
-        val admittedTypoCosts = HashMap<String, Int>()
+        // 3-Tier Bayesian admission of Layer-1 typo-aware Viterbi paths (filter before cost anchoring)
+        val admittedTypoEntries = mutableListOf<Pair<ViterbiPath, Int>>()
         if (enableTypoLayer && typoBeam[n].isNotEmpty()) {
             val sortedTypo = typoBeam[n].sortedBy {
                 it.cost + (matrix?.getTransitionCost(it.lastRid, 0) ?: 0)
             }
             val seenTypoSurfaces = HashSet<String>(seenFullSurfaces)
-            var admittedCount = 0
             for (path in sortedTypo) {
-                if (admittedCount >= 3) break
+                if (admittedTypoEntries.size >= 3) break
                 if (path.surface.isBlank() ||
                     path.surface == reading ||
                     JapaneseKanaUtils.isAllHiragana(path.surface) ||
@@ -2421,20 +2421,42 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 val effCost = path.cost + (matrix?.getTransitionCost(path.lastRid, 0) ?: 0)
                 if (effCost > bestExactCost + 1800) break
                 if (!seenTypoSurfaces.add(path.surface)) continue
+                admittedTypoEntries.add(path to effCost)
+            }
+        }
 
-                val cand = toConversionCandidate(
-                    path = path,
-                    reading = path.reading.ifEmpty { reading },
-                    sourceOverride = "viterbi_typo",
-                    obsPenalty = path.typoPenalty.toFloat() / 1000.0f
-                )
-                admittedTypoCosts[cand.surface] = effCost
-                when {
-                    effCost <= bestExactCost - 2500 && tier1Typo.isEmpty() -> tier1Typo.add(cand)
-                    effCost <= bestExactCost - 400 && tier1Typo.isEmpty() && tier2Typo.isEmpty() -> tier2Typo.add(cand)
-                    else -> tier3Typo.add(cand)
-                }
-                admittedCount++
+        val bestAdmittedTypoCost = admittedTypoEntries.minOfOrNull { it.second } ?: Int.MAX_VALUE
+        val bestLatticeCost = minOf(bestExactCost, bestAdmittedTypoCost).takeIf { it < Int.MAX_VALUE }
+
+        val fullCandidates = scoredFullCandidates.map { sc ->
+            val eos = matrix?.getTransitionCost(sc.path.lastRid, 0) ?: 0
+            toConversionCandidate(
+                path = sc.path,
+                reading = reading,
+                bestLatticeCost = bestLatticeCost,
+                eosCost = eos
+            )
+        }
+
+        val tier1Typo = mutableListOf<ConversionCandidate>()
+        val tier2Typo = mutableListOf<ConversionCandidate>()
+        val tier3Typo = mutableListOf<ConversionCandidate>()
+        val admittedTypoCosts = HashMap<String, Int>()
+        for ((path, effCost) in admittedTypoEntries) {
+            val eos = matrix?.getTransitionCost(path.lastRid, 0) ?: 0
+            val cand = toConversionCandidate(
+                path = path,
+                reading = path.reading.ifEmpty { reading },
+                sourceOverride = "viterbi_typo",
+                obsPenalty = path.typoPenalty.toFloat() / 1000.0f,
+                bestLatticeCost = bestLatticeCost,
+                eosCost = eos
+            )
+            admittedTypoCosts[cand.surface] = effCost
+            when {
+                effCost <= bestExactCost - 2500 && tier1Typo.isEmpty() -> tier1Typo.add(cand)
+                effCost <= bestExactCost - 400 && tier1Typo.isEmpty() && tier2Typo.isEmpty() -> tier2Typo.add(cand)
+                else -> tier3Typo.add(cand)
             }
         }
 

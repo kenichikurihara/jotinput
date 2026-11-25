@@ -2380,8 +2380,35 @@ Three conversion ranking bugs were diagnosed without resorting to any anecdotal 
   - `KanaKanjiEngineVoicingTest.testLookupLatencyBenchmark`: `0.0067 ms` average lookup; `EngineColdVsWarmBenchmarkTest`: `1.634 ms` warm query average.
 - **Dual-Target Deployment & Logcat**: Deployed via `./deploy.sh` to **Pixel 10 Pro** (`<device-ip>:38587`) and **ARCVM** (`arc:5555`). Both targets provisioned `dict_mozc_general.bin` (`48M`), removed legacy `system_dictionary.bin`, launched `MainActivity`, loaded `mozc_general` (`1,225,277` tokens) once without duplicates, and initialized `AsrManager` (`ReazonSpeech`) and `KanaKanjiEngine` cleanly.
 
+---
 
+## Finding 59: Why `みつこりません -> 見つかりません` Failed On-Device Under `P1c NEVER_TOKEN0_ONLY` & Selective Typo Stage-2 Resolution
 
+### 1. Root Causes Revealed Against Live Pixel 10 Pro Configuration
+Even after `KanaKanjiEngine.getBaseCandidates("みつこりません")` ranked `見つかりません` (`viterbi_typo`) at **Rank 1**, on-device SLM reranking (`qwen3.5-0.8b-instruct-q4_k_m.gguf`, user prefs `slm_weight_alpha = 0.0`, `slm_lambda_obs = 0.5`, all 6 `.bin` dictionaries loaded) pushed `見つかりません` below Top-10 (`[0] 光子リマ線`, `[1] 密こりません`, `[2] 光子`, ...):
+1. **`P1c (Stage2Policy::NEVER_TOKEN0_ONLY)` Blindness to Multi-Token Coherence ([`llm_reranker.h`](app/src/main/cpp/llm_reranker.h#L52))**: Evaluating only `token_0` + `1.0 * min(3, n_tokens - 1)` gave chimeric `光子リマ線` a Token-0 surrogate of `13.83` nats (true multi-token NLL `49.93`) and `密こりません` `14.95` (true NLL `37.24`), whereas `見つかりません` received `17.09` (true NLL `22.44` — `14.8–27.5` nats better once tokens `1..k` are decoded).
+2. **`dictCost` Flattening in `KanaKanjiEngine.toConversionCandidate()` ([`KanaKanjiEngine.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/KanaKanjiEngine.kt))**: Averaging per-morpheme word costs (`wordCostSum / wordCount`) erased Mozc's CRF transition/path cost gap (`見つかりません` `dictCost = 4504` vs `光子リマ線` `5014` despite a `+9,561`-point Viterbi path cost difference). Rebuilding on the path's own average word cost (`ownAvgWordCost`) plus monotonic lattice excess `(path.cost + eosCost) - bestLatticeCost` preserves CRF dominance (`見つかりません` `< 4000`, `密こりません` `> 7500`, `光子リマ線` `> 9000`) without inflating common-noun multi-token phrases like `あさの -> 朝の` over single-token proper nouns (`浅野`).
+3. **Uncalibrated Full-Span `obsDiscount` & Fast-Path Cache Poisoning ([`LlmReranker.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt))**: Comparing full-span candidates against `bestPoolNll` (dominated by 1-token prefixes like `光子`) forced `obsDiscount -> 1.0`, while `tryFastRerankWithStatus` unconditionally wrote incomplete Token-0 scores to `memoizedNllCache` right before checking completeness.
+4. **Qwen3.5 Hybrid Recurrent Context-Decode Failure (`ret = -1`) ([`llm_reranker.cc`](app/src/main/cpp/llm_reranker.cc))**: On Gated DeltaNet models (`partial_seq_rm_supported_ == false`), context prefix shrinkage (`common_prefix_len == n_tokens < old_n`) bypassed `CASE B` and left `n_new_tokens == 0`, calling `llama_batch_init(0, 0, 1)` -> `llama_decode` `-1`.
 
+### 2. Algorithmic Solutions Implemented
+1. **Monotonic Lattice Excess Propagation ([`KanaKanjiEngine.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/KanaKanjiEngine.kt))**: Updated `toConversionCandidate()` to compute `effDictCost = (ownAvgWordCost + maxOf(0, (path.cost + eosCost) - bestLatticeCost)).coerceIn(1, 15000)`.
+2. **Selective Full-Span Stage-2 Verification, Exact NLL Cache Separation & `ret = -1` Fix ([`llm_reranker.h`](app/src/main/cpp/llm_reranker.h), [`llm_reranker.cc`](app/src/main/cpp/llm_reranker.cc), [`llm_reranker_jni.cc`](app/src/main/cpp/llm_reranker_jni.cc))**:
+   - Guarded `n_new_tokens <= 0` in `EnsureContextCached` (resetting KV cleanly and re-decoding `context_tokens`) and propagated `partial_seq_rm_supported_ = false` when `seq_rm` fails.
+   - Separated `cached_exact_candidate_nlls_` (populated only for 1-token or Stage-2-decoded candidates) from `cached_candidate_nlls_`.
+   - Added `force_stage2_prefix_count` parameter and JNI entry `nativeScoreCandidatesWithPriorsForceStage2(...)` so P1c (`NEVER_TOKEN0_ONLY`) retains its 13.1x speedup on all normal queries (`force_stage2_prefix_count = 0`), while only full-span non-system candidates with typo competition trigger packed/recurrent Stage-2 verification (up to depth 8, with recurrent multi-seq fallback and checkpointing).
+3. **Kotlin Cache & `obsDiscount` Fixes ([`LlmReranker.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt))**:
+   - Added `exactMemoizedNllCache`, `hasFullSpanTypoCompetition(topPool)` selectivity gate, bypassed approximate fast-path cache misses under typo competition, fixed unguarded `memoizedNllCache` writes, and referenced `bestFullNll` / `!hasNaturalExactFull` in `computeObsDiscount` for full-span candidates.
+4. **Tests & On-Device Verification Hook**: Added regression assertions in [`FlickTypoAndMozcCorrectionEvaluationTest`](app/src/test/java/com/example/myasr/FlickTypoAndMozcCorrectionEvaluationTest.kt) and [`LlmRerankerNativeSafetyTest`](app/src/test/java/com/example/myasr/LlmRerankerNativeSafetyTest.kt), plus log-only `SLM_TYPO_VERIFY` diagnostics in [`MainActivity.kt`](app/src/main/java/com/example/myasr/MainActivity.kt).
+
+### 3. Verification
+- **Unit, Evaluation, Konsist & Alloy Suites**: `./gradlew testDebugUnitTest --max-workers=2` passed 100% (**`Suites=84, Tests=534, Failures=0, Errors=0, Skipped=0`**).
+- **Topline Benchmarks**:
+  - `python3 eval/eis/run_eis.py`: **`EIS-v1 test = 187.0 chars/min CI95=[158.3, 208.7] (dev 192.5)`** (`CUJ-1=204.4`, `CUJ-2=173.6`, `CUJ-3=139.0`, `CUJ-4=337.7`) — zero regression.
+  - `JotInputPredictionEvaluationRunnerTest` (`slm_off japanese`): `target_hit_at_1 = 0.8889`, `target_hit_at_3 = 0.9167`, `mrr = 0.9009`.
+- **Host C++ Verification (`app/src/main/cpp/llm_reranker.cc` + `qwen2.5-0.5b-instruct-q4_k_m.gguf`)**:
+  - Context-shrink test (`n_new_tokens <= 0` guard) passed; `tools/bench_slm_10x_profiles.cc` compiled cleanly against updated C++ headers.
+  - Selective Stage 2 (`force_stage2_prefix_count = 8`) corrected `みつこりません` NLLs from P1c (`光子リマ線 = 13.8272`, `密こりません = 14.9463`, `見つかりません = 17.0865`) to Stage 2 (`見つかりません = 22.4379` vs `密こりません = 37.2362` vs `光子リマ線 = 49.9305`), with deterministic exact cache replay on repeat queries.
+- **APK & Deployment**: `app-debug.apk` built cleanly (`40,218,066 B` / `38.35 MB <= 110 MB`, `libmyasr_llm.so` 16 KB page-aligned `0x4000`), deployed via `./deploy.sh` and verified in logcat on **ARCVM** (`arc:5555` + `emulator-5554`: `MainActivity +1s223ms`, `mozc_general` `1,225,277` tokens, `KanaKanjiEngine` warm-up `204ms`, `AsrManager (JA) status=READY`). **Pixel 10 Pro** (`<device-ip>`) was unreachable over Wi-Fi/USB at deploy time (`100% packet loss`), so live `qwen3.5-0.8b` verification on the physical phone remains pending user reconnect or GitHub CI artifact update.
 
 

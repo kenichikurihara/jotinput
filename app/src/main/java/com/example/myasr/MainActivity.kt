@@ -348,6 +348,21 @@ class MainActivity : AppCompatActivity() {
                 cands3.take(4).forEachIndexed { idx, c ->
                     Log.i("MainActivity", "  Top-${idx + 1}: '${c.surface}' (source: ${c.source})")
                 }
+
+                val typoChecks = listOf(
+                    "" to "みつこりません",
+                    "鍵が" to "みつこりません",
+                    "" to "かんがいかい",
+                    "新入社員の" to "かんがいかい",
+                    "" to "ぶひ"
+                )
+                for ((tCtx, tReading) in typoChecks) {
+                    val tCands = AsrApp.instance.kanaKanjiEngine.getCandidates(tReading, tCtx)
+                    Log.i(
+                        "MainActivity",
+                        "SLM_TYPO_VERIFY ctx='$tCtx' reading='$tReading' -> ${tCands.take(5).map { "${it.surface}(${it.source})" }}"
+                    )
+                }
             }
             withContext(Dispatchers.Main) {
                 updateSlmStatusBadge()

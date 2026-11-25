@@ -69,6 +69,7 @@ struct ContextLogitsSnapshot {
   std::vector<float> logits;
   float log_denom = 0.0f;
   std::unordered_map<std::string, float> candidate_nlls;
+  std::unordered_map<std::string, float> exact_candidate_nlls;
 };
 
 // Idea 1: Prefix-Tree node for packed single-pass Stage 2 evaluation
@@ -109,7 +110,8 @@ class LlmReranker {
   bool ScoreCandidatesWithPriors(const std::string& context,
                                  const std::vector<std::string>& candidates,
                                  const std::vector<float>& prior_penalties,
-                                 std::vector<float>* out_neg_logprobs);
+                                 std::vector<float>* out_neg_logprobs,
+                                 int force_stage2_prefix_count = 0);
 
   bool TryFastScoreCandidates(const std::string& context,
                               const std::vector<std::string>& candidates,
@@ -169,7 +171,8 @@ class LlmReranker {
                       const std::vector<int32_t>& tokens,
                       const std::vector<float>& logits,
                       float log_denom,
-                      const std::unordered_map<std::string, float>& candidate_nlls);
+                      const std::unordered_map<std::string, float>& candidate_nlls,
+                      const std::unordered_map<std::string, float>& exact_candidate_nlls);
 
   LlmRerankerConfig config_;
   llama_model* model_ = nullptr;
@@ -184,6 +187,7 @@ class LlmReranker {
   std::vector<float> cached_context_logits_;
   float cached_context_log_denom_ = 0.0f;
   std::unordered_map<std::string, float> cached_candidate_nlls_;
+  std::unordered_map<std::string, float> cached_exact_candidate_nlls_;
   bool partial_seq_rm_supported_ = true;
   bool seq_pos_add_supported_ = true;    // Idea 2: Whether llama_memory_seq_add is supported
   bool has_checkpoint_ = false;

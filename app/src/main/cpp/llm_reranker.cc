@@ -217,6 +217,7 @@ void LlmReranker::Release() {
   cached_context_tokens_.clear();
   cached_context_logits_.clear();
   cached_candidate_nlls_.clear();
+  cached_exact_candidate_nlls_.clear();
   cached_context_log_denom_ = 0.0f;
   valid_token_bitmask_.clear();
   valid_token_ids_.clear();
@@ -238,6 +239,7 @@ void LlmReranker::Release() {
       snap.tokens.clear();
       snap.logits.clear();
       snap.candidate_nlls.clear();
+      snap.exact_candidate_nlls.clear();
       snap.log_denom = 0.0f;
     }
     snapshot_access_counter_ = 0;
@@ -265,6 +267,7 @@ void LlmReranker::ResetCaches() {
   cached_context_tokens_.clear();
   cached_context_logits_.clear();
   cached_candidate_nlls_.clear();
+  cached_exact_candidate_nlls_.clear();
   cached_context_log_denom_ = 0.0f;
   token_cache_.clear();
   has_checkpoint_ = false;
@@ -281,6 +284,7 @@ void LlmReranker::ResetCaches() {
       snap.tokens.clear();
       snap.logits.clear();
       snap.candidate_nlls.clear();
+      snap.exact_candidate_nlls.clear();
       snap.log_denom = 0.0f;
     }
     snapshot_access_counter_ = 0;
@@ -490,6 +494,7 @@ bool LlmReranker::Initialize(const std::string& model_path, int n_threads) {
   cached_context_tokens_.clear();
   cached_context_logits_.clear();
   cached_candidate_nlls_.clear();
+  cached_exact_candidate_nlls_.clear();
   token_cache_.clear();
   partial_seq_rm_supported_ = true;
   seq_pos_add_supported_ = true;
@@ -624,7 +629,8 @@ void LlmReranker::UpsertSnapshot(
     const std::vector<int32_t>& tokens,
     const std::vector<float>& logits,
     float log_denom,
-    const std::unordered_map<std::string, float>& candidate_nlls) {
+    const std::unordered_map<std::string, float>& candidate_nlls,
+    const std::unordered_map<std::string, float>& exact_candidate_nlls) {
   std::lock_guard<std::mutex> s_lock(snapshot_mutex_);
   snapshot_access_counter_++;
   size_t target_idx = 0;
@@ -647,6 +653,7 @@ void LlmReranker::UpsertSnapshot(
   slot.logits = logits;
   slot.log_denom = log_denom;
   slot.candidate_nlls = candidate_nlls;
+  slot.exact_candidate_nlls = exact_candidate_nlls;
 }
 
 bool LlmReranker::RollbackOrRestoreContextState() {
@@ -719,7 +726,7 @@ bool LlmReranker::DecodeFullContextIntoKvLocked(const std::vector<int32_t>& cont
     has_checkpoint_ = true;
   }
   UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
-                 cached_context_log_denom_, cached_candidate_nlls_);
+                 cached_context_log_denom_, cached_candidate_nlls_, cached_exact_candidate_nlls_);
   return true;
 }
 
@@ -789,6 +796,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
         cached_context_logits_ = ring_snap->logits;
         cached_context_log_denom_ = ring_snap->log_denom;
         cached_candidate_nlls_ = ring_snap->candidate_nlls;
+        cached_exact_candidate_nlls_ = ring_snap->exact_candidate_nlls;
         has_checkpoint_ = false;
         kv_cache_synced_with_context_ = true;
         cache_hits_++;
@@ -798,6 +806,8 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
     }
     if (n_tokens >= 1 && llama_memory_seq_rm(mem, 0, n_tokens - 1, -1)) {
       common_prefix_len = n_tokens - 1;
+    } else if (n_tokens >= 1) {
+      partial_seq_rm_supported_ = false;
     }
   }
 
@@ -857,6 +867,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
       cached_context_logits_ = approx_snap->logits;
       cached_context_log_denom_ = approx_snap->log_denom;
       cached_candidate_nlls_.clear();
+      cached_exact_candidate_nlls_.clear();
       has_checkpoint_ = false;
       kv_cache_synced_with_context_ = false;
       cache_hits_++;
@@ -869,11 +880,17 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
   cache_misses_++;
   stats_.cache_misses++;
   cached_candidate_nlls_.clear();
+  cached_exact_candidate_nlls_.clear();
 
   int n_new_tokens = n_tokens - common_prefix_len;
   int start_pos = common_prefix_len;
 
-  if (common_prefix_len > 0 && n_new_tokens > 0) {
+  if (n_new_tokens <= 0) {
+    has_checkpoint_ = false;
+    llama_memory_clear(mem, true);
+    start_pos = 0;
+    n_new_tokens = n_tokens;
+  } else if (common_prefix_len > 0) {
     if (has_checkpoint_) {
       llama_memory_seq_rm(mem, kCheckpointSeqId, -1, -1);
       has_checkpoint_ = false;
@@ -886,7 +903,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
         n_new_tokens = n_tokens;
       }
     }
-  } else if (common_prefix_len == 0) {
+  } else {
     has_checkpoint_ = false;
     llama_memory_clear(mem, true);
   }
@@ -946,7 +963,7 @@ bool LlmReranker::EnsureContextCached(const std::string& context) {
   }
 
   UpsertSnapshot(current_hash, cached_context_tokens_, cached_context_logits_,
-                 cached_context_log_denom_, cached_candidate_nlls_);
+                 cached_context_log_denom_, cached_candidate_nlls_, cached_exact_candidate_nlls_);
   return true;
 }
 
@@ -1108,7 +1125,8 @@ bool LlmReranker::ScoreCandidatesWithPriors(
     const std::string& context,
     const std::vector<std::string>& candidates,
     const std::vector<float>& prior_penalties,
-    std::vector<float>* out_neg_logprobs) {
+    std::vector<float>* out_neg_logprobs,
+    int force_stage2_prefix_count) {
   abort_prediction_.store(true);
   abort_scoring_.store(false);
 
@@ -1132,6 +1150,8 @@ bool LlmReranker::ScoreCandidatesWithPriors(
 
   out_neg_logprobs->assign(candidates.size(), 20.0f);
 
+  const int forced_limit = std::clamp(force_stage2_prefix_count, 0, static_cast<int>(candidates.size()));
+
   struct CandidateInfo {
     int index = 0;
     std::string surface;
@@ -1142,6 +1162,8 @@ bool LlmReranker::ScoreCandidatesWithPriors(
     float lower_bound_total = 20.0f;
     float surrogate_total = 20.0f;
     bool is_complete = false;
+    bool force_full_stage2 = false;
+    bool scored_in_stage2 = false;
     std::vector<int> tree_node_path;
   };
 
@@ -1149,6 +1171,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
   cand_infos.reserve(candidates.size());
   float best_completed_total_score = 999.0f;
   const bool use_approx_policy = (config_.stage2_policy != Stage2Policy::ALWAYS_FULL);
+  bool has_pending_forced = false;
 
   // --- STAGE 1: Token-0 Evaluation & Memoized Cache Lookup ---
   for (size_t i = 0; i < candidates.size(); ++i) {
@@ -1156,9 +1179,11 @@ bool LlmReranker::ScoreCandidatesWithPriors(
     info.index = static_cast<int>(i);
     info.surface = candidates[i];
     info.prior_penalty = (i < prior_penalties.size()) ? prior_penalties[i] : 0.0f;
+    info.force_full_stage2 = (static_cast<int>(i) < forced_limit);
 
-    auto it = cached_candidate_nlls_.find(info.surface);
-    if (it != cached_candidate_nlls_.end()) {
+    const auto& lookup_map = info.force_full_stage2 ? cached_exact_candidate_nlls_ : cached_candidate_nlls_;
+    auto it = lookup_map.find(info.surface);
+    if (it != lookup_map.end()) {
       info.token0_nll = it->second;
       info.surrogate_nll = it->second;
       info.lower_bound_total = it->second + info.prior_penalty;
@@ -1200,10 +1225,14 @@ bool LlmReranker::ScoreCandidatesWithPriors(
       info.is_complete = true;
       (*out_neg_logprobs)[i] = best_t0_nll;
       cached_candidate_nlls_[info.surface] = best_t0_nll;
+      cached_exact_candidate_nlls_[info.surface] = best_t0_nll;
       if (info.lower_bound_total < best_completed_total_score) {
         best_completed_total_score = info.lower_bound_total;
       }
     } else {
+      if (info.force_full_stage2) {
+        has_pending_forced = true;
+      }
       size_t extra_toks = std::min<size_t>(3, info.tokens.size() - 1);
       info.surrogate_nll = best_t0_nll + config_.token0_extra_token_nll_prior * static_cast<float>(extra_toks);
       info.surrogate_total = info.surrogate_nll + info.prior_penalty;
@@ -1216,13 +1245,16 @@ bool LlmReranker::ScoreCandidatesWithPriors(
   std::vector<int> eval_order(cand_infos.size());
   for (size_t i = 0; i < cand_infos.size(); ++i) eval_order[i] = static_cast<int>(i);
   std::sort(eval_order.begin(), eval_order.end(), [&](int a, int b) {
+    if (cand_infos[a].force_full_stage2 != cand_infos[b].force_full_stage2) {
+      return cand_infos[a].force_full_stage2;
+    }
     if (use_approx_policy) {
       return cand_infos[a].surrogate_total < cand_infos[b].surrogate_total;
     }
     return cand_infos[a].lower_bound_total < cand_infos[b].lower_bound_total;
   });
 
-  if (eval_order.size() >= 2) {
+  if (!has_pending_forced && eval_order.size() >= 2) {
     const auto& top1 = cand_infos[eval_order[0]];
     const auto& top2 = cand_infos[eval_order[1]];
     float gap = use_approx_policy
@@ -1231,13 +1263,13 @@ bool LlmReranker::ScoreCandidatesWithPriors(
     if (top1.is_complete && gap >= config_.decisive_top1_gap_nats) {
       stats_.stage2_skipped_calls++;
       UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
-                     cached_context_log_denom_, cached_candidate_nlls_);
+                     cached_context_log_denom_, cached_candidate_nlls_, cached_exact_candidate_nlls_);
       return true;
     }
   }
 
   // --- IDEA A2: Zero-Stage-2 / Collision-Only Stage 2 Gating ---
-  if (config_.stage2_policy == Stage2Policy::NEVER_TOKEN0_ONLY) {
+  if (config_.stage2_policy == Stage2Policy::NEVER_TOKEN0_ONLY && !has_pending_forced) {
     for (const auto& info : cand_infos) {
       if (!info.is_complete) {
         cached_candidate_nlls_[info.surface] = info.surrogate_nll;
@@ -1246,13 +1278,13 @@ bool LlmReranker::ScoreCandidatesWithPriors(
     stats_.stage2_skipped_calls++;
     if (kv_cache_synced_with_context_) {
       UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
-                     cached_context_log_denom_, cached_candidate_nlls_);
+                     cached_context_log_denom_, cached_candidate_nlls_, cached_exact_candidate_nlls_);
     }
     return true;
   }
 
   llama_token exact_collision_filter_tok = -1;
-  if (config_.stage2_policy == Stage2Policy::EXACT_COLLISION_ONLY) {
+  if (!has_pending_forced && config_.stage2_policy == Stage2Policy::EXACT_COLLISION_ONLY) {
     bool need_stage2 = false;
     if (!eval_order.empty()) {
       const auto& top1 = cand_infos[eval_order[0]];
@@ -1281,11 +1313,11 @@ bool LlmReranker::ScoreCandidatesWithPriors(
       stats_.stage2_skipped_calls++;
       if (kv_cache_synced_with_context_) {
         UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
-                       cached_context_log_denom_, cached_candidate_nlls_);
+                       cached_context_log_denom_, cached_candidate_nlls_, cached_exact_candidate_nlls_);
       }
       return true;
     }
-  } else if (config_.stage2_policy == Stage2Policy::COLLISION_AND_CLOSE_ONLY) {
+  } else if (!has_pending_forced && config_.stage2_policy == Stage2Policy::COLLISION_AND_CLOSE_ONLY) {
     bool need_stage2 = false;
     float best_surrogate = !eval_order.empty() ? cand_infos[eval_order[0]].surrogate_total : 0.0f;
     size_t max_check = std::min<size_t>(eval_order.size(),
@@ -1333,7 +1365,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
       stats_.stage2_skipped_calls++;
       if (kv_cache_synced_with_context_) {
         UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
-                       cached_context_log_denom_, cached_candidate_nlls_);
+                       cached_context_log_denom_, cached_candidate_nlls_, cached_exact_candidate_nlls_);
       }
       return true;
     }
@@ -1342,20 +1374,22 @@ bool LlmReranker::ScoreCandidatesWithPriors(
   // Ensure KV cache is genuinely materialized if a suffix-approx cache hit deferred Prefill
   if (!kv_cache_synced_with_context_) {
     if (!DecodeFullContextIntoKvLocked(cached_context_tokens_)) {
-      return true;  // Return Stage-1 surrogate scores safely if decode fails
+      return !has_pending_forced;  // Forced full-span Stage 2 requires valid KV cache
     }
     const float* exact_logits = cached_context_logits_.data();
     const float exact_denom = cached_context_log_denom_;
     best_completed_total_score = 999.0f;
     for (auto& info : cand_infos) {
-      if (!info.tokens.empty()) {
+      if (!info.tokens.empty() && !info.is_complete) {
         info.token0_nll = std::max(0.0f, -(exact_logits[info.tokens[0]] - exact_denom));
         info.lower_bound_total = info.token0_nll + info.prior_penalty;
         if (info.tokens.size() <= 1) {
           info.surrogate_nll = info.token0_nll;
           info.surrogate_total = info.lower_bound_total;
+          info.is_complete = true;
           (*out_neg_logprobs)[info.index] = info.token0_nll;
           cached_candidate_nlls_[info.surface] = info.token0_nll;
+          cached_exact_candidate_nlls_[info.surface] = info.token0_nll;
           if (info.lower_bound_total < best_completed_total_score) {
             best_completed_total_score = info.lower_bound_total;
           }
@@ -1368,6 +1402,9 @@ bool LlmReranker::ScoreCandidatesWithPriors(
       }
     }
     std::sort(eval_order.begin(), eval_order.end(), [&](int a, int b) {
+      if (cand_infos[a].force_full_stage2 != cand_infos[b].force_full_stage2) {
+        return cand_infos[a].force_full_stage2;
+      }
       if (use_approx_policy) {
         return cand_infos[a].surrogate_total < cand_infos[b].surrogate_total;
       }
@@ -1384,35 +1421,42 @@ bool LlmReranker::ScoreCandidatesWithPriors(
   }
 
   // --- IDEA 1: Prefix-Tree (Trie) Construction for Surviving Multi-Token Candidates ---
+  const int effective_max_nodes = has_pending_forced
+      ? std::max(config_.max_tree_batch_tokens, 64)
+      : config_.max_tree_batch_tokens;
   std::vector<PrefixTreeNode> tree_nodes;
-  tree_nodes.reserve(config_.max_tree_batch_tokens);
+  tree_nodes.reserve(effective_max_nodes);
   std::vector<int> root_children;
   std::vector<int> active_cand_indices;
   int next_branch_seq_id = 1;  // Branch seq_ids: 1 .. (kCheckpointSeqId - 1) = 1..14
   const int max_branch_seqs = kCheckpointSeqId - 1;
-  const int effective_max_cands = use_approx_policy
-      ? std::min(max_branch_seqs, std::max(1, config_.max_stage2_candidates))
-      : max_branch_seqs;
-  const size_t effective_max_toks = use_approx_policy
-      ? static_cast<size_t>(std::max(2, config_.max_stage2_tree_depth + 1))
-      : static_cast<size_t>(8);
+  const int effective_max_cands = has_pending_forced
+      ? std::min(max_branch_seqs, std::max(8, forced_limit))
+      : (use_approx_policy ? std::min(max_branch_seqs, std::max(1, config_.max_stage2_candidates)) : max_branch_seqs);
+  const size_t effective_max_toks = has_pending_forced
+      ? static_cast<size_t>(8)
+      : (use_approx_policy ? static_cast<size_t>(std::max(2, config_.max_stage2_tree_depth + 1)) : static_cast<size_t>(8));
 
   for (int ord_idx : eval_order) {
     auto& info = cand_infos[ord_idx];
     if (info.is_complete || info.tokens.size() <= 1) continue;
-    if (exact_collision_filter_tok >= 0 &&
+    if (has_pending_forced && config_.stage2_policy == Stage2Policy::NEVER_TOKEN0_ONLY && !info.force_full_stage2) {
+      cached_candidate_nlls_[info.surface] = info.surrogate_nll;
+      continue;
+    }
+    if (!info.force_full_stage2 && exact_collision_filter_tok >= 0 &&
         (info.tokens.empty() || info.tokens[0] != exact_collision_filter_tok)) {
       cached_candidate_nlls_[info.surface] = info.surrogate_nll;
       continue;
     }
 
-    if (info.lower_bound_total > dynamic_prune_cutoff) {
+    if (!info.force_full_stage2 && info.lower_bound_total > dynamic_prune_cutoff) {
       cached_candidate_nlls_[info.surface] = use_approx_policy ? info.surrogate_nll : info.token0_nll;
       continue;
     }
     if (static_cast<int>(active_cand_indices.size()) >= effective_max_cands ||
         next_branch_seq_id > max_branch_seqs) {
-      if (use_approx_policy) {
+      if (use_approx_policy && !info.force_full_stage2) {
         cached_candidate_nlls_[info.surface] = info.surrogate_nll;
       }
       continue;
@@ -1440,7 +1484,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
       }
 
       if (found_node == -1) {
-        if (static_cast<int>(tree_nodes.size()) >= config_.max_tree_batch_tokens) {
+        if (static_cast<int>(tree_nodes.size()) >= effective_max_nodes) {
           break;
         }
         PrefixTreeNode new_node;
@@ -1476,6 +1520,7 @@ bool LlmReranker::ScoreCandidatesWithPriors(
   }
 
   // --- STAGE 2 EXECUTION: Single-Pass Packed Prefix-Tree Decode ---
+  bool need_sequential_fallback = false;
   if (!tree_nodes.empty() && !active_cand_indices.empty() && !abort_scoring_.load()) {
     stats_.stage2_calls++;
     llama_memory_t mem = llama_get_memory(ctx_);
@@ -1514,7 +1559,8 @@ bool LlmReranker::ScoreCandidatesWithPriors(
       }
       tree_batch.n_tokens = n_batch_nodes;
 
-      if (llama_decode(ctx_, tree_batch) == 0 && !abort_scoring_.load()) {
+      int decode_ret = llama_decode(ctx_, tree_batch);
+      if (decode_ret == 0 && !abort_scoring_.load()) {
         // Idea 4 & B3: Compute adaptive log_denom once per internal tree node
         for (int ord_idx : active_cand_indices) {
           auto& info = cand_infos[ord_idx];
@@ -1538,18 +1584,46 @@ bool LlmReranker::ScoreCandidatesWithPriors(
           }
           (*out_neg_logprobs)[info.index] = total_nll;
           cached_candidate_nlls_[info.surface] = total_nll;
+          cached_exact_candidate_nlls_[info.surface] = total_nll;
+          info.scored_in_stage2 = true;
         }
+      } else if (!abort_scoring_.load()) {
+        // Hybrid recurrent models may fail multi-seq tree batch before partial seq_rm is flagged false
+        partial_seq_rm_supported_ = false;
+        need_sequential_fallback = true;
       }
       llama_batch_free(tree_batch);
 
       if (num_assigned_seqs == 1) {
-        RollbackOrRestoreContextState();
+        if (!RollbackOrRestoreContextState()) {
+          cached_context_hash_ = 0;
+          cached_context_n_tokens_ = 0;
+          cached_context_tokens_.clear();
+          has_checkpoint_ = false;
+          kv_cache_synced_with_context_ = false;
+          llama_memory_clear(mem, true);
+        }
       } else {
         for (int s = 1; s <= num_assigned_seqs; ++s) {
           llama_memory_seq_rm(mem, s, -1, -1);
         }
+        if (need_sequential_fallback && !has_checkpoint_) {
+          llama_memory_seq_rm(mem, kCheckpointSeqId, -1, -1);
+          llama_memory_seq_cp(mem, 0, kCheckpointSeqId, -1, -1);
+          has_checkpoint_ = true;
+        }
       }
     } else {
+      need_sequential_fallback = true;
+    }
+
+    if (need_sequential_fallback && !abort_scoring_.load()) {
+      // Ensure seq 0 context state is checkpointed before decoding onto seq 0
+      if (!has_checkpoint_) {
+        llama_memory_seq_rm(mem, kCheckpointSeqId, -1, -1);
+        llama_memory_seq_cp(mem, 0, kCheckpointSeqId, -1, -1);
+        has_checkpoint_ = true;
+      }
       // Fallback for hybrid recurrent models where partial seq_rm is disabled
       for (int ord_idx : active_cand_indices) {
         if (abort_scoring_.load()) break;
@@ -1582,17 +1656,52 @@ bool LlmReranker::ScoreCandidatesWithPriors(
           }
           (*out_neg_logprobs)[info.index] = total_nll;
           cached_candidate_nlls_[info.surface] = total_nll;
+          cached_exact_candidate_nlls_[info.surface] = total_nll;
+          info.scored_in_stage2 = true;
         }
         llama_batch_free(b);
-        RollbackOrRestoreContextState();
+        if (!RollbackOrRestoreContextState()) {
+          cached_context_hash_ = 0;
+          cached_context_n_tokens_ = 0;
+          cached_context_tokens_.clear();
+          has_checkpoint_ = false;
+          kv_cache_synced_with_context_ = false;
+          llama_memory_clear(mem, true);
+          break;
+        }
       }
     }
+
+    if (has_pending_forced && abort_scoring_.load()) {
+      return false;
+    }
   } else {
+    if (has_pending_forced && abort_scoring_.load()) {
+      return false;
+    }
     stats_.stage2_skipped_calls++;
   }
 
+  // Scale-consistency guard for any forced candidate not decoded in Stage 2
+  if (has_pending_forced) {
+    float max_forced_scored_nll = 0.0f;
+    for (const auto& info : cand_infos) {
+      if (info.force_full_stage2 && (info.is_complete || info.scored_in_stage2)) {
+        max_forced_scored_nll = std::max(max_forced_scored_nll, (*out_neg_logprobs)[info.index]);
+      }
+    }
+    for (auto& info : cand_infos) {
+      if (info.force_full_stage2 && !info.is_complete && !info.scored_in_stage2) {
+        size_t tok_count = std::max<size_t>(1, info.tokens.size());
+        (*out_neg_logprobs)[info.index] = std::max(
+            max_forced_scored_nll + 4.0f,
+            info.token0_nll + 5.5f * static_cast<float>(tok_count - 1));
+      }
+    }
+  }
+
   UpsertSnapshot(cached_context_hash_, cached_context_tokens_, cached_context_logits_,
-                 cached_context_log_denom_, cached_candidate_nlls_);
+                 cached_context_log_denom_, cached_candidate_nlls_, cached_exact_candidate_nlls_);
   return true;
 }
 

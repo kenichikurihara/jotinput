@@ -43,4 +43,24 @@ class LlmRerankerNativeSafetyTest {
             }
         }
     }
+
+    @Test
+    fun `EnsureContextCached must guard non-positive n_new_tokens before llama_batch_init`() {
+        val root = resolveProjectRoot()
+        val cppFile = File(root, "app/src/main/cpp/llm_reranker.cc")
+        assertTrue("Expected llm_reranker.cc at ${cppFile.absolutePath}", cppFile.isFile)
+
+        val content = cppFile.readText()
+        val fnStart = content.indexOf("bool LlmReranker::EnsureContextCached(")
+        assertTrue("Expected EnsureContextCached in llm_reranker.cc", fnStart >= 0)
+        val fnEnd = content.indexOf("bool LlmReranker::WarmContext(", fnStart)
+        val fnBody = if (fnEnd > fnStart) content.substring(fnStart, fnEnd) else content.substring(fnStart)
+
+        val guardIdx = fnBody.indexOf("n_new_tokens <= 0")
+        val batchInitIdx = fnBody.indexOf("llama_batch_init(n_new_tokens")
+        assertTrue(
+            "EnsureContextCached must guard n_new_tokens <= 0 before llama_batch_init(n_new_tokens, ...) to avoid llama_decode ret = -1",
+            guardIdx >= 0 && batchInitIdx > guardIdx
+        )
+    }
 }
