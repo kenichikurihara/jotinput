@@ -22,6 +22,9 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -173,6 +176,99 @@ class GitHubArtifactUpdateClientTest {
         assertTrue(fakeRes.isFailure)
         assertFalse(fakeDest.exists())
         assertFalse(File(dir, "${fakeDest.name}.tmp").exists())
+    }
+
+    @Test
+    fun `extractApkFromZip handles STORED entry with bit-3 data descriptor from GitHub upload-artifact v4`() {
+        val dir = tempFolder.newFolder("apk_stored_bit3")
+        val zipFile = File(dir, "artifact.zip")
+        val destApk = File(dir, "jotinput-update-stored.apk")
+
+        val entryName = "app-debug.apk".toByteArray(Charsets.UTF_8)
+        val payload = ByteArray(4100) { idx ->
+            when (idx) {
+                0 -> 0x50.toByte()
+                1 -> 0x4B.toByte()
+                2 -> 0x03.toByte()
+                3 -> 0x04.toByte()
+                else -> (idx % 251).toByte()
+            }
+        }
+        val crc = CRC32().apply { update(payload) }.value.toInt()
+        val size = payload.size
+
+        // Construct raw ZIP mimicking `actions/upload-artifact@v4` with `compression-level: 0`:
+        // Local File Header has method=0 (STORED), flags=0x08 (Data Descriptor), crc=0, csize=0, usize=0.
+        val buf = ByteBuffer.allocate(30 + entryName.size + size + 16 + 46 + entryName.size + 22)
+            .order(ByteOrder.LITTLE_ENDIAN)
+
+        // Local File Header (30 bytes + filename)
+        buf.putInt(0x04034b50)
+        buf.putShort(20)
+        buf.putShort(0x0008)
+        buf.putShort(0)
+        buf.putShort(0)
+        buf.putShort(0)
+        buf.putInt(0)
+        buf.putInt(0)
+        buf.putInt(0)
+        buf.putShort(entryName.size.toShort())
+        buf.putShort(0)
+        buf.put(entryName)
+
+        // Uncompressed payload
+        buf.put(payload)
+
+        // Data Descriptor (16 bytes)
+        buf.putInt(0x08074b50)
+        buf.putInt(crc)
+        buf.putInt(size)
+        buf.putInt(size)
+
+        // Central Directory Header (46 bytes + filename)
+        val cdOffset = buf.position()
+        buf.putInt(0x02014b50)
+        buf.putShort(20)
+        buf.putShort(20)
+        buf.putShort(0x0008)
+        buf.putShort(0)
+        buf.putShort(0)
+        buf.putShort(0)
+        buf.putInt(crc)
+        buf.putInt(size)
+        buf.putInt(size)
+        buf.putShort(entryName.size.toShort())
+        buf.putShort(0)
+        buf.putShort(0)
+        buf.putShort(0)
+        buf.putShort(0)
+        buf.putInt(0)
+        buf.putInt(0)
+        buf.put(entryName)
+        val cdSize = buf.position() - cdOffset
+
+        // End of Central Directory (22 bytes)
+        buf.putInt(0x06054b50)
+        buf.putShort(0)
+        buf.putShort(0)
+        buf.putShort(1)
+        buf.putShort(1)
+        buf.putInt(cdSize)
+        buf.putInt(cdOffset)
+        buf.putShort(0)
+
+        zipFile.writeBytes(buf.array().copyOf(buf.position()))
+
+        val res = GitHubArtifactUpdateClient.extractApkFromZip(
+            zipFile = zipFile,
+            destApkFile = destApk,
+            minApkBytes = 512L
+        )
+        assertTrue("Expected STORED bit-3 descriptor ZIP extraction to succeed, got: ${res.exceptionOrNull()}", res.isSuccess)
+        assertTrue(destApk.exists())
+        assertFalse(File(dir, "${destApk.name}.tmp").exists())
+        assertEquals(payload.size.toLong(), destApk.length())
+        assertTrue(payload.contentEquals(destApk.readBytes()))
     }
 
     @Test

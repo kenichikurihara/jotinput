@@ -7,10 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.BufferedInputStream
 import java.io.BufferedReader
 import java.io.File
-import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -22,7 +20,7 @@ import java.nio.charset.StandardCharsets
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
-import java.util.zip.ZipInputStream
+import java.util.zip.ZipFile
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -144,6 +142,11 @@ class GitHubArtifactUpdateClient {
 
         /**
          * Safely extracts the `.apk` entry from a GitHub Actions artifact ZIP into [destApkFile].
+         *
+         * Uses [ZipFile] (Central Directory lookup) instead of `ZipInputStream` because
+         * `actions/upload-artifact@v4` with `compression-level: 0` emits `STORED` entries
+         * with bit-3 Data Descriptors (`csize=0, usize=0` in the Local File Header), which
+         * causes `ZipInputStream` to read 0 bytes or throw on EXT descriptors.
          * Immune to Zip-Slip because entry names are never used for output path resolution.
          */
         fun extractApkFromZip(
@@ -167,24 +170,26 @@ class GitHubArtifactUpdateClient {
                     tempApk.delete()
                 }
                 var foundApkEntry = false
-                ZipInputStream(BufferedInputStream(FileInputStream(zipFile))).use { zis ->
-                    while (true) {
-                        val entry = zis.nextEntry ?: break
-                        try {
-                            if (entry.isDirectory) continue
-                            val entryName = entry.name.substringAfterLast('/')
-                            if (!entryName.endsWith(".apk", ignoreCase = true)) {
-                                continue
-                            }
-                            foundApkEntry = true
-                            var totalWritten = 0L
-                            val headerBytes = ByteArray(4)
-                            var headerCaptured = 0
+                ZipFile(zipFile).use { zf ->
+                    val apkEntries = zf.entries().asSequence()
+                        .filter { !it.isDirectory }
+                        .filter { it.name.substringAfterLast('/').endsWith(".apk", ignoreCase = true) }
+                        .toList()
+                    val targetEntry = apkEntries.firstOrNull {
+                        it.name.substringAfterLast('/').equals("app-debug.apk", ignoreCase = true)
+                    } ?: apkEntries.firstOrNull()
 
+                    if (targetEntry != null) {
+                        foundApkEntry = true
+                        var totalWritten = 0L
+                        val headerBytes = ByteArray(4)
+                        var headerCaptured = 0
+
+                        zf.getInputStream(targetEntry).use { input ->
                             FileOutputStream(tempApk).use { out ->
                                 val buffer = ByteArray(65_536)
                                 while (true) {
-                                    val read = zis.read(buffer)
+                                    val read = input.read(buffer)
                                     if (read <= 0) break
                                     totalWritten += read
                                     if (totalWritten > maxApkBytes) {
@@ -199,21 +204,18 @@ class GitHubArtifactUpdateClient {
                                 }
                                 out.flush()
                             }
+                        }
 
-                            if (totalWritten < minApkBytes) {
-                                throw IllegalStateException("Extracted APK is smaller than minimum threshold ($totalWritten bytes)")
-                            }
-                            if (headerCaptured < 4 ||
-                                headerBytes[0] != 0x50.toByte() ||
-                                headerBytes[1] != 0x4B.toByte() ||
-                                headerBytes[2] != 0x03.toByte() ||
-                                headerBytes[3] != 0x04.toByte()
-                            ) {
-                                throw IllegalStateException("Extracted file is not a valid APK/ZIP archive")
-                            }
-                            break
-                        } finally {
-                            zis.closeEntry()
+                        if (totalWritten < minApkBytes) {
+                            throw IllegalStateException("Extracted APK is smaller than minimum threshold ($totalWritten bytes)")
+                        }
+                        if (headerCaptured < 4 ||
+                            headerBytes[0] != 0x50.toByte() ||
+                            headerBytes[1] != 0x4B.toByte() ||
+                            headerBytes[2] != 0x03.toByte() ||
+                            headerBytes[3] != 0x04.toByte()
+                        ) {
+                            throw IllegalStateException("Extracted file is not a valid APK/ZIP archive")
                         }
                     }
                 }
