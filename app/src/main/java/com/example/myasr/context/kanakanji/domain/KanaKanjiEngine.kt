@@ -245,23 +245,38 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         activeMmapDictionaries.clear()
 
         val mozcDir = getMozcDir()
-        val binFiles = mozcDir.listFiles { f -> f.name.endsWith(".bin") } ?: emptyArray()
+        val binFiles = (mozcDir.listFiles { f -> f.name.endsWith(".bin") } ?: emptyArray())
+            .sortedBy { it.name }
+        val hasDedicatedMozcGeneral = binFiles.any {
+            it.name == "dict_mozc_general.bin" && it.length() > 64L
+        }
+        val loadedSourceIds = HashSet<String>()
         for (f in binFiles) {
-            if (f.length() > 64L && f.name != "connection_data.bin") {
-                try {
-                    val mmap = MmapDictionary.loadFromFile(f)
-                    if (mmap != null) {
-                        val sourceId = when {
-                            f.name.startsWith("dict_") -> f.name.removePrefix("dict_").removeSuffix(".bin")
-                            f.name == "system_dictionary.bin" -> "mozc_general"
-                            else -> f.name.removeSuffix(".bin")
-                        }
-                        activeMmapDictionaries.add(MmapEntry(sourceId, mmap))
-                        Log.i(TAG, "Loaded MmapDictionary '$sourceId' from ${f.name} (${mmap.numTokens} tokens)")
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed loading mmap dict ${f.name}: ${e.message}")
+            if (f.length() <= 64L || f.name == "connection_data.bin") continue
+            if (hasDedicatedMozcGeneral && f.name == "system_dictionary.bin") {
+                Log.i(TAG, "Skipping legacy system_dictionary.bin because dict_mozc_general.bin is active.")
+                continue
+            }
+            val sourceId = when {
+                f.name.startsWith("dict_") -> f.name.removePrefix("dict_").removeSuffix(".bin")
+                f.name == "system_dictionary.bin" -> "mozc_general"
+                else -> f.name.removeSuffix(".bin")
+            }
+            if (!loadedSourceIds.add(sourceId)) {
+                Log.w(TAG, "Skipping duplicate MmapDictionary '$sourceId' from ${f.name}")
+                continue
+            }
+            try {
+                val mmap = MmapDictionary.loadFromFile(f)
+                if (mmap != null) {
+                    activeMmapDictionaries.add(MmapEntry(sourceId, mmap))
+                    Log.i(TAG, "Loaded MmapDictionary '$sourceId' from ${f.name} (${mmap.numTokens} tokens)")
+                } else {
+                    loadedSourceIds.remove(sourceId)
                 }
+            } catch (e: Exception) {
+                loadedSourceIds.remove(sourceId)
+                Log.w(TAG, "Failed loading mmap dict ${f.name}: ${e.message}")
             }
         }
 
@@ -898,7 +913,22 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 }
             }
 
-            val step2EndIndex = result.size
+            var step2EndIndex = result.size
+
+            // 2.5. Productive 2-Mora Compound Synthesis (e.g. "ぶひ" -> "部費", "てが" -> "手が")
+            // When no exact 2-mora entry exists in the loaded lexicon, synthesize high-affinity 1+1
+            // compounds validated by Mozc 2D bigram connection costs.
+            if (normalized.length == 2 && matrix != null && step2EndIndex == step2StartIndex) {
+                val synthesizedTwoMora = synthesizeTwoMoraCompounds(normalized, connRid, matrix)
+                for ((cand, totalCost) in synthesizedTwoMora) {
+                    val prevSize = result.size
+                    addCandidate(cand)
+                    if (result.size > prevSize) {
+                        recordStep2Cost(cand.surface, totalCost)
+                    }
+                }
+                step2EndIndex = result.size
+            }
 
             // 3.6. Voiced & Semi-voiced Exact Matches (e.g. "かいき" -> "会議" [かいぎ], "こはん" -> "ご飯" [ごはん])
             val voicedPaths = matchingPaths.filter { it.voicingDistance > 0 && it.typoCostPenalty == 0 }
@@ -1015,7 +1045,12 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                     val remainingViterbi = mutableListOf<ConversionCandidate>()
                     for (cand in viterbiCandidates) {
                         val vCost = viterbiFullCosts[cand.surface] ?: Int.MAX_VALUE
-                        val allowPromotion = !hasVoicedExpansion || vCost <= bestStep2Cost + 2500
+                        val isTypo = cand.source == "viterbi_typo"
+                        val allowPromotion = if (isTypo) {
+                            vCost <= bestStep2Cost
+                        } else {
+                            !hasVoicedExpansion || vCost <= bestStep2Cost + 2500
+                        }
                         if (!cand.isPrediction && cand.source != "viterbi_prefix" && allowPromotion) {
                             val isParticleExact = JapaneseKanaUtils.isCommonParticle(cand.surface) && cand.surface == normalized
                             val isRedundantHiragana = !isParticleExact &&
@@ -1682,7 +1717,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val wordCostSum: Int = 0,
         val wordCount: Int = 0,
         val excessTransCostSum: Int = 0,
-        val pendingCoordKind: Int = 0
+        val pendingCoordKind: Int = 0,
+        val reading: String = "",
+        val typoPenalty: Int = 0
     )
 
     private fun isContentWord(lid: Int): Boolean = MozcPosCatalog.isContentWord(lid)
@@ -1696,6 +1733,92 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
     private fun isPredicatePos(posId: Int): Boolean = MozcPosCatalog.isPredicatePos(posId)
 
     private fun isProperNoun(lid: Int): Boolean = MozcPosCatalog.isProperNoun(lid)
+
+    private fun isPrefix(lid: Int): Boolean = MozcPosCatalog.isPrefix(lid)
+
+    private fun findTrieNode(reading: String): TrieNode? {
+        var node: TrieNode? = root
+        for (ch in reading) {
+            node = node?.children?.get(ch) ?: return null
+        }
+        return node
+    }
+
+    private fun mergeExactWordEntries(
+        subReading: String,
+        trieNode: TrieNode?,
+        includeEmojiSymbols: Boolean = false
+    ): List<WordEntry> {
+        val subWords = ArrayList<WordEntry>()
+        trieNode?.words?.let { subWords.addAll(it) }
+        val mmapWords = queryAllMmapExactTokens(subReading, includeEmojiSymbols = includeEmojiSymbols)
+        for (tok in mmapWords) {
+            if (subWords.none { it.surface == tok.surface && it.lid == tok.lid }) {
+                subWords.add(tok)
+            }
+        }
+        return subWords
+    }
+
+    /**
+     * Synthesizes productive 1+1 Kanji/Kana compounds for 2-mora readings absent from the exact lexicon
+     * (e.g., "ぶひ" -> "部費", "てが" -> "手が") using Mozc 2D bigram connection costs.
+     */
+    private fun synthesizeTwoMoraCompounds(
+        normalized: String,
+        connRid: Int,
+        matrix: ConnectionMatrix
+    ): List<Pair<ConversionCandidate, Int>> {
+        val c1 = normalized.substring(0, 1)
+        val c2 = normalized.substring(1, 2)
+        val raw1 = mergeExactWordEntries(c1, findTrieNode(c1), includeEmojiSymbols = false)
+        val raw2 = mergeExactWordEntries(c2, findTrieNode(c2), includeEmojiSymbols = false)
+
+        val w1List = raw1.filter { it.cost <= 4500 && it.lid > 0 && !isFunctionalWord(it.lid) }
+            .distinctBy { Triple(it.surface, it.lid, it.rid) }
+        val w2List = raw2.filter { it.cost <= 4500 && it.lid > 0 && !isPrefix(it.lid) }
+            .distinctBy { Triple(it.surface, it.lid, it.rid) }
+        if (w1List.isEmpty() || w2List.isEmpty()) return emptyList()
+
+        data class TwoMoraMatch(val candidate: ConversionCandidate, val totalCost: Int)
+        val bestBySurface = HashMap<String, TwoMoraMatch>()
+
+        for (w1 in w1List) {
+            val t0 = matrix.getTransitionCost(connRid, w1.lid)
+            for (w2 in w2List) {
+                val surface = w1.surface + w2.surface
+                if (JapaneseKanaUtils.isAllHiragana(surface)) continue
+                val t12 = matrix.getTransitionCost(w1.rid, w2.lid)
+                if (t12 > 2500) continue
+                val totalCost = w1.cost + w2.cost + t0 + t12
+                if (totalCost > 9500) continue
+
+                val existing = bestBySurface[surface]
+                if (existing == null || totalCost < existing.totalCost) {
+                    val effDictCost = ((w1.cost + w2.cost) / 2 + maxOf(0, t12 - 1500)).coerceIn(0, 15000)
+                    val isPred = isPredicatePos(w2.rid) || isAuxiliaryVerb(w2.rid)
+                    val cand = ConversionCandidate(
+                        surface = surface,
+                        reading = normalized,
+                        isPrediction = false,
+                        source = "viterbi",
+                        dictCost = effDictCost,
+                        firstBunsetsuSurface = w1.surface,
+                        lastContentWordSurface = if (isContentWord(w2.lid) && w2.surface != w1.surface) w2.surface else "",
+                        completedSurface = surface,
+                        isPredicate = isPred,
+                        predicateTailSurface = if (isPred) w2.surface else ""
+                    )
+                    bestBySurface[surface] = TwoMoraMatch(cand, totalCost)
+                }
+            }
+        }
+
+        return bestBySurface.values
+            .sortedBy { it.totalCost }
+            .take(3)
+            .map { Pair(it.candidate, it.totalCost) }
+    }
 
     private fun queryAllMmapExactTokens(reading: String, includeEmojiSymbols: Boolean = true): List<WordEntry> {
         val dicts = activeMmapDictionaries
@@ -1846,6 +1969,190 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         return searchViterbiLatticeWithCosts(reading, beamWidth).first
     }
 
+    private fun advanceViterbiPath(
+        path: ViterbiPath,
+        w: WordEntry,
+        subReading: String,
+        startPos: Int,
+        endPos: Int,
+        totalLen: Int,
+        extraTypoPenalty: Int,
+        matrix: ConnectionMatrix?
+    ): ViterbiPath? {
+        if (startPos > 0 && endPos == totalLen && isPrefix(w.lid)) {
+            return null
+        }
+        val isUser = w.source == "user"
+        val isCanonical = w.source == "canonical"
+
+        // Idea V1: Unigram Confidence-Gated Length Bonus & Functional-Boundary Over-Spanning Guard
+        val baseBonus = computeLengthBonus(
+            subReading = subReading,
+            rawCost = w.cost,
+            lid = w.lid,
+            isUserOrCanonical = isUser || isCanonical,
+            checkLeadingParticle = startPos > 0,
+            prevIsFunctional = isFunctionalWord(path.lastRid)
+        )
+
+        // Idea A: Additive Bunsetsu-level Length Bonus Normalization for auxiliary verbs attaching to verb/adj stems
+        val predicateBunsetsuBonus = if (startPos > 0 && isAuxiliaryVerb(w.lid) && isPredicatePos(path.lastRid)) {
+            DEFAULT_LENGTH_BONUS_PER_CHAR
+        } else {
+            0
+        }
+        val lengthBonus = baseBonus + predicateBunsetsuBonus
+        val userBonus = if (isUser) 50000 else 0
+
+        // Morphological connection transition cost
+        val transitionCost = if (matrix != null) {
+            val lid = if (w.lid > 0) w.lid else 0
+            matrix.getTransitionCost(path.lastRid, lid)
+        } else {
+            0
+        }
+
+        // Idea V2: Incremental Max-Morpheme Surprisal (L_inf) Hinge Penalty
+        val effectiveWordCost = if (isUser || isCanonical) 0 else w.cost.coerceAtLeast(0)
+        val newMaxWordCost = maxOf(path.maxWordCost, effectiveWordCost)
+        val prevRarityPen = maxOf(0, path.maxWordCost - RARITY_HINGE_THRESHOLD) / 2
+        val nextRarityPen = maxOf(0, newMaxWordCost - RARITY_HINGE_THRESHOLD) / 2
+        val rarityDelta = nextRarityPen - prevRarityPen
+
+        // Idea V2: Parallel Coordination Symmetry Bonus (e.g. "オン + と + オフ")
+        val isKatakanaWord = w.surface.isNotEmpty() && w.surface.all { it in '\u30A0'..'\u30FF' || it == 'ー' }
+        val isKanjiWord = !isKatakanaWord && w.surface.any { it in '\u4E00'..'\u9FFF' }
+        val isCoordParticle = (w.surface == "と" || w.surface == "や") && isFunctionalWord(w.lid)
+        val coordBonus = when {
+            path.pendingCoordKind == -1 && isKatakanaWord -> 1200
+            path.pendingCoordKind == -2 && isKanjiWord -> 600
+            else -> 0
+        }
+        val nextCoordKind = when {
+            isCoordParticle && path.pendingCoordKind > 0 -> -path.pendingCoordKind
+            isKatakanaWord && (isContentWord(w.lid) || isProperNoun(w.lid)) -> 1
+            isKanjiWord && isContentWord(w.lid) -> 2
+            else -> 0
+        }
+
+        val newCost = path.cost + (w.cost - lengthBonus).coerceAtLeast(-50000) - userBonus +
+            transitionCost + rarityDelta - coordBonus + extraTypoPenalty
+        val nextRid = if (w.rid > 0) w.rid else path.lastRid
+
+        val nextWordCostSum = path.wordCostSum + if (isFunctionalWord(w.lid) || isCanonical) 0 else effectiveWordCost
+        val nextWordCount = path.wordCount + if (isFunctionalWord(w.lid) || isCanonical) 0 else 1
+        val nextExcessTrans = path.excessTransCostSum + maxOf(0, transitionCost - 1500)
+
+        // Update first bunsetsu metadata
+        val (nextFb, nextFbLen, nextClosed) = if (startPos == 0) {
+            Triple(w.surface, endPos, false)
+        } else if (!path.isFirstBunsetsuClosed) {
+            if (isSuffix(w.lid)) {
+                Triple(path.firstBunsetsuSurface + w.surface, endPos, false)
+            } else if (isFunctionalWord(w.lid) || isContentWord(w.lid)) {
+                Triple(path.firstBunsetsuSurface, path.firstBunsetsuReadingLen, true)
+            } else {
+                Triple(path.firstBunsetsuSurface, path.firstBunsetsuReadingLen, path.isFirstBunsetsuClosed)
+            }
+        } else {
+            Triple(path.firstBunsetsuSurface, path.firstBunsetsuReadingLen, true)
+        }
+
+        val nextLastContent = if (isContentWord(w.lid) || (w.surface.length >= 2 && !JapaneseKanaUtils.isAllHiragana(w.surface))) {
+            w.surface
+        } else {
+            path.lastContentWordSurface
+        }
+
+        val nextSecondProper = if (startPos > 0 && !path.isFirstBunsetsuClosed && isContentWord(w.lid)) {
+            isProperNoun(w.lid)
+        } else {
+            path.secondBunsetsuIsProper
+        }
+
+        return ViterbiPath(
+            cost = newCost,
+            surface = path.surface + w.surface,
+            words = path.words + listOf(w.surface),
+            hasUserWord = path.hasUserWord || isUser,
+            lastRid = nextRid,
+            firstBunsetsuSurface = nextFb,
+            firstBunsetsuReadingLen = nextFbLen,
+            isFirstBunsetsuClosed = nextClosed,
+            lastContentWordSurface = nextLastContent,
+            secondBunsetsuIsProper = nextSecondProper,
+            maxWordCost = newMaxWordCost,
+            wordCostSum = nextWordCostSum,
+            wordCount = nextWordCount,
+            excessTransCostSum = nextExcessTrans,
+            pendingCoordKind = nextCoordKind,
+            reading = path.reading + subReading,
+            typoPenalty = path.typoPenalty + extraTypoPenalty
+        )
+    }
+
+    private fun pruneBeamBucket(bucket: MutableList<ViterbiPath>, limit: Int) {
+        if (bucket.size <= limit) return
+        val byKey = LinkedHashMap<Pair<String, Int>, ViterbiPath>(bucket.size)
+        for (p in bucket) {
+            val key = Pair(p.surface, p.lastRid)
+            val existing = byKey[key]
+            if (existing == null || p.cost < existing.cost) {
+                byKey[key] = p
+            }
+        }
+        val sortedList = byKey.values.toMutableList()
+        sortedList.sortBy { it.cost }
+        bucket.clear()
+        bucket.addAll(if (sortedList.size > limit) sortedList.subList(0, limit) else sortedList)
+    }
+
+    private fun toConversionCandidate(
+        path: ViterbiPath,
+        reading: String,
+        sourceOverride: String? = null,
+        obsPenalty: Float = 0.0f
+    ): ConversionCandidate {
+        val fb = path.firstBunsetsuSurface.ifEmpty { path.surface }
+        val lastCw = if (path.lastContentWordSurface.isNotEmpty() && path.lastContentWordSurface != fb) {
+            path.lastContentWordSurface
+        } else {
+            ""
+        }
+        val isPred = isPredicatePos(path.lastRid) || isAuxiliaryVerb(path.lastRid)
+        val tailSurface = if (isPred && fb.isNotEmpty() && path.surface.length > fb.length) {
+            path.surface.substring(fb.length)
+        } else if (isPred) {
+            path.surface
+        } else {
+            ""
+        }
+        // Idea R1: Propagate structured lattice cost to SLM reranker on [0, 15000] scale
+        val avgWordCost = if (path.wordCount > 0) path.wordCostSum / path.wordCount else 5000
+        val maxExcess = maxOf(0, path.maxWordCost - 4500) / 2
+        val avgExcessTrans = if (path.wordCount > 0) path.excessTransCostSum / path.wordCount else 0
+        val effDictCost = (avgWordCost + maxExcess + avgExcessTrans).coerceIn(0, 15000)
+
+        return ConversionCandidate(
+            surface = path.surface,
+            reading = reading,
+            isPrediction = false,
+            source = when {
+                path.hasUserWord -> "user"
+                sourceOverride != null -> sourceOverride
+                else -> "viterbi"
+            },
+            obsPenalty = obsPenalty,
+            dictCost = effDictCost,
+            firstBunsetsuSurface = fb,
+            lastContentWordSurface = lastCw,
+            completedSurface = path.surface,
+            suffixBranchingFactor = 1.0f,
+            isPredicate = isPred,
+            predicateTailSurface = tailSurface
+        )
+    }
+
     private fun searchViterbiLatticeWithCosts(
         reading: String,
         beamWidth: Int = 6,
@@ -1857,178 +2164,180 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val beam = Array(n + 1) { mutableListOf<ViterbiPath>() }
         beam[0].add(ViterbiPath(0, "", emptyList(), false, lastRid = initialRid, firstBunsetsuSurface = "", firstBunsetsuReadingLen = 0, isFirstBunsetsuClosed = false, lastContentWordSurface = "", secondBunsetsuIsProper = false))
 
+        val enableTypoLayer = n in 3..14
+        val hasExplicitDakuten = reading.any { ch ->
+            ch in "がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽゔ"
+        }
+        val voicingEditPenalty = if (hasExplicitDakuten) 2200 else 1200
+        val typoBeamWidth = 6
+        val typoBeam = if (enableTypoLayer) Array(n + 1) { mutableListOf<ViterbiPath>() } else emptyArray()
+        val exactSubwordCache = Array(n) { arrayOfNulls<List<WordEntry>>(n + 1) }
+
+        fun getExactStratifiedSubwords(startPos: Int, endPos: Int): List<WordEntry> {
+            exactSubwordCache[startPos][endPos]?.let { return it }
+            var node: TrieNode? = root
+            for (k in startPos until n) {
+                node = node?.children?.get(reading[k])
+                val e = k + 1
+                if (exactSubwordCache[startPos][e] == null) {
+                    val sub = reading.substring(startPos, e)
+                    val words = mergeExactWordEntries(sub, node, includeEmojiSymbols = false)
+                    exactSubwordCache[startPos][e] = if (words.isNotEmpty()) {
+                        selectPosStratifiedSubwords(words, maxTotal = 24)
+                    } else {
+                        emptyList()
+                    }
+                }
+            }
+            return exactSubwordCache[startPos][endPos] ?: emptyList()
+        }
+
+        data class SubwordBranch(val node: TrieNode?, val reading: String, val typoPenalty: Int)
+
         val matrix = connectionMatrix
 
         for (i in 0 until n) {
             val currentPaths = beam[i]
-            if (currentPaths.isEmpty()) continue
-
-            for (path in currentPaths) {
-                var node: TrieNode? = root
-                var j = i
-                while (j < n) {
-                    val ch = reading[j]
-                    node = node?.children?.get(ch)
-                    j++
-
-                    val subReading = reading.substring(i, j)
-                    val subWords = mutableListOf<WordEntry>()
-                    node?.words?.let { subWords.addAll(it) }
-
-                    // Also query zero-heap mmap dictionaries for subReading
-                    val mmapWords = queryAllMmapExactTokens(subReading, includeEmojiSymbols = false)
-                    for (tok in mmapWords) {
-                        if (subWords.none { it.surface == tok.surface && it.lid == tok.lid }) {
-                            subWords.add(tok)
+            if (currentPaths.isNotEmpty()) {
+                for (path in currentPaths) {
+                    for (j in (i + 1)..n) {
+                        val stratifiedWords = getExactStratifiedSubwords(i, j)
+                        if (stratifiedWords.isEmpty()) continue
+                        val subReading = reading.substring(i, j)
+                        for (w in stratifiedWords) {
+                            advanceViterbiPath(path, w, subReading, i, j, n, extraTypoPenalty = 0, matrix = matrix)
+                                ?.let { beam[j].add(it) }
                         }
                     }
 
-                    if (subWords.isNotEmpty()) {
-                        val stratifiedWords = selectPosStratifiedSubwords(subWords, maxTotal = 24)
-                        for (w in stratifiedWords) {
-                            val isUser = w.source == "user"
-                            val isCanonical = w.source == "canonical"
+                    // Fallback single-character hiragana transition
+                    val singleChar = reading[i].toString()
+                    val fallbackCost = path.cost + 18000
+                    val fb = if (i > 0) path.firstBunsetsuSurface else singleChar
+                    val fbLen = if (i > 0) path.firstBunsetsuReadingLen else 1
+                    beam[i + 1].add(
+                        ViterbiPath(
+                            cost = fallbackCost,
+                            surface = path.surface + singleChar,
+                            words = path.words + listOf(singleChar),
+                            hasUserWord = path.hasUserWord,
+                            lastRid = path.lastRid,
+                            firstBunsetsuSurface = fb,
+                            firstBunsetsuReadingLen = fbLen,
+                            isFirstBunsetsuClosed = true,
+                            lastContentWordSurface = path.lastContentWordSurface,
+                            secondBunsetsuIsProper = path.secondBunsetsuIsProper,
+                            reading = path.reading + singleChar,
+                            typoPenalty = path.typoPenalty
+                        )
+                    )
+                }
 
-                            // Idea V1: Unigram Confidence-Gated Length Bonus & Functional-Boundary Over-Spanning Guard
-                            val baseBonus = computeLengthBonus(
-                                subReading = subReading,
-                                rawCost = w.cost,
-                                lid = w.lid,
-                                isUserOrCanonical = isUser || isCanonical,
-                                checkLeadingParticle = i > 0,
-                                prevIsFunctional = isFunctionalWord(path.lastRid)
-                            )
+                // Layer 0 -> Layer 1: 1-typo subword transition (length >= 2)
+                if (enableTypoLayer && i < n - 1) {
+                    val topExactSrc = currentPaths.sortedBy { it.cost }.take(4)
+                    var activeBranches = mutableListOf(SubwordBranch(root, "", 0))
+                    val maxJ = minOf(n, i + 8)
+                    for (j in (i + 1)..maxJ) {
+                        val ch = reading[j - 1]
+                        val byReading = LinkedHashMap<String, SubwordBranch>()
 
-                            // Idea A: Additive Bunsetsu-level Length Bonus Normalization for auxiliary verbs attaching to verb/adj stems
-                            val predicateBunsetsuBonus = if (i > 0 && isAuxiliaryVerb(w.lid) && isPredicatePos(path.lastRid)) DEFAULT_LENGTH_BONUS_PER_CHAR else 0
-                            val lengthBonus = baseBonus + predicateBunsetsuBonus
-                            val userBonus = if (isUser) 50000 else 0
-
-                            // Morphological connection transition cost
-                            val transitionCost = if (matrix != null) {
-                                val lid = if (w.lid > 0) w.lid else 0
-                                matrix.getTransitionCost(path.lastRid, lid)
-                            } else {
-                                0
-                            }
-
-                            // Idea V2: Incremental Max-Morpheme Surprisal (L_inf) Hinge Penalty
-                            val effectiveWordCost = if (isUser || isCanonical) 0 else w.cost.coerceAtLeast(0)
-                            val newMaxWordCost = maxOf(path.maxWordCost, effectiveWordCost)
-                            val prevRarityPen = maxOf(0, path.maxWordCost - RARITY_HINGE_THRESHOLD) / 2
-                            val nextRarityPen = maxOf(0, newMaxWordCost - RARITY_HINGE_THRESHOLD) / 2
-                            val rarityDelta = nextRarityPen - prevRarityPen
-
-                            // Idea V2: Parallel Coordination Symmetry Bonus (e.g. "オン + と + オフ")
-                            val isKatakanaWord = w.surface.isNotEmpty() && w.surface.all { it in '\u30A0'..'\u30FF' || it == 'ー' }
-                            val isKanjiWord = !isKatakanaWord && w.surface.any { it in '\u4E00'..'\u9FFF' }
-                            val isCoordParticle = (w.surface == "と" || w.surface == "や") && isFunctionalWord(w.lid)
-                            val coordBonus = when {
-                                path.pendingCoordKind == -1 && isKatakanaWord -> 1200
-                                path.pendingCoordKind == -2 && isKanjiWord -> 600
-                                else -> 0
-                            }
-                            val nextCoordKind = when {
-                                isCoordParticle && path.pendingCoordKind > 0 -> -path.pendingCoordKind
-                                isKatakanaWord && (isContentWord(w.lid) || isProperNoun(w.lid)) -> 1
-                                isKanjiWord && isContentWord(w.lid) -> 2
-                                else -> 0
-                            }
-
-                            val newCost = path.cost + (w.cost - lengthBonus).coerceAtLeast(-50000) - userBonus + transitionCost + rarityDelta - coordBonus
-                            val nextRid = if (w.rid > 0) w.rid else path.lastRid
-
-                            val nextWordCostSum = path.wordCostSum + if (isFunctionalWord(w.lid) || isCanonical) 0 else effectiveWordCost
-                            val nextWordCount = path.wordCount + if (isFunctionalWord(w.lid) || isCanonical) 0 else 1
-                            val nextExcessTrans = path.excessTransCostSum + maxOf(0, transitionCost - 1500)
-
-                            // Update first bunsetsu metadata
-                            val (nextFb, nextFbLen, nextClosed) = if (i == 0) {
-                                Triple(w.surface, j, false)
-                            } else if (!path.isFirstBunsetsuClosed) {
-                                if (isSuffix(w.lid)) {
-                                    Triple(path.firstBunsetsuSurface + w.surface, j, false)
-                                } else if (isFunctionalWord(w.lid) || isContentWord(w.lid)) {
-                                    Triple(path.firstBunsetsuSurface, path.firstBunsetsuReadingLen, true)
-                                } else {
-                                    Triple(path.firstBunsetsuSurface, path.firstBunsetsuReadingLen, path.isFirstBunsetsuClosed)
+                        fun addBranch(node: TrieNode?, nextReading: String, penalty: Int) {
+                            if (node != null || hasAnyMmapPrefix(nextReading)) {
+                                val existing = byReading[nextReading]
+                                if (existing == null || penalty < existing.typoPenalty) {
+                                    byReading[nextReading] = SubwordBranch(node, nextReading, penalty)
                                 }
-                            } else {
-                                Triple(path.firstBunsetsuSurface, path.firstBunsetsuReadingLen, true)
                             }
+                        }
 
-                            val nextLastContent = if (isContentWord(w.lid) || (w.surface.length >= 2 && !JapaneseKanaUtils.isAllHiragana(w.surface))) {
-                                w.surface
-                            } else {
-                                path.lastContentWordSurface
+                        for (branch in activeBranches) {
+                            addBranch(branch.node?.children?.get(ch), branch.reading + ch, branch.typoPenalty)
+                            if (branch.typoPenalty == 0) {
+                                for (flick in JapaneseKanaUtils.getFlickTypoExpansions(ch)) {
+                                    addBranch(
+                                        branch.node?.children?.get(flick.char),
+                                        branch.reading + flick.char,
+                                        flick.costPenalty
+                                    )
+                                }
+                                for (vChar in JapaneseKanaUtils.getPhoneticModifierExpansions(ch)) {
+                                    if (vChar != ch) {
+                                        addBranch(
+                                            branch.node?.children?.get(vChar),
+                                            branch.reading + vChar,
+                                            voicingEditPenalty
+                                        )
+                                    }
+                                }
                             }
+                        }
+                        if (byReading.isEmpty()) break
+                        activeBranches = byReading.values.toMutableList()
+                        if (activeBranches.size > 20) {
+                            activeBranches.sortBy { it.typoPenalty }
+                            activeBranches = activeBranches.subList(0, 20)
+                        }
 
-                            val nextSecondProper = if (i > 0 && !path.isFirstBunsetsuClosed && isContentWord(w.lid)) {
-                                isProperNoun(w.lid)
-                            } else {
-                                path.secondBunsetsuIsProper
+                        if (j - i >= 2) {
+                            for (branch in activeBranches) {
+                                if (branch.typoPenalty == 0) continue
+                                val rawTokens = mergeExactWordEntries(branch.reading, branch.node, includeEmojiSymbols = false)
+                                if (rawTokens.isEmpty()) continue
+                                val filtered = rawTokens.filter {
+                                    it.source == "user" || it.source == "canonical" || it.cost <= 6500
+                                }
+                                if (filtered.isEmpty()) continue
+                                val selected = selectPosStratifiedSubwords(filtered, maxTotal = 6)
+                                for (path in topExactSrc) {
+                                    for (w in selected) {
+                                        advanceViterbiPath(
+                                            path = path,
+                                            w = w,
+                                            subReading = branch.reading,
+                                            startPos = i,
+                                            endPos = j,
+                                            totalLen = n,
+                                            extraTypoPenalty = branch.typoPenalty,
+                                            matrix = matrix
+                                        )?.let { typoBeam[j].add(it) }
+                                    }
+                                }
                             }
-
-                            beam[j].add(
-                                ViterbiPath(
-                                    cost = newCost,
-                                    surface = path.surface + w.surface,
-                                    words = path.words + listOf(w.surface),
-                                    hasUserWord = path.hasUserWord || isUser,
-                                    lastRid = nextRid,
-                                    firstBunsetsuSurface = nextFb,
-                                    firstBunsetsuReadingLen = nextFbLen,
-                                    isFirstBunsetsuClosed = nextClosed,
-                                    lastContentWordSurface = nextLastContent,
-                                    secondBunsetsuIsProper = nextSecondProper,
-                                    maxWordCost = newMaxWordCost,
-                                    wordCostSum = nextWordCostSum,
-                                    wordCount = nextWordCount,
-                                    excessTransCostSum = nextExcessTrans,
-                                    pendingCoordKind = nextCoordKind
-                                )
-                            )
                         }
                     }
                 }
-
-                // Fallback single-character hiragana transition
-                val singleChar = reading[i].toString()
-                val fallbackCost = path.cost + 18000
-                val fb = if (i > 0) path.firstBunsetsuSurface else singleChar
-                val fbLen = if (i > 0) path.firstBunsetsuReadingLen else 1
-                beam[i + 1].add(
-                    ViterbiPath(
-                        cost = fallbackCost,
-                        surface = path.surface + singleChar,
-                        words = path.words + listOf(singleChar),
-                        hasUserWord = path.hasUserWord,
-                        lastRid = path.lastRid,
-                        firstBunsetsuSurface = fb,
-                        firstBunsetsuReadingLen = fbLen,
-                        isFirstBunsetsuClosed = true,
-                        lastContentWordSurface = path.lastContentWordSurface,
-                        secondBunsetsuIsProper = path.secondBunsetsuIsProper
-                    )
-                )
             }
 
-            // Layered Beam Pruning:
-            // Deduplicate exact surface + lastRid pairs to preserve beam capacity,
-            // while preserving diverse content word stems and inflections.
-            for (k in 1..n) {
-                if (beam[k].size > beamWidth * 2) {
-                    val byKey = LinkedHashMap<Pair<String, Int>, ViterbiPath>()
-                    for (p in beam[k]) {
-                        val key = Pair(p.surface, p.lastRid)
-                        val existing = byKey[key]
-                        if (existing == null || p.cost < existing.cost) {
-                            byKey[key] = p
+            // Layer 1 -> Layer 1: exact subword continuations from prior typo paths
+            if (enableTypoLayer && typoBeam[i].isNotEmpty()) {
+                for (path in typoBeam[i]) {
+                    for (j in (i + 1)..n) {
+                        val stratifiedWords = getExactStratifiedSubwords(i, j)
+                        if (stratifiedWords.isEmpty()) continue
+                        val subReading = reading.substring(i, j)
+                        val limit = minOf(10, stratifiedWords.size)
+                        for (idx in 0 until limit) {
+                            advanceViterbiPath(
+                                path = path,
+                                w = stratifiedWords[idx],
+                                subReading = subReading,
+                                startPos = i,
+                                endPos = j,
+                                totalLen = n,
+                                extraTypoPenalty = 0,
+                                matrix = matrix
+                            )?.let { typoBeam[j].add(it) }
                         }
                     }
-                    val sortedList = byKey.values.toMutableList()
-                    sortedList.sortBy { it.cost }
-                    beam[k] = if (sortedList.size > beamWidth * 2) sortedList.subList(0, beamWidth * 2).toMutableList() else sortedList
+                }
+            }
+
+            // Layered Beam Pruning for exact Layer 0 and typo Layer 1
+            for (k in (i + 1)..n) {
+                pruneBeamBucket(beam[k], beamWidth * 2)
+                if (enableTypoLayer) {
+                    pruneBeamBucket(typoBeam[k], typoBeamWidth * 2)
                 }
             }
         }
@@ -2039,6 +2348,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         } else {
             finalPaths.sortBy { it.cost }
         }
+        val bestExactCost = finalPaths.firstOrNull()?.let {
+            it.cost + (matrix?.getTransitionCost(it.lastRid, 0) ?: 0)
+        } ?: Int.MAX_VALUE
 
         // 1. Bilateral 2D Diversity for Full-Sentence Candidates (m = n):
         // Penalize repetitive first bunsetsu stems AND repetitive last content words.
@@ -2083,39 +2395,47 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         scoredFullCandidates.sortBy { it.effectiveCost }
 
         val fullCandidates = scoredFullCandidates.map {
-            val fb = it.path.firstBunsetsuSurface.ifEmpty { it.path.surface }
-            val lastCw = if (it.path.lastContentWordSurface.isNotEmpty() && it.path.lastContentWordSurface != fb) {
-                it.path.lastContentWordSurface
-            } else {
-                ""
-            }
-            val isPred = isPredicatePos(it.path.lastRid) || isAuxiliaryVerb(it.path.lastRid)
-            val tailSurface = if (isPred && fb.isNotEmpty() && it.path.surface.length > fb.length) {
-                it.path.surface.substring(fb.length)
-            } else if (isPred) {
-                it.path.surface
-            } else {
-                ""
-            }
-            // Idea R1: Propagate structured lattice cost to SLM reranker on [0, 15000] scale
-            val avgWordCost = if (it.path.wordCount > 0) it.path.wordCostSum / it.path.wordCount else 5000
-            val maxExcess = maxOf(0, it.path.maxWordCost - 4500) / 2
-            val avgExcessTrans = if (it.path.wordCount > 0) it.path.excessTransCostSum / it.path.wordCount else 0
-            val effDictCost = (avgWordCost + maxExcess + avgExcessTrans).coerceIn(0, 15000)
+            toConversionCandidate(it.path, reading)
+        }
 
-            ConversionCandidate(
-                surface = it.path.surface,
-                reading = reading,
-                isPrediction = false,
-                source = if (it.path.hasUserWord) "user" else "viterbi",
-                dictCost = effDictCost,
-                firstBunsetsuSurface = fb,
-                lastContentWordSurface = lastCw,
-                completedSurface = it.path.surface,
-                suffixBranchingFactor = 1.0f,
-                isPredicate = isPred,
-                predicateTailSurface = tailSurface
-            )
+        // 3-Tier Bayesian admission of Layer-1 typo-aware Viterbi paths
+        val tier1Typo = mutableListOf<ConversionCandidate>()
+        val tier2Typo = mutableListOf<ConversionCandidate>()
+        val tier3Typo = mutableListOf<ConversionCandidate>()
+        val admittedTypoCosts = HashMap<String, Int>()
+        if (enableTypoLayer && typoBeam[n].isNotEmpty()) {
+            val sortedTypo = typoBeam[n].sortedBy {
+                it.cost + (matrix?.getTransitionCost(it.lastRid, 0) ?: 0)
+            }
+            val seenTypoSurfaces = HashSet<String>(seenFullSurfaces)
+            var admittedCount = 0
+            for (path in sortedTypo) {
+                if (admittedCount >= 3) break
+                if (path.surface.isBlank() ||
+                    path.surface == reading ||
+                    JapaneseKanaUtils.isAllHiragana(path.surface) ||
+                    path.maxWordCost > 6500
+                ) {
+                    continue
+                }
+                val effCost = path.cost + (matrix?.getTransitionCost(path.lastRid, 0) ?: 0)
+                if (effCost > bestExactCost + 1800) break
+                if (!seenTypoSurfaces.add(path.surface)) continue
+
+                val cand = toConversionCandidate(
+                    path = path,
+                    reading = path.reading.ifEmpty { reading },
+                    sourceOverride = "viterbi_typo",
+                    obsPenalty = path.typoPenalty.toFloat() / 1000.0f
+                )
+                admittedTypoCosts[cand.surface] = effCost
+                when {
+                    effCost <= bestExactCost - 2500 && tier1Typo.isEmpty() -> tier1Typo.add(cand)
+                    effCost <= bestExactCost - 400 && tier1Typo.isEmpty() && tier2Typo.isEmpty() -> tier2Typo.add(cand)
+                    else -> tier3Typo.add(cand)
+                }
+                admittedCount++
+            }
         }
 
         // 2. Multi-Horizon Prefix Candidate Extraction (m = n-1, n-2, ..., 2):
@@ -2344,7 +2664,16 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         var fullIdx = 0
         var prefixIdx = 0
 
-        // Slots 1-2: Top 2 full candidates
+        // Slots 1-2: Tier-1 strong typo wins (delta >= 2500) before Slot 1, Tier-2 competitive typo (delta >= 0) at Slot 2
+        for (c in tier1Typo) {
+            tryAdd(c)
+        }
+        if (fullIdx < fullCandidates.size) {
+            tryAdd(fullCandidates[fullIdx++])
+        }
+        for (c in tier2Typo) {
+            tryAdd(c)
+        }
         while (fullIdx < minOf(2, fullCandidates.size)) {
             tryAdd(fullCandidates[fullIdx++])
         }
@@ -2360,6 +2689,10 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         while (prefixIdx < minOf(12, prefixCandidates.size)) {
             tryAdd(prefixCandidates[prefixIdx++])
         }
+        // Tier-3 near-miss typo candidates (still within LlmReranker's fullCands topPool budget)
+        for (c in tier3Typo) {
+            tryAdd(c)
+        }
         // Remaining full candidates
         while (fullIdx < fullCandidates.size && results.size < beamWidth + 12) {
             tryAdd(fullCandidates[fullIdx++])
@@ -2369,9 +2702,12 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             tryAdd(prefixCandidates[prefixIdx++])
         }
 
-        val fullCostMap = HashMap<String, Int>(scoredFullCandidates.size)
+        val fullCostMap = HashMap<String, Int>(scoredFullCandidates.size + admittedTypoCosts.size)
         for (sc in scoredFullCandidates) {
             fullCostMap.putIfAbsent(sc.path.surface, sc.effectiveCost)
+        }
+        for ((surface, effCost) in admittedTypoCosts) {
+            fullCostMap.putIfAbsent(surface, effCost)
         }
         return Pair(results, fullCostMap)
     }

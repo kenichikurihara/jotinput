@@ -255,109 +255,95 @@ object JapaneseKanaUtils {
      */
     data class FlickExpansion(val char: Char, val costPenalty: Int)
 
-    private val FLICK_TYPO_EXPANSION_MAP: Map<Char, List<FlickExpansion>> = mapOf(
-        // あ column (Key 0): Center 'あ', Left 'い', Up 'う', Right 'え', Down 'お'
-        // Neighbors: か(1), た(3)
-        'あ' to listOf(
-            FlickExpansion('い', 2200), FlickExpansion('う', 2200), FlickExpansion('え', 2200), FlickExpansion('お', 2200),
-            FlickExpansion('か', 3200), FlickExpansion('た', 3200)
-        ),
-        'い' to listOf(FlickExpansion('あ', 2200)),
-        'う' to listOf(FlickExpansion('あ', 2200)),
-        'え' to listOf(FlickExpansion('あ', 2200)),
-        'お' to listOf(FlickExpansion('あ', 2200)),
+    private val FLICK_TYPO_EXPANSION_MAP: Map<Char, List<FlickExpansion>> = buildFlickTypoExpansionMap()
 
-        // か column (Key 1): Center 'か', Left 'き', Up 'く', Right 'け', Down 'こ'
-        // Neighbors: あ(0), さ(2), な(4)
-        'か' to listOf(
-            FlickExpansion('き', 2200), FlickExpansion('く', 2200), FlickExpansion('け', 2200), FlickExpansion('こ', 2200),
-            FlickExpansion('あ', 3200), FlickExpansion('さ', 3200), FlickExpansion('な', 3200)
-        ),
-        'き' to listOf(FlickExpansion('か', 2200), FlickExpansion('し', 3200)),
-        'く' to listOf(FlickExpansion('か', 2200), FlickExpansion('す', 3200)),
-        'け' to listOf(FlickExpansion('か', 2200), FlickExpansion('せ', 3200)),
-        'こ' to listOf(FlickExpansion('か', 2200), FlickExpansion('そ', 3200)),
+    private fun buildFlickTypoExpansionMap(): Map<Char, List<FlickExpansion>> {
+        val acc = LinkedHashMap<Char, LinkedHashMap<Char, Int>>()
 
-        // さ column (Key 2): Center 'さ', Left 'し', Up 'す', Right 'せ', Down 'そ'
-        // Neighbors: か(1), は(5)
-        'さ' to listOf(
-            FlickExpansion('し', 2200), FlickExpansion('す', 2200), FlickExpansion('せ', 2200), FlickExpansion('そ', 2200),
-            FlickExpansion('か', 3200), FlickExpansion('は', 3200)
-        ),
-        'し' to listOf(FlickExpansion('さ', 2200), FlickExpansion('き', 3200)),
-        'す' to listOf(FlickExpansion('さ', 2200), FlickExpansion('く', 3200)),
-        'せ' to listOf(FlickExpansion('さ', 2200), FlickExpansion('け', 3200)),
-        'そ' to listOf(FlickExpansion('さ', 2200), FlickExpansion('こ', 3200)),
+        fun add(from: Char, to: Char, cost: Int) {
+            if (from == to) return
+            val map = acc.getOrPut(from) { LinkedHashMap() }
+            val existing = map[to]
+            if (existing == null || cost < existing) {
+                map[to] = cost
+            }
+        }
 
-        // た column (Key 3): Center 'た', Left 'ち', Up 'つ', Right 'て', Down 'と'
-        // Neighbors: あ(0), な(4), ま(6)
-        'た' to listOf(
-            FlickExpansion('ち', 2200), FlickExpansion('つ', 2200), FlickExpansion('て', 2200), FlickExpansion('と', 2200),
-            FlickExpansion('あ', 3200), FlickExpansion('な', 3200), FlickExpansion('ま', 3200)
-        ),
-        'ち' to listOf(FlickExpansion('た', 2200)),
-        'つ' to listOf(FlickExpansion('た', 2200)),
-        'て' to listOf(FlickExpansion('た', 2200)),
-        'と' to listOf(FlickExpansion('た', 2200)),
-
-        // な column (Key 4): Center 'な', Left 'に', Up 'ぬ', Right 'ね', Down 'の'
-        // Neighbors: か(1), た(3), は(5), や(7)
-        'な' to listOf(
-            FlickExpansion('に', 2200), FlickExpansion('ぬ', 2200), FlickExpansion('ね', 2200), FlickExpansion('の', 2200),
-            FlickExpansion('か', 3200), FlickExpansion('た', 3200), FlickExpansion('は', 3200), FlickExpansion('や', 3200)
-        ),
-        'に' to listOf(FlickExpansion('な', 2200)),
-        'ぬ' to listOf(FlickExpansion('な', 2200)),
-        'ね' to listOf(FlickExpansion('な', 2200)),
-        'の' to listOf(FlickExpansion('な', 2200)),
-
-        // は column (Key 5): Center 'は', Left 'ひ', Up 'ふ', Right 'へ', Down 'ほ'
-        // Neighbors: さ(2), な(4), ら(8)
-        'は' to listOf(
-            FlickExpansion('ひ', 2200), FlickExpansion('ふ', 2200), FlickExpansion('へ', 2200), FlickExpansion('ほ', 2200),
-            FlickExpansion('さ', 3200), FlickExpansion('な', 3200), FlickExpansion('ら', 3200)
-        ),
-        'ひ' to listOf(FlickExpansion('は', 2200)),
-        'ふ' to listOf(FlickExpansion('は', 2200)),
-        'へ' to listOf(FlickExpansion('は', 2200)),
-        'ほ' to listOf(FlickExpansion('は', 2200)),
-
-        // ま column (Key 6): Center 'ま', Left 'み', Up 'む', Right 'め', Down 'も'
-        // Neighbors: た(3), や(7)
-        'ま' to listOf(
-            FlickExpansion('み', 2200), FlickExpansion('む', 2200), FlickExpansion('め', 2200), FlickExpansion('も', 2200),
-            FlickExpansion('た', 3200), FlickExpansion('や', 3200)
-        ),
-        'み' to listOf(FlickExpansion('ま', 2200)),
-        'む' to listOf(FlickExpansion('ま', 2200)),
-        'め' to listOf(FlickExpansion('ま', 2200)),
-        'も' to listOf(FlickExpansion('ま', 2200)),
-
-        // や column (Key 7): Center 'や', Left '（', Up 'ゆ', Right '）', Down 'よ'
-        // Neighbors: な(4), ま(6), ら(8), わ(10)
-        'や' to listOf(
-            FlickExpansion('ゆ', 2200), FlickExpansion('よ', 2200),
-            FlickExpansion('な', 3200), FlickExpansion('ま', 3200), FlickExpansion('ら', 3200)
-        ),
-        'ゆ' to listOf(FlickExpansion('や', 2200)),
-        'よ' to listOf(FlickExpansion('や', 2200)),
-
-        // ら column (Key 8): Center 'ら', Left 'り', Up 'る', Right 'れ', Down 'ろ'
-        // Neighbors: は(5), や(7)
-        'ら' to listOf(
-            FlickExpansion('り', 2200), FlickExpansion('る', 2200), FlickExpansion('れ', 2200), FlickExpansion('ろ', 2200),
-            FlickExpansion('は', 3200), FlickExpansion('や', 3200)
-        ),
-        'り' to listOf(FlickExpansion('ら', 2200)),
-        'る' to listOf(FlickExpansion('ら', 2200)),
-        'れ' to listOf(FlickExpansion('ら', 2200)),
-        'ろ' to listOf(FlickExpansion('ら', 2200)),
-
-        // わ column (Key 10): Center 'わ', Left 'を', Up 'ん', Right 'ー'
-        'わ' to listOf(
-            FlickExpansion('を', 2200), FlickExpansion('ん', 2200), FlickExpansion('ー', 2200)
+        // Standard 5-direction keys: [center(a), left(i), up(u), right(e), down(o)]
+        // 90° adjacent directions on the cross: left(1)<->up(2)/down(4), right(3)<->up(2)/down(4).
+        val fiveDirRows = listOf(
+            // Unvoiced rows
+            charArrayOf('あ', 'い', 'う', 'え', 'お'),
+            charArrayOf('か', 'き', 'く', 'け', 'こ'),
+            charArrayOf('さ', 'し', 'す', 'せ', 'そ'),
+            charArrayOf('た', 'ち', 'つ', 'て', 'と'),
+            charArrayOf('な', 'に', 'ぬ', 'ね', 'の'),
+            charArrayOf('は', 'ひ', 'ふ', 'へ', 'ほ'),
+            charArrayOf('ま', 'み', 'む', 'め', 'も'),
+            charArrayOf('ら', 'り', 'る', 'れ', 'ろ'),
+            // Voiced rows (dakuten)
+            charArrayOf('が', 'ぎ', 'ぐ', 'げ', 'ご'),
+            charArrayOf('ざ', 'じ', 'ず', 'ぜ', 'ぞ'),
+            charArrayOf('だ', 'ぢ', 'づ', 'で', 'ど'),
+            charArrayOf('ば', 'び', 'ぶ', 'べ', 'ぼ'),
+            // Semi-voiced row (handakuten)
+            charArrayOf('ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ')
         )
-    )
+
+        for (row in fiveDirRows) {
+            val center = row[0]
+            for (d in 1..4) {
+                add(center, row[d], 2200)
+                add(row[d], center, 2200)
+            }
+            // Same-key 90-degree adjacent flick directions
+            add(row[1], row[2], 2600); add(row[1], row[4], 2600) // left <-> up, down
+            add(row[2], row[1], 2600); add(row[2], row[3], 2600) // up <-> left, right
+            add(row[3], row[2], 2600); add(row[3], row[4], 2600) // right <-> up, down
+            add(row[4], row[1], 2600); add(row[4], row[3], 2600) // down <-> left, right
+        }
+
+        // や column (Key 7: center 'や', up 'ゆ', down 'よ') and わ column (Key 10)
+        add('や', 'ゆ', 2200); add('や', 'よ', 2200)
+        add('ゆ', 'や', 2200); add('よ', 'や', 2200)
+        add('わ', 'を', 2200); add('わ', 'ん', 2200); add('わ', 'ー', 2200)
+
+        // Adjacent 12-key center neighbors (directed as defined by 12-key grid adjacency)
+        val centerNeighbors = mapOf(
+            'あ' to charArrayOf('か', 'た'),
+            'か' to charArrayOf('あ', 'さ', 'な'),
+            'さ' to charArrayOf('か', 'は'),
+            'た' to charArrayOf('あ', 'な', 'ま'),
+            'な' to charArrayOf('か', 'た', 'は', 'や'),
+            'は' to charArrayOf('さ', 'な', 'ら'),
+            'ま' to charArrayOf('た', 'や'),
+            'や' to charArrayOf('な', 'ま', 'ら'),
+            'ら' to charArrayOf('は', 'や')
+        )
+        for ((from, tos) in centerNeighbors) {
+            for (to in tos) add(from, to, 3200)
+        }
+
+        // Adjacent 12-key directional neighbors across matching flick directions:
+        // か<->さ (Key 1 <-> Key 2) and voiced が<->ざ (Key 1 <-> Key 2), ざ<->ば (Key 2 <-> Key 5)
+        val parallelKeyPairs = listOf(
+            charArrayOf('か', 'き', 'く', 'け', 'こ') to charArrayOf('さ', 'し', 'す', 'せ', 'そ'),
+            charArrayOf('が', 'ぎ', 'ぐ', 'げ', 'ご') to charArrayOf('ざ', 'じ', 'ず', 'ぜ', 'ぞ'),
+            charArrayOf('ざ', 'じ', 'ず', 'ぜ', 'ぞ') to charArrayOf('ば', 'び', 'ぶ', 'べ', 'ぼ')
+        )
+        for ((rowA, rowB) in parallelKeyPairs) {
+            for (d in 0..4) {
+                add(rowA[d], rowB[d], 3200)
+                add(rowB[d], rowA[d], 3200)
+            }
+        }
+
+        return acc.mapValues { (_, targets) ->
+            targets.entries
+                .sortedBy { it.value }
+                .map { FlickExpansion(it.key, it.value) }
+        }
+    }
 
     fun getFlickTypoExpansions(char: Char): List<FlickExpansion> {
         return FLICK_TYPO_EXPANSION_MAP[char] ?: emptyList()

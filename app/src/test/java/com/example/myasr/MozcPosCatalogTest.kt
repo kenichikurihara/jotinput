@@ -20,6 +20,7 @@ class MozcPosCatalogTest {
             assertFalse(MozcPosCatalog.isProperNoun(id))
             assertFalse(MozcPosCatalog.isSahenNoun(id))
             assertFalse(MozcPosCatalog.isInNounRange(id))
+            assertFalse(MozcPosCatalog.isPrefix(id))
         }
     }
 
@@ -57,6 +58,13 @@ class MozcPosCatalogTest {
         assertFalse("Suffix must not be counted as content word", MozcPosCatalog.isContentWord(MozcPosCatalog.POS_SUFFIX_CHUU))
         assertTrue(MozcPosCatalog.isContentWord(MozcPosCatalog.POS_NOUN_GENERAL))
         assertFalse(MozcPosCatalog.isContentWord(MozcPosCatalog.POS_SYMBOL))
+
+        // Prefix POS (接頭詞: 2596..2642)
+        assertFalse(MozcPosCatalog.isPrefix(2595))
+        assertTrue(MozcPosCatalog.isPrefix(2596))
+        assertTrue(MozcPosCatalog.isPrefix(2632))
+        assertTrue(MozcPosCatalog.isPrefix(2642))
+        assertFalse(MozcPosCatalog.isPrefix(2643))
     }
 
     @Test

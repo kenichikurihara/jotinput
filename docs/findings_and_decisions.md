@@ -2347,6 +2347,40 @@ We benchmarked two non-invasive vocabulary expansion architectures on top of fro
    - [`FlickPopupGeometryTest`](app/src/test/java/com/example/myasr/FlickPopupGeometryTest.kt) verifies density-scaled `dp` bounds across all 7 device profiles (`360dp`–`1600dp`).
    - [`FlickKeyboardMultiScreenInstrumentedTest`](app/src/androidTest/java/com/example/myasr/FlickKeyboardMultiScreenInstrumentedTest.kt) passed 100% (`OK (1 test)`) on **both** ARCVM (`arc:5555`, `0.718s`) and physical **Pixel 10 Pro** (`<device-ip>:44609`, `0.874s`), validating rendered pixel ink proportions across `360dp`, `411dp` (idle & composing `"確定"`), `480dp`, `701dp`, `800dp`, and `914dp` landscape renders.
 
+---
+
+## 58. Multi-Morpheme Flick Typo Viterbi, Voiced/Diagonal Flick Geometry, 2-Mora Compound Synthesis & Lexicon Sync (`みつこりません` / `かんがいかい` / `ぶひ`)
+
+### 1. Problem & Root Causes
+Three conversion ranking bugs were diagnosed without resorting to any anecdotal unigram cost patches:
+1. **「みつこりません」 → 「見つかりません」**: [`JapaneseKanaUtils.FLICK_TYPO_EXPANSION_MAP`](app/src/main/java/com/example/myasr/context/kanakanji/domain/JapaneseKanaUtils.kt) already mapped `'こ' -> 'か'` (`costPenalty = 2200`), but [`KanaKanjiEngine`](app/src/main/java/com/example/myasr/context/kanakanji/domain/KanaKanjiEngine.kt) previously applied flick typos only inside `findMatchingTrieNodes()`, which requires a single monolithic lexicon entry spanning `[0, n)`. Multi-morpheme phrases (`見つかり` + `ません`) failed to match as a single entry, and `searchViterbiLatticeWithCosts()` only expanded exact substrings.
+2. **「かんがいかい」 → 「歓迎会」**:
+   - `FLICK_TYPO_EXPANSION_MAP` omitted all voiced (`が/ざ/だ/ば` rows) and semi-voiced (`ぱ` row) keys, as well as same-key 90° diagonal cardinal flicks (`'こ' -> 'き'/'け'`, `'ご' -> 'ぎ'/'げ'`), so `getFlickTypoExpansions('が')` returned empty.
+   - Multi-morpheme composition (`歓迎` + `会`) and inflected phrases (`かんがいかいに`) also required typo-aware Viterbi lattice support and full-span inclusion in [`LlmReranker`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt) (`fuzzyShort` `dictCost` cap `6000` excluded `歓迎会` at `6378`).
+3. **「ぶひ」 → 「部費」**:
+   - **Stale Pruned Binary Overwrite & Double-Mmap**: Gitignored `tools/mozc_dict/system_dictionary.bin` was a stale `7.9M` pruned binary (`225,008` tokens, lacking `ぶひ -> 部費` at Mozc cost `6731`) while `app/src/test/resources/mozc/system_dictionary.bin` held the canonical `48M` (`50,230,585` bytes) unpruned `746,439`-reading / `1,225,277`-token Mozc OSS dictionary. [`deploy.sh`](deploy.sh) pushed the stale `7.9M` file over both `dict_mozc_general.bin` and `system_dictionary.bin`, and `reloadMmapDictionaries()` double-mapped both as `"mozc_general"`.
+   - **2-Mora Compound Gap & Source Recognition**: `KanaKanjiEngine` restricted Viterbi to `normalized.length >= 3`, preventing productive 2-mora synthesis (`部` `1949` + `費` `1949`, Mozc bigram cost `8804`) when using `base_dictionary.tsv` or unlisted compounds, and `LlmReranker.hasNaturalFullWord` omitted `"mozc_general"`, `"base"`, `"sudachidict"`, `"jawiki"`, `"place_names"`, and `"personal_names"`.
+
+### 2. Algorithmic Solution
+1. **Prefix POS Classification ([`MozcPosCatalog.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/MozcPosCatalog.kt))**: Added `FLAG_PREFIX` (`2596..2642`, Mozc `接頭詞`) and `isPrefix(id)` to prevent invalid prefix-ending chimeras (`部 + 被`, `密 + 非`).
+2. **Complete 12-Key Voiced, Semi-Voiced & 90° Diagonal Flick Geometry ([`JapaneseKanaUtils.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/JapaneseKanaUtils.kt))**: Built `FLICK_TYPO_EXPANSION_MAP` uniformly from the 5-direction key table covering all unvoiced, voiced (`が/ざ/だ/ば`), and semi-voiced (`ぱ`) rows, voiced grid adjacencies (`が↔ざ`, `ざ↔ば` at `3200`), center↔cardinal (`2200`), and same-key 90° adjacent flicks (`2600`).
+3. **Deduplicated Mmap Loading, 2-Mora Compound Synthesis & 2-Layer Typo-Aware Viterbi ([`KanaKanjiEngine.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/KanaKanjiEngine.kt))**:
+   - Deduplicated `reloadMmapDictionaries()` per `sourceId`, skipping legacy `system_dictionary.bin` when `dict_mozc_general.bin` is active.
+   - Added `synthesizeTwoMoraCompounds()` (`n == 2`, when no exact lexicon match exists) validated by Mozc 2D `ConnectionMatrix` (`t12 <= 2500`, `totalCost <= 9500`, `!isPrefix(w2.lid)`).
+   - Extended `searchViterbiLatticeWithCosts()` (`n in 3..14`) with a row-cached exact Layer 0 (`exactSubwordCache`), an isolated Layer 1 (`typoBeam`, `typoBeamWidth = 6`) supporting one prefix-pruned flick/voicing edit per path (`voicingEditPenalty = 2200` when explicit dakuten is already present in `reading`, else `1200`), and 3-tier Bayesian admission (`tier1Typo` margin `>= 2500` capped at 1 at Slot 1; `tier2Typo` margin `>= 400` capped at 1 at Slot 2; `tier3Typo` margin `>= -1800` emitted after `prefixCandidates[4..12]` inside `LlmReranker.topPool`).
+4. **Reranker & Lexicon Deployment Fixes ([`LlmReranker.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt), [`deploy.sh`](deploy.sh))**:
+   - Added real Mmap/TSV source IDs to `hasNaturalFullWord` and raised `fuzzyShort` `dictCost` cap to `7000`.
+   - Synced the `50,230,585`-byte unpruned binary to `tools/mozc_dict/system_dictionary.bin` and updated `deploy.sh` to provision `dict_mozc_general.bin` only when remote size is smaller and remove legacy duplicate `system_dictionary.bin`.
+
+### 3. Verification
+- **Unit, Evaluation, Konsist & Alloy 6 Suites**: `./gradlew testDebugUnitTest` passed 100% (`84` suites, `532` tests, `0` failures, `0` errors, `0` skipped), including new assertions in [`MozcPosCatalogTest`](app/src/test/java/com/example/myasr/MozcPosCatalogTest.kt) and [`FlickTypoAndMozcCorrectionEvaluationTest`](app/src/test/java/com/example/myasr/FlickTypoAndMozcCorrectionEvaluationTest.kt).
+- **Topline Metrics & Latency Non-Regression**:
+  - `python3 eval/eis/run_eis.py`: `EIS-v1 test = 187.0 chars/min` (`dev 192.5`, `CUJ-1 = 204.4`, `CUJ-2 = 173.6`, `CUJ-3 = 139.0`, `CUJ-4 = 337.7`) — zero regression vs baseline.
+  - `EisRegressionTest`: `Warm Session Zero-Query EIS = 700.0 chars/min`; `CUJ-2 Predictive EIS = 332.0 chars/min` (vs `97.2` baseline).
+  - `KanaKanjiEngineVoicingTest.testLookupLatencyBenchmark`: `0.0067 ms` average lookup; `EngineColdVsWarmBenchmarkTest`: `1.634 ms` warm query average.
+- **Dual-Target Deployment & Logcat**: Deployed via `./deploy.sh` to **Pixel 10 Pro** (`<device-ip>:38587`) and **ARCVM** (`arc:5555`). Both targets provisioned `dict_mozc_general.bin` (`48M`), removed legacy `system_dictionary.bin`, launched `MainActivity`, loaded `mozc_general` (`1,225,277` tokens) once without duplicates, and initialized `AsrManager` (`ReazonSpeech`) and `KanaKanjiEngine` cleanly.
+
+
 
 
 

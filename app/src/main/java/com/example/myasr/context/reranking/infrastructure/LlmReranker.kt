@@ -300,7 +300,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 cand.obsPenalty == 0.0f &&
                 !cand.isPrediction &&
                 cand.dictCost <= 5500 &&
-                (cand.source in listOf("dict", "user", "mozc") || cand.historyCount >= 1) &&
+                (cand.source in listOf("dict", "user", "mozc", "base", "mozc_general", "sudachidict", "jawiki", "place_names", "personal_names") || cand.historyCount >= 1) &&
                 cand.reading.isNotEmpty() && cand.reading.length == n
             }
             val isDeadEndReading = !isEnglishPool && n in 2..5 && !hasNaturalFullWord
@@ -1116,7 +1116,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             val phraseChunkPrefix = prefixCands.filter { it.source == "phrase_chunk" }
 
             // Idea 10: Protect at least 2 slots for short-extension high-frequency fuzzy/phonetic candidates
-            val fuzzyShort = singleWordPrefix.filter { it.obsPenalty > 0f && it.dictCost <= 6000 }
+            val fuzzyShort = singleWordPrefix.filter { it.obsPenalty > 0f && it.dictCost <= 7000 }
             val regularSingle = singleWordPrefix.filter { it !in fuzzyShort }
             val prioritizedSingle = mutableListOf<ConversionCandidate>()
             prioritizedSingle.addAll(fuzzyShort.take(2))
@@ -1287,7 +1287,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             val phraseChunkPrefix = prefixCands.filter { it.source == "phrase_chunk" }
 
             // Idea 10: Protect at least 2 slots for short-extension high-frequency fuzzy/phonetic candidates
-            val fuzzyShort = singleWordPrefix.filter { it.obsPenalty > 0f && it.dictCost <= 6000 }
+            val fuzzyShort = singleWordPrefix.filter { it.obsPenalty > 0f && it.dictCost <= 7000 }
             val regularSingle = singleWordPrefix.filter { it !in fuzzyShort }
             val prioritizedSingle = mutableListOf<ConversionCandidate>()
             prioritizedSingle.addAll(fuzzyShort.take(2))

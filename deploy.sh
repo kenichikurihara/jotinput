@@ -88,15 +88,22 @@ for DEV in $DEVICES; do
     fi
 
     # Ensure Mozc memory-mapped binary dictionary is up-to-date in device storage
-    if [ -f "$REPO_DIR/tools/mozc_dict/system_dictionary.bin" ]; then
-        LOCAL_BIN_SIZE=$(wc -c < "$REPO_DIR/tools/mozc_dict/system_dictionary.bin" | tr -d ' ')
-        REMOTE_BIN_SIZE=$(adb -s "$DEV" shell "wc -c < /sdcard/Android/data/com.example.myasr/files/mozc/dict_mozc_general.bin 2>/dev/null" | tr -d '\r ')
-        if [ "$LOCAL_BIN_SIZE" != "$REMOTE_BIN_SIZE" ]; then
+    SRC_MOZC_BIN=""
+    if [ -f "$REPO_DIR/tools/mozc_dict/system_dictionary.bin" ] && [ "$(wc -c < "$REPO_DIR/tools/mozc_dict/system_dictionary.bin" | tr -d ' ')" -ge 41943040 ]; then
+        SRC_MOZC_BIN="$REPO_DIR/tools/mozc_dict/system_dictionary.bin"
+    elif [ -f "$REPO_DIR/app/src/test/resources/mozc/system_dictionary.bin" ]; then
+        SRC_MOZC_BIN="$REPO_DIR/app/src/test/resources/mozc/system_dictionary.bin"
+    fi
+    if [ -n "$SRC_MOZC_BIN" ]; then
+        LOCAL_BIN_SIZE=$(wc -c < "$SRC_MOZC_BIN" | tr -d ' ')
+        REMOTE_BIN_SIZE=$(adb -s "$DEV" shell "wc -c < /sdcard/Android/data/com.example.myasr/files/mozc/dict_mozc_general.bin 2>/dev/null" | tr -cd '0-9')
+        REMOTE_BIN_SIZE="${REMOTE_BIN_SIZE:-0}"
+        if [ "$REMOTE_BIN_SIZE" -lt "$LOCAL_BIN_SIZE" ]; then
             echo "  -> Updating Mozc dict_mozc_general.bin in device storage ($LOCAL_BIN_SIZE bytes)..."
             adb -s "$DEV" shell "mkdir -p /sdcard/Android/data/com.example.myasr/files/mozc" || true
-            adb -s "$DEV" push "$REPO_DIR/tools/mozc_dict/system_dictionary.bin" "/sdcard/Android/data/com.example.myasr/files/mozc/dict_mozc_general.bin"
-            adb -s "$DEV" push "$REPO_DIR/tools/mozc_dict/system_dictionary.bin" "/sdcard/Android/data/com.example.myasr/files/mozc/system_dictionary.bin"
+            adb -s "$DEV" push "$SRC_MOZC_BIN" "/sdcard/Android/data/com.example.myasr/files/mozc/dict_mozc_general.bin"
         fi
+        adb -s "$DEV" shell "rm -f /sdcard/Android/data/com.example.myasr/files/mozc/system_dictionary.bin" >/dev/null 2>&1 || true
     fi
 
     # Ensure Mozc base dictionary is up-to-date in device storage

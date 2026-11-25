@@ -22,6 +22,7 @@ object MozcPosCatalog {
     private const val FLAG_PROPER_NOUN = 1 shl 5
     private const val FLAG_SAHEN_NOUN = 1 shl 6
     private const val FLAG_NOUN_RANGE = 1 shl 7
+    private const val FLAG_PREFIX = 1 shl 8
 
     private val posFlags = IntArray(POS_SIZE).apply {
         for (id in 0 until POS_SIZE) {
@@ -37,6 +38,7 @@ object MozcPosCatalog {
             if (!isSuf && (id in 1841..2195 || id in 434..1840 || id in 2196..2590 || id in 12..28 || id in 2659..2671)) {
                 mask = mask or FLAG_CONTENT_WORD
             }
+            if (id in 2596..2642) mask = mask or FLAG_PREFIX
             this[id] = mask
         }
     }
@@ -53,4 +55,5 @@ object MozcPosCatalog {
     fun isProperNoun(id: Int): Boolean = hasFlag(id, FLAG_PROPER_NOUN)
     fun isSahenNoun(id: Int): Boolean = hasFlag(id, FLAG_SAHEN_NOUN)
     fun isInNounRange(id: Int): Boolean = hasFlag(id, FLAG_NOUN_RANGE)
+    fun isPrefix(id: Int): Boolean = hasFlag(id, FLAG_PREFIX)
 }
