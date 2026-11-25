@@ -357,10 +357,12 @@ class MainActivity : AppCompatActivity() {
                     "" to "ぶひ"
                 )
                 for ((tCtx, tReading) in typoChecks) {
+                    val tStartMs = android.os.SystemClock.elapsedRealtime()
                     val tCands = AsrApp.instance.kanaKanjiEngine.getCandidates(tReading, tCtx)
+                    val tElapsedMs = android.os.SystemClock.elapsedRealtime() - tStartMs
                     Log.i(
                         "MainActivity",
-                        "SLM_TYPO_VERIFY ctx='$tCtx' reading='$tReading' -> ${tCands.take(5).map { "${it.surface}(${it.source})" }}"
+                        "SLM_TYPO_VERIFY (${tElapsedMs}ms) ctx='$tCtx' reading='$tReading' -> ${tCands.take(5).map { "${it.surface}(${it.source})" }}"
                     )
                 }
             }

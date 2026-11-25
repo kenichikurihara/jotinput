@@ -2411,4 +2411,42 @@ Even after `KanaKanjiEngine.getBaseCandidates("みつこりません")` ranked `
   - Selective Stage 2 (`force_stage2_prefix_count = 8`) corrected `みつこりません` NLLs from P1c (`光子リマ線 = 13.8272`, `密こりません = 14.9463`, `見つかりません = 17.0865`) to Stage 2 (`見つかりません = 22.4379` vs `密こりません = 37.2362` vs `光子リマ線 = 49.9305`), with deterministic exact cache replay on repeat queries.
 - **APK & Deployment**: `app-debug.apk` built cleanly (`40,218,066 B` / `38.35 MB <= 110 MB`, `libmyasr_llm.so` 16 KB page-aligned `0x4000`), deployed via `./deploy.sh` and verified in logcat on **ARCVM** (`arc:5555` + `emulator-5554`: `MainActivity +1s223ms`, `mozc_general` `1,225,277` tokens, `KanaKanjiEngine` warm-up `204ms`, `AsrManager (JA) status=READY`). **Pixel 10 Pro** (`<device-ip>`) was unreachable over Wi-Fi/USB at deploy time (`100% packet loss`), so live `qwen3.5-0.8b` verification on the physical phone remains pending user reconnect or GitHub CI artifact update.
 
+---
+
+## Finding 60: Pixel 10 Pro Real-Device Diagnosis & Live Fix Verification (`みちこ -> 道子` User-Dict Typo Black Hole & Stage-2 Scale Alignment)
+
+### 1. Real-Device Root Causes Reproduced Against Pixel 10 Pro Data
+When Pixel 10 Pro (`<device-ip>:37801`) reconnected with commit `a2f9dfe` installed (`qwen3.5-0.8b-instruct-q4_k_m.gguf`, `slm_weight_alpha = 0.0`, `slm_lambda_obs = 0.5`, 20 entries in `custom_dictionary.json`, 2,173 history entries / 4,147 bigrams), reproducing the phone's exact state uncovered four interacting bugs explaining why `みつこりません -> 見つかりません` still failed on the real phone:
+1. **Custom Dictionary `userBonus = 50,000` Inside Layer-1 `typoBeam` ([`KanaKanjiEngine.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/KanaKanjiEngine.kt))**:
+   - The phone's `custom_dictionary.json` contains `"みちこ" -> "道子"` (`source = "user"`, `cost = 10`, `lid/rid = 1851`).
+   - Inside `advanceViterbiPath()`, `isUser = (w.source == "user")` granted `userBonus = 50000`, `effectiveWordCost = 0`, and `hasUserWord = true` even when `extraTypoPenalty > 0` (`つ -> ち` flick typo inside `typoBeam`) or `path.typoPenalty > 0`.
+   - `道子` therefore entered `typoBeam[3]` around `-49,390`, spawned homophonic single-kanji chimera tails (`道子リマ線`, `道子リマ戦`, `道子リマ選`), saturated `typoBeam[7]` (`typoBeamWidth = 6`) and all 3 `admittedTypoEntries` slots, completely evicting `見つかりません` before the SLM even ran, and overrode `sourceOverride = "viterbi_typo"` back to `"user"` in `toConversionCandidate()`.
+2. **Typo-Matched `addCandidate` & `mergedFull` Promotion Over Exact Matches ([`KanaKanjiEngine.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/KanaKanjiEngine.kt))**:
+   - In `getBaseCandidates()`, `addCandidate()` overwrote `existing.source = cand.source` (`"user"`) and `priority = 3.0f` even when `cand.obsPenalty > 0.0f` (from Step 4.5 `flickPaths`), `prioritizeByHistory()` / `interleavePredictiveCandidates()` partitioned on `source == "user"` without requiring `obsPenalty == 0.0f`, and `mergedFull` (`isTypo` promotion) only required `vCost <= bestStep2Cost` (`0`-point margin rather than Tier-1 `-2500`). Moreover, a typo-matched user word with `lid = 1851` received a ~`1,700`-point BOS transition advantage over exact Mozc proper nouns (`lid = 1922`), letting `道子` (`rawWordCost = 3500`) displace exact `光子` on `みつこ`.
+3. **`latentVariants` Inflating `forcedSurfaces` to 29 on Hybrid Recurrent `qwen3.5-0.8b` ([`LlmReranker.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt))**:
+   - `getLatentParticleVariants()` inserted case particles before auxiliary inflections (`見つかりにません`, `見つかりをません`, `見つかりがません`) and `rerankWithStatus()` added all variants into `forcedSurfaces` (`29` items vs `8` real full-span targets), overflowing `max_branch_seqs = 14`, slowing `qwen3.5-0.8b` (Gated DeltaNet sequential fallback) toward the `2500ms` timeout, and evicting valid full-span candidates into penalty buckets.
+4. **Stage-2 vs Token-0 Surrogate Scale Mismatch ([`LlmReranker.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt))**:
+   - `isFullSpanScoringTarget()` excluded `source == "system"` (`ミツコリマセン`), and under `hasExactFullSpanStage2 = true`, `scoreAndRankPool()` still compared exact Stage-2 full NLLs (`20.6–24.7`) against unforced Token-0 surrogate partials (`10.0–15.0`) in both `isChimeraFull` detection and the History Coherence Gate (`deltaNll = rawNll - bestPoolNll`, damping `歓迎会` `hist = 4` on `かんがいかい`).
+
+### 2. Algorithmic Solutions Implemented
+1. **Exact-User-Only Bonus, Typo Stem Diversity & Typo Priority Guards ([`KanaKanjiEngine.kt`](app/src/main/java/com/example/myasr/context/kanakanji/domain/KanaKanjiEngine.kt))**:
+   - Gated `userBonus = 50000`, `effectiveWordCost = 0`, and `hasUserWord = true` strictly on `isExactUser = isUser && extraTypoPenalty == 0 && path.typoPenalty == 0`; floored typo-matched user `rawWordCost` to `maxOf(w.cost, 5000)`; guarded `toConversionCandidate()` (`source = "user"` only when `obsPenalty == 0.0f` unless no `sourceOverride`), `addCandidate()` (`cand.obsPenalty == 0.0f`), `prioritizeByHistory()`, and `interleavePredictiveCandidates()`.
+   - Added `maxPerFirstStem` diversity to `pruneBeamBucket()` (`maxPerFirstStem = 3` on `typoBeam`) and first-bunsetsu stem diversity in `admittedTypoEntries` (at most 1 per stem before backfill), and aligned Step-4 `mergedFull` `isTypo` promotion with `vCost <= bestStep2Cost - 2500`.
+2. **Stage-2 Scope & Scale-Consistent Pool Scoring ([`LlmReranker.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt))**:
+   - Excluded inflectional/auxiliary tails from `getLatentParticleVariants()`, included full-span `system` candidates in `isFullSpanScoringTarget()`, capped `forcedSurfaces` to primary full-span surfaces (`.take(10)` without latent expansions), guarded latent variant NLL fusion against unforced surrogates, and added `hasExactFullSpanStage2` to `scoreAndRankPool()` so `isChimeraFull` and History Coherence (`bestFullNll`) never mix Stage-2 exact NLLs with Token-0 surrogates.
+3. **Diagnostics & Regression Tests ([`MainActivity.kt`](app/src/main/java/com/example/myasr/MainActivity.kt), [`FlickTypoAndMozcCorrectionEvaluationTest.kt`](app/src/test/java/com/example/myasr/FlickTypoAndMozcCorrectionEvaluationTest.kt))**:
+   - Added elapsed-time logging to `SLM_TYPO_VERIFY` and added `testUserDictionaryTypoDoesNotHijackMitsukorimasen`, `testTypoMatchedFlickUserWordDoesNotBypassExactMatches`, and `testStage2ScaleConsistencyAndHistoryCoherence`.
+
+### 3. Verification (Local + Live Pixel 10 Pro & ARCVM Dual-Target)
+- **Unit, Evaluation, Konsist & Alloy Suites**: `./gradlew testDebugUnitTest --max-workers=2` passed 100% (**`Suites=84, Tests=537, Failures=0, Errors=0, Skipped=0`**).
+- **Topline Benchmark (`python3 eval/eis/run_eis.py`)**: **`EIS-v1 test = 187.0 chars/min CI95=[158.3, 208.7] (dev 192.5)`** (`CUJ-1=204.4`, `CUJ-2=173.6`, `CUJ-3=139.0`, `CUJ-4=337.7`) — zero regression.
+- **Live Pixel 10 Pro Verification (`<device-ip>:37801`, `qwen3.5-0.8b-instruct-q4_k_m.gguf`, 20 user-dict words, 6 Mmap dicts)**:
+  - `MyAsrLlm` & `AsrManager`: `qwen3.5-0.8b` initialized and warmed cleanly (`perf_cores=6`), `ReazonSpeech` & `Parakeet` loaded cleanly, zero crashes or `llama_decode` errors.
+  - `SLM_TYPO_VERIFY (706ms) ctx='' reading='みつこりません' -> [見つかりません(viterbi_typo), 見てこりません(viterbi_typo), 美津子(viterbi_prefix), 美都子(viterbi_prefix), 美律子(viterbi_prefix)]` (**Top-1**, `道子リマ線` eliminated).
+  - `SLM_TYPO_VERIFY (806ms) ctx='鍵が' reading='みつこりません' -> [見つかりません(viterbi_typo), 蜜こりません(viterbi), 密子(viterbi_prefix), 満子(viterbi_prefix), ミツコ(viterbi_prefix)]` (**Top-1**).
+  - `SLM_TYPO_VERIFY (643ms) ctx='' reading='かんがいかい' -> [歓迎会(viterbi_typo), 感慨会(viterbi), 感外(viterbi_prefix), 管亥(viterbi_prefix), 感街(viterbi_prefix)]` (**Top-1**).
+  - `SLM_TYPO_VERIFY (580ms) ctx='新入社員の' reading='かんがいかい' -> [歓迎会(viterbi_typo), 歓迎回(viterbi_typo), 間外(viterbi_prefix), 間街(viterbi_prefix), 感外(viterbi_prefix)]` (**Top-1**).
+  - `SLM_TYPO_VERIFY (80ms) ctx='' reading='ぶひ' -> [ブヒれ(mozc_general), ブヒ(mozc_general), 部費(mozc_general), ﾌﾞﾋ(system), ブヒん(mozc_general)]` (**Top-3**).
+- **Live ARCVM Verification (`arc:5555`)**: Deployed via `./deploy.sh`; `MainActivity` (`+1s14ms`), `KanaKanjiOnDevice`, and `AsrManager` (`ReazonSpeech` `READY` in `1984ms`) verified cleanly in logcat with zero crashes.
+
 

@@ -200,8 +200,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
          * Evaluates candidates across full/partial/predictive spans with principled unconsumed penalties
          * and intra-word surprisal clamping for user dictionaries.
          */
-        private fun isFullSpanScoringTarget(cand: ConversionCandidate): Boolean {
-            return !cand.isPrediction && cand.source != "viterbi_prefix" && cand.source != "system"
+        internal fun isFullSpanScoringTarget(cand: ConversionCandidate): Boolean {
+            return !cand.isPrediction && cand.source != "viterbi_prefix"
         }
 
         internal fun hasFullSpanTypoCompetition(topPool: List<ConversionCandidate>): Boolean {
@@ -239,7 +239,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             gammaUser: Float,
             targetInputLength: Int? = null,
             hysteresisDelta: Float = -1.20f,
-            nowMs: Long = System.currentTimeMillis()
+            nowMs: Long = System.currentTimeMillis(),
+            hasExactFullSpanStage2: Boolean = false
         ): List<ConversionCandidate> {
             if (topPool.isEmpty()) return emptyList()
 
@@ -308,6 +309,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 val fullCand = topPool[fIdx]
                 val fullNll = scores[fIdx]
                 for (pIdx in topPool.indices) {
+                    if (hasExactFullSpanStage2 && !isFullSpanScoringTarget(topPool[pIdx])) continue
                     if (unconsumedDeltas[pIdx] > 0) {
                         val partCand = topPool[pIdx]
                         val isPrefix = if (isEnglishPool) {
@@ -426,9 +428,11 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 }
 
                 // Hybrid-6b History x SLM Fusion (Contextual Bigram Cache + Time-Decay + Coherence Gate + Gated Soft-Clamping + c=1 Damping)
+                val isFullSpanCand = deltaUnconsumed == 0 && deltaExt == 0 && !candidate.isPrediction
                 val isBigram = candidate.source == "history_bigram" || candidate.source == "history_skip_bigram"
                 val effectiveNll: Float = if (!isExactUser && (candidate.historyCount > 0 || isBigram) && !isChimeraFull[index]) {
-                    val deltaNll = rawNll - bestPoolNll
+                    val histRefNll = if (hasExactFullSpanStage2 && isFullSpanCand) bestFullNll else bestPoolNll
+                    val deltaNll = rawNll - histRefNll
                     val gate = 1.0f / (1.0f + kotlin.math.exp(((deltaNll - HISTORY_THETA_GATE_NATS) / HISTORY_GATE_TEMP_NATS).coerceIn(-20.0f, 20.0f)))
 
                     val hoursElapsed = if (candidate.lastUsedAtMs > 0L && nowMs > candidate.lastUsedAtMs) {
@@ -455,7 +459,6 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                     rawBaseNll
                 }
 
-                val isFullSpanCand = deltaUnconsumed == 0 && deltaExt == 0 && !candidate.isPrediction
                 val obsDiscount = if (!isEnglishPool) {
                     computeObsDiscount(
                         rawNll = rawNll,
@@ -1097,7 +1100,13 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
         val tail = candidate.predicateTailSurface
 
         // 1. Continuous input (D2): e.g. "ジム行けた" (firstBunsetsu: "ジム", tail: "行けた")
-        if (fb.isNotEmpty() && tail.isNotEmpty() && candidate.surface.length > fb.length && candidate.surface.startsWith(fb)) {
+        // Do not insert case particles before inflectional/auxiliary tails (e.g. "ません", "て", "ない")
+        val isAuxiliaryTail = tail.startsWith("ませ") || tail.startsWith("まし") || tail == "ます" ||
+            tail.startsWith("ない") || tail.startsWith("なかっ") || tail.startsWith("です") ||
+            tail.startsWith("でし") || tail.startsWith("だっ") || tail.startsWith("だろ") ||
+            tail.startsWith("て") || tail == "た" || tail.startsWith("れる") || tail.startsWith("られ") ||
+            tail.startsWith("せる") || tail.startsWith("させ")
+        if (!isAuxiliaryTail && fb.isNotEmpty() && tail.isNotEmpty() && candidate.surface.length > fb.length && candidate.surface.startsWith(fb)) {
             for (p in CASE_PARTICLES) {
                 variants.add("$fb$p$tail")
             }
@@ -1279,7 +1288,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 lambdaObs = lambdaObs,
                 gammaUser = gammaUser,
                 targetInputLength = targetInputLength,
-                hysteresisDelta = -0.35f
+                hysteresisDelta = -0.35f,
+                hasExactFullSpanStage2 = needsExactStage2
             )
 
             return FastRerankResult(
@@ -1421,15 +1431,13 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
             val needsExactStage2 = hasFullSpanTypoCompetition(topPool)
             val forcedSurfaces = if (needsExactStage2) {
-                val s = ArrayList<String>(topPool.size * 2)
+                val s = ArrayList<String>(topPool.size)
                 for (i in topPool.indices) {
                     if (isFullSpanScoringTarget(topPool[i])) {
-                        val evalSurf = evalSurfaces[i]
-                        s.add(evalSurf)
-                        latentVariantsMap[evalSurf]?.let { s.addAll(it) }
+                        s.add(evalSurfaces[i])
                     }
                 }
-                s.distinct()
+                s.distinct().take(10)
             } else {
                 emptyList()
             }
@@ -1471,10 +1479,15 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 val evalSurf = evalSurfaces[idx]
                 val baseNll = scoreMap[evalSurf] ?: 20.0f
                 val variants = latentVariantsMap[evalSurf]
-                val minLatentNll = variants?.mapNotNull { scoreMap[it] }?.minOrNull()
+                val isForcedFull = needsExactStage2 && evalSurf in forcedSet
+                val minLatentNll = if (isForcedFull) {
+                    variants?.filter { it in forcedSet }?.mapNotNull { scoreMap[it] }?.minOrNull()
+                } else {
+                    variants?.mapNotNull { scoreMap[it] }?.minOrNull()
+                }
                 val finalNll = if (minLatentNll != null) minOf(baseNll, minLatentNll) else baseNll
                 memoizedNllCache.put("$effectiveContext:$evalSurf", finalNll)
-                if (needsExactStage2 && isFullSpanScoringTarget(topPool[idx])) {
+                if (isForcedFull) {
                     exactMemoizedNllCache.put("$effectiveContext:$evalSurf", finalNll)
                 }
                 finalNll
@@ -1488,7 +1501,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
                 lambdaObs = lambdaObs,
                 gammaUser = gammaUser,
                 targetInputLength = targetInputLength,
-                hysteresisDelta = -1.20f
+                hysteresisDelta = -1.20f,
+                hasExactFullSpanStage2 = needsExactStage2
             )
 
             return Pair(sortedPool + restPool, true)

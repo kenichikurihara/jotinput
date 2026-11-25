@@ -552,4 +552,135 @@ class FlickTypoAndMozcCorrectionEvaluationTest {
             )
         }
     }
+
+    @Test
+    fun testUserDictionaryTypoDoesNotHijackMitsukorimasen() {
+        withMmapOnlyEngine { mmapEngine ->
+            // Simulate Pixel 10 Pro custom_dictionary.json containing "みちこ" -> "道子" (NORMAL priority)
+            mmapEngine.insertWord(
+                reading = "みちこ",
+                surface = "道子",
+                cost = 10,
+                source = "user",
+                lid = 1851,
+                rid = 1851,
+                priority = 3.0f
+            )
+
+            // 1. Typo query "みつこりません" must NOT give userBonus=-50000 to typo-matched "道子" in typoBeam
+            val mitsuCands = mmapEngine.getBaseCandidates("みつこりません")
+            val top5Surfaces = mitsuCands.take(5).map { it.surface }
+            assertEquals(
+                "Even with 'みちこ->道子' in user dict, 'みつこりません' Top-1 must be '見つかりません', got: $top5Surfaces",
+                "見つかりません",
+                mitsuCands.first().surface
+            )
+            assertFalse(
+                "Typo-induced chimera '道子リマ線' must not dominate Top-3, got: ${mitsuCands.take(3).map { it.surface }}",
+                mitsuCands.take(3).any { it.surface.startsWith("道子リマ") }
+            )
+
+            // 2. Exact user dictionary queries "みちこ" and "みちこさん" must still rank "道子" / "道子さん" #1 with source="user"
+            val michikoExact = mmapEngine.getBaseCandidates("みちこ")
+            assertEquals("道子", michikoExact.first().surface)
+            assertEquals("user", michikoExact.first().source)
+
+            val michikosanExact = mmapEngine.getBaseCandidates("みちこさん")
+            assertEquals("道子さん", michikosanExact.first().surface)
+            assertEquals("user", michikosanExact.first().source)
+        }
+    }
+
+    @Test
+    fun testTypoMatchedFlickUserWordDoesNotBypassExactMatches() {
+        withMmapOnlyEngine { mmapEngine ->
+            mmapEngine.insertWord(
+                reading = "みちこ",
+                surface = "道子",
+                cost = 10,
+                source = "user",
+                lid = 1851,
+                rid = 1851,
+                priority = 3.0f
+            )
+
+            // Typing exact "みつこ" must not let flick-typo "道子" (みちこ, obsPenalty > 0) displace exact "光子"/"美津子"/"みつ子"
+            val cands = mmapEngine.getBaseCandidates("みつこ")
+            assertTrue("Candidates for 'みつこ' must not be empty", cands.isNotEmpty())
+            assertTrue(
+                "Top-1 for 'みつこ' should be an exact match (obsPenalty == 0), got: ${cands.first()}",
+                cands.first().obsPenalty == 0.0f
+            )
+            assertTrue(
+                "Top-3 for 'みつこ' must include exact match before typo '道子', got: ${cands.take(5).map { "${it.surface}(obs=${it.obsPenalty})" }}",
+                cands.first().surface != "道子"
+            )
+        }
+    }
+
+    @Test
+    fun testStage2ScaleConsistencyAndHistoryCoherence() {
+        // 1. isFullSpanScoringTarget treats full-span system candidates (e.g. katakana) uniformly, while excluding prefixes/predictions
+        assertTrue(
+            LlmReranker.isFullSpanScoringTarget(
+                ConversionCandidate("ミツコリマセン", "みつこりません", isPrediction = false, source = "system")
+            )
+        )
+        assertFalse(
+            LlmReranker.isFullSpanScoringTarget(
+                ConversionCandidate("光子", "みつこ", isPrediction = false, source = "viterbi_prefix")
+            )
+        )
+        assertFalse(
+            LlmReranker.isFullSpanScoringTarget(
+                ConversionCandidate("美津子", "みつこ", isPrediction = true, source = "mozc_general")
+            )
+        )
+
+        // 2. Under hasExactFullSpanStage2 = true, cheap Token-0 surrogate partials (~12 nats) must NOT trigger
+        //    false-positive chimera demotion on exact Stage-2 full-span candidates (~20.6 nats)
+        val candTarget = ConversionCandidate("見つかりません", "みつかりません", source = "viterbi_typo", obsPenalty = 2.2f, dictCost = 3046)
+        val candPartialPrefix = ConversionCandidate("見つ", "みつ", source = "viterbi_prefix", dictCost = 2000, completedSurface = "見つけ")
+        val candGarbageFull = ConversionCandidate("密こりません", "みつこりません", source = "viterbi", dictCost = 11601)
+        val candKatakanaFull = ConversionCandidate("ミツコリマセン", "みつこりません", source = "system", dictCost = 5000)
+
+        val rerankedMitsu = LlmReranker.scoreAndRankPool(
+            topPool = listOf(candGarbageFull, candTarget, candKatakanaFull, candPartialPrefix),
+            scores = floatArrayOf(36.112f, 20.6303f, 24.5f, 11.5f),
+            currentShownTop1 = null,
+            weightAlpha = 0.0f,
+            lambdaObs = 0.5f,
+            gammaUser = 3.0f,
+            targetInputLength = 7,
+            hasExactFullSpanStage2 = true
+        )
+        assertEquals(
+            "見つかりません must remain #1 without false chimera demotion under mixed Stage-2/surrogate pool",
+            "見つかりません",
+            rerankedMitsu.first().surface
+        )
+
+        // 3. History Coherence Gate on かんがいかい uses bestFullNll (~21.91) rather than surrogate bestPoolNll (~13.43),
+        //    preserving history=4 boost for "歓迎会" even when unforced partials have lower Token-0 surrogate NLLs.
+        val candKangai = ConversionCandidate("灌漑会", "かんがいかい", source = "viterbi", dictCost = 3434)
+        val candKangei = ConversionCandidate("歓迎会", "かんがいかい", source = "viterbi_typo", obsPenalty = 2.2f, dictCost = 1958, historyCount = 4, lastUsedAtMs = System.currentTimeMillis() - 60_000L)
+        val candKangaikai = ConversionCandidate("感慨会", "かんがいかい", source = "viterbi", dictCost = 3769)
+        val candPartial = ConversionCandidate("管亥", "かんがい", source = "viterbi_prefix", dictCost = 5796, completedSurface = "管亥かい")
+
+        val rerankedKangai = LlmReranker.scoreAndRankPool(
+            topPool = listOf(candKangai, candKangei, candKangaikai, candPartial),
+            scores = floatArrayOf(24.6711f, 22.7117f, 21.907f, 13.4333f),
+            currentShownTop1 = null,
+            weightAlpha = 0.0f,
+            lambdaObs = 0.5f,
+            gammaUser = 3.0f,
+            targetInputLength = 6,
+            hasExactFullSpanStage2 = true
+        )
+        assertEquals(
+            "With history=4 and Stage-2 reference bestFullNll, '歓迎会' must rank #1 over '感慨会'/'灌漑会'",
+            "歓迎会",
+            rerankedKangai.first().surface
+        )
+    }
 }

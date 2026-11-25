@@ -780,7 +780,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             if (cand.surface.isNotBlank() && !isRedundantHiragana) {
                 if (seenSurfaces.add(cand.surface)) {
                     result.add(cand)
-                } else if (cand.priority > 0f) {
+                } else if (cand.priority > 0f && cand.obsPenalty == 0.0f) {
                     val existing = result.firstOrNull { it.surface == cand.surface }
                     if (existing != null && cand.priority > existing.priority) {
                         val idx = result.indexOf(existing)
@@ -1047,7 +1047,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                         val vCost = viterbiFullCosts[cand.surface] ?: Int.MAX_VALUE
                         val isTypo = cand.source == "viterbi_typo"
                         val allowPromotion = if (isTypo) {
-                            vCost <= bestStep2Cost
+                            vCost <= bestStep2Cost - 2500
                         } else {
                             !hasVoicedExpansion || vCost <= bestStep2Cost + 2500
                         }
@@ -1195,9 +1195,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             return candidates
         }
 
-        val userCands = candidates.filter { it.source == "user" }
+        val userCands = candidates.filter { it.source == "user" && it.obsPenalty == 0.0f }
         val collocCands = candidates.filter { it.source == "context_collocation" }
-        val rest = candidates.filter { it.source != "user" && it.source != "context_collocation" }
+        val rest = candidates.filter { !(it.source == "user" && it.obsPenalty == 0.0f) && it.source != "context_collocation" }
 
         // Current-input candidates: exact matches, voicing/typo corrections of current input length
         val currentCands = rest.filter { it.source != "phrase_chunk" && it.reading.length <= normalized.length }.toMutableList()
@@ -1391,8 +1391,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 if (count > 0 || ts > 0L) cand.copy(historyCount = count, lastUsedAtMs = ts) else cand
             }
         }
-        val userCandidates = enriched.filter { it.source == "user" }
-        val nonUserCandidates = enriched.filter { it.source != "user" }
+        val userCandidates = enriched.filter { it.source == "user" && it.obsPenalty == 0.0f }
+        val nonUserCandidates = enriched.filter { !(it.source == "user" && it.obsPenalty == 0.0f) }
 
         val sortedNonUser = nonUserCandidates.sortedWith { a, b ->
             val aIsColloc = a.source == "context_collocation"
@@ -1983,14 +1983,16 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             return null
         }
         val isUser = w.source == "user"
+        val isExactUser = isUser && extraTypoPenalty == 0 && path.typoPenalty == 0
         val isCanonical = w.source == "canonical"
+        val rawWordCost = if (isUser && extraTypoPenalty > 0) maxOf(w.cost, 5000) else w.cost
 
         // Idea V1: Unigram Confidence-Gated Length Bonus & Functional-Boundary Over-Spanning Guard
         val baseBonus = computeLengthBonus(
             subReading = subReading,
-            rawCost = w.cost,
+            rawCost = rawWordCost,
             lid = w.lid,
-            isUserOrCanonical = isUser || isCanonical,
+            isUserOrCanonical = isExactUser || isCanonical,
             checkLeadingParticle = startPos > 0,
             prevIsFunctional = isFunctionalWord(path.lastRid)
         )
@@ -2002,7 +2004,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             0
         }
         val lengthBonus = baseBonus + predicateBunsetsuBonus
-        val userBonus = if (isUser) 50000 else 0
+        val userBonus = if (isExactUser) 50000 else 0
 
         // Morphological connection transition cost
         val transitionCost = if (matrix != null) {
@@ -2013,7 +2015,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         }
 
         // Idea V2: Incremental Max-Morpheme Surprisal (L_inf) Hinge Penalty
-        val effectiveWordCost = if (isUser || isCanonical) 0 else w.cost.coerceAtLeast(0)
+        val effectiveWordCost = if (isExactUser || isCanonical) 0 else rawWordCost.coerceAtLeast(0)
         val newMaxWordCost = maxOf(path.maxWordCost, effectiveWordCost)
         val prevRarityPen = maxOf(0, path.maxWordCost - RARITY_HINGE_THRESHOLD) / 2
         val nextRarityPen = maxOf(0, newMaxWordCost - RARITY_HINGE_THRESHOLD) / 2
@@ -2035,7 +2037,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             else -> 0
         }
 
-        val newCost = path.cost + (w.cost - lengthBonus).coerceAtLeast(-50000) - userBonus +
+        val newCost = path.cost + (rawWordCost - lengthBonus).coerceAtLeast(-50000) - userBonus +
             transitionCost + rarityDelta - coordBonus + extraTypoPenalty
         val nextRid = if (w.rid > 0) w.rid else path.lastRid
 
@@ -2074,7 +2076,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             cost = newCost,
             surface = path.surface + w.surface,
             words = path.words + listOf(w.surface),
-            hasUserWord = path.hasUserWord || isUser,
+            hasUserWord = path.hasUserWord || isExactUser,
             lastRid = nextRid,
             firstBunsetsuSurface = nextFb,
             firstBunsetsuReadingLen = nextFbLen,
@@ -2091,7 +2093,11 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         )
     }
 
-    private fun pruneBeamBucket(bucket: MutableList<ViterbiPath>, limit: Int) {
+    private fun pruneBeamBucket(
+        bucket: MutableList<ViterbiPath>,
+        limit: Int,
+        maxPerFirstStem: Int = Int.MAX_VALUE
+    ) {
         if (bucket.size <= limit) return
         val byKey = LinkedHashMap<Pair<String, Int>, ViterbiPath>(bucket.size)
         for (p in bucket) {
@@ -2104,7 +2110,27 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
         val sortedList = byKey.values.toMutableList()
         sortedList.sortBy { it.cost }
         bucket.clear()
-        bucket.addAll(if (sortedList.size > limit) sortedList.subList(0, limit) else sortedList)
+        if (maxPerFirstStem == Int.MAX_VALUE || sortedList.size <= limit) {
+            bucket.addAll(if (sortedList.size > limit) sortedList.subList(0, limit) else sortedList)
+            return
+        }
+        val stemCounts = HashMap<String, Int>()
+        val overflow = ArrayList<ViterbiPath>()
+        for (p in sortedList) {
+            val stem = p.firstBunsetsuSurface.ifEmpty { p.surface }
+            val c = stemCounts.getOrDefault(stem, 0)
+            if (c < maxPerFirstStem) {
+                bucket.add(p)
+                stemCounts[stem] = c + 1
+                if (bucket.size >= limit) return
+            } else {
+                overflow.add(p)
+            }
+        }
+        for (p in overflow) {
+            if (bucket.size >= limit) break
+            bucket.add(p)
+        }
     }
 
     private fun toConversionCandidate(
@@ -2146,8 +2172,9 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             reading = reading,
             isPrediction = false,
             source = when {
-                path.hasUserWord -> "user"
+                path.hasUserWord && obsPenalty == 0.0f -> "user"
                 sourceOverride != null -> sourceOverride
+                path.hasUserWord -> "user"
                 else -> "viterbi"
             },
             obsPenalty = obsPenalty,
@@ -2345,7 +2372,7 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
             for (k in (i + 1)..n) {
                 pruneBeamBucket(beam[k], beamWidth * 2)
                 if (enableTypoLayer) {
-                    pruneBeamBucket(typoBeam[k], typoBeamWidth * 2)
+                    pruneBeamBucket(typoBeam[k], typoBeamWidth * 2, maxPerFirstStem = 3)
                 }
             }
         }
@@ -2409,6 +2436,8 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 it.cost + (matrix?.getTransitionCost(it.lastRid, 0) ?: 0)
             }
             val seenTypoSurfaces = HashSet<String>(seenFullSurfaces)
+            val seenTypoStems = HashSet<String>()
+            val overflowTypo = mutableListOf<Pair<ViterbiPath, Int>>()
             for (path in sortedTypo) {
                 if (admittedTypoEntries.size >= 3) break
                 if (path.surface.isBlank() ||
@@ -2421,7 +2450,16 @@ class KanaKanjiEngine internal constructor(private val context: Context? = null)
                 val effCost = path.cost + (matrix?.getTransitionCost(path.lastRid, 0) ?: 0)
                 if (effCost > bestExactCost + 1800) break
                 if (!seenTypoSurfaces.add(path.surface)) continue
-                admittedTypoEntries.add(path to effCost)
+                val stem = path.firstBunsetsuSurface.ifEmpty { path.surface }
+                if (seenTypoStems.add(stem)) {
+                    admittedTypoEntries.add(path to effCost)
+                } else {
+                    overflowTypo.add(path to effCost)
+                }
+            }
+            for (entry in overflowTypo) {
+                if (admittedTypoEntries.size >= 3) break
+                admittedTypoEntries.add(entry)
             }
         }
 
