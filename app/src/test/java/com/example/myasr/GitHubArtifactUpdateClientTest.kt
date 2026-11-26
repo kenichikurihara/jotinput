@@ -341,4 +341,20 @@ class GitHubArtifactUpdateClientTest {
         assertNull(repo.getMatchingDownloadedApk())
         assertFalse("Stale APK already matching installed build should be deleted", staleApk.exists())
     }
+
+    @Test
+    fun `AppUpdateRepository disables debug artifact checks and downloads in release builds`() = runBlocking {
+        val context = RuntimeEnvironment.getApplication()
+        val repo = AppUpdateRepository(context, isDebugBuild = false)
+        assertFalse(repo.getInstalledBuildInfo().isDebugBuild)
+
+        val checkResult = repo.checkLatestBuild()
+        assertTrue(checkResult is AppUpdateCheckResult.Checked)
+        val checked = checkResult as AppUpdateCheckResult.Checked
+        assertNull(checked.artifact)
+        assertEquals(BuildFreshnessStatus.NO_ARTIFACT, checked.freshness)
+
+        val dlResult = repo.downloadLatestArtifact { _, _ -> }
+        assertTrue(dlResult.isFailure)
+    }
 }

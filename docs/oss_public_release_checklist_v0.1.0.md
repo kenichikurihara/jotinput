@@ -12,17 +12,17 @@
 
 公開ボタンを押す前に**「後からやり直しが効かない項目（P0）」**を最優先で片付けることが重要です。
 
-| 優先度 | カテゴリ | 公開前に確認・対応した項目（Phase 1 完了状況） | 放置した場合のリスク |
+| 優先度 | カテゴリ | 公開前に確認・対応した項目（Phase 1〜2 完了状況） | 放置した場合のリスク |
 | :--- | :--- | :--- | :--- |
 | **P0 (必須)** | ライセンス | ✅ **完了**: Apache License 2.0 へ変更（[`LICENSE`](../LICENSE)） | リポジトリを公開しても誰も合法的に利用・フォークできない |
 | **P0 (必須)** | パッケージID | ✅ **完了**: `applicationId = "io.github.kenichikurihara.jotinput"` へ変更（[`app/build.gradle.kts`](../app/build.gradle.kts)） | 公開後に変更すると別アプリ扱いになり、既存ユーザーのデータ移行・上書き更新が不可能。Google Play でも拒否される |
 | **P0 (必須)** | 個人情報・環境情報 | ✅ **完了**: ローカル LAN IP (`<device-ip>`)・実機シリアル (`<device-serial>`)・ローカル絶対パス・個人名例を除去／汎用化 | 公開と同時にインターネット上に永続的に残る |
 | **P0 (必須)** | 秘密情報監査 | ✅ **完了**: Git 全履歴の個人メールを `noreply` へ書換え、`app/debug.keystore` を全履歴から削除・`.gitignore` 化 | 公開後はクローン・アーカイブされ削除困難 |
-| **P0 (必須)** | Release ビルド検証 | `isMinifyEnabled = true` だが CI は `assembleDebug` のみ。`proguard-rules.pro` は 9 行のみ（Phase 2 で対応） | R8 難読化・最適化で JNI / リフレクション / JSON が壊れ、v0.1.0 Release APK だけクラッシュする危険が高い |
-| **P0 (必須)** | 署名キー管理 | `signingConfigs.release` が未設定（Phase 2 で対応） | 署名済み Release APK を作れない。また鍵を紛失すると二度とアップデート配布できない |
+| **P0 (必須)** | Release ビルド検証 | ✅ **完了**: [`proguard-rules.pro`](../app/proguard-rules.pro) 強化、[`android-ci.yml`](../.github/workflows/android-ci.yml) に R8 / 16KB 検証追加、ARCVM で署名済み Release APK スモーク検証済み（Pixel 10 Pro 実機フル検証は接続後実施） | R8 難読化・最適化で JNI / リフレクション / JSON が壊れ、v0.1.0 Release APK だけクラッシュする危険が高い |
+| **P0 (必須)** | 署名キー管理 | ✅ **完了**: Release 用 Keystore 生成・`~/.config/jotinput/` 保管・GitHub `release` 環境 Secrets 登録・`signingConfigs.release` 設定済み | 署名済み Release APK を作れない。また鍵を紛失すると二度とアップデート配布できない |
 | **P0 (必須)** | PR / 保守ポリシー | `CONTRIBUTING.md` が未作成。PR レビューの期待値が未定義（Phase 3 で対応） | 大量・大型の PR や他端末向け PR が来た際に対応できず、摩擦や燃え尽きにつながる |
 | **P1 (推奨)** | サードパーティ権利 | ✅ **完了**: [`NOTICE`](../NOTICE) 新設および `MainActivity.kt` のライセンス表示を更新（Parakeet / mozcdic-ut / llama.cpp / Mozc / gl-keyboard-correction / FUTO Swipe 帰属含む） | ライセンス違反・著作権クレームのリスク |
-| **P1 (推奨)** | アプリ内更新機構 | `AppUpdateRepository.kt` が `app-debug` CI Artifact + GitHub PAT 前提（Phase 2 で対応） | Release ビルドでは署名が異なるため Debug APK で上書き不可。公開ユーザー向け設計との不整合 |
+| **P1 (推奨)** | アプリ内更新機構 | ✅ **完了**: Debug 限定マニフェスト + `AppUpdateDecisionModel` (`APP_UPD_R1`) + `MainActivity` / `AppUpdateRepository` の `!BuildConfig.DEBUG` 多層ガードで Release ビルドから完全分離 | Release ビルドでは署名が異なるため Debug APK で上書き不可。公開ユーザー向け設計との不整合 |
 | **P1 (推奨)** | Android セキュリティ | ✅ **完了**: `allowBackup="false"`、`DictionaryActivity` を `exported="false"` に変更 | 入力履歴・辞書・設定の意図しないクラウドバックアップや外部アプリからの直接起動 |
 | **P1 (推奨)** | バージョニング | ✅ **完了**: `versionCode = 1`, `versionName = "0.1.0"` に設定 | `v0.1.0` と整合しない |
 | **P2 (公開後可)** | 外部依存 URL | `BaseDictionaryDownloader.kt` が個人 Gist URL を参照 | メンテナーの Gist 削除・変更で動かなくなる。GitHub Releases / Repo 内管理へ移行推奨 |
@@ -343,12 +343,12 @@ flowchart TD
 4. [x] `AndroidManifest.xml` の `allowBackup="false"`・`DictionaryActivity` の `exported="false"` を修正する。
 5. [x] `docs/` や `eval/` に残っていた個人名例・ローカル環境情報を汎用化する。
 
-### Phase 2: v0.1.0 Release ビルドの確立と実機検証
-1. Release 用 Keystore を生成し、安全にバックアップ＋GitHub Secrets に登録する。
-2. `app/build.gradle.kts` に `signingConfigs.release` を設定する。
-3. Release ビルド向けのアップデーター挙動（Debug Artifact 依存の分離）を整理する。
-4. `.github/workflows/android-ci.yml` に Release ビルド（R8）検証を追加し、`.github/workflows/release.yml`（タグ push で Release APK 自動生成・公開）を作成する。
-5. **署名済み Release APK を Pixel 10 Pro にクリーンインストールして全機能を手動検証**し、R8 によるクラッシュがゼロであることを確認する。
+### Phase 2: v0.1.0 Release ビルドの確立と実機検証 ✅ 構築完了（実機フル検証は端末接続後）
+1. [x] Release 用 Keystore を生成し、リポジトリ外（`~/.config/jotinput/`）に保管＋GitHub `release` 環境 Secrets に登録する。
+2. [x] `app/build.gradle.kts` に環境変数 / `keystore.properties` 参照の `signingConfigs.release` を設定し、`proguard-rules.pro` を強化する。
+3. [x] Release ビルド向けのアップデーター挙動（Debug Artifact 依存の分離・`!BuildConfig.DEBUG` 多層ガード＋ユニットテスト）を整理する。
+4. [x] `.github/workflows/android-ci.yml` に Release ビルド（R8）＋16KB ELF アラインメント検証を追加し、`.github/workflows/release.yml`（タグ push で署名済み Release APK 自動生成・公開 + `mapping.txt` 保存）を作成する。
+5. [x] 署名済み Release APK をビルド・`apksigner` 検証し、ARCVM 上で R8 難読化後のモデル/JNI ロードを確認する（**Pixel 10 Pro 実機での手動フル検証は端末接続後に実施**）。
 
 ### Phase 3: 低負荷 OSS 運用の防壁づくり
 1. `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, Issue/PR テンプレートを作成する。

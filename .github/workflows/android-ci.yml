@@ -129,6 +129,31 @@ jobs:
           ./gradlew assembleDebug --max-workers=2 --stacktrace
           ccache -s
 
+      - name: Verify Release Build (R8 & LintVital)
+        run: ./gradlew assembleRelease --max-workers=2 --stacktrace
+
+      - name: Verify 16KB ELF Page Alignment (arm64-v8a)
+        run: |
+          python3 -c '
+          import glob, subprocess, sys
+          libs = sorted(glob.glob("app/build/intermediates/stripped_native_libs/release/stripReleaseDebugSymbols/out/lib/arm64-v8a/*.so"))
+          if not libs:
+              print("ERROR: No stripped arm64-v8a .so files found", file=sys.stderr)
+              sys.exit(1)
+          for lib in libs:
+              out = subprocess.check_output(["readelf", "-lW", lib], text=True)
+              loads = [line.split()[-1] for line in out.splitlines() if line.strip().startswith("LOAD")]
+              if not loads:
+                  print(f"ERROR: No LOAD segments in {lib}", file=sys.stderr)
+                  sys.exit(1)
+              for align in loads:
+                  val = int(align, 16)
+                  if val < 0x4000 or (val % 0x4000) != 0:
+                      print(f"ERROR: {lib} LOAD segment alignment {align} is not 16KB-aligned", file=sys.stderr)
+                      sys.exit(1)
+              print(f"OK {lib}: alignments={loads}")
+          '
+
       - name: Upload Test Reports on Failure
         if: failure()
         uses: actions/upload-artifact@v4

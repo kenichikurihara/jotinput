@@ -20,7 +20,8 @@ import java.io.File
 class AppUpdateRepository(
     private val context: Context,
     val tokenStore: GitHubTokenStore = GitHubTokenStore(context),
-    private val client: GitHubArtifactUpdateClient = GitHubArtifactUpdateClient()
+    private val client: GitHubArtifactUpdateClient = GitHubArtifactUpdateClient(),
+    private val isDebugBuild: Boolean = BuildConfig.DEBUG
 ) {
     companion object {
         private const val TAG = "AppUpdateRepository"
@@ -56,7 +57,7 @@ class AppUpdateRepository(
         gitSha = BuildConfig.BUILD_GIT_SHA,
         commitEpochMs = BuildConfig.BUILD_GIT_COMMIT_EPOCH_MS,
         githubRunId = BuildConfig.BUILD_GITHUB_RUN_ID,
-        isDebugBuild = BuildConfig.DEBUG
+        isDebugBuild = isDebugBuild
     )
 
     fun getUpdatesDir(): File {
@@ -160,6 +161,13 @@ class AppUpdateRepository(
     }
 
     suspend fun checkLatestBuild(): AppUpdateCheckResult {
+        if (!isDebugBuild) {
+            return AppUpdateCheckResult.Checked(
+                artifact = null,
+                freshness = BuildFreshnessStatus.NO_ARTIFACT,
+                checkedAtMs = System.currentTimeMillis()
+            )
+        }
         val token = tokenStore.getToken()
         if (token.isNullOrBlank()) {
             return AppUpdateCheckResult.Failure(
@@ -205,6 +213,9 @@ class AppUpdateRepository(
     suspend fun downloadLatestArtifact(
         onProgress: (percent: Int, statusText: String) -> Unit
     ): Result<DownloadedApkInfo> {
+        if (!isDebugBuild) {
+            return Result.failure(IllegalStateException("Debug artifact updater is disabled in release builds"))
+        }
         val token = tokenStore.getToken()
         if (token.isNullOrBlank()) {
             return Result.failure(

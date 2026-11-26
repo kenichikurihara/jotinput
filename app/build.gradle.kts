@@ -1,3 +1,6 @@
+import java.io.File
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -73,10 +76,64 @@ android {
         }
     }
 
+    val releaseSigningProps = run {
+        val envStoreFile = providers.environmentVariable("RELEASE_STORE_FILE").orNull?.trim()
+        val envStorePass = providers.environmentVariable("RELEASE_STORE_PASSWORD").orNull
+        val envKeyAlias = providers.environmentVariable("RELEASE_KEY_ALIAS").orNull?.trim()
+        val envKeyPass = providers.environmentVariable("RELEASE_KEY_PASSWORD").orNull
+        if (!envStoreFile.isNullOrEmpty() && !envStorePass.isNullOrEmpty() &&
+            !envKeyAlias.isNullOrEmpty() && !envKeyPass.isNullOrEmpty()
+        ) {
+            Properties().apply {
+                setProperty("storeFile", envStoreFile)
+                setProperty("storePassword", envStorePass)
+                setProperty("keyAlias", envKeyAlias)
+                setProperty("keyPassword", envKeyPass)
+            }
+        } else {
+            val candidates = listOf(
+                rootProject.file("keystore.properties"),
+                File(System.getProperty("user.home"), ".config/jotinput/keystore.properties")
+            )
+            val propsFile = candidates.firstOrNull { it.isFile }
+            if (propsFile != null) {
+                Properties().apply { propsFile.inputStream().use(::load) }
+            } else {
+                null
+            }
+        }
+    }
+
+    val releaseStoreFile = releaseSigningProps?.getProperty("storeFile")?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { path -> File(path).let { if (it.isAbsolute) it else rootProject.file(path) } }
+        ?.takeIf { it.isFile }
+    val releaseStorePassword = releaseSigningProps?.getProperty("storePassword")?.takeIf { it.isNotEmpty() }
+    val releaseKeyAlias = releaseSigningProps?.getProperty("keyAlias")?.trim()?.takeIf { it.isNotEmpty() }
+    val releaseKeyPassword = releaseSigningProps?.getProperty("keyPassword")?.takeIf { it.isNotEmpty() }
+    val hasReleaseSigning = releaseStoreFile != null &&
+        releaseStorePassword != null &&
+        releaseKeyAlias != null &&
+        releaseKeyPassword != null
+
+    if (hasReleaseSigning) {
+        signingConfigs {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

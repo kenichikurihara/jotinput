@@ -2087,6 +2087,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun triggerAppUpdateCheck() {
+        if (!BuildConfig.DEBUG) return
         val repo = AsrApp.instance.appUpdateRepository
         if (!repo.hasToken()) {
             lastAppUpdateErrorKind = AppUpdateCheckErrorKind.TOKEN_REQUIRED
@@ -2132,6 +2133,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startAppUpdateDownload() {
+        if (!BuildConfig.DEBUG) return
         val repo = AsrApp.instance.appUpdateRepository
         if (!repo.hasToken()) {
             showGitHubTokenDialog()
@@ -2198,6 +2200,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun triggerInstallDownloadedApk() {
+        if (!BuildConfig.DEBUG) return
         val repo = AsrApp.instance.appUpdateRepository
         val downloaded = repo.getMatchingDownloadedApk()
         if (downloaded == null) {
@@ -2233,6 +2236,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleAppUpdateInstallIntent(intent: Intent?) {
+        if (!BuildConfig.DEBUG) return
         if (intent?.getBooleanExtra(EXTRA_TRIGGER_APP_UPDATE_INSTALL, false) == true) {
             intent.removeExtra(EXTRA_TRIGGER_APP_UPDATE_INSTALL)
             bottomNav.selectedItemId = R.id.nav_home
