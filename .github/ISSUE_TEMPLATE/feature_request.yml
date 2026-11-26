@@ -1,0 +1,61 @@
+name: Feature / Architecture Proposal (Issue-First)
+description: Discuss a new feature, UI change, or multi-device PR BEFORE writing code
+title: "[Proposal]: "
+labels:
+  - enhancement
+  - proposal
+body:
+  - type: markdown
+    attributes:
+      value: |
+        JotInput follows an **Issue-First / Curated PRs** model (`CONTRIBUTING.md`).
+        Please describe your proposal here **before** spending time writing a PR so we can verify fit with JotInput's scope, offline guarantee, and solo-maintainer capacity.
+
+  - type: textarea
+    id: jtbd
+    attributes:
+      label: Problem / Job to be Done (JTBD)
+      description: When does this problem happen, what triggers it, and what outcome do you want?
+      placeholder: "When I am typing/speaking on ..., I want ... so that ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Design / Solution
+      description: How should this work without breaking offline guarantees, APK size limits, or simple UI guidelines?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Primary Affected Area
+      options:
+        - ASR / Voice Punctuation / VAD
+        - Kana-Kanji Conversion / Mozc / Dictionaries
+        - English Swipe (FUTO Swipe) / Typo Correction
+        - On-Device SLM Re-Ranking (llama.cpp)
+        - Custom Dictionary
+        - UI / IME Layout (requires PRD + JTBD/CUJ + DMN/Alloy)
+        - Build / CI / Multi-Device Support
+    validations:
+      required: true
+
+  - type: textarea
+    id: constraints_impact
+    attributes:
+      label: APK Size, Offline Privacy & Tier 1 Compatibility Impact
+      description: Note any new dependencies, external download hosts (`PRIVACY.md`), or upstream licenses (`NOTICE`).
+      placeholder: "e.g., No bundled assets, offline-only, standard Android APIs..."
+
+  - type: checkboxes
+    id: acknowledgement
+    attributes:
+      label: Contributor Acknowledgements
+      options:
+        - label: I have read CONTRIBUTING.md and understand this is maintained by a solo developer with no SLA or merge guarantee (forking under Apache-2.0 is always welcome).
+          required: true
+        - label: I understand UI changes require PRD/JTBD/CUJ updates and architecture changes must pass DddArchitectureKonsistTest and AlloyVerificationTest.
+          required: true

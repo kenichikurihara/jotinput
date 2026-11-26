@@ -20,7 +20,7 @@
 | **P0 (必須)** | 秘密情報監査 | ✅ **完了**: Git 全履歴の個人メールを `noreply` へ書換え、`app/debug.keystore` を全履歴から削除・`.gitignore` 化 | 公開後はクローン・アーカイブされ削除困難 |
 | **P0 (必須)** | Release ビルド検証 | ✅ **完了**: [`proguard-rules.pro`](../app/proguard-rules.pro) 強化、[`android-ci.yml`](../.github/workflows/android-ci.yml) に R8 / 16KB 検証追加、ARCVM で署名済み Release APK スモーク検証済み（Pixel 10 Pro 実機フル検証は接続後実施） | R8 難読化・最適化で JNI / リフレクション / JSON が壊れ、v0.1.0 Release APK だけクラッシュする危険が高い |
 | **P0 (必須)** | 署名キー管理 | ✅ **完了**: Release 用 Keystore 生成・`~/.config/jotinput/` 保管・GitHub `release` 環境 Secrets 登録・`signingConfigs.release` 設定済み | 署名済み Release APK を作れない。また鍵を紛失すると二度とアップデート配布できない |
-| **P0 (必須)** | PR / 保守ポリシー | `CONTRIBUTING.md` が未作成。PR レビューの期待値が未定義（Phase 3 で対応） | 大量・大型の PR や他端末向け PR が来た際に対応できず、摩擦や燃え尽きにつながる |
+| **P0 (必須)** | PR / 保守ポリシー | ✅ **完了**: [`CONTRIBUTING.md`](../CONTRIBUTING.md), [`SECURITY.md`](../SECURITY.md), [`CHANGELOG.md`](../CHANGELOG.md), Issue/PR テンプレート整備済み | 大量・大型の PR や他端末向け PR が来た際に対応できず、摩擦や燃え尽きにつながる |
 | **P1 (推奨)** | サードパーティ権利 | ✅ **完了**: [`NOTICE`](../NOTICE) 新設および `MainActivity.kt` のライセンス表示を更新（Parakeet / mozcdic-ut / llama.cpp / Mozc / gl-keyboard-correction / FUTO Swipe 帰属含む） | ライセンス違反・著作権クレームのリスク |
 | **P1 (推奨)** | アプリ内更新機構 | ✅ **完了**: Debug 限定マニフェスト + `AppUpdateDecisionModel` (`APP_UPD_R1`) + `MainActivity` / `AppUpdateRepository` の `!BuildConfig.DEBUG` 多層ガードで Release ビルドから完全分離 | Release ビルドでは署名が異なるため Debug APK で上書き不可。公開ユーザー向け設計との不整合 |
 | **P1 (推奨)** | Android セキュリティ | ✅ **完了**: `allowBackup="false"`、`DictionaryActivity` を `exported="false"` に変更 | 入力履歴・辞書・設定の意図しないクラウドバックアップや外部アプリからの直接起動 |
@@ -307,28 +307,33 @@ flowchart TD
 - [x] `LICENSE`: Apache License 2.0 へ差し替え
 - [x] `NOTICE`: 全サードパーティ OSS・モデル・辞書の権利表記（Parakeet / mozcdic-ut / llama.cpp / Mozc / gl-keyboard-correction / FUTO Swipe 帰属含む）
 - [x] `PRIVACY.md`: 100% オンデバイス動作・権限用途・ダウンロード先 URL の透明な開示
-- [ ] `CONTRIBUTING.md`: Issue-First ポリシー、CI 必須、AI 丸投げ PR 禁止、サポート端末 Tier、レビュー返信目安の明記
-- [ ] `SECURITY.md`: 脆弱性報告窓口（GitHub Private Vulnerability Reporting の案内）
-- [ ] `CHANGELOG.md`: `v0.1.0` の機能一覧・既知の制限事項
-- [ ] `README.md`: 最新化（現在の APK サイズ表記・SLM ダウンロード状況・インストール手順を v0.1.0 Release APK ベースに更新、スクショ追加）
-- [ ] `.github/ISSUE_TEMPLATE/bug_report.yml`: 端末モデル・Android バージョン・アプリバージョン・再現手順・ログを構造化入力させるフォーム
-- [ ] `.github/ISSUE_TEMPLATE/feature_request.yml`: 機能提案フォーム（「実装前に合意が必要」の注意書き付き）
-- [ ] `.github/pull_request_template.md`: 外部コントリビューターにも分かりやすい形に整理（関連 Issue・検証端末・スクショ・CI 確認）
+- [x] `CONTRIBUTING.md`: Issue-First ポリシー、CI 必須、AI 丸投げ PR 禁止、サポート端末 Tier、レビュー返信目安の明記
+- [x] `SECURITY.md`: 脆弱性報告窓口（GitHub Private Vulnerability Reporting の案内）・APK 検証手順
+- [x] `CHANGELOG.md`: `v0.1.0` の機能一覧・セキュリティ対策・既知の制限事項
+- [x] `README.md`: 最新化（Release ~29 MB / Debug ~36 MB 表記、`connection_data.bin` のみ同梱 + Qwen3.5 含む全モデルのアプリ内ダウンロード案内、サポート Tier、`Powered by FUTO Swipe` 明記、`v0.1.0` Release APK インストール手順）
+- [x] `.github/ISSUE_TEMPLATE/config.yml`: Blank Issue 無効化 + `SECURITY.md` / `PRIVACY.md` / `CONTRIBUTING.md` 誘導リンク
+- [x] `.github/ISSUE_TEMPLATE/bug_report.yml`: 端末モデル・Tier・Android バージョン・ABI・アプリバージョン・再現手順・ログ/Insets を構造化入力させるフォーム
+- [x] `.github/ISSUE_TEMPLATE/feature_request.yml`: 機能/アーキテクチャ提案フォーム（「事前合意が必要」の注意書き付き）
+- [x] `.github/pull_request_template.md`: 外部コントリビューターにも分かりやすい形に整理（関連 Issue・Tier 検証端末・証拠/スクショ・AI 利用開示・DDD/DMN/Alloy/CI 確認）
 
 ### 7.2 GitHub リポジトリ設定（Settings）
-- [ ] **Branch Protection (`main`)**:
+> **補足（GitHub Free Private リポジトリの API 制約）**: `kenichikurihara/jotinput` が Private の間は、GitHub Free プランの仕様により Branch Protection (HTTP 403)・Private Vulnerability Reporting (HTTP 404)・Fork PR 承認設定 (HTTP 422)・Secret Scanning が未開放です。Phase 3 では Private 状態で適用可能な設定を完了し、Public 化直後（Phase 4 冒頭）に残りを適用します。
+
+- [ ] **Branch Protection (`main`)** *(Phase 4 の Public 化直後に有効化)*:
   - Require a pull request before merging（またはメンテナー自身はバイパス許可）
   - Require status checks to pass (`Build & Test`)
   - Do not allow force pushes / deletions
-- [ ] **Actions セキュリティ**:
-  - Fork PR workflows: `Require approval for first-time contributors`
-  - Workflow permissions: `Read repository contents and packages permissions`
-- [ ] **Security**:
-  - Enable `Private vulnerability reporting`
+- [ ] **Fork PR workflows** *(Phase 4 の Public 化直後に有効化; Private 時は HTTP 422)*:
+  - `Require approval for first-time contributors`（`repos/kenichikurihara/jotinput/actions/permissions/fork-pr-contributor-approval` または Settings → Actions → General）
+- [x] **Actions ワークフロー権限**:
+  - `default_workflow_permissions: "read"`, `can_approve_pull_request_reviews: false`（CLI 検証済み）
+- [x] **Dependabot alerts**:
+  - `PUT repos/kenichikurihara/jotinput/vulnerability-alerts` で有効化済み（HTTP 204 確認）
+- [ ] **Public 必須のセキュリティ機能** *(Phase 4 の Public 化直後に有効化)*:
+  - Enable `Private vulnerability reporting` (`PUT repos/kenichikurihara/jotinput/private-vulnerability-reporting`)
   - Enable `Secret scanning` & `Push protection`（パブリックリポジトリは無料）
-  - Enable `Dependabot alerts`
-- [ ] **Releases & Tags**:
-  - Release ノートに既知の制限・対応端末 Tier・SHA-256・インストール手順（提供元不明アプリ許可）を明記
+- [ ] **Releases & Tags** *(Phase 4 リリース時に確認)*:
+  - Release ノート（`.github/workflows/release.yml`）に既知の制限・対応端末 Tier・`SHA256SUMS.txt`・インストール手順（提供元不明アプリ許可）を明記
 
 ---
 
@@ -350,12 +355,17 @@ flowchart TD
 4. [x] `.github/workflows/android-ci.yml` に Release ビルド（R8）＋16KB ELF アラインメント検証を追加し、`.github/workflows/release.yml`（タグ push で署名済み Release APK 自動生成・公開 + `mapping.txt` 保存）を作成する。
 5. [x] 署名済み Release APK をビルド・`apksigner` 検証し、ARCVM 上で R8 難読化後のモデル/JNI ロードを確認する（**Pixel 10 Pro 実機での手動フル検証は端末接続後に実施**）。
 
-### Phase 3: 低負荷 OSS 運用の防壁づくり
-1. `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, Issue/PR テンプレートを作成する。
-2. `README.md` にサポート端末 Tier と v0.1.0 インストール手順を反映する。
-3. GitHub Settings（Branch Protection, Fork PR 承認制, Secret Scanning, Private Vulnerability Reporting）を設定する。
+### Phase 3: 低負荷 OSS 運用の防壁づくり ✅ 完了
+1. [x] `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, Issue/PR テンプレート（`.github/ISSUE_TEMPLATE/{config,bug_report,feature_request}.yml`, `.github/pull_request_template.md`）を作成する。
+2. [x] `README.md` にサポート端末 Tier・正確な APK/モデル構成・v0.1.0 インストール手順を反映する。
+3. [x] Private リポジトリで利用可能な GitHub Settings（Actions Workflow 権限 `read` 確認・Dependabot `vulnerability-alerts` 有効化）を適用し、Public 必須設定の Phase 4 手順を明文化する。
 
 ### Phase 4: リポジトリ公開 & v0.1.0 リリース
-1. GitHub リポジトリの Visibility を **Public** に変更する。
-2. `git tag -a v0.1.0 -m "Release v0.1.0"` → `git push origin v0.1.0` でリリースワークフローを起動する。
-3. 生成された GitHub Release ページから自分で APK をダウンロードし、再度インストール・起動確認を行って完了！
+1. GitHub リポジトリの Visibility を **Public** に変更する（GitHub Web UI または `gh repo edit`）。
+2. Public 化直後に必須保護設定を有効化する:
+   - **Branch Protection (`main`)**: `Build & Test` ステータスチェック必須・強制 push / 削除禁止
+   - **Fork PR workflows**: Settings → Actions → General → `Require approval for first-time contributors`
+   - **Security**: `Private vulnerability reporting`（`PUT .../private-vulnerability-reporting`）および `Secret scanning` + `Push protection` を有効化
+3. *(必要に応じ)* `periodic-lexicon-update.yml` を公開後も自動 PR 実行するか、手動トリガー中心にするか最終確認する。
+4. `git tag -a v0.1.0 -m "Release v0.1.0"` → `git push origin v0.1.0` でリリースワークフローを起動する（必要に応じて `CHANGELOG.md` のリリース日を追記）。
+5. 生成された GitHub Release ページから自分で署名済み APK をダウンロード（`SHA256SUMS.txt` / `apksigner` 検証）し、Pixel 10 Pro 実機等でインストール・起動確認を行って完了！

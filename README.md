@@ -1,8 +1,12 @@
-# JotInput - On-Device Japanese Automatic Speech Recognition & Flick/QWERTY Keyboard for Android
+# JotInput - On-Device Japanese & English Voice + Flick/QWERTY Keyboard for Android
 
 > **JotInput** = **J**apanese **O**n-device **T**ext **Input**
 
-A lightweight, fully offline, on-device Android Japanese voice & flick keyboard (IME) powered by **ReazonSpeech** and **Sherpa-ONNX** (Next-gen Kaldi / ONNX Runtime), combined with a Mozc-based Kana-Kanji flick/QWERTY keyboard and optional on-device SLM candidate re-ranking.
+A lightweight, 100% offline, on-device Android Japanese & English voice + flick/QWERTY keyboard (IME) powered by **ReazonSpeech**, **NVIDIA Parakeet**, and **Sherpa-ONNX**, combined with a Mozc-based Kana-Kanji keyboard, neural swipe typing (**Powered by FUTO Swipe**), and optional on-device **Qwen3.5** SLM candidate re-ranking (`llama.cpp`).
+
+- **License**: [Apache License 2.0](LICENSE) · [Third-Party Notices (`NOTICE`)](NOTICE)
+- **Privacy & Security**: [Privacy Policy (`PRIVACY.md`)](PRIVACY.md) · [Security Policy (`SECURITY.md`)](SECURITY.md)
+- **Contributing & Releases**: [Contributing Guide (`CONTRIBUTING.md`)](CONTRIBUTING.md) · [Changelog (`CHANGELOG.md`)](CHANGELOG.md)
 
 ---
 
@@ -20,27 +24,38 @@ Detailed documentation is available in the [`docs/`](docs/index.md) folder:
 
 ---
 
+## 📱 Supported Devices (Support Tiers)
+
+JotInput is developed by a **solo maintainer** who only owns **Google Pixel 10 Pro** and **ChromeOS ARCVM** hardware:
+
+| Tier | Scope | Support Level |
+| :--- | :--- | :--- |
+| **Tier 1 (Primary)** | **Google Pixel 10 Pro** (physical device) & **ChromeOS ARCVM** (`x86_64`), Android 8.0+ (API 26+) | Maintainer-verified. Regressions block releases. |
+| **Tier 2 (Best-Effort)** | Other `arm64-v8a` / `x86_64` devices running stock/AOSP-compatible Android 8.0+ | Community-supported via standard Android APIs (requires logs/screenshots/tests in PRs; see [`CONTRIBUTING.md`](CONTRIBUTING.md)). |
+| **Tier 3 (Unsupported)** | 32-bit ABIs (`armeabi-v7a`, `x86`), Android `< 8.0`, custom-ROM hacks, or OEM proprietary workarounds | Not supported. |
+
+---
+
 ## 🌟 Features
 
-- **100% On-Device & Offline**: No cloud APIs, no external server calls, complete privacy.
-- **Unified Custom Dictionary Subsystem (Japanese & English)**:
-  - **Bilingual & Unified Storage**: Manage Japanese and English custom vocabulary in a unified JSON repository (`custom_dictionary.json`) with an empty-by-default persistence guarantee.
-  - **Effortless English Registration**: Entering English in the reading field automatically collapses the word/surface field—English entries require only a single field while preserving casing in the surface and lowercasing the reading key.
-  - **Neural Swipe Trie Synchronization**: Dynamically synchronizes user English words into the native C++ FUTO Swipe Trie in `< 0.5ms` with beam prefix protection and spatial-gated score boosting for Top-1 priority selection.
-  - **Spatial Typo & Misspelling Correction**: Misspelled English words typed in QWERTY mode automatically surface user dictionary matches in the candidate strip with a `[USER]` badge based on 2-layer spatial edit distance and SymSpell integration.
-  - **In-Beam Acoustic Biasing & Phonetic Substitution**: Generates hotwords for both Kanji surface and Kana readings (Hiragana/Katakana expansion) during Zipformer `modified_beam_search` decoding and replaces phonetic Kana matches in `< 0.5ms`.
-  - **Full Dictionary Management UI**: Searchable and editable list with progressive disclosure to add, toggle, or delete terms directly within the app.
-- **ReazonSpeech Zipformer Architecture**:
-  - Based on `reazonspeech-k2-v2` trained on ~35,000 hours of Japanese audio.
-  - Optimized with **int8 quantization** for mobile devices (Encoder: ~147 MB, Decoder: ~11 MB, Joiner: ~10 MB, Vocabulary: 40 KB). Total size is ~169 MB, which runs comfortably within standard mobile RAM limits.
-- **Voice Keyboard (IME) & Setup Screen**:
-  - `VoiceInputMethodService` is a system-wide keyboard: the header **🎙 話す / 完了** button records 16,000 Hz mono 16-bit PCM and commits the decoded text at the cursor (optionally streaming at sentence boundaries with voice punctuation commands).
-  - Gboard-style flick / QWERTY / symbols / numpad keyboard with Kana-Kanji conversion (Mozc-derived dictionaries), next-phrase prediction, clipboard paste and dictionary shortcut in the header.
-  - **Neural Swipe Typing on English QWERTY**: Cleanroom ONNX Runtime native C++ integration of FUTO Keyboard's spatial 1D-CNN/DFSMN and ContextLM model, providing continuous gesture typing at ~4.2ms latency with 90.3% Top-1 accuracy, automatic inter-word space management on consecutive swipes, and single-tap entire-word deletion on backspace.
-  - `MainActivity` is a setup & settings hub: IME enable/select, quick-test field, keyboard height, streaming voice input, SLM re-rank engine selection, dictionary/model downloads and advanced tuning.
-- **Lightweight APK & On-Demand Model/Dictionary Download Architecture**:
-  - The APK is optimized for minimal size (~86 MB vs ~261 MB previously, target ≤ 90 MB) with zero models or dictionaries bundled in assets.
-  - All models and dictionaries are loaded from device storage. The ReazonSpeech ASR model, the Mozc dictionaries / Connection Matrix, and FUTO Swipe typing models (~12 MB) are downloaded on demand with progress tracking in the app UI and automated provisioning via `deploy.sh`. The optional Qwen2.5 GGUF SLM currently has no in-app downloader and is pushed with `tools/push_model_to_device.sh` (in-app download is still to be implemented per the project policy).
+- **100% On-Device & Zero Telemetry**: Audio, typed keystrokes, clipboard previews, and custom dictionaries never leave your device. No analytics, ad SDKs, or cloud APIs ([`PRIVACY.md`](PRIVACY.md)).
+- **Japanese & Optional English Speech Recognition**:
+  - **Japanese ASR**: ReazonSpeech `reazonspeech-k2-v2` Zipformer int8 via `sherpa-onnx` (~169 MB extracted model files) with streaming VAD (`StreamingVadProcessor`) and spoken Japanese punctuation (`JapanesePunctuationEngine`) with vocabulary false-positive protection.
+  - **English ASR (Optional)**: On-demand download of **NVIDIA Parakeet TDT-CTC 110M INT8** (`EnglishAsrModelDownloader`, ~126 MB extracted).
+- **Mozc-Based Kana-Kanji Keyboard & On-Demand Lexicons**:
+  - System-wide `VoiceInputMethodService` with flick / QWERTY / symbol / numpad layouts, header clipboard paste, and dictionary shortcut.
+  - Viterbi Kana-Kanji conversion (`KanaKanjiEngine`) using a compact bundled 2D bigram connection matrix (`connection_data.bin`, ~14.28 MB) plus on-demand HTTPS downloads for Mozc base, SudachiDict, jawiki, place/personal name, and emoji dictionaries (`MultiDictionaryManager`, `BaseDictionaryDownloader`).
+- **Neural Swipe Typing & English Typo Correction**:
+  - **Powered by FUTO Swipe**: Cleanroom ONNX Runtime native C++ integration of FUTO Swipe spatial 1D-CNN/DFSMN + ContextLM models (`FutoSwipeEngine`, `FutoSwipeDownloader`) for fast QWERTY gesture typing with automatic inter-word spacing and single-tap gesture-word deletion.
+  - **Spatial Typo Correction**: `EnglishSpellEngine` (`gl-keyboard-correction` / SymSpell, `EnglishSpellDownloader`) surfaces English spelling corrections in the candidate strip.
+- **Optional On-Device SLM Candidate Re-Ranking**:
+  - `LlmReranker` (`llama.cpp`) supports quantized **Qwen3.5-0.8B / 2B GGUF** models downloaded directly in-app via `SlmModelDownloader` (or pushed with `tools/push_model_to_device.sh`).
+- **Unified Japanese & English Custom Dictionary**:
+  - Persistent unified JSON repository (`custom_dictionary.json`, empty by default and preserved across upgrades; `android:allowBackup="false"`).
+  - Entering an English reading automatically collapses the surface field; custom entries synchronize into ASR hotword biasing/phonetic replacement and the native C++ FUTO Swipe Trie + spatial typo candidates.
+- **Compact APK & Modular Download-Only Architecture**:
+  - Signed Release APK is **~29 MB** (Debug APK is **~36 MB**), compiled for `arm64-v8a` & `x86_64` with **16KB ELF page alignment** (`arm64-v8a`).
+  - Only `app/src/main/assets/mozc/connection_data.bin` (~14.28 MB) is bundled in the APK; heavy neural models and large multi-dictionaries load from device storage via in-app HTTPS downloaders across `MainActivity`'s 3 tabs (`Home` / `Settings` / `Data`).
 
 ---
 
@@ -49,77 +64,77 @@ Detailed documentation is available in the [`docs/`](docs/index.md) folder:
 ```mermaid
 flowchart LR
     Mic[Microphone 16kHz PCM] --> Rec[AudioRecorder / StreamingVadProcessor]
-    Rec --> Asr[AsrManager: sherpa-onnx OfflineRecognizer<br/>ReazonSpeech Zipformer]
+    Rec --> Asr[AsrManager: sherpa-onnx Recognizer<br/>ReazonSpeech JA / Parakeet EN]
     Asr --> Post[DictionaryPostProcessor + JapanesePunctuationEngine]
     Post --> IME[VoiceInputMethodService]
     Keys[FlickKeyboardView] --> Kana[KanaKanjiEngine]
-    Kana --> SLM[LlmReranker (Qwen2.5-0.5B / 1.5B)]
+    Kana --> SLM[LlmReranker (Qwen3.5-0.8B / 2B GGUF)]
     SLM --> IME
     Kana --> IME
     IME --> App[Target app text field]
-    Main[MainActivity: setup, settings, downloads] -.-> Asr
+    Main[MainActivity: Home / Settings / Data] -.-> Asr
 ```
 
 See [System Architecture](docs/architecture.md) for details.
 
 ---
 
-## 🚀 Getting Started
+## 📥 Install v0.1.0 Release APK (End Users)
+
+> Official package ID: `io.github.kenichikurihara.jotinput` (Android 8.0+ / API 26+, `arm64-v8a` or `x86_64`).
+
+1. Download `app-release.apk` and `SHA256SUMS.txt` from [GitHub Releases](https://github.com/kenichikurihara/jotinput/releases).
+2. *(Recommended)* Verify the download integrity and APK signature before installing:
+   ```bash
+   sha256sum -c SHA256SUMS.txt
+   apksigner verify --print-certs app-release.apk
+   ```
+3. Transfer `app-release.apk` to your Android device and allow **Install unknown apps** when prompted to complete installation (or install via USB: `adb install -r app-release.apk`).
+4. Open **JotInput**, grant microphone permission, and follow the **Home** / **Data** tabs to download the speech model and dictionaries over HTTPS.
+5. Enable **JotInput** in Android Language & Keyboard settings and switch the active input method to **JotInput**.
+
+> **Note**: Release builds update manually from GitHub Releases (do not upgrade between Debug and Release builds without uninstalling, as they use different signing certificates).
+
+---
+
+## 🛠️ Build & Test from Source (Developers)
 
 ### Prerequisites
-- Android device or emulator running **Android 8.0 (API 26)** or higher with an `arm64-v8a` or `x86_64` processor (32-bit ABIs are not supported).
-- Android SDK installed (`android-sdk` with `platform-tools`) and NDK 26.3 for the native re-ranker.
+- Android device or emulator running **Android 8.0 (API 26)** or higher (`arm64-v8a` or `x86_64`; 32-bit ABIs are not supported).
+- Android SDK (`platform-tools`) and NDK 26.3 (for native `llama.cpp` / C++ engines).
 
-### 1. Model Setup (Download-Only; nothing is bundled in the APK)
-
-#### Option A: Developer provisioning
+### Build, Unit Tests & Provisioning
 ```bash
-./download_model.sh   # fetches ReazonSpeech into tools/models/reazonspeech/
-./deploy.sh           # builds, installs, and pushes missing model files to connected devices
-```
+# Run unit, punctuation, Konsist DDD, and Alloy 6 formal verification tests
+./gradlew testDebugUnitTest
 
-#### Option B: Download in-app
-Install the APK without models. When opened, the app displays a setup card with a **"Download ReazonSpeech Model (~160MB)"** button with a live progress indicator. Dictionaries are downloaded from the dictionary card; the optional Qwen SLM is pushed with `tools/push_model_to_device.sh`.
-
----
-
-### 2. Build the App
-
-```bash
+# Build Debug APK (app/build/outputs/apk/debug/app-debug.apk)
 ./gradlew assembleDebug
-```
 
-The APK will be generated at:
-```
-app/build/outputs/apk/debug/app-debug.apk
-```
-
----
-
-### 3. Install on Android Device
-
-Connect your phone (USB debugging) and/or ChromeOS ARCVM, then run:
-
-```bash
+# Optional: pre-fetch models into tools/models/ and deploy Debug build to connected devices
+./download_model.sh
 ./deploy.sh
 ```
 
-or manually:
-
-```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-
-Or open the project in **Android Studio** and click **Run**.
+> Release builds (`./gradlew assembleRelease`) produce an unsigned APK unless release signing variables/properties are configured locally (see [`SECURITY.md`](SECURITY.md) and [`app/build.gradle.kts`](app/build.gradle.kts)).
 
 ---
 
 ## 📱 How to Use
 
 1. Launch **JotInput** and grant microphone permission when prompted.
-2. Download the model/dictionaries if prompted.
-3. Tap **音声キーボードを有効にする** to enable the keyboard, then **入力方法をJotInputに切り替える** to select it.
-4. Tap any text field (e.g. the built-in **キーボードテスト** field) and use the keyboard:
-   - Tap **🎙 話す** in the header, speak Japanese, then tap **完了**; the transcription is inserted at the cursor.
-   - Or type with the flick/QWERTY keyboard and pick conversion candidates from the header strip.
-5. Register custom words via the **Dict** shortcut or the **Custom Dictionary** button.
+2. Download the ReazonSpeech model and Mozc dictionaries from the **Home** / **Data** tabs (optional English ASR, FUTO Swipe, English Spell, and Qwen3.5 GGUF SLM models are also available on demand).
+3. Tap **音声キーボードを有効にする** to enable the keyboard, then switch the active IME to **JotInput**.
+4. Tap any text field (such as the in-app **キーボードテスト** box) and use the keyboard:
+   - Tap **🎙 話す** in the header, speak, and tap **完了** (or use streaming mode for hands-free sentence-boundary commits with voice punctuation).
+   - Type with the flick/QWERTY keyboard or swipe on the English QWERTY layout and select candidates from the header strip.
+5. Register custom Japanese or English words via the **Dict** shortcut or **Data** tab.
+
+---
+
+## 📄 License, Privacy & Contributing
+
+- Licensed under the [**Apache License 2.0**](LICENSE).
+- Third-party software, model weights, and lexicon attributions (including **"Powered by FUTO Swipe"**) are documented in [**`NOTICE`**](NOTICE).
+- Privacy details are documented in [**`PRIVACY.md`**](PRIVACY.md); vulnerability reporting is in [**`SECURITY.md`**](SECURITY.md).
+- Before opening a PR, please read [**`CONTRIBUTING.md`**](CONTRIBUTING.md) for solo-maintainer expectations, Issue-First rules, and multi-device evidence requirements.

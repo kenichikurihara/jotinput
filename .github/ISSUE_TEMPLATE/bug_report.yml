@@ -1,0 +1,89 @@
+name: Bug Report / バグ報告
+description: Report a reproducible crash, IME layout problem, or ASR/conversion bug
+title: "[Bug]: "
+labels:
+  - bug
+  - triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug in **JotInput**.
+        Please note that the maintainer only owns **Pixel 10 Pro** and **ChromeOS ARCVM**, so reports from other devices require logs and screenshots to investigate.
+
+  - type: checkboxes
+    id: prechecks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I checked existing issues and am reporting a new reproducible bug.
+          required: true
+        - label: This is NOT a security vulnerability (security issues must follow SECURITY.md).
+          required: true
+
+  - type: dropdown
+    id: device_tier
+    attributes:
+      label: Device / Environment
+      options:
+        - Pixel 10 Pro (Tier 1)
+        - ChromeOS ARCVM (Tier 1)
+        - Other Android 8.0+ arm64-v8a / x86_64 device (Tier 2 - Best effort)
+    validations:
+      required: true
+
+  - type: input
+    id: device_details
+    attributes:
+      label: Device Model, Android OS Version, and ABI
+      placeholder: "e.g., Pixel 10 Pro, Android 16, arm64-v8a"
+    validations:
+      required: true
+
+  - type: input
+    id: app_version
+    attributes:
+      label: JotInput Version & Install Source
+      placeholder: "e.g., v0.1.0 (GitHub Release APK) or commit SHA"
+    validations:
+      required: true
+
+  - type: input
+    id: host_app
+    attributes:
+      label: Target App (if IME-related)
+      placeholder: "e.g., Chrome, Gmail, Slack, Termux (or MainActivity)"
+
+  - type: textarea
+    id: assets_enabled
+    attributes:
+      label: Downloaded Models / Dictionaries Enabled
+      placeholder: "e.g., ReazonSpeech int8, Mozc + SudachiDict, FUTO Swipe, Qwen3.5 GGUF (or None)"
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_actual
+    attributes:
+      label: Expected vs. Actual Behavior
+      placeholder: |
+        Expected: ...
+        Actual: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Logs / Window Insets / Screenshots
+      description: Please attach screenshots/screen recordings for visual bugs, filtered `adb logcat` for crashes, and `adb shell dumpsys window windows` for IME layout/inset bugs.
+      render: shell
