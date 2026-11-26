@@ -317,23 +317,24 @@ flowchart TD
 - [x] `.github/pull_request_template.md`: 外部コントリビューターにも分かりやすい形に整理（関連 Issue・Tier 検証端末・証拠/スクショ・AI 利用開示・DDD/DMN/Alloy/CI 確認）
 
 ### 7.2 GitHub リポジトリ設定（Settings）
-> **補足（GitHub Free Private リポジトリの API 制約）**: `kenichikurihara/jotinput` が Private の間は、GitHub Free プランの仕様により Branch Protection (HTTP 403)・Private Vulnerability Reporting (HTTP 404)・Fork PR 承認設定 (HTTP 422)・Secret Scanning が未開放です。Phase 3 では Private 状態で適用可能な設定を完了し、Public 化直後（Phase 4 冒頭）に残りを適用します。
+> **補足**: Phase 4 にてリポジトリを Public へ切り替え、Public 必須の保護設定・セキュリティ機能をすべて API 経由で有効化・リードバック検証しました。
 
-- [ ] **Branch Protection (`main`)** *(Phase 4 の Public 化直後に有効化)*:
-  - Require a pull request before merging（またはメンテナー自身はバイパス許可）
+- [x] **Branch Protection (`main`)**:
+  - Require a pull request before merging（`required_approving_review_count: 1`, `enforce_admins: false` によりソロメンテナーの直接運用を許可しつつ外部/非 Admin からの直接 push を禁止）
   - Require status checks to pass (`Build & Test`)
-  - Do not allow force pushes / deletions
-- [ ] **Fork PR workflows** *(Phase 4 の Public 化直後に有効化; Private 時は HTTP 422)*:
-  - `Require approval for first-time contributors`（`repos/kenichikurihara/jotinput/actions/permissions/fork-pr-contributor-approval` または Settings → Actions → General）
-- [x] **Actions ワークフロー権限**:
+  - Do not allow force pushes (`allow_force_pushes: false`) / deletions (`allow_deletions: false`)
+- [x] **Fork PR workflows**:
+  - `Require approval for first-time contributors`（`approval_policy: "first_time_contributors"` 設定済み）
+- [x] **Actions ワークフロー権限 & Deployment Protection**:
   - `default_workflow_permissions: "read"`, `can_approve_pull_request_reviews: false`（CLI 検証済み）
+  - `release` 環境にカスタムデプロイポリシー設定済み（`v*` タグおよび `main` ブランチのみ許可）
 - [x] **Dependabot alerts**:
   - `PUT repos/kenichikurihara/jotinput/vulnerability-alerts` で有効化済み（HTTP 204 確認）
-- [ ] **Public 必須のセキュリティ機能** *(Phase 4 の Public 化直後に有効化)*:
-  - Enable `Private vulnerability reporting` (`PUT repos/kenichikurihara/jotinput/private-vulnerability-reporting`)
-  - Enable `Secret scanning` & `Push protection`（パブリックリポジトリは無料）
-- [ ] **Releases & Tags** *(Phase 4 リリース時に確認)*:
-  - Release ノート（`.github/workflows/release.yml`）に既知の制限・対応端末 Tier・`SHA256SUMS.txt`・インストール手順（提供元不明アプリ許可）を明記
+- [x] **Public 必須のセキュリティ機能**:
+  - `Private vulnerability reporting` 有効化済み（`enabled: true`）
+  - `Secret scanning` & `Push protection` 有効化済み（`status: "enabled"`）
+- [x] **Releases & Tags**:
+  - `v0.1.0` リリース（https://github.com/kenichikurihara/jotinput/releases/tag/v0.1.0 ）を公開し、`jotinput-0.1.0-universal-release.apk`（28.51 MiB）および `SHA256SUMS.txt`、インストール・検証手順・対応端末 Tier・既知の制限を記載
 
 ---
 
@@ -360,12 +361,10 @@ flowchart TD
 2. [x] `README.md` にサポート端末 Tier・正確な APK/モデル構成・v0.1.0 インストール手順を反映する。
 3. [x] Private リポジトリで利用可能な GitHub Settings（Actions Workflow 権限 `read` 確認・Dependabot `vulnerability-alerts` 有効化）を適用し、Public 必須設定の Phase 4 手順を明文化する。
 
-### Phase 4: リポジトリ公開 & v0.1.0 リリース
-1. GitHub リポジトリの Visibility を **Public** に変更する（GitHub Web UI または `gh repo edit`）。
-2. Public 化直後に必須保護設定を有効化する:
-   - **Branch Protection (`main`)**: `Build & Test` ステータスチェック必須・強制 push / 削除禁止
-   - **Fork PR workflows**: Settings → Actions → General → `Require approval for first-time contributors`
-   - **Security**: `Private vulnerability reporting`（`PUT .../private-vulnerability-reporting`）および `Secret scanning` + `Push protection` を有効化
-3. *(必要に応じ)* `periodic-lexicon-update.yml` を公開後も自動 PR 実行するか、手動トリガー中心にするか最終確認する。
-4. `git tag -a v0.1.0 -m "Release v0.1.0"` → `git push origin v0.1.0` でリリースワークフローを起動する（必要に応じて `CHANGELOG.md` のリリース日を追記）。
-5. 生成された GitHub Release ページから自分で署名済み APK をダウンロード（`SHA256SUMS.txt` / `apksigner` 検証）し、Pixel 10 Pro 実機等でインストール・起動確認を行って完了！
+### Phase 4: リポジトリ公開 & v0.1.0 リリース ✅ 完了（Pixel 10 Pro 実機最終確認は端末接続後）
+1. [x] `CHANGELOG.md` に `[0.1.0] - 2026-11-26` を確定し、`origin/main` へ反映する。
+2. [x] GitHub リポジトリ `kenichikurihara/jotinput` の Visibility を **Public** に変更する。
+3. [x] Public 化直後に保護設定・セキュリティ機能（Branch Protection `main`、`first_time_contributors` Fork PR 承認、`Private vulnerability reporting`、`Secret scanning` + `Push protection`、`release` 環境ポリシー）を有効化・検証する。
+4. [x] `git tag -a v0.1.0 -m "Release v0.1.0"` → `git push origin v0.1.0` でリリースワークフロー（Run `45814444618`）を実行し、`https://github.com/kenichikurihara/jotinput/releases/tag/v0.1.0` を公開する。
+5. [x] 公開された GitHub Release から `jotinput-0.1.0-universal-release.apk`（SHA-256: `ed0bcff591008863fa9ab3e91bcbdfcd890f04ce58da76aee1929f3f8f41bbba`）および `SHA256SUMS.txt` をダウンロードし、`sha256sum` / `apksigner`（v2 署名、`CN=JotInput, OU=Release, O=kenichikurihara`、証明書 SHA-256: `a302f78d2fbb30f383df87a387ef388554c7c0f87b70e4f54c2f0287df36de3c`）を検証のうえ、ARCVM (`arc:5555`) でクリーンインストール・オンボーディング・`MainActivity` 起動・`AsrManager` ReazonSpeech モデルロード＋ウォームアップ推論・クラッシュゼロを確認する（**Pixel 10 Pro 実機での最終確認は実機未接続のためユーザー確認待ち**）。
+6. [ ] *(公開後判断)* `periodic-lexicon-update.yml` を公開後も毎月自動 PR 実行するか、手動トリガー中心にするか判断する。
