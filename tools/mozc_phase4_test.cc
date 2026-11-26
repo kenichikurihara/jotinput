@@ -98,8 +98,8 @@ int main() {
   std::cout << "============================================================\n" << std::endl;
 
   mozc::LlmRerankerConfig config;
-  config.model_path = "./tools/models/qwen2.5-0.5b-instruct-q4_k_m.gguf";
-  config.backend_dir = "./tools/llama_bin/llama-b11846";
+  config.model_path = "tools/models/qwen2.5-0.5b-instruct-q4_k_m.gguf";
+  config.backend_dir = "tools/llama_bin/llama-b11846";
   config.n_ctx = 512;
   config.n_threads = 4;
   config.alpha_weight = 0.20f;

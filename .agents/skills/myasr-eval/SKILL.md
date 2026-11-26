@@ -17,14 +17,14 @@ This skill documents all evaluation suites, datasets, metrics, and command-line 
 | Subsystem | Evaluation Focus | Primary Datasets & Tests | Metrics | Execution Tool |
 | :--- | :--- | :--- | :--- | :--- |
 | **1. Japanese ASR & Custom Dictionary** | Acoustic decoding, hotword biasing, phonetic substitution | `eval/dataset.json` (1,000 cases), 20-case custom dict matrix | TWRR, CER, FPR, RTF | Python (`eval/evaluate_1000.py`) |
-| **2. Spoken Punctuation & Boundary Input** | Spoken punctuation commands (`、`, `。`, `！`, 改行) vs protected homophones | [`JapanesePunctuationEvaluationTest.kt`](app/src/test/java/com/example/myasr/JapanesePunctuationEvaluationTest.kt) (67+ cases) | 100% Pass, False-Positive Rate | Gradle JVM UnitTest |
-| **3. Kana-Kanji Conversion & Bigram Costs** | Mozc Viterbi, Bigram connection matrix, morpheme splitting | `eval/connection_matrix_eval_results.json`, [`ConnectionMatrixTest.kt`](app/src/test/java/com/example/myasr/ConnectionMatrixTest.kt) | Top-1 / Top-3 Accuracy, Boundary Acc | Python & JVM UnitTest |
+| **2. Spoken Punctuation & Boundary Input** | Spoken punctuation commands (`、`, `。`, `！`, 改行) vs protected homophones | [`JapanesePunctuationEvaluationTest.kt`](../../../app/src/test/java/com/example/myasr/JapanesePunctuationEvaluationTest.kt) (67+ cases) | 100% Pass, False-Positive Rate | Gradle JVM UnitTest |
+| **3. Kana-Kanji Conversion & Bigram Costs** | Mozc Viterbi, Bigram connection matrix, morpheme splitting | `eval/connection_matrix_eval_results.json`, [`ConnectionMatrixTest.kt`](../../../app/src/test/java/com/example/myasr/ConnectionMatrixTest.kt) | Top-1 / Top-3 Accuracy, Boundary Acc | Python & JVM UnitTest |
 | **4. On-Device SLM Candidate Re-ranking** | Disambiguating homophones, context-free evaluation, Qwen2.5-0.5B vs 1.5B | `tools/eval_1000_cases.tsv`, `tools/eval_500_natural_empty.tsv`, `tools/eval_dataset_10000.jsonl` | Top-1, Top-3, MRR, Latency, Energy (mJ) | C++ CLI & Python |
-| **5. Multimodal Voice & Touch Arbitration** | State machine transitions, voice streaming while typing, Undo/Delete/Space/Punctuation | [`VoiceInputArbitratorTest.kt`](app/src/test/java/com/example/myasr/VoiceInputArbitratorTest.kt), [`FutoSwipeIntegrationTest.kt`](app/src/test/java/com/example/myasr/FutoSwipeIntegrationTest.kt) | 100% Pass, Zero Inconsistency | Gradle JVM UnitTest |
-| **6. Streaming Prefix Freeze & Filler Removal** | Live speech partial commit, flicker suppression, filler filtering | [`StreamingPrefixFreezeEvaluationTest.kt`](app/src/test/java/com/example/myasr/StreamingPrefixFreezeEvaluationTest.kt), 120-case filler suite | Edit Distance, Revision Rate, Latency | Gradle JVM UnitTest |
+| **5. Multimodal Voice & Touch Arbitration** | State machine transitions, voice streaming while typing, Undo/Delete/Space/Punctuation | [`VoiceInputArbitratorTest.kt`](../../../app/src/test/java/com/example/myasr/VoiceInputArbitratorTest.kt), [`FutoSwipeIntegrationTest.kt`](../../../app/src/test/java/com/example/myasr/FutoSwipeIntegrationTest.kt) | 100% Pass, Zero Inconsistency | Gradle JVM UnitTest |
+| **6. Streaming Prefix Freeze & Filler Removal** | Live speech partial commit, flicker suppression, filler filtering | [`StreamingPrefixFreezeEvaluationTest.kt`](../../../app/src/test/java/com/example/myasr/StreamingPrefixFreezeEvaluationTest.kt), 120-case filler suite | Edit Distance, Revision Rate, Latency | Gradle JVM UnitTest |
 | **7. English QWERTY Neural Swipe Typing** | 1D-CNN/DFSMN spatial CTC beam search + ContextLM re-ranking | `eval/futo_swipe/swipe_eval_1000.jsonl` (1,000 cases) | Top-1 / Top-3 / Top-5 Acc, NN Latency (ms) | Python & Native C++ |
-| **8. LM-First Joint Scoring & Parameter Tuning** | Language model-first joint decoding, Intra-Word Surprisal Clamping, length diagnostic recovery, flick/QWERTY typo recovery | `eval/lm_first_eval_dataset.json` (247 cases), [`LmFirstJointEvaluationTest.kt`](app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt) | Top-1, Top-3, MRR, User Dict 100%, Diagnostic 100% | Python (`tune_and_eval_lm_first.py`) & JVM UnitTest |
-| **9. English Typo & Contextual SLM Reranking** | Normalized relative observation cost $D_{\text{obs}} \le 0.38$, short-word protection, space-adaptive BPE evaluation | [`EnglishTypoRerankTest.kt`](app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt), [`UnifiedEnglishDictionaryTest.kt`](app/src/test/java/com/example/myasr/UnifiedEnglishDictionaryTest.kt) | 100% Pass, Zero Distortion on Short Words | Gradle JVM UnitTest |
+| **8. LM-First Joint Scoring & Parameter Tuning** | Language model-first joint decoding, Intra-Word Surprisal Clamping, length diagnostic recovery, flick/QWERTY typo recovery | `eval/lm_first_eval_dataset.json` (247 cases), [`LmFirstJointEvaluationTest.kt`](../../../app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt) | Top-1, Top-3, MRR, User Dict 100%, Diagnostic 100% | Python (`tune_and_eval_lm_first.py`) & JVM UnitTest |
+| **9. English Typo & Contextual SLM Reranking** | Normalized relative observation cost $D_{\text{obs}} \le 0.38$, short-word protection, space-adaptive BPE evaluation | [`EnglishTypoRerankTest.kt`](../../../app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt), [`UnifiedEnglishDictionaryTest.kt`](../../../app/src/test/java/com/example/myasr/UnifiedEnglishDictionaryTest.kt) | 100% Pass, Zero Distortion on Short Words | Gradle JVM UnitTest |
 
 --------------------------------------------------------------------------------
 
@@ -47,8 +47,8 @@ python3 eval/evaluate_1000.py \
 ```
 
 ### Reference Documentation
-- [`docs/evaluation_report_1000.md`](docs/evaluation_report_1000.md)
-- [`docs/dictionary_improvement_plan.md`](docs/dictionary_improvement_plan.md)
+- [`docs/evaluation_report_1000.md`](../../../docs/evaluation_report_1000.md)
+- [`docs/dictionary_improvement_plan.md`](../../../docs/dictionary_improvement_plan.md)
 
 --------------------------------------------------------------------------------
 
@@ -58,7 +58,7 @@ python3 eval/evaluate_1000.py \
 Every build or PR touching ASR, VAD, punctuation, or IME MUST pass 100% on unit tests. Never weaken vocabulary protection rules for spoken commands.
 
 ### Test Matrix
-- **Test Class**: [`app/src/test/java/com/example/myasr/JapanesePunctuationEvaluationTest.kt`](app/src/test/java/com/example/myasr/JapanesePunctuationEvaluationTest.kt) (67+ deterministic tests)
+- **Test Class**: [`app/src/test/java/com/example/myasr/JapanesePunctuationEvaluationTest.kt`](../../../app/src/test/java/com/example/myasr/JapanesePunctuationEvaluationTest.kt) (67+ deterministic tests)
 - **Protected Words**:
   - `てん` (点): 天気, 天然, 満点, 交差点, 重点, 10点, 頂点, 減点, 起点
   - `まる` (丸): まるで, 一丸, 日の丸, まるまる, 丸ごと, 丸見え
@@ -71,8 +71,8 @@ Every build or PR touching ASR, VAD, punctuation, or IME MUST pass 100% on unit 
 ```
 
 ### Reference Documentation
-- [`docs/punctuation_and_voice_boundary_evaluation_criteria.md`](docs/punctuation_and_voice_boundary_evaluation_criteria.md)
-- [`docs/voice_punctuation_and_sentence_boundary_input.md`](docs/voice_punctuation_and_sentence_boundary_input.md)
+- [`docs/punctuation_and_voice_boundary_evaluation_criteria.md`](../../../docs/punctuation_and_voice_boundary_evaluation_criteria.md)
+- [`docs/voice_punctuation_and_sentence_boundary_input.md`](../../../docs/voice_punctuation_and_sentence_boundary_input.md)
 
 --------------------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ Benchmarks Mozc-derived Viterbi candidate ordering against full $2672 \times 267
 ### Key Datasets & Scripts
 - **Runner**: `eval/evaluate_connection_matrix.py`
 - **Output Report**: `eval/connection_matrix_eval_results.json`
-- **JVM Unit Test**: [`app/src/test/java/com/example/myasr/ConnectionMatrixTest.kt`](app/src/test/java/com/example/myasr/ConnectionMatrixTest.kt)
+- **JVM Unit Test**: [`app/src/test/java/com/example/myasr/ConnectionMatrixTest.kt`](../../../app/src/test/java/com/example/myasr/ConnectionMatrixTest.kt)
 
 ### How to Run
 ```bash
@@ -96,8 +96,8 @@ python3 eval/evaluate_connection_matrix.py
 ```
 
 ### Reference Documentation
-- [`docs/connection_matrix_evaluation_report.md`](docs/connection_matrix_evaluation_report.md)
-- [`docs/system_design_gboard_style_mmap_lexicon.md`](docs/system_design_gboard_style_mmap_lexicon.md)
+- [`docs/connection_matrix_evaluation_report.md`](../../../docs/connection_matrix_evaluation_report.md)
+- [`docs/system_design_gboard_style_mmap_lexicon.md`](../../../docs/system_design_gboard_style_mmap_lexicon.md)
 
 --------------------------------------------------------------------------------
 
@@ -130,9 +130,9 @@ g++ -O3 tools/eval_context_free_slm.cc -o tools/eval_context_free_slm
 ```
 
 ### Reference Documentation
-- [`docs/rerank_nano2_kekka_sakujo_debug_and_ideas.md`](docs/rerank_nano2_kekka_sakujo_debug_and_ideas.md)
-- [`docs/context_free_slm_reranking_evaluation.md`](docs/context_free_slm_reranking_evaluation.md)
-- [`docs/slm_battery_and_power_consumption_report.md`](docs/slm_battery_and_power_consumption_report.md)
+- [`docs/rerank_nano2_kekka_sakujo_debug_and_ideas.md`](../../../docs/rerank_nano2_kekka_sakujo_debug_and_ideas.md)
+- [`docs/context_free_slm_reranking_evaluation.md`](../../../docs/context_free_slm_reranking_evaluation.md)
+- [`docs/slm_battery_and_power_consumption_report.md`](../../../docs/slm_battery_and_power_consumption_report.md)
 
 --------------------------------------------------------------------------------
 
@@ -142,8 +142,8 @@ g++ -O3 tools/eval_context_free_slm.cc -o tools/eval_context_free_slm
 Verifies race-condition-free interaction between continuous streaming voice, VAD pause chunks, flick/tap typing, backspace, undo, space, punctuation absorption, and cursor movements.
 
 ### Test Classes
-- [`app/src/test/java/com/example/myasr/VoiceTouchInputArbitratorTest.kt`](app/src/test/java/com/example/myasr/VoiceTouchInputArbitratorTest.kt) (covers all 24 corner cases in ADR-012/ADR-013)
-- [`app/src/test/java/com/example/myasr/FutoSwipeIntegrationTest.kt`](app/src/test/java/com/example/myasr/FutoSwipeIntegrationTest.kt) (covers swipe word commit, consecutive swipe inter-word spacing, single-tap entire-word deletion on backspace, alternative candidate replacement)
+- [`app/src/test/java/com/example/myasr/VoiceTouchInputArbitratorTest.kt`](../../../app/src/test/java/com/example/myasr/VoiceTouchInputArbitratorTest.kt) (covers all 24 corner cases in ADR-012/ADR-013)
+- [`app/src/test/java/com/example/myasr/FutoSwipeIntegrationTest.kt`](../../../app/src/test/java/com/example/myasr/FutoSwipeIntegrationTest.kt) (covers swipe word commit, consecutive swipe inter-word spacing, single-tap entire-word deletion on backspace, alternative candidate replacement)
 
 ### How to Run
 ```bash
@@ -152,7 +152,7 @@ Verifies race-condition-free interaction between continuous streaming voice, VAD
 ```
 
 ### Reference Documentation
-- [`docs/voice_and_touch_interaction_corner_cases.md`](docs/voice_and_touch_interaction_corner_cases.md)
+- [`docs/voice_and_touch_interaction_corner_cases.md`](../../../docs/voice_and_touch_interaction_corner_cases.md)
 
 --------------------------------------------------------------------------------
 
@@ -162,8 +162,8 @@ Verifies race-condition-free interaction between continuous streaming voice, VAD
 Evaluates partial commit strategies (Freeze) to eliminate visual flicker during real-time streaming speech recognition.
 
 ### Test Classes & Scripts
-- **Test Class**: [`app/src/test/java/com/example/myasr/StreamingPrefixFreezeEvaluationTest.kt`](app/src/test/java/com/example/myasr/StreamingPrefixFreezeEvaluationTest.kt)
-- **Latency Benchmark**: [`app/src/test/java/com/example/myasr/ImeLatencyAndAsyncTest.kt`](app/src/test/java/com/example/myasr/ImeLatencyAndAsyncTest.kt)
+- **Test Class**: [`app/src/test/java/com/example/myasr/StreamingPrefixFreezeEvaluationTest.kt`](../../../app/src/test/java/com/example/myasr/StreamingPrefixFreezeEvaluationTest.kt)
+- **Latency Benchmark**: [`app/src/test/java/com/example/myasr/ImeLatencyAndAsyncTest.kt`](../../../app/src/test/java/com/example/myasr/ImeLatencyAndAsyncTest.kt)
 
 ### How to Run
 ```bash
@@ -172,7 +172,7 @@ Evaluates partial commit strategies (Freeze) to eliminate visual flicker during 
 ```
 
 ### Reference Documentation
-- [`docs/streaming_prefix_freeze_solutions_and_evaluation.md`](docs/streaming_prefix_freeze_solutions_and_evaluation.md)
+- [`docs/streaming_prefix_freeze_solutions_and_evaluation.md`](../../../docs/streaming_prefix_freeze_solutions_and_evaluation.md)
 
 --------------------------------------------------------------------------------
 
@@ -200,8 +200,8 @@ python3 eval/futo_swipe/run_futo_swipe_eval.py \
 ```
 
 ### Reference Documentation
-- [`docs/futo_swipe_phase1_evaluation_report.md`](docs/futo_swipe_phase1_evaluation_report.md)
-- [`docs/futo_swipe_qwerty_design.md`](docs/futo_swipe_qwerty_design.md)
+- [`docs/futo_swipe_phase1_evaluation_report.md`](../../../docs/futo_swipe_phase1_evaluation_report.md)
+- [`docs/futo_swipe_qwerty_design.md`](../../../docs/futo_swipe_qwerty_design.md)
 
 --------------------------------------------------------------------------------
 
@@ -220,7 +220,7 @@ Evaluates Language Model-first joint beam search and candidate scoring, combinin
 - **Tuner & Grid Search Runner**: `eval/tune_and_eval_lm_first.py`
 - **Cached NLL Cache**: `eval/lm_first_nll_cache.json`
 - **Tuning Results Summary**: `eval/lm_first_tuning_results.json`
-- **Android JVM Unit Test**: [`app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt`](app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt)
+- **Android JVM Unit Test**: [`app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt`](../../../app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt)
 
 ### Tuned Optimal Parameters & Benchmark Results
 - **Optimal Hyperparameters**:
@@ -249,7 +249,7 @@ python3 eval/tune_and_eval_lm_first.py
 ```
 
 ### Reference Documentation
-- [`docs/lm_first_flick_and_qwerty_architecture.md`](docs/lm_first_flick_and_qwerty_architecture.md)
+- [`docs/lm_first_flick_and_qwerty_architecture.md`](../../../docs/lm_first_flick_and_qwerty_architecture.md)
 
 --------------------------------------------------------------------------------
 
@@ -260,9 +260,9 @@ Evaluates English QWERTY typing candidate ranking, relative observation error no
 
 ### Test Matrix
 - **Test Classes**:
-  - [`app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt`](app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt) (Joint Bayesian energy ranking, NLL vs. observation penalty)
-  - [`app/src/test/java/com/example/myasr/UnifiedEnglishDictionaryTest.kt`](app/src/test/java/com/example/myasr/UnifiedEnglishDictionaryTest.kt) (Normalized typo matching, prefix completion, bilingual property persistence)
-  - [`app/src/test/java/com/example/myasr/EnglishSpellEngineTest.kt`](app/src/test/java/com/example/myasr/EnglishSpellEngineTest.kt) (Native C++ typo correction, GEC clause correction)
+  - [`app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt`](../../../app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt) (Joint Bayesian energy ranking, NLL vs. observation penalty)
+  - [`app/src/test/java/com/example/myasr/UnifiedEnglishDictionaryTest.kt`](../../../app/src/test/java/com/example/myasr/UnifiedEnglishDictionaryTest.kt) (Normalized typo matching, prefix completion, bilingual property persistence)
+  - [`app/src/test/java/com/example/myasr/EnglishSpellEngineTest.kt`](../../../app/src/test/java/com/example/myasr/EnglishSpellEngineTest.kt) (Native C++ typo correction, GEC clause correction)
 
 ### How to Run
 ```bash
@@ -277,7 +277,7 @@ Evaluates English QWERTY typing candidate ranking, relative observation error no
 ```
 
 ### Reference Documentation
-- [ADR-019 & Finding 40 in `docs/findings_and_decisions.md`](docs/findings_and_decisions.md)
+- [ADR-019 & Finding 40 in `docs/findings_and_decisions.md`](../../../docs/findings_and_decisions.md)
 
 --------------------------------------------------------------------------------
 

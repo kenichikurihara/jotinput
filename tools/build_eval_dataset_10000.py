@@ -14,9 +14,10 @@ import random
 import re
 from typing import List, Dict, Any, Tuple
 
-OUTPUT_PATH = "./tools/eval_dataset_10000.jsonl"
-KWDLC_DIR = "./tools/data_sources/KWDLC/knp"
-TATOEBA_PATH = "./tools/data_sources/tatoeba/jpn_sentences.tsv"
+TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_PATH = os.path.join(TOOLS_DIR, "eval_dataset_10000.jsonl")
+KWDLC_DIR = os.path.join(TOOLS_DIR, "data_sources", "KWDLC", "knp")
+TATOEBA_PATH = os.path.join(TOOLS_DIR, "data_sources", "tatoeba", "jpn_sentences.tsv")
 
 # Common Japanese homophone dictionary for generating challenging alternatives
 HOMOPHONE_MAP = {

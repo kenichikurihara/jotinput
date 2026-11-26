@@ -4,7 +4,9 @@ import subprocess
 import time
 import xml.etree.ElementTree as ET
 
-DEVICE_ID = "<device-ip>:43343"
+APP_ID = "io.github.kenichikurihara.jotinput"
+APP_NAMESPACE = "com.example.myasr"
+DEVICE_ID = os.environ.get("ADB_DEVICE_ID", "<device-ip>:<port>")
 
 def run_adb(cmd, timeout=15):
     full_cmd = ["adb", "-s", DEVICE_ID] + cmd
@@ -30,7 +32,7 @@ def get_top1_for_prefix(prefix):
     try:
         root = ET.fromstring(xml_data)
         for n in root.iter("node"):
-            if n.attrib.get("resource-id") == "com.example.myasr:id/etKeyboardTest":
+            if n.attrib.get("resource-id") == f"{APP_ID}:id/etKeyboardTest":
                 return n.attrib.get("text", "").strip()
     except Exception as e:
         print(f"Error parsing XML for prefix {prefix}: {e}")
@@ -92,9 +94,9 @@ def main():
         with open(out_path, "w", encoding="utf-8") as out:
             json.dump(results, out, indent=2, ensure_ascii=False)
         print(f"Saved {len(results)} golden records to {out_path}")
-        run_adb(["shell", "ime", "set", "com.example.myasr/.VoiceInputMethodService"])
+        run_adb(["shell", "ime", "set", f"{APP_ID}/{APP_NAMESPACE}.VoiceInputMethodService"])
         run_adb(["shell", "settings", "put", "system", "screen_off_timeout", "120000"])
-        print("Restored default IME to com.example.myasr/.VoiceInputMethodService and timeout to 2m")
+        print(f"Restored default IME to {APP_ID}/{APP_NAMESPACE}.VoiceInputMethodService and timeout to 2m")
 
 if __name__ == "__main__":
     main()

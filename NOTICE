@@ -1,0 +1,74 @@
+JotInput
+Copyright 2026 kenichikurihara
+
+This product includes software developed by kenichikurihara
+(https://github.com/kenichikurihara/jotinput).
+
+--------------------------------------------------------------------------------
+THIRD-PARTY OPEN-SOURCE SOFTWARE, MODEL WEIGHTS & LEXICONS NOTICE
+--------------------------------------------------------------------------------
+JotInput bundles, builds against, or downloads on demand the following
+third-party components, pre-trained neural models, and lexical resources.
+Each third-party component remains subject to its own license terms.
+
+1. ReazonSpeech Zipformer Transducer Model
+   - Copyright (c) Reazon Human Interaction Lab (Reazon Holdings, Inc.)
+   - License: Apache License, Version 2.0
+   - Upstream: https://github.com/reazon-research/ReazonSpeech
+
+2. NVIDIA Parakeet TDT-CTC 110M (English ASR, optional download)
+   - Copyright (c) NVIDIA Corporation
+   - License: Creative Commons Attribution 4.0 International (CC-BY-4.0)
+   - Upstream: https://huggingface.co/nvidia/parakeet-tdt_ctc-110m
+
+3. sherpa-onnx (On-device Speech Recognition Engine & ONNX Runtime packaging)
+   - Copyright (c) 2022-2026 Next-gen Kaldi / K2 FSA Team
+   - License: Apache License, Version 2.0
+   - Upstream: https://github.com/k2-fsa/sherpa-onnx
+
+4. sherpa-onnx-zipformer-ja-reazonspeech ONNX Model Packaging (optional download)
+   - Distributed by Taisei Ozaki / DeL
+   - License: Apache License, Version 2.0
+   - Upstream: https://huggingface.co/DeL-TaiseiOzaki/sherpa-onnx-zipformer-ja-reazonspeech-2024-08-01
+
+5. llama.cpp / ggml (On-device LLM/SLM inference runtime)
+   - Copyright (c) 2023-2026 The ggml authors
+   - License: MIT License
+   - Upstream: https://github.com/ggml-org/llama.cpp
+
+6. Mozc (Japanese Input Method Editor Engine, Connection Matrix & Lexicons)
+   - Copyright (c) 2010-2026 Google Inc. / Google LLC
+   - License: 3-Clause BSD License
+   - Upstream: https://github.com/google/mozc
+
+7. mozcdic-ut External Dictionaries (optional downloads)
+   - Upstream: https://github.com/utuhiro78
+   - SudachiDict (mozcdic-ut-sudachidict): Apache License, Version 2.0
+     (Derived from Works Applications /WAP SudachiDict)
+   - Wikipedia Entries (mozcdic-ut-jawiki): Creative Commons Attribution-ShareAlike
+     (CC-BY-SA 3.0 / Wikipedia content derivatives)
+   - Place Names & Postal Data (mozcdic-ut-place-names) and Personal Names
+     (mozcdic-ut-personal-names): Derived from public postal / name datasets
+     per upstream mozcdic-ut license notices.
+
+8. FUTO Swipe Neural Gesture Typing Technology (optional download)
+   - Attribution: "Powered by FUTO Swipe"
+   - Copyright (c) 2026 FUTO Holdings Inc.
+   - License: FUTO Model Weights License 1.0
+   - Upstream: https://gitlab.futo.org/keyboard/swipe-library
+   - Weights: https://huggingface.co/futo-org/futo-swipe
+
+9. gl-keyboard-correction (English Spell Correction Engine, optional download)
+   - Distributed by Loke-60000
+   - License: Apache License, Version 2.0
+   - Upstream: https://huggingface.co/Loke-60000/gl-keyboard-correction
+
+10. Android Jetpack & Material Components
+    - Copyright (c) The Android Open Source Project
+    - License: Apache License, Version 2.0
+    - Upstream: https://developer.android.com/jetpack
+
+11. Optional On-Device Small Language Models (e.g., Qwen3.5 GGUF, optional download)
+    - Subject to the respective upstream model publisher license terms
+      (e.g., Apache License, Version 2.0 / Qwen License) when downloaded
+      or provisioned onto device storage by the user.

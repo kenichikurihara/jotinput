@@ -12,21 +12,21 @@
 
 公開ボタンを押す前に**「後からやり直しが効かない項目（P0）」**を最優先で片付けることが重要です。
 
-| 優先度 | カテゴリ | 現在のリポジトリで確認された具体的な課題 | 放置した場合のリスク |
+| 優先度 | カテゴリ | 公開前に確認・対応した項目（Phase 1 完了状況） | 放置した場合のリスク |
 | :--- | :--- | :--- | :--- |
-| **P0 (必須)** | ライセンス | `LICENSE` が現在 **Proprietary Software License（公開・改変禁止）** のまま | リポジトリを公開しても誰も合法的に利用・フォークできない |
-| **P0 (必須)** | パッケージID | `applicationId = "com.example.myasr"` のまま (`app/build.gradle.kts:40`) | 公開後に変更すると別アプリ扱いになり、既存ユーザーのデータ移行・上書き更新が不可能。Google Play でも拒否される |
-| **P0 (必須)** | 個人情報・環境情報 | `deploy.sh`, `AGENTS.md`, `GEMINI.md`, `.agents/skills/` にローカル LAN IP (`<device-ip>`)・実機シリアル (`<device-serial>`)・ローカルパス (`/home/<user>/...`) が記載 | 公開と同時にインターネット上に永続的に残る |
-| **P0 (必須)** | 秘密情報監査 | Git 履歴に個人メールアドレス (`<redacted-email>`) と `noreply` が混在。`app/debug.keystore` が追跡済み | 公開後はクローン・アーカイブされ削除困難 |
-| **P0 (必須)** | Release ビルド検証 | `isMinifyEnabled = true` だが CI は `assembleDebug` のみ。`proguard-rules.pro` は 9 行のみ | R8 難読化・最適化で JNI / リフレクション / JSON が壊れ、v0.1.0 Release APK だけクラッシュする危険が高い |
-| **P0 (必須)** | 署名キー管理 | `signingConfigs.release` が未設定 | 署名済み Release APK を作れない。また鍵を紛失すると二度とアップデート配布できない |
-| **P0 (必須)** | PR / 保守ポリシー | `CONTRIBUTING.md` が未作成。PR レビューの期待値が未定義 | 大量・大型の PR や他端末向け PR が来た際に対応できず、摩擦や燃え尽きにつながる |
-| **P1 (推奨)** | サードパーティ権利 | `MainActivity.kt` で参照する NVIDIA Parakeet や `mozcdic-ut-*` (Wikipedia由来等) のライセンス整理が `LICENSE` に未反映。FUTO Swipe の帰属表示確認 | ライセンス違反・著作権クレームのリスク |
-| **P1 (推奨)** | アプリ内更新機構 | `AppUpdateRepository.kt` が `app-debug` CI Artifact + GitHub PAT 前提 | Release ビルドでは署名が異なるため Debug APK で上書き不可。公開ユーザー向け設計との不整合 |
-| **P1 (推奨)** | Android セキュリティ | `AndroidManifest.xml` で `allowBackup="true"`、`DictionaryActivity` が `exported="true"` | 入力履歴・辞書・設定の意図しないクラウドバックアップや外部アプリからの直接起動 |
-| **P1 (推奨)** | バージョニング | 現在 `versionCode = 2`, `versionName = "1.1"` (`app/build.gradle.kts:43-44`) | `v0.1.0` と整合しない（新 `applicationId` なら `versionCode = 1`, `versionName = "0.1.0"` で初期化可能） |
+| **P0 (必須)** | ライセンス | ✅ **完了**: Apache License 2.0 へ変更（[`LICENSE`](../LICENSE)） | リポジトリを公開しても誰も合法的に利用・フォークできない |
+| **P0 (必須)** | パッケージID | ✅ **完了**: `applicationId = "io.github.kenichikurihara.jotinput"` へ変更（[`app/build.gradle.kts`](../app/build.gradle.kts)） | 公開後に変更すると別アプリ扱いになり、既存ユーザーのデータ移行・上書き更新が不可能。Google Play でも拒否される |
+| **P0 (必須)** | 個人情報・環境情報 | ✅ **完了**: ローカル LAN IP (`<device-ip>`)・実機シリアル (`<device-serial>`)・ローカル絶対パス・個人名例を除去／汎用化 | 公開と同時にインターネット上に永続的に残る |
+| **P0 (必須)** | 秘密情報監査 | ✅ **完了**: Git 全履歴の個人メールを `noreply` へ書換え、`app/debug.keystore` を全履歴から削除・`.gitignore` 化 | 公開後はクローン・アーカイブされ削除困難 |
+| **P0 (必須)** | Release ビルド検証 | `isMinifyEnabled = true` だが CI は `assembleDebug` のみ。`proguard-rules.pro` は 9 行のみ（Phase 2 で対応） | R8 難読化・最適化で JNI / リフレクション / JSON が壊れ、v0.1.0 Release APK だけクラッシュする危険が高い |
+| **P0 (必須)** | 署名キー管理 | `signingConfigs.release` が未設定（Phase 2 で対応） | 署名済み Release APK を作れない。また鍵を紛失すると二度とアップデート配布できない |
+| **P0 (必須)** | PR / 保守ポリシー | `CONTRIBUTING.md` が未作成。PR レビューの期待値が未定義（Phase 3 で対応） | 大量・大型の PR や他端末向け PR が来た際に対応できず、摩擦や燃え尽きにつながる |
+| **P1 (推奨)** | サードパーティ権利 | ✅ **完了**: [`NOTICE`](../NOTICE) 新設および `MainActivity.kt` のライセンス表示を更新（Parakeet / mozcdic-ut / llama.cpp / Mozc / gl-keyboard-correction / FUTO Swipe 帰属含む） | ライセンス違反・著作権クレームのリスク |
+| **P1 (推奨)** | アプリ内更新機構 | `AppUpdateRepository.kt` が `app-debug` CI Artifact + GitHub PAT 前提（Phase 2 で対応） | Release ビルドでは署名が異なるため Debug APK で上書き不可。公開ユーザー向け設計との不整合 |
+| **P1 (推奨)** | Android セキュリティ | ✅ **完了**: `allowBackup="false"`、`DictionaryActivity` を `exported="false"` に変更 | 入力履歴・辞書・設定の意図しないクラウドバックアップや外部アプリからの直接起動 |
+| **P1 (推奨)** | バージョニング | ✅ **完了**: `versionCode = 1`, `versionName = "0.1.0"` に設定 | `v0.1.0` と整合しない |
 | **P2 (公開後可)** | 外部依存 URL | `BaseDictionaryDownloader.kt` が個人 Gist URL を参照 | メンテナーの Gist 削除・変更で動かなくなる。GitHub Releases / Repo 内管理へ移行推奨 |
-| **P2 (公開後可)** | プライバシー文書 | IME + `RECORD_AUDIO` + `INTERNET` 権限に対する `PRIVACY.md` が未整備 | 「キーロガーでは？」という不信感で導入を敬遠される |
+| **P2 (公開後可)** | プライバシー文書 | ✅ **完了**: [`PRIVACY.md`](../PRIVACY.md) を作成（日英併記） | 「キーロガーでは？」という不信感で導入を敬遠される |
 
 ---
 
@@ -81,17 +81,16 @@ IME（キーボード）アプリはユーザーのパスワードやプライ�
 今回の調査で、リポジトリ内に以下の環境依存・個人情報が追跡されていることが確認されました。
 
 1. **ローカル LAN IP アドレス (`<device-ip>`)**
-   - 箇所: `deploy.sh`, `AGENTS.md`, `GEMINI.md`, `.agents/skills/myasr-debug/SKILL.md`
-   - 対策: 環境変数（例: `JOTINPUT_ADB_HOST`）やローカル未追跡ファイル（`.env.local` 等）に逃がし、コード上は `192.168.x.x` 等のプレースホルダに置換する。
+   - 対象: `deploy.sh`, `AGENTS.md`, `GEMINI.md`, `.agents/skills/myasr-debug/SKILL.md` 等
+   - 対策: 環境変数（例: `JOTINPUT_ADB_WIFI_HOST`）やローカル未追跡ファイル（`.env.local` 等）に逃がし、コード上は `<device-ip>` のプレースホルダに置換済み。
 2. **実機シリアル番号 (`<device-serial>`)**
-   - 箇所: `AGENTS.md`, `GEMINI.md`
-   - 対策: `<device-serial>` のようなプレースホルダに置換する。
+   - 対象: `AGENTS.md`, `GEMINI.md` 等
+   - 対策: `<device-serial>` のプレースホルダに置換済み。
 3. **ローカルのユーザー名を含む絶対パス (`/home/<user>/...`)**
-   - 箇所: `AGENTS.md`, `GEMINI.md`, `.agents/skills/**`, `docs/**` の一部
-   - 対策: 相対パス表記に統一する。
+   - 対象: `AGENTS.md`, `GEMINI.md`, `.agents/skills/**`, `docs/**`, `tools/**`
+   - 対策: 相対パス表記または `<user>` プレースホルダへ置換済み。
 4. **Git コミット履歴のメールアドレス**
-   - `<redacted-email>` と `88264831+kenichikurihara@users.noreply.github.com` が混在しています。
-   - 判断: 個人 Gmail アドレスが Git ログに見えることを許容するならそのままでも可。隠したい場合は公開前に `git filter-repo` で全コミットの author/committer を `noreply` に書き換えて force-push する必要があります（**公開前にしか安全にできない作業**）。
+   - 公開前に個人メール (`<redacted-email>`) を `88264831+kenichikurihara@users.noreply.github.com` へ `git-filter-repo` で全コミット書き換え済み。
 
 ### 3.2 秘密情報・Keystore・テストデータの監査（P0）
 - **全履歴のシークレットスキャン**: 公開前に `gitleaks detect` または `trufflehog git file://.` を実行し、過去コミットを含めてトークン・APIキー・パスワードが混入していないか確認する。
@@ -113,17 +112,12 @@ IME（キーボード）アプリはユーザーのパスワードやプライ�
 ## 4. Version 0.1.0 リリースビルド固有の技術課題（P0〜P1）
 
 ### 4.1 `applicationId` の確定（P0・公開後変更不可）
-現在 [`app/build.gradle.kts`](../app/build.gradle.kts) 40行目が `applicationId = "com.example.myasr"` です。
-- **推奨変更例**: `io.github.kenichikurihara.jotinput`（独自ドメインをお持ちなら `com.yourdomain.jotinput` 等）。
-- **注意**: `namespace = "com.example.myasr"`（Kotlin/Java パッケージ名）は必ずしも即座に変えなくてもビルド可能ですが、**`applicationId` だけは v0.1.0 の初回リリース前に必ず確定させてください**。
-- `deploy.sh` 等にハードコードされている `/sdcard/Android/data/com.example.myasr/...` も同時に更新します。
+[`app/build.gradle.kts`](../app/build.gradle.kts) で `applicationId = "io.github.kenichikurihara.jotinput"` へ更新済みです（`namespace = "com.example.myasr"` を維持）。
+- `deploy.sh` やドキュメント内の `/sdcard/Android/data/io.github.kenichikurihara.jotinput/...` および完全修飾コンポーネント名も同時に更新しました。
 
 ### 4.2 バージョニングとタグ規約（P1）
-- 現在 `versionCode = 2`, `versionName = "1.1"` になっています。
-- `applicationId` を新しくして v0.1.0 としてクリーンスタートする場合：
-  - `versionCode = 1`
-  - `versionName = "0.1.0"`
-  - Git タグ: `v0.1.0`（Semantic Versioning: `0.x.y` は「初期開発版・破壊的変更あり得る」ことを自然に伝えられるため、初回公開に最適）
+- `versionCode = 1`、`versionName = "0.1.0"` へ更新済み。
+- Git タグ: `v0.1.0`（Semantic Versioning: `0.x.y` は「初期開発版・破壊的変更あり得る」ことを自然に伝えられるため、初回公開に最適）
 
 ### 4.3 Release 署名（Keystore）の生成と保管（P0）
 1. ローカルでリリース用 Keystore を生成（RSA 4096bit / PKCS12、有効期限 25 年以上）：
@@ -310,9 +304,9 @@ flowchart TD
 ## 7. GitHub リポジトリ設定・ドキュメント整備チェックリスト
 
 ### 7.1 公開前に作成・更新すべきルートファイル
-- [ ] `LICENSE`: OSS ライセンス（Apache 2.0 等）へ差し替え
-- [ ] `NOTICE` / `THIRD_PARTY_LICENSES.md`: 全サードパーティ OSS・モデル・辞書の権利表記（Parakeet / mozcdic-ut / FUTO Swipe 帰属含む）
-- [ ] `PRIVACY.md`: 100% オンデバイス動作・権限用途・ダウンロード先 URL の透明な開示
+- [x] `LICENSE`: Apache License 2.0 へ差し替え
+- [x] `NOTICE`: 全サードパーティ OSS・モデル・辞書の権利表記（Parakeet / mozcdic-ut / llama.cpp / Mozc / gl-keyboard-correction / FUTO Swipe 帰属含む）
+- [x] `PRIVACY.md`: 100% オンデバイス動作・権限用途・ダウンロード先 URL の透明な開示
 - [ ] `CONTRIBUTING.md`: Issue-First ポリシー、CI 必須、AI 丸投げ PR 禁止、サポート端末 Tier、レビュー返信目安の明記
 - [ ] `SECURITY.md`: 脆弱性報告窓口（GitHub Private Vulnerability Reporting の案内）
 - [ ] `CHANGELOG.md`: `v0.1.0` の機能一覧・既知の制限事項
@@ -342,12 +336,12 @@ flowchart TD
 
 無理なく安全に進めるための 4 ステップです。
 
-### Phase 1: 公開前ブロッカーの解消（最優先・取り返しがつかない作業）
-1. OSS ライセンスを決定し、`LICENSE` / `NOTICE` / `PRIVACY.md` を整備する。
-2. `applicationId` を `com.example.myasr` から本番 ID へ変更し、`versionCode = 1`, `versionName = "0.1.0"` に設定する。
-3. 個人情報・ローカル環境情報（IP アドレス、シリアル番号、`/home/<user>/`）を除去し、Git 履歴のシークレットスキャン（`gitleaks` 等）を実施する。
-4. `AndroidManifest.xml` の `allowBackup`・`DictionaryActivity` の `exported` を確認・修正する。
-5. `docs/` や `eval/` に公開したくない個人メモが含まれていないか確認する。
+### Phase 1: 公開前ブロッカーの解消（最優先・取り返しがつかない作業）✅ 完了
+1. [x] OSS ライセンスを決定し、`LICENSE` / `NOTICE` / `PRIVACY.md` を整備する。
+2. [x] `applicationId` を `io.github.kenichikurihara.jotinput` へ確定し、`versionCode = 1`, `versionName = "0.1.0"` に設定する。
+3. [x] 個人情報・ローカル環境情報（IP アドレス、シリアル番号、ローカル絶対パス、個人名サンプル、Gmail 履歴、`app/debug.keystore`）を履歴を含めて除去・サニタイズし、全履歴監査を実施する。
+4. [x] `AndroidManifest.xml` の `allowBackup="false"`・`DictionaryActivity` の `exported="false"` を修正する。
+5. [x] `docs/` や `eval/` に残っていた個人名例・ローカル環境情報を汎用化する。
 
 ### Phase 2: v0.1.0 Release ビルドの確立と実機検証
 1. Release 用 Keystore を生成し、安全にバックアップ＋GitHub Secrets に登録する。

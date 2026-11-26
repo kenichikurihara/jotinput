@@ -126,7 +126,7 @@ class UnifiedEnglishDictionaryTest {
         val candsAdjacent = EnglishDictionaryUtils.suggestFromUserDictionary("nakamuta", dict)
         assertTrue("Must suggest Nakamura for nakamuta", candsAdjacent.any { it.surface == "Nakamura" })
 
-        // 3. Transposition typo: 'ir' mistyped as 'ri' (nakmaura -> Nakamura)
+        // 3. Transposition typo: 'am' mistyped as 'ma' (nakmaura -> Nakamura)
         val candsTransposed = EnglishDictionaryUtils.suggestFromUserDictionary("nakmaura", dict)
         assertTrue("Must suggest Nakamura for nakmaura", candsTransposed.any { it.surface == "Nakamura" })
 

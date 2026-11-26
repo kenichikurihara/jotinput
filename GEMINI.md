@@ -4,7 +4,7 @@
 
 Whenever changes or fixes are made to the Android application, **always install and verify the app on BOTH target environments**:
 1. **ARCVM (ChromeOS Android container)**: e.g. `arc:5555`
-2. **Connected Phone (Pixel 10 Pro via USB or Wi-Fi)**: e.g. `<device-serial>` or `<device-ip>:46363` (any active phone device listed in `adb devices`)
+2. **Connected Phone (Pixel 10 Pro via USB or Wi-Fi)**: e.g. `<device-serial>` or `<device-ip>:<port>` (any active phone device listed in `adb devices`)
 
 ### Standard Deployment Workflow:
 Run `./deploy.sh` or execute the following steps for all connected targets in `adb devices`:
@@ -15,9 +15,9 @@ Or manually:
 1. Compile APK: `./gradlew assembleDebug`
 2. For each device in `adb devices`:
    - `adb -s <device> install -r app/build/outputs/apk/debug/app-debug.apk`
-   - `adb -s <device> shell pm grant com.example.myasr android.permission.RECORD_AUDIO`
-   - `adb -s <device> shell ime enable com.example.myasr/.VoiceInputMethodService`
-   - `adb -s <device> shell am start -n com.example.myasr/.MainActivity`
+   - `adb -s <device> shell pm grant io.github.kenichikurihara.jotinput android.permission.RECORD_AUDIO`
+   - `adb -s <device> shell ime enable io.github.kenichikurihara.jotinput/com.example.myasr.VoiceInputMethodService`
+   - `adb -s <device> shell am start -n io.github.kenichikurihara.jotinput/com.example.myasr.MainActivity`
 3. Verify that the app launches and the ReazonSpeech model loads cleanly in logcat on both devices.
 4. For any UI / IME change, verify visual rendering and `dumpsys window` metrics on the physical phone (and on ARCVM whenever applicable). Never silently skip a target; if a target is unreachable or a check is constrained by the environment (e.g., ChromeOS hardware keyboard bridge), explicitly report it to the user.
 

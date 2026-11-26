@@ -943,7 +943,7 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             return internalFile
         }
 
-        // 2. App-specific external files dir (/sdcard/Android/data/com.example.myasr/files/models/)
+        // 2. App-specific external files dir (/sdcard/Android/data/io.github.kenichikurihara.jotinput/files/models/)
         val appExternalDir = context.getExternalFilesDir("models")
         if (appExternalDir != null) {
             val appExternalFile = File(appExternalDir, fileName)

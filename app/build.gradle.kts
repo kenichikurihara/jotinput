@@ -37,11 +37,11 @@ android {
         .orElse(0L)
 
     defaultConfig {
-        applicationId = "com.example.myasr"
+        applicationId = "io.github.kenichikurihara.jotinput"
         minSdk = 26
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 1
+        versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("en", "ja")
 
@@ -63,15 +63,6 @@ android {
                 cppFlags += listOf("-std=c++17", "-O3")
                 arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
             }
-        }
-    }
-
-    signingConfigs {
-        getByName("debug") {
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
         }
     }
 

@@ -1900,6 +1900,35 @@ class MainActivity : AppCompatActivity() {
             https://huggingface.co/futo-org/futo-swipe
 
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            ■ llama.cpp / ggml (On-Device SLM Inference)
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            Copyright (c) 2023-2026 The ggml authors
+            License: MIT License
+            https://github.com/ggml-org/llama.cpp
+
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            ■ Mozc Engine, Connection Matrix & Lexicons
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            Copyright (c) 2010-2026 Google Inc. / Google LLC
+            License: 3-Clause BSD License
+            https://github.com/google/mozc
+
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            ■ mozcdic-ut External Dictionaries (Optional Download)
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            - SudachiDict: Apache License, Version 2.0
+            - jawiki (Wikipedia): CC-BY-SA 3.0
+            - place-names / personal-names: Public postal & name datasets
+            https://github.com/utuhiro78
+
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            ■ gl-keyboard-correction (English Spell Correction)
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            Distributed by Loke-60000
+            License: Apache License, Version 2.0
+            https://huggingface.co/Loke-60000/gl-keyboard-correction
+
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             ■ Android Jetpack & Material Components
             ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             Copyright (c) The Android Open Source Project

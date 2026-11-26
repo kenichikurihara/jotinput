@@ -14,6 +14,7 @@ Collects:
 """
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -130,7 +131,7 @@ def run_benchmark_case(
     # 1. Prepare & warm up model BEFORE resetting battery stats
     run_adb(serial, "logcat -c")
     prep_cmd = (
-        f"am start -n com.example.myasr/.MainActivity "
+        f"am start -n io.github.kenichikurihara.jotinput/com.example.myasr.MainActivity "
         f"--es bench_action prepare --es bench_engine {engine}"
     )
     run_adb(serial, prep_cmd)
@@ -148,7 +149,7 @@ def run_benchmark_case(
 
     # 3. Trigger benchmark run
     run_cmd = (
-        f"am start -n com.example.myasr/.MainActivity "
+        f"am start -n io.github.kenichikurihara.jotinput/com.example.myasr.MainActivity "
         f"--es bench_action run --es bench_engine {engine} "
         f"--es bench_workload {workload} --ei bench_iters {iters}"
     )
@@ -156,7 +157,7 @@ def run_benchmark_case(
 
     done_line = wait_for_log(serial, "BENCH_RUN_DONE", timeout_sec=180.0)
     # Immediately snapshot batterystats and restore battery state
-    bstats_out = run_adb(serial, "dumpsys batterystats com.example.myasr")
+    bstats_out = run_adb(serial, "dumpsys batterystats io.github.kenichikurihara.jotinput")
     run_adb(serial, "cmd battery reset")
 
     if not done_line:
@@ -202,7 +203,7 @@ def run_benchmark_case(
 
 
 def main():
-    serial = sys.argv[1] if len(sys.argv) > 1 else "<device-ip>:44191"
+    serial = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("ADB_DEVICE_ID", "<device-ip>:<port>")
     cases = [
         ("1. リランクなし (OFF: Mozc Viterbi + 2D連接行列のみ)", "none", "miss", 500),
         ("2. Qwen2.5-0.5B (KVキャッシュHit: 同一文脈連続入力)", "local_slm", "hit", 500),
@@ -219,7 +220,7 @@ def main():
         results.append(res)
 
     # Restore default setting on device (LOCAL_SLM enabled)
-    run_adb(serial, "am start -n com.example.myasr/.MainActivity --es bench_action prepare --es bench_engine local_slm")
+    run_adb(serial, "am start -n io.github.kenichikurihara.jotinput/com.example.myasr.MainActivity --es bench_action prepare --es bench_engine local_slm")
 
     out_path = "eval/battery_power_eval_results.json"
     with open(out_path, "w", encoding="utf-8") as f:

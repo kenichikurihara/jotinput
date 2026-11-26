@@ -51,3 +51,9 @@ tools/bench_1000_context_free
 tools/cv_optimize_alpha
 tools/slm_scorer_cli
 
+# Signing keys & local environment overrides
+*.keystore
+*.jks
+keystore.properties
+.env.local
+

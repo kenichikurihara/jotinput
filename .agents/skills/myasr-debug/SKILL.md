@@ -31,7 +31,7 @@ Use this skill whenever investigating:
    - Always verify behavior on **both** ARCVM (`arc:5555`) and the physical phone (`Pixel 10 Pro`).
    - ARCVM uses hardware key tunneling; physical phone exercises touch/flick insets and wireless adb.
 3. **Mandatory Non-Regression Contract**:
-   - Always run `./gradlew testDebugUnitTest` and ensure 100% pass (especially [`JapanesePunctuationEvaluationTest`](app/src/test/java/com/example/myasr/JapanesePunctuationEvaluationTest.kt), [`LmFirstJointEvaluationTest`](app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt), and [`EnglishTypoRerankTest`](app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt)).
+   - Always run `./gradlew testDebugUnitTest` and ensure 100% pass (especially [`JapanesePunctuationEvaluationTest`](../../../app/src/test/java/com/example/myasr/JapanesePunctuationEvaluationTest.kt), [`LmFirstJointEvaluationTest`](../../../app/src/test/java/com/example/myasr/LmFirstJointEvaluationTest.kt), and [`EnglishTypoRerankTest`](../../../app/src/test/java/com/example/myasr/EnglishTypoRerankTest.kt)).
 
 --------------------------------------------------------------------------------
 
@@ -41,13 +41,13 @@ Use this skill whenever investigating:
 
 #### Symptom A: An unexpected word is promoted to #1 (e.g. `"I wi"` $\to$ `"UI"`)
 - **Pipeline Stages to Trace**:
-  1. **User Dictionary Match** ([`EnglishDictionaryUtils.suggestFromUserDictionary`](app/src/main/java/com/example/myasr/EnglishDictionaryUtils.kt)):
+  1. **User Dictionary Match** ([`EnglishDictionaryUtils.suggestFromUserDictionary`](../../../app/src/main/java/com/example/myasr/context/english/domain/EnglishDictionaryUtils.kt)):
      - Did a fuzzy/typo search return an unrelated entry?
      - Check normalized observation error: $D_{\text{obs}}(X, W) = d_{\text{spatial}}(X, W) / \max(|X|, |W|)$.
      - If $D_{\text{obs}} > 0.38$, candidate must be rejected by relative cost normalization.
-  2. **English Spell Engine Suggestions** ([`english_spell_engine.cc`](app/src/main/cpp/spelling/english_spell_engine.cc)):
+  2. **English Spell Engine Suggestions** ([`english_spell_engine.cc`](../../../app/src/main/cpp/spelling/english_spell_engine.cc)):
      - Check whether prefix completions (`w.rfind(typed, 0) == 0`) or typo matches (`cost <= 3.6f && norm_cost <= 0.38f`) generated the candidate pool.
-  3. **Contextual SLM Conditional Log-Likelihood** ([`LlmReranker.cc`](app/src/main/cpp/llm_reranker.cc)):
+  3. **Contextual SLM Conditional Log-Likelihood** ([`LlmReranker.cc`](../../../app/src/main/cpp/llm_reranker.cc)):
      - Check $-\log P(W \mid C)$ on target device using the on-device logit evaluation CLI or logcat.
      - Verify space-adaptive BPE tokenization: does context end with space? If not, did BPE evaluate the leading-space token (e.g. `' will'` = 686 vs `'will'` = 14387)?
   4. **Intra-Word Surprisal Clamping / User Boost Guard**:
@@ -59,7 +59,7 @@ Use this skill whenever investigating:
      - Check left/right IDs (`lid`/`rid`) and bigram transition score from Mozc matrix (`connection_data.bin`).
   2. **Intra-Word Surprisal Clamping (ADR-018)**:
      - Check if SLM out-of-vocabulary penalty disproportionately penalized common kanji morphemes.
-     - Verify $sysBestNll$ floor clamping in [`LlmReranker.kt`](app/src/main/java/com/example/myasr/LlmReranker.kt).
+     - Verify $sysBestNll$ floor clamping in [`LlmReranker.kt`](../../../app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt).
 
 #### Quick On-Device Logit Inspection Recipe
 To directly test on-device SLM log-likelihoods for any context and candidate set without recompiling:
@@ -77,9 +77,9 @@ To directly test on-device SLM log-likelihoods for any context and candidate set
 - **Root Cause (Finding 38)**: Android task reuse on `adb shell am start` without `am force-stop` brings the existing activity to front without re-inflating views.
 - **Resolution**:
   ```bash
-  DEV="<device_id>"  # e.g. arc:5555 or <device-ip>:32827
-  adb -s "$DEV" shell am force-stop com.example.myasr
-  adb -s "$DEV" shell am start -n com.example.myasr/.MainActivity
+  DEV="<device_id>"  # e.g. arc:5555 or <device-ip>:<port>
+  adb -s "$DEV" shell am force-stop io.github.kenichikurihara.jotinput
+  adb -s "$DEV" shell am start -n io.github.kenichikurihara.jotinput/com.example.myasr.MainActivity
   ```
   *(Note: `./deploy.sh` automatically performs `force-stop` before `start`).*
 
@@ -132,18 +132,18 @@ adb -s "$DEV" logcat -s AsrManager:D VoiceTouchArbitrator:D AudioRecorder:D
 - **Resolution Recipe**:
   1. **Wake up the phone screen**:
      ```bash
-     adb -s <device-ip>:<port> shell input keyevent KEYCODE_WAKEUP 2>/dev/null || true
+     adb -s "<device-ip>:<port>" shell input keyevent KEYCODE_WAKEUP 2>/dev/null || true
      ```
   2. **Scan active wireless debugging port on device IP**:
-     [`deploy.sh`](deploy.sh) includes an automated fast port scanner across ports 30000–50000. You can run:
+     [`deploy.sh`](../../../deploy.sh) includes an automated fast port scanner across ports 30000–50000 when `JOTINPUT_ADB_WIFI_HOST` is set. You can run:
      ```bash
-     ./deploy.sh
+     JOTINPUT_ADB_WIFI_HOST=<device-ip> ./deploy.sh
      ```
      Or manually find the open wireless port:
      ```bash
      python3 -c "
-     import socket
-     ip = '<device-ip>'
+     import os, socket
+     ip = os.environ.get('JOTINPUT_ADB_WIFI_HOST', '<device-ip>')
      for port in range(30000, 50000):
          s = socket.socket()
          s.settimeout(0.08)
@@ -192,8 +192,8 @@ Ensure `Align` field is `0x4000` (16,384 bytes).
 #### Verifying Storage Assets Existence
 Neural models and large dictionaries are loaded from `context.getExternalFilesDir(null)`:
 ```bash
-adb -s "$DEV" shell ls -lh /storage/emulated/0/Android/data/com.example.myasr/files/models/
-adb -s "$DEV" shell ls -lh /storage/emulated/0/Android/data/com.example.myasr/files/mozc/
+adb -s "$DEV" shell ls -lh /storage/emulated/0/Android/data/io.github.kenichikurihara.jotinput/files/models/
+adb -s "$DEV" shell ls -lh /storage/emulated/0/Android/data/io.github.kenichikurihara.jotinput/files/mozc/
 ```
 
 ---
@@ -205,5 +205,5 @@ Before committing or pushing any fix:
 - [ ] Verified deployment to ARCVM container (`arc:5555`) via `./deploy.sh`.
 - [ ] Verified deployment to Physical Phone (`Pixel 10 Pro`) via `./deploy.sh`.
 - [ ] APK synced to Google Drive (`JotInput/app-debug.apk`) for phone sideloading.
-- [ ] Architectural decisions or post-mortems documented in [`docs/findings_and_decisions.md`](docs/findings_and_decisions.md).
+- [ ] Architectural decisions or post-mortems documented in [`docs/findings_and_decisions.md`](../../../docs/findings_and_decisions.md).
 - [ ] Changes committed and pushed to `origin/main`.

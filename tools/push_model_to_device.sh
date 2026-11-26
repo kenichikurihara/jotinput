@@ -33,8 +33,8 @@ for DEV in $DEVICES; do
     echo "--------------------------------------------------------"
     echo "Pushing SLM model(s) to [$DEV] ($DEV_MODEL)..."
 
-    TARGET_DIR="/sdcard/Android/data/com.example.myasr/files/models"
-    adb -s "$DEV" shell "mkdir -p $TARGET_DIR" || true
+    TARGET_DIR="/sdcard/Android/data/io.github.kenichikurihara.jotinput/files/models"
+    adb -s "$DEV" shell "mkdir -p $TARGET_DIR && chmod 2775 $TARGET_DIR 2>/dev/null" || true
 
     for MNAME in "${MODELS_TO_PUSH[@]}"; do
         MPATH="$REPO_DIR/tools/models/$MNAME"
