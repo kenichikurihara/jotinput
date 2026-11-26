@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0]
+## [0.1.0] - 2026-11-26
 
-Initial public open-source release candidate of **JotInput** (`io.github.kenichikurihara.jotinput`), an offline on-device Japanese & English voice + flick/QWERTY Android keyboard (IME).
+Initial public open-source release of **JotInput** (`io.github.kenichikurihara.jotinput`), an offline on-device Japanese & English voice + flick/QWERTY Android keyboard (IME).
 
 ### Added
 - **On-Device Japanese & English Speech Recognition (ASR)**:
