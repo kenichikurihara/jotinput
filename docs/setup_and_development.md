@@ -7,20 +7,21 @@ This guide walks through configuring the development environment, compiling the 
 ## 🛠️ Environment Prerequisites
 
 - **Host OS**: Linux, macOS, or ChromeOS Linux (Crostini).
-- **Java Development Kit (JDK)**: OpenJDK 21 or later.
+- **Java Development Kit (JDK)**: JDK 17 or later (CI uses Temurin JDK 17).
 - **Android SDK**:
   - `compileSdk`: 34
   - `minSdk`: 26 (Android 8.0 Oreo)
   - `targetSdk`: 34 (Android 14)
   - `build-tools`: 34.0.0
-- **Gradle**: Gradle 8.4 (included via [`gradlew`](gradlew)).
+  - `ndkVersion`: `26.3.11579264`
+- **Gradle**: Gradle wrapper ([`gradlew`](../gradlew)).
 - **ADB**: Android Debug Bridge (`adb`).
 
 ---
 
 ## 📦 Step 1: Model Setup
 
-Models are **never bundled in the APK** (download-only architecture; `app/src/main/assets/` stays empty). The ReazonSpeech ONNX files are placed in `context.getExternalFilesDir(null)/reazonspeech/` on the device in one of two ways:
+Heavy neural models and large word dictionaries are **never bundled in the APK** (only the compact Mozc 2D bigram connection matrix `app/src/main/assets/mozc/connection_data.bin`, ~14.28 MB, is bundled). The ReazonSpeech ONNX files are placed in `context.getExternalFilesDir(null)/reazonspeech/` on the device in one of two ways:
 
 ### Option A: Developer provisioning (used by `deploy.sh`)
 Run the download script to fetch the files from Hugging Face into `tools/models/reazonspeech/` (git-ignored):
@@ -33,28 +34,24 @@ Files:
 - `joiner-epoch-99-avg-1.onnx`
 - `tokens.txt`
 
-`./deploy.sh` then pushes any file missing on each target device to `/sdcard/Android/data/com.example.myasr/files/reazonspeech/`.
+`./deploy.sh` then pushes any file missing on each target device to `/sdcard/Android/data/io.github.kenichikurihara.jotinput/files/reazonspeech/`.
 
 ### Option B: Download In-App
-Skip `download_model.sh`. When the APK is opened without a model, `MainActivity` displays a download card that fetches the model files to `context.getExternalFilesDir(null)/reazonspeech/` with a live progress bar. Mozc dictionaries and the connection matrix are downloaded from the dictionary card in the same screen.
+Skip `download_model.sh`. When the APK is opened without a model, `MainActivity` (**Home** / **Data** tabs) provides in-app HTTPS downloaders for ReazonSpeech, optional NVIDIA Parakeet English ASR, Mozc / SudachiDict / jawiki / place / personal / emoji dictionaries, FUTO Swipe, English Spell, and optional Qwen3.5 GGUF SLM models.
 
 ---
 
-### Step 1.2: On-Device SLM Model Setup (Optional but Recommended for Smart IME Re-ranking)
+### Step 1.2: On-Device SLM Model Setup (Optional for Smart IME Re-ranking)
 
-For context-aware Kana-Kanji candidate re-ranking (resolving issues like `ことなります` $\rightarrow$ `異なります` and contextual homophone disambiguation), prepare the Qwen2.5-0.5B GGUF model:
+For context-aware Kana-Kanji candidate re-ranking, quantized **Qwen3.5-0.8B / 2B GGUF** models can be downloaded directly in-app via `SlmModelDownloader` (**Data** tab), or pushed manually from your workstation:
 
-1. **Download the Quantized Model**:
-   ```bash
-   huggingface-cli download Qwen/Qwen2.5-0.5B-Instruct-GGUF qwen2.5-0.5b-instruct-q4_k_m.gguf --local-dir tools/models
-   ```
-2. **Push to Connected Devices (ARCVM + Phone)**:
+1. **Push to Connected Devices (ARCVM + Phone)**:
    ```bash
    ./tools/push_model_to_device.sh
    ```
-   This pushes the 469MB model to `/sdcard/Android/data/com.example.myasr/files/models/qwen2.5-0.5b-instruct-q4_k_m.gguf` on all connected devices without root requirements.
-3. **Graceful Fallback**:
-   If the SLM model is absent, `KanaKanjiEngine` runs seamlessly using the standard baseline Mozc dictionary without any runtime penalty.
+   This pushes local GGUF models to `/sdcard/Android/data/io.github.kenichikurihara.jotinput/files/models/` on all connected devices without root requirements.
+2. **Graceful Fallback**:
+   If no SLM model is installed, `KanaKanjiEngine` runs seamlessly using the standard baseline Mozc Viterbi decoder without any runtime penalty.
 
 ---
 
@@ -83,10 +80,10 @@ app/build/outputs/apk/debug/app-debug.apk
 
 Every modification made to the codebase must be deployed and verified on **both** target environments:
 1. **ARCVM (ChromeOS Android Subsystem)**: `arc:5555`
-2. **Physical Phone over Wi-Fi Debugging**: e.g., Pixel 10 Pro (`<device-ip>:46363`)
+2. **Physical Phone over USB / Wi-Fi Debugging**: e.g., Pixel 10 Pro (`<device-ip>:<port>`)
 
 #### Automated Dual Deployment via `deploy.sh`:
-Use the automated deployment script located at [`deploy.sh`](deploy.sh):
+Use the automated deployment script located at [`deploy.sh`](../deploy.sh):
 ```bash
 ./deploy.sh
 ```
@@ -95,7 +92,7 @@ This script automatically:
 2. Queries `adb devices` for all active targets.
 3. Installs the APK with `install -r`.
 4. Grants `android.permission.RECORD_AUDIO`.
-5. Enables `com.example.myasr/.VoiceInputMethodService` as an IME.
+5. Enables `io.github.kenichikurihara.jotinput/com.example.myasr.VoiceInputMethodService` as an IME.
 6. Launches `MainActivity` on every connected device.
 
 ---
@@ -123,12 +120,12 @@ On ChromeOS with Linux development environment (Crostini) and Android app suppor
 
 3. **Grant Microphone Permission**:
    ```bash
-   adb -s arc:5555 shell pm grant com.example.myasr android.permission.RECORD_AUDIO
+   adb -s arc:5555 shell pm grant io.github.kenichikurihara.jotinput android.permission.RECORD_AUDIO
    ```
 
 4. **Launch the Application**:
    ```bash
-   adb -s arc:5555 shell am start -n com.example.myasr/.MainActivity
+   adb -s arc:5555 shell am start -n io.github.kenichikurihara.jotinput/com.example.myasr.MainActivity
    ```
 
 5. **Monitor Logs in Real-Time**:
@@ -146,19 +143,19 @@ JotInput provides a full-featured Android Input Method Editor (IME) that works s
 
 1. **Enable the IME service**:
    ```bash
-   adb -s arc:5555 shell ime enable com.example.myasr/.VoiceInputMethodService
+   adb -s arc:5555 shell ime enable io.github.kenichikurihara.jotinput/com.example.myasr.VoiceInputMethodService
    ```
 
 2. **(Optional) Set as the default IME**:
    ```bash
-   adb -s arc:5555 shell ime set com.example.myasr/.VoiceInputMethodService
+   adb -s arc:5555 shell ime set io.github.kenichikurihara.jotinput/com.example.myasr.VoiceInputMethodService
    ```
 
 3. **Verify enabled IMEs**:
    ```bash
    adb -s arc:5555 shell ime list -s
    ```
-   You should see `com.example.myasr/.VoiceInputMethodService` listed.
+   You should see `io.github.kenichikurihara.jotinput/com.example.myasr.VoiceInputMethodService` listed.
 
 ### Method 2: Enabling via the App UI
 
@@ -199,7 +196,7 @@ When any input field is focused (including the **キーボードテスト** fiel
 4. Install and run:
    ```bash
    adb install -r app/build/outputs/apk/debug/app-debug.apk
-   adb shell am start -n com.example.myasr/.MainActivity
+   adb shell am start -n io.github.kenichikurihara.jotinput/com.example.myasr.MainActivity
    ```
 
 ---
@@ -209,11 +206,11 @@ When any input field is focused (including the **キーボードテスト** fiel
 ### 1. `RECORD_AUDIO` Permission Not Prompted
 On some ChromeOS container configurations, system permission dialogs may not surface over the active window. You can explicitly grant the permission via ADB:
 ```bash
-adb shell pm grant com.example.myasr android.permission.RECORD_AUDIO
+adb shell pm grant io.github.kenichikurihara.jotinput android.permission.RECORD_AUDIO
 ```
 
 ### 2. Native Library Architecture Mismatch (`UnsatisfiedLinkError`)
-The app ships only 64-bit native libraries (Sherpa-ONNX from [`sherpa-onnx-1.13.8.aar`](app/libs/sherpa-onnx-1.13.8.aar) plus the llama.cpp-based `libmyasr_llm.so`):
+The app ships only 64-bit native libraries (Sherpa-ONNX from [`sherpa-onnx-1.13.8.aar`](../app/libs/sherpa-onnx-1.13.8.aar) plus the llama.cpp-based `libmyasr_llm.so`):
 - `x86_64` (ARCVM / ChromeOS, Android Studio Emulators)
 - `arm64-v8a` (Modern physical Android devices)
 
@@ -227,7 +224,7 @@ ndk {
 ### 3. Model Not Found / Fails to Load
 Models are loaded from `getExternalFilesDir(null)/reazonspeech/` (not from APK assets). If `AsrManager` logs `No ReazonSpeech model files found`, run `./download_model.sh` followed by `./deploy.sh`, or use the in-app download card. Verify with:
 ```bash
-adb -s <device> shell ls /sdcard/Android/data/com.example.myasr/files/reazonspeech/
+adb -s <device> shell ls /sdcard/Android/data/io.github.kenichikurihara.jotinput/files/reazonspeech/
 ```
 
 ---
@@ -240,21 +237,21 @@ adb -s <device> shell ls /sdcard/Android/data/com.example.myasr/files/reazonspee
 
 ### Data Retention Across App Updates
 - The dictionary is persisted in Android's internal sandbox: `context.filesDir/custom_dictionary.json`.
-- Standard application updates via `adb install -r` (reinstall keeping data) or Google Play updates **do not touch** `filesDir`.
-- [`DictionaryRepository`](app/src/main/java/com/example/myasr/DictionaryRepository.kt) checks `file.exists()`. If the file exists, it preserves and loads all entries.
+- Standard application updates via `adb install -r` (reinstall keeping data) or signed Release APK upgrades **do not touch** `filesDir`.
+- [`DictionaryRepository`](../app/src/main/java/com/example/myasr/context/vocabulary/infrastructure/DictionaryRepository.kt) checks `file.exists()`. If the file exists, it preserves and loads all entries.
 - *Developer Contract*: Future updates must preserve this file. Never call `delete()` on `custom_dictionary.json` during app migrations.
 
 ### Inspecting and Backing Up the Dictionary via ADB
-To inspect registered dictionary entries directly from the device:
+To inspect registered dictionary entries directly from the device (Debug builds):
 ```bash
-adb -s arc:5555 shell "run-as com.example.myasr cat files/custom_dictionary.json"
+adb -s arc:5555 shell "run-as io.github.kenichikurihara.jotinput cat files/custom_dictionary.json"
 ```
 To back up the dictionary before testing:
 ```bash
-adb -s arc:5555 exec-out "run-as com.example.myasr cat files/custom_dictionary.json" > custom_dictionary_backup.json
+adb -s arc:5555 exec-out "run-as io.github.kenichikurihara.jotinput cat files/custom_dictionary.json" > custom_dictionary_backup.json
 ```
 To restore the dictionary:
 ```bash
 adb -s arc:5555 push custom_dictionary_backup.json /data/local/tmp/
-adb -s arc:5555 shell "run-as com.example.myasr cp /data/local/tmp/custom_dictionary_backup.json files/custom_dictionary.json"
+adb -s arc:5555 shell "run-as io.github.kenichikurihara.jotinput cp /data/local/tmp/custom_dictionary_backup.json files/custom_dictionary.json"
 ```

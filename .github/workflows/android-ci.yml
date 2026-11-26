@@ -111,10 +111,10 @@ jobs:
         run: |
           mkdir -p tools/mozc_dict
           if [ -f app/src/main/assets/mozc/connection_data.bin ] && [ ! -f tools/mozc_dict/connection_data.bin ]; then
-            ln -sf ../app/src/main/assets/mozc/connection_data.bin tools/mozc_dict/connection_data.bin
+            ln -sf ../../app/src/main/assets/mozc/connection_data.bin tools/mozc_dict/connection_data.bin
           fi
           if [ -f app/src/test/resources/mozc/system_dictionary.bin ] && [ ! -f tools/mozc_dict/system_dictionary.bin ]; then
-            ln -sf ../app/src/test/resources/mozc/system_dictionary.bin tools/mozc_dict/system_dictionary.bin
+            ln -sf ../../app/src/test/resources/mozc/system_dictionary.bin tools/mozc_dict/system_dictionary.bin
           fi
 
       - name: Setup Native Dependencies

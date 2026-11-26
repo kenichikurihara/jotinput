@@ -84,10 +84,10 @@ jobs:
         run: |
           mkdir -p tools/mozc_dict
           if [ -f app/src/main/assets/mozc/connection_data.bin ] && [ ! -f tools/mozc_dict/connection_data.bin ]; then
-            ln -sf ../app/src/main/assets/mozc/connection_data.bin tools/mozc_dict/connection_data.bin
+            ln -sf ../../app/src/main/assets/mozc/connection_data.bin tools/mozc_dict/connection_data.bin
           fi
           if [ -f app/src/test/resources/mozc/system_dictionary.bin ] && [ ! -f tools/mozc_dict/system_dictionary.bin ]; then
-            ln -sf ../app/src/test/resources/mozc/system_dictionary.bin tools/mozc_dict/system_dictionary.bin
+            ln -sf ../../app/src/test/resources/mozc/system_dictionary.bin tools/mozc_dict/system_dictionary.bin
           fi
 
       - name: Setup Native Dependencies
@@ -209,13 +209,44 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${GITHUB_REF_NAME}"
+          VERSION_NAME="${{ steps.version.outputs.version_name }}"
           OUT_DIR="${RUNNER_TEMP}/release-assets"
-          APK_PATH="${OUT_DIR}/jotinput-${{ steps.version.outputs.version_name }}-universal-release.apk"
+          APK_NAME="jotinput-${VERSION_NAME}-universal-release.apk"
+          APK_PATH="${OUT_DIR}/${APK_NAME}"
           SUMS_PATH="${OUT_DIR}/SHA256SUMS.txt"
+          NOTES_PATH="${OUT_DIR}/RELEASE_NOTES.md"
+          cat > "${NOTES_PATH}" <<EOF
+          ## JotInput ${TAG}
+
+          - **Package ID**: \`io.github.kenichikurihara.jotinput\`
+          - **Requirements**: Android 8.0+ (API 26+), \`arm64-v8a\` or \`x86_64\` (16KB ELF page-aligned)
+          - **APK**: \`${APK_NAME}\`
+
+          ### Installation & Verification
+          1. Download \`${APK_NAME}\` and \`SHA256SUMS.txt\`.
+          2. Verify integrity & signing certificate:
+             \`\`\`bash
+             sha256sum -c SHA256SUMS.txt
+             apksigner verify --print-certs ${APK_NAME}
+             \`\`\`
+          3. Allow **Install unknown apps** when installing on Android (do not install over a Debug build without uninstalling first, as signing keys differ).
+          4. Open **JotInput** and download speech/dictionary/swipe/SLM assets on demand from the **Home** / **Data** tabs.
+
+          ### Supported Devices & Known Limitations
+          - **Tier 1 (Maintainer-verified)**: Google Pixel 10 Pro & ChromeOS ARCVM.
+          - **Tier 2 (Best-effort)**: Other AOSP-compatible Android 8.0+ \`arm64-v8a\` / \`x86_64\` devices.
+          - **Unsupported**: 32-bit ABIs (\`armeabi-v7a\`, \`x86\`) and Android < 8.0.
+          - Release builds update manually via GitHub Releases (debug-only CI artifact self-updater is disabled).
+
+          See [\`CHANGELOG.md\`](https://github.com/kenichikurihara/jotinput/blob/main/CHANGELOG.md), [\`PRIVACY.md\`](https://github.com/kenichikurihara/jotinput/blob/main/PRIVACY.md), [\`NOTICE\`](https://github.com/kenichikurihara/jotinput/blob/main/NOTICE), and [\`SECURITY.md\`](https://github.com/kenichikurihara/jotinput/blob/main/SECURITY.md).
+
+          ---
+          EOF
           if gh release view "${TAG}" >/dev/null 2>&1; then
             gh release upload "${TAG}" "${APK_PATH}" "${SUMS_PATH}" --clobber
           else
             gh release create "${TAG}" "${APK_PATH}" "${SUMS_PATH}" \
               --title "JotInput ${TAG}" \
+              --notes-file "${NOTES_PATH}" \
               --generate-notes
           fi

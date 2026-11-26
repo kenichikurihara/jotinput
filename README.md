@@ -83,13 +83,13 @@ See [System Architecture](docs/architecture.md) for details.
 
 > Official package ID: `io.github.kenichikurihara.jotinput` (Android 8.0+ / API 26+, `arm64-v8a` or `x86_64`).
 
-1. Download `app-release.apk` and `SHA256SUMS.txt` from [GitHub Releases](https://github.com/kenichikurihara/jotinput/releases).
+1. Download `jotinput-0.1.0-universal-release.apk` and `SHA256SUMS.txt` from [GitHub Releases](https://github.com/kenichikurihara/jotinput/releases).
 2. *(Recommended)* Verify the download integrity and APK signature before installing:
    ```bash
    sha256sum -c SHA256SUMS.txt
-   apksigner verify --print-certs app-release.apk
+   apksigner verify --print-certs jotinput-0.1.0-universal-release.apk
    ```
-3. Transfer `app-release.apk` to your Android device and allow **Install unknown apps** when prompted to complete installation (or install via USB: `adb install -r app-release.apk`).
+3. Transfer `jotinput-0.1.0-universal-release.apk` to your Android device and allow **Install unknown apps** when prompted to complete installation (or install via USB: `adb install -r jotinput-0.1.0-universal-release.apk`).
 4. Open **JotInput**, grant microphone permission, and follow the **Home** / **Data** tabs to download the speech model and dictionaries over HTTPS.
 5. Enable **JotInput** in Android Language & Keyboard settings and switch the active input method to **JotInput**.
 
