@@ -2449,4 +2449,41 @@ When Pixel 10 Pro (`<device-ip>:37801`) reconnected with commit `a2f9dfe` instal
   - `SLM_TYPO_VERIFY (80ms) ctx='' reading='ぶひ' -> [ブヒれ(mozc_general), ブヒ(mozc_general), 部費(mozc_general), ﾌﾞﾋ(system), ブヒん(mozc_general)]` (**Top-3**).
 - **Live ARCVM Verification (`arc:5555`)**: Deployed via `./deploy.sh`; `MainActivity` (`+1s14ms`), `KanaKanjiOnDevice`, and `AsrManager` (`ReazonSpeech` `READY` in `1984ms`) verified cleanly in logcat with zero crashes.
 
+---
+
+## Finding 61 & ADR-026: English Voice User-Dictionary Prioritization & Forced Stage-2 SLM Windowing
+
+### 1. Root Cause Analysis
+1. **Complete Exclusion of Custom Dictionary in All English Voice Paths ([`VoiceInputMethodService.kt`](app/src/main/java/com/example/myasr/VoiceInputMethodService.kt))**:
+   - `decodeSpeechChunkAsync()`, `finishListeningAndDecode()`, and `formatVoiceTextWithCorrections()` explicitly gated `dictionaryRepository.getActive()` behind `if (asrLanguage == AsrLanguage.JAPANESE)` and passed zero user dictionary entries to `EnglishVoicePostProcessor.formatWithCorrections()`.
+2. **NeMo CTC Greedy-Search Constraint ([`AsrManager.kt`](app/src/main/java/com/example/myasr/context/speech/infrastructure/AsrManager.kt))**:
+   - English ASR runs NVIDIA Parakeet TDT-CTC 110M (`OfflineNemoEncDecCtcModelConfig`) with `decodingMethod = "greedy_search"`. Binary inspection of `sherpa-onnx` 1.13.8 confirms `OfflineRecognizerCtcImpl` supports only `OfflineCtcGreedySearchDecoder` and static `OfflineCtcFstDecoder` (no dynamic per-stream `hotwords` biasing).
+3. **Bilingual Kana-Reading & Symbol-Bearing Term Exclusion**:
+   - Bilingual Japanese/English users frequently register English surfaces with Kana readings (e.g. `JotInput` / `じょっといんぷっと`, `Kurihara` / `くりはら`, `CI/CD` / `しーあいしーでぃー`) or tech symbols (`llama.cpp`, `Node.js`, `C++`).
+4. **Silent Stage-2 Bypass in `LlmReranker.scorePairDeltaNll()` ([`LlmReranker.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt))**:
+   - `scorePairDeltaNll()` called `nativeScoreCandidates()` (`force_stage2_prefix_count = 0`), which under `Stage2Policy::NEVER_TOKEN0_ONLY` evaluated only token-0 + heuristic surrogate. When `origText` and `corrText` shared a leading sentence prefix, both shared token-0 and skipped Stage 2 (`deltaNll ≈ 0.0`), neutralizing SLM coherence gating.
+
+### 2. Algorithmic & Architectural Design (Zero Hardcoded Word Tables)
+1. **Pure Domain DMN Policy ([`EnglishUserDictDecisionModel.kt`](app/src/main/java/com/example/myasr/context/speech/domain/EnglishUserDictDecisionModel.kt))**:
+   - Added `EnglishVoiceUserDictResolutionPolicy` (`HitPolicy.FIRST`) with 10 rules protecting disabled entries, already-exact surfaces, short targets ($\le 3$ alnum chars against non-exact matches), reverted pairs (`SUGGEST_CHIP`), preceding-context confirmations, non-colliding matches, SLM-verified common-word collisions (`DEFAULT_SLM_THETA_NORMAL = 4.0f`, `DEFAULT_SLM_THETA_HIGH = 4.5f`, `DEFAULT_SLM_THETA_CASE_ONLY = 1.0f`), and common lowercase safety (`KEEP_ORIGINAL` / `SUGGEST_CHIP`).
+2. **Word-Agnostic Multi-Tier Resolver ([`EnglishVoiceUserDictionaryResolver.kt`](app/src/main/java/com/example/myasr/context/speech/domain/EnglishVoiceUserDictionaryResolver.kt))**:
+   - Accepts all enabled entries whose surface contains ASCII letters and zero CJK/Kana characters (including bilingual Kana-reading entries and 1-letter + spoken symbol terms like `C++`).
+   - Supports: (a) exact normalized / case / CamelCase / multi-word merge & possessive (`'s` / plural `s`) matching; (b) spoken symbol normalization (`.` $\to$ `dot`, `/` $\to$ `slash`, `+` $\to$ `plus`, `#` $\to$ `sharp`) and cardinal number normalization (`ten` $\leftrightarrow$ `10`); (c) general English Metaphone/G2P phonetic key + weighted phonological edit distance with onset compatibility and OOV edit fallback; (d) aligned token subsequence matching (`Kuber CTL` / `Kuber Control` $\to$ `kubectl`) rejecting arbitrary scattered words (`jot down your input` $\not\to$ `JotInput`); (e) corpus log-frequency collision gating via `EnglishCaseModel::getWordLogFreq` + SLM coherence gate.
+3. **Forced Stage-2 Pair Windowing ([`LlmReranker.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt))**:
+   - Added `extractDivergingPairWindow()` moving the shared word prefix into trimmed context and capping trailing words to 4 so `nativeScoreCandidatesWithPriorsForceStage2(..., 2)` evaluates the exact diverging span within Stage 2's 8-token budget.
+4. **End-to-End IME & Feedback Loop Wiring ([`EnglishVoicePostProcessor.kt`](app/src/main/java/com/example/myasr/context/speech/domain/EnglishVoicePostProcessor.kt), [`VoiceCorrectionRepository.kt`](app/src/main/java/com/example/myasr/context/speech/infrastructure/VoiceCorrectionRepository.kt), [`VoiceInputMethodService.kt`](app/src/main/java/com/example/myasr/VoiceInputMethodService.kt))**:
+   - Wired active user dictionary entries, corpus frequencies, and suppressed revert pairs across all English voice paths (`decodeSpeechChunkAsync`, `finishListeningAndDecode`, and `formatVoiceTextWithCorrections` streaming loop/commit), with `recordAccept` (extracting context tokens) and `recordRevert` persistence isolated from `custom_dictionary.json`.
+5. **Formal Verification & Architecture Sync**:
+   - Added [`english_voice_user_dict.als`](app/src/test/resources/alloy/english_voice_user_dict.als) (6 assertions + 5 reachability predicates) and [`EnglishVoiceUserDictionaryTest.kt`](app/src/test/java/com/example/myasr/context/speech/domain/EnglishVoiceUserDictionaryTest.kt).
+
+### 3. Quantitative Evaluation (Real NVIDIA Parakeet TDT-CTC 110M + Qwen2.5-0.5B)
+Dataset: 38 dictionary entries, 68 positive utterances (`edge-tts` across 4 voices, 16 kHz mono WAV), 42 adversarial lookalike negatives, and 300 baseline English utterances (`eval/english_voice/evaluate_user_dict.py` $\to$ `user_dict_eval_results.json`):
+
+| Configuration | Exact TWRR | Case-Insensitive TWRR | Chip+Auto Recall | Adversarial FPR (42) | Baseline-300 FPR (300) | Avg Latency |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Baseline (Prior JotInput)** | 22.06% (15/68) | 39.71% | 22.06% (15/68) | 0.0% (0/42) | 0.0% (0/300) | 0.0 ms |
+| **Improved (SLM-OFF)** | **88.24%** (60/68) | 89.71% | **92.65%** (63/68) | **0.0%** (0/42) | **0.0%** (0/300, +2 TP fixes) | 19.2 ms |
+| **Improved (SLM-ON, Qwen2.5-0.5B)** | **92.65%** (63/68) | **94.12%** | **92.65%** (63/68) | **0.0%** (0/42) | **0.0%** (0/300, +2 TP fixes) | 32.0 ms |
+
+
 

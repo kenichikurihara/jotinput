@@ -1,0 +1,3701 @@
+{
+  "summaries": [
+    {
+      "mode": "Baseline (Current JotInput)",
+      "pos_exact_twrr_pct": 22.06,
+      "pos_exact_count": "15/68",
+      "pos_ci_twrr_pct": 39.71,
+      "pos_chip_recall_pct": 22.06,
+      "pos_chip_count": "15/68",
+      "adv_auto_fpr_pct": 0.0,
+      "adv_auto_fp_count": "0/42",
+      "adv_chip_count": "0/42",
+      "baseline300_tp_count": 0,
+      "baseline300_fpr_pct": 0.0,
+      "baseline300_fp_count": "0/300",
+      "avg_latency_ms": 0.0
+    },
+    {
+      "mode": "Improved (SLM-OFF)",
+      "pos_exact_twrr_pct": 88.24,
+      "pos_exact_count": "60/68",
+      "pos_ci_twrr_pct": 89.71,
+      "pos_chip_recall_pct": 92.65,
+      "pos_chip_count": "63/68",
+      "adv_auto_fpr_pct": 0.0,
+      "adv_auto_fp_count": "0/42",
+      "adv_chip_count": "5/42",
+      "baseline300_tp_count": 2,
+      "baseline300_fpr_pct": 0.0,
+      "baseline300_fp_count": "0/300",
+      "avg_latency_ms": 19.168
+    },
+    {
+      "mode": "Improved (SLM-ON)",
+      "pos_exact_twrr_pct": 92.65,
+      "pos_exact_count": "63/68",
+      "pos_ci_twrr_pct": 94.12,
+      "pos_chip_recall_pct": 92.65,
+      "pos_chip_count": "63/68",
+      "adv_auto_fpr_pct": 0.0,
+      "adv_auto_fp_count": "0/42",
+      "adv_chip_count": "5/42",
+      "baseline300_tp_count": 2,
+      "baseline300_fpr_pct": 0.0,
+      "baseline300_fp_count": "0/300",
+      "avg_latency_ms": 31.986
+    }
+  ],
+  "pos_slm_off": [
+    {
+      "id": "ud_pos_0001",
+      "category": "camelcase_compound",
+      "target": "JotInput",
+      "context_before": "",
+      "raw": "I use Jot input on my Android phone every day",
+      "out": "I use JotInput on my Android phone every day",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 6,
+          "end": 15,
+          "orig": "Jot input",
+          "proposed": "JotInput",
+          "target": "JotInput",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0002",
+      "category": "camelcase_compound",
+      "target": "JotInput",
+      "context_before": "",
+      "raw": "Jot inputs voice recognition runs locally",
+      "out": "JotInputs voice recognition runs locally",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 10,
+          "orig": "Jot inputs",
+          "proposed": "JotInputs",
+          "target": "JotInput",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0003",
+      "category": "camelcase_compound",
+      "target": "ReazonSpeech",
+      "context_before": "",
+      "raw": "Reaisan speech transcribes Japanese audio accurately",
+      "out": "ReazonSpeech transcribes Japanese audio accurately",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 14,
+          "orig": "Reaisan speech",
+          "proposed": "ReazonSpeech",
+          "target": "ReazonSpeech",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.2585,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0004",
+      "category": "camelcase_compound",
+      "target": "ReazonSpeech",
+      "context_before": "",
+      "raw": "We benchmarked reaison speech on mobile CPUs",
+      "out": "We benchmarked ReazonSpeech on mobile CPUs",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 15,
+          "end": 29,
+          "orig": "reaison speech",
+          "proposed": "ReazonSpeech",
+          "target": "ReazonSpeech",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.1816,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0005",
+      "category": "camelcase_compound",
+      "target": "PyTorch",
+      "context_before": "",
+      "raw": "We trained the acoustic model using PyTorch",
+      "out": "We trained the acoustic model using PyTorch",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0006",
+      "category": "camelcase_compound",
+      "target": "PyTorch",
+      "context_before": "",
+      "raw": "PyTorch's eager execution makes debugging easy",
+      "out": "PyTorch's eager execution makes debugging easy",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0007",
+      "category": "camelcase_compound",
+      "target": "GraphQL",
+      "context_before": "",
+      "raw": "Our backackend exposes a unified graphQL schema.",
+      "out": "Our backackend exposes a unified GraphQL schema.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 33,
+          "end": 40,
+          "orig": "graphQL",
+          "proposed": "GraphQL",
+          "target": "GraphQL",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0008",
+      "category": "camelcase_compound",
+      "target": "gRPC",
+      "context_before": "",
+      "raw": "The microservices communicate over GRPC streams",
+      "out": "The microservices communicate over gRPC streams",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 35,
+          "end": 39,
+          "orig": "GRPC",
+          "proposed": "gRPC",
+          "target": "gRPC",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0009",
+      "category": "camelcase_compound",
+      "target": "Tailscale",
+      "context_before": "",
+      "raw": "I connected to the build server via tailscale",
+      "out": "I connected to the build server via Tailscale",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 36,
+          "end": 45,
+          "orig": "tailscale",
+          "proposed": "Tailscale",
+          "target": "Tailscale",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0010",
+      "category": "camelcase_compound",
+      "target": "Tailscale",
+      "context_before": "",
+      "raw": "Tailscale's Mesh network simplifies remote debugging.",
+      "out": "Tailscale's Mesh network simplifies remote debugging.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0011",
+      "category": "camelcase_compound",
+      "target": "FastConformer",
+      "context_before": "",
+      "raw": "The fast conformer encoder runs in a single pass",
+      "out": "The FastConformer encoder runs in a single pass",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 4,
+          "end": 18,
+          "orig": "fast conformer",
+          "proposed": "FastConformer",
+          "target": "FastConformer",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0012",
+      "category": "camelcase_compound",
+      "target": "Zipformer",
+      "context_before": "",
+      "raw": "The zip forer transducer achieves low character error rate",
+      "out": "The Zipformer transducer achieves low character error rate",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 4,
+          "end": 13,
+          "orig": "zip forer",
+          "proposed": "Zipformer",
+          "target": "Zipformer",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.2222,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0013",
+      "category": "camelcase_compound",
+      "target": "Datadog",
+      "context_before": "",
+      "raw": "Check the memory metrics in Dataog right now",
+      "out": "Check the memory metrics in Datadog right now",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 28,
+          "end": 34,
+          "orig": "Dataog",
+          "proposed": "Datadog",
+          "target": "Datadog",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.4286,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0014",
+      "category": "camelcase_compound",
+      "target": "Cloudflare",
+      "context_before": "",
+      "raw": "We deployed the worker Edge script to Cloudflare",
+      "out": "We deployed the worker Edge script to Cloudflare",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0015",
+      "category": "camelcase_compound",
+      "target": "Cloudflare",
+      "context_before": "",
+      "raw": "Cloudflare's DNS resolver lowered our latency",
+      "out": "Cloudflare's DNS resolver lowered our latency",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0016",
+      "category": "camelcase_compound",
+      "target": "LangChain",
+      "context_before": "We are building an LLM pipeline. ",
+      "raw": "We built a retrieval agent with Lang Chain",
+      "out": "We built a retrieval agent with LangChain",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 32,
+          "end": 42,
+          "orig": "Lang Chain",
+          "proposed": "LangChain",
+          "target": "LangChain",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0017",
+      "category": "camelcase_compound",
+      "target": "SymSpell",
+      "context_before": "",
+      "raw": "The English typo corctor relies on Sim spell",
+      "out": "The English typo corctor relies on SymSpell",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 35,
+          "end": 44,
+          "orig": "Sim spell",
+          "proposed": "SymSpell",
+          "target": "SymSpell",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.125,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0018",
+      "category": "camelcase_compound",
+      "target": "Supabase",
+      "context_before": "",
+      "raw": "Authentication and storage are hosted on Superabase",
+      "out": "Authentication and storage are hosted on Supabase",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 41,
+          "end": 51,
+          "orig": "Superabase",
+          "proposed": "Supabase",
+          "target": "Supabase",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.3667,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0019",
+      "category": "camelcase_compound",
+      "target": "Supabase",
+      "context_before": "",
+      "raw": "Superbase Row level security protects user records",
+      "out": "Supabase Row level security protects user records",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 9,
+          "orig": "Superbase",
+          "proposed": "Supabase",
+          "target": "Supabase",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.2847,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0020",
+      "category": "camelcase_compound",
+      "target": "KanaKanji",
+      "context_before": "",
+      "raw": "The Konickoni lattice search runs in milliseconds",
+      "out": "The KanaKanji lattice search runs in milliseconds",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 4,
+          "end": 13,
+          "orig": "Konickoni",
+          "proposed": "KanaKanji",
+          "target": "KanaKanji",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.6667,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0021",
+      "category": "camelcase_compound",
+      "target": "SudachiDict",
+      "context_before": "",
+      "raw": "We downloaded the optional Sadaci Dict Lexicon",
+      "out": "We downloaded the optional SudachiDict Lexicon",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 27,
+          "end": 38,
+          "orig": "Sadaci Dict",
+          "proposed": "SudachiDict",
+          "target": "SudachiDict",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.2818,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0022",
+      "category": "camelcase_compound",
+      "target": "vLLM",
+      "context_before": "",
+      "raw": "We benchmarked throughput using VLLM on Linux",
+      "out": "We benchmarked throughput using vLLM on Linux",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 32,
+          "end": 36,
+          "orig": "VLLM",
+          "proposed": "vLLM",
+          "target": "vLLM",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0023",
+      "category": "camelcase_compound",
+      "target": "OAuth",
+      "context_before": "",
+      "raw": "The client refreshes Oh access tokens automatically",
+      "out": "The client refreshes Oh access tokens automatically",
+      "hit_exact": false,
+      "chip_hit": false,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0024",
+      "category": "camelcase_compound",
+      "target": "NixOS",
+      "context_before": "",
+      "raw": "Our reproducible buildildbox runs NXOS.",
+      "out": "Our reproducible buildildbox runs NixOS.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 34,
+          "end": 38,
+          "orig": "NXOS",
+          "proposed": "NixOS",
+          "target": "NixOS",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.3667,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0025",
+      "category": "camelcase_compound",
+      "target": "Antigravity",
+      "context_before": "",
+      "raw": "Let's test this workflow inside antigravity",
+      "out": "Let's test this workflow inside Antigravity",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 32,
+          "end": 43,
+          "orig": "antigravity",
+          "proposed": "Antigravity",
+          "target": "Antigravity",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0026",
+      "category": "proper_nouns_ja",
+      "target": "Kurihara",
+      "context_before": "",
+      "raw": "Please send the report to Korihara before noon.",
+      "out": "Please send the report to Kurihara before noon.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 26,
+          "end": 34,
+          "orig": "Korihara",
+          "proposed": "Kurihara",
+          "target": "Kurihara",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.125,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0027",
+      "category": "proper_nouns_ja",
+      "target": "Kurihara",
+      "context_before": "",
+      "raw": "Curihara's poull request fixed the regression",
+      "out": "Kurihara's poull request fixed the regression",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 10,
+          "orig": "Curihara's",
+          "proposed": "Kurihara's",
+          "target": "Kurihara",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.125,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0028",
+      "category": "proper_nouns_ja",
+      "target": "Kenichi",
+      "context_before": "",
+      "raw": "Kenichi reviewed the architectural design document",
+      "out": "Kenichi reviewed the architectural design document",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0029",
+      "category": "proper_nouns_ja",
+      "target": "Anthropic",
+      "context_before": "",
+      "raw": "We read the safety paper published by Anthropic",
+      "out": "We read the safety paper published by Anthropic",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0030",
+      "category": "proper_nouns_ja",
+      "target": "Qwen",
+      "context_before": "We loaded the GGUF language model. ",
+      "raw": "The O device Rranker uses Quenn for scoring",
+      "out": "The O device Rranker uses Qwen for scoring",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 26,
+          "end": 31,
+          "orig": "Quenn",
+          "proposed": "Qwen",
+          "target": "Qwen",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.4,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0031",
+      "category": "proper_nouns_ja",
+      "target": "Qwen",
+      "context_before": "Benchmarking local language models: ",
+      "raw": "Quen achieved high top one accuracy after tuning",
+      "out": "Qwen achieved high top one accuracy after tuning",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 4,
+          "orig": "Quen",
+          "proposed": "Qwen",
+          "target": "Qwen",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.25,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0032",
+      "category": "proper_nouns_ja",
+      "target": "Mozc",
+      "context_before": "Working on Japanese IME conversion. ",
+      "raw": "We updated the Mosque dictionary",
+      "out": "We updated the Mosque dictionary",
+      "hit_exact": false,
+      "chip_hit": true,
+      "autos": [],
+      "chips": [
+        {
+          "start": 15,
+          "end": 21,
+          "orig": "Mosque",
+          "proposed": "Mozc",
+          "target": "Mozc",
+          "action": "SUGGEST_CHIP",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": true,
+          "rank": [
+            2,
+            0.7292,
+            -3,
+            -1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ud_pos_0033",
+      "category": "proper_nouns_ja",
+      "target": "Mozc",
+      "context_before": "Japanese morphological analysis: ",
+      "raw": "The Mos connection matrix fits inside the package",
+      "out": "The Mos connection matrix fits inside the package",
+      "hit_exact": false,
+      "chip_hit": false,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0034",
+      "category": "proper_nouns_ja",
+      "target": "Konsist",
+      "context_before": "Verify the DDD bounded contexts. ",
+      "raw": "Run consists architecture tests",
+      "out": "Run consists architecture tests",
+      "hit_exact": false,
+      "chip_hit": true,
+      "autos": [],
+      "chips": [
+        {
+          "start": 4,
+          "end": 12,
+          "orig": "consists",
+          "proposed": "Konsist",
+          "target": "Konsist",
+          "action": "SUGGEST_CHIP",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": true,
+          "rank": [
+            1,
+            0.1429,
+            -2,
+            -1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ud_pos_0035",
+      "category": "proper_nouns_ja",
+      "target": "Konsist",
+      "context_before": "",
+      "raw": "Our CI pipeline checks Kotlin modules with Cist.",
+      "out": "Our CI pipeline checks Kotlin modules with Cist.",
+      "hit_exact": false,
+      "chip_hit": false,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0036",
+      "category": "acronyms_symbols",
+      "target": "CI/CD",
+      "context_before": "",
+      "raw": "RurCI slash CD workflow builds the debug package",
+      "out": "RurCI slash CD workflow builds the debug package",
+      "hit_exact": false,
+      "chip_hit": false,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0037",
+      "category": "acronyms_symbols",
+      "target": "CI/CD",
+      "context_before": "",
+      "raw": "Check the CI slash CD logs for any failing unit test",
+      "out": "Check the CI/CD logs for any failing unit test",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 10,
+          "end": 21,
+          "orig": "CI slash CD",
+          "proposed": "CI/CD",
+          "target": "CI/CD",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -3
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0038",
+      "category": "acronyms_symbols",
+      "target": "llama.cpp",
+      "context_before": "",
+      "raw": "Inference runs natively through lamma. cPp",
+      "out": "Inference runs natively through llama.cpp",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 32,
+          "end": 42,
+          "orig": "lamma. cPp",
+          "proposed": "llama.cpp",
+          "target": "llama.cpp",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.25,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0039",
+      "category": "acronyms_symbols",
+      "target": "llama.cpp",
+      "context_before": "",
+      "raw": "We updated the lama.cPP submodule yesterday",
+      "out": "We updated the llama.cpp submodule yesterday",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 15,
+          "end": 23,
+          "orig": "lama.cPP",
+          "proposed": "llama.cpp",
+          "target": "llama.cpp",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.125,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0040",
+      "category": "acronyms_symbols",
+      "target": "Node.js",
+      "context_before": "",
+      "raw": "The script requires node.js version twenty",
+      "out": "The script requires Node.js version twenty",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 20,
+          "end": 27,
+          "orig": "node.js",
+          "proposed": "Node.js",
+          "target": "Node.js",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0041",
+      "category": "acronyms_symbols",
+      "target": "C++",
+      "context_before": "",
+      "raw": "The core decoder is written in C plus plus",
+      "out": "The core decoder is written in C++",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 31,
+          "end": 42,
+          "orig": "C plus plus",
+          "proposed": "C++",
+          "target": "C++",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -3
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0042",
+      "category": "acronyms_symbols",
+      "target": "SLM",
+      "context_before": "",
+      "raw": "Our SLM reranker runs completely offline",
+      "out": "Our SLM reranker runs completely offline",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0043",
+      "category": "acronyms_symbols",
+      "target": "SLM",
+      "context_before": "",
+      "raw": "We evaluated the SLM latency on mobile cores",
+      "out": "We evaluated the SLM latency on mobile cores",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0044",
+      "category": "acronyms_symbols",
+      "target": "VAD",
+      "context_before": "",
+      "raw": "The VAD module detects pauses within two hundred milliseconds",
+      "out": "The VAD module detects pauses within two hundred milliseconds",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0045",
+      "category": "acronyms_symbols",
+      "target": "VAD",
+      "context_before": "",
+      "raw": "Tune the VAD silence threshold carefully",
+      "out": "Tune the VAD silence threshold carefully",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0046",
+      "category": "acronyms_symbols",
+      "target": "IME",
+      "context_before": "",
+      "raw": "The Android IME handles both speech and touch",
+      "out": "The Android IME handles both speech and touch",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0047",
+      "category": "acronyms_symbols",
+      "target": "IME",
+      "context_before": "",
+      "raw": "Switch the default IME in System settings",
+      "out": "Switch the default IME in System settings",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0048",
+      "category": "acronyms_symbols",
+      "target": "UI",
+      "context_before": "",
+      "raw": "We simplified the mainuIe into three tabs",
+      "out": "We simplified the mainuIe into three tabs",
+      "hit_exact": false,
+      "chip_hit": false,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0049",
+      "category": "acronyms_symbols",
+      "target": "UI",
+      "context_before": "",
+      "raw": "Inspect the UI layout hierarchy on the phone",
+      "out": "Inspect the UI layout hierarchy on the phone",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0050",
+      "category": "acronyms_symbols",
+      "target": "kubectl",
+      "context_before": "Check the Kubernetes cluster. ",
+      "raw": "Run Kuber CTL apply on the production manifest",
+      "out": "Run kubectl apply on the production manifest",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 4,
+          "end": 13,
+          "orig": "Kuber CTL",
+          "proposed": "kubectl",
+          "target": "kubectl",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.1875,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0051",
+      "category": "acronyms_symbols",
+      "target": "kubectl",
+      "context_before": "Kubernetes deployment debug: ",
+      "raw": "Use Kuber Control Git pods to inspect the cluster",
+      "out": "Use Kuber Control Git pods to inspect the cluster",
+      "hit_exact": false,
+      "chip_hit": true,
+      "autos": [],
+      "chips": [
+        {
+          "start": 4,
+          "end": 17,
+          "orig": "Kuber Control",
+          "proposed": "kubectl",
+          "target": "kubectl",
+          "action": "SUGGEST_CHIP",
+          "match_kind": "ABBREVIATION_SUBSEQUENCE",
+          "is_common_collision": true,
+          "rank": [
+            3,
+            0.5,
+            -3,
+            -2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ud_pos_0052",
+      "category": "acronyms_symbols",
+      "target": "gRPC",
+      "context_before": "",
+      "raw": "We defined the service interface with GRPC",
+      "out": "We defined the service interface with gRPC",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 38,
+          "end": 42,
+          "orig": "GRPC",
+          "proposed": "gRPC",
+          "target": "gRPC",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0053",
+      "category": "multiword_phrases",
+      "target": "Google DeepMind",
+      "context_before": "",
+      "raw": "Researchers at Google Deepmind published the benchmark",
+      "out": "Researchers at Google DeepMind published the benchmark",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 15,
+          "end": 30,
+          "orig": "Google Deepmind",
+          "proposed": "Google DeepMind",
+          "target": "Google DeepMind",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0054",
+      "category": "multiword_phrases",
+      "target": "Google DeepMind",
+      "context_before": "",
+      "raw": "She joined Google Deepmind as a research engineer",
+      "out": "She joined Google DeepMind as a research engineer",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 11,
+          "end": 26,
+          "orig": "Google Deepmind",
+          "proposed": "Google DeepMind",
+          "target": "Google DeepMind",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0055",
+      "category": "multiword_phrases",
+      "target": "Pixel 10 Pro",
+      "context_before": "",
+      "raw": "We verified the keyboard layout on Pixel ten Pro",
+      "out": "We verified the keyboard layout on Pixel 10 Pro",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 35,
+          "end": 48,
+          "orig": "Pixel ten Pro",
+          "proposed": "Pixel 10 Pro",
+          "target": "Pixel 10 Pro",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -3
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0056",
+      "category": "multiword_phrases",
+      "target": "Pixel 10 Pro",
+      "context_before": "",
+      "raw": "Depoy the debug buildild to Pixel ten Pro over WiFi.",
+      "out": "Depoy the debug buildild to Pixel 10 Pro over WiFi.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 28,
+          "end": 41,
+          "orig": "Pixel ten Pro",
+          "proposed": "Pixel 10 Pro",
+          "target": "Pixel 10 Pro",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -3
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0057",
+      "category": "multi_term_sentences",
+      "target": "PyTorch",
+      "context_before": "",
+      "raw": "Export the PyTorch cheheckpoint into ONX format",
+      "out": "Export the PyTorch cheheckpoint into ONX format",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0058",
+      "category": "multi_term_sentences",
+      "target": "GraphQL",
+      "context_before": "",
+      "raw": "Compare graphQL queries against rest endndpoints.",
+      "out": "Compare GraphQL queries against rest endndpoints.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 8,
+          "end": 15,
+          "orig": "graphQL",
+          "proposed": "GraphQL",
+          "target": "GraphQL",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0059",
+      "category": "multi_term_sentences",
+      "target": "Datadog",
+      "context_before": "",
+      "raw": "Dataog alerts triggered when CPU usage spiked",
+      "out": "Datadog alerts triggered when CPU usage spiked",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 6,
+          "orig": "Dataog",
+          "proposed": "Datadog",
+          "target": "Datadog",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.4286,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0060",
+      "category": "multi_term_sentences",
+      "target": "FastConformer",
+      "context_before": "",
+      "raw": "Parakeed uses a fast conformer backbone for streaming",
+      "out": "Parakeed uses a FastConformer backbone for streaming",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 16,
+          "end": 30,
+          "orig": "fast conformer",
+          "proposed": "FastConformer",
+          "target": "FastConformer",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0061",
+      "category": "multi_term_sentences",
+      "target": "Zipformer",
+      "context_before": "",
+      "raw": "Risent speech relies on his zip former encoder",
+      "out": "ReazonSpeech relies on his Zipformer encoder",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 13,
+          "orig": "Risent speech",
+          "proposed": "ReazonSpeech",
+          "target": "ReazonSpeech",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.5417,
+            -3,
+            -2
+          ]
+        },
+        {
+          "start": 28,
+          "end": 38,
+          "orig": "zip former",
+          "proposed": "Zipformer",
+          "target": "Zipformer",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0062",
+      "category": "multi_term_sentences",
+      "target": "KanaKanji",
+      "context_before": "",
+      "raw": "Ar Konikonji conversion uses mosqu Big RAam costs",
+      "out": "Ar KanaKanji conversion uses mosqu Big RAam costs",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 3,
+          "end": 12,
+          "orig": "Konikonji",
+          "proposed": "KanaKanji",
+          "target": "KanaKanji",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.3333,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0063",
+      "category": "multi_term_sentences",
+      "target": "SudachiDict",
+      "context_before": "",
+      "raw": "Sudaci dict expands proper noun coverage offline",
+      "out": "SudachiDict expands proper noun coverage offline",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 11,
+          "orig": "Sudaci dict",
+          "proposed": "SudachiDict",
+          "target": "SudachiDict",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.1909,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0064",
+      "category": "multi_term_sentences",
+      "target": "vLLM",
+      "context_before": "",
+      "raw": "Compare lamma. cPP latency against VLLM serving",
+      "out": "Compare llama.cpp latency against vLLM serving",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 8,
+          "end": 18,
+          "orig": "lamma. cPP",
+          "proposed": "llama.cpp",
+          "target": "llama.cpp",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.25,
+            -3,
+            -2
+          ]
+        },
+        {
+          "start": 35,
+          "end": 39,
+          "orig": "VLLM",
+          "proposed": "vLLM",
+          "target": "vLLM",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0065",
+      "category": "multi_term_sentences",
+      "target": "SymSpell",
+      "context_before": "",
+      "raw": "Sim spell generates typo candidates in under a millisecond",
+      "out": "SymSpell generates typo candidates in under a millisecond",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 9,
+          "orig": "Sim spell",
+          "proposed": "SymSpell",
+          "target": "SymSpell",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.125,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0066",
+      "category": "multi_term_sentences",
+      "target": "NixOS",
+      "context_before": "",
+      "raw": "We provisioned the CI rununner on NXOS",
+      "out": "We provisioned the CI rununner on NixOS",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 34,
+          "end": 38,
+          "orig": "NXOS",
+          "proposed": "NixOS",
+          "target": "NixOS",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.3667,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0067",
+      "category": "multi_term_sentences",
+      "target": "Antigravity",
+      "context_before": "",
+      "raw": "Antiravity orchestrated the verification steps automatically",
+      "out": "Antigravity orchestrated the verification steps automatically",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 10,
+          "orig": "Antiravity",
+          "proposed": "Antigravity",
+          "target": "Antigravity",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.1818,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0068",
+      "category": "multi_term_sentences",
+      "target": "JotInput",
+      "context_before": "",
+      "raw": "Open jot input settings to configure voice punctuation",
+      "out": "Open JotInput settings to configure voice punctuation",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 5,
+          "end": 14,
+          "orig": "jot input",
+          "proposed": "JotInput",
+          "target": "JotInput",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    }
+  ],
+  "pos_slm_on": [
+    {
+      "id": "ud_pos_0001",
+      "category": "camelcase_compound",
+      "target": "JotInput",
+      "context_before": "",
+      "raw": "I use Jot input on my Android phone every day",
+      "out": "I use JotInput on my Android phone every day",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 6,
+          "end": 15,
+          "orig": "Jot input",
+          "proposed": "JotInput",
+          "target": "JotInput",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0002",
+      "category": "camelcase_compound",
+      "target": "JotInput",
+      "context_before": "",
+      "raw": "Jot inputs voice recognition runs locally",
+      "out": "JotInputs voice recognition runs locally",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 10,
+          "orig": "Jot inputs",
+          "proposed": "JotInputs",
+          "target": "JotInput",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0003",
+      "category": "camelcase_compound",
+      "target": "ReazonSpeech",
+      "context_before": "",
+      "raw": "Reaisan speech transcribes Japanese audio accurately",
+      "out": "ReazonSpeech transcribes Japanese audio accurately",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 14,
+          "orig": "Reaisan speech",
+          "proposed": "ReazonSpeech",
+          "target": "ReazonSpeech",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.2585,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0004",
+      "category": "camelcase_compound",
+      "target": "ReazonSpeech",
+      "context_before": "",
+      "raw": "We benchmarked reaison speech on mobile CPUs",
+      "out": "We benchmarked ReazonSpeech on mobile CPUs",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 15,
+          "end": 29,
+          "orig": "reaison speech",
+          "proposed": "ReazonSpeech",
+          "target": "ReazonSpeech",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.1816,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0005",
+      "category": "camelcase_compound",
+      "target": "PyTorch",
+      "context_before": "",
+      "raw": "We trained the acoustic model using PyTorch",
+      "out": "We trained the acoustic model using PyTorch",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0006",
+      "category": "camelcase_compound",
+      "target": "PyTorch",
+      "context_before": "",
+      "raw": "PyTorch's eager execution makes debugging easy",
+      "out": "PyTorch's eager execution makes debugging easy",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0007",
+      "category": "camelcase_compound",
+      "target": "GraphQL",
+      "context_before": "",
+      "raw": "Our backackend exposes a unified graphQL schema.",
+      "out": "Our backackend exposes a unified GraphQL schema.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 33,
+          "end": 40,
+          "orig": "graphQL",
+          "proposed": "GraphQL",
+          "target": "GraphQL",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0008",
+      "category": "camelcase_compound",
+      "target": "gRPC",
+      "context_before": "",
+      "raw": "The microservices communicate over GRPC streams",
+      "out": "The microservices communicate over gRPC streams",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 35,
+          "end": 39,
+          "orig": "GRPC",
+          "proposed": "gRPC",
+          "target": "gRPC",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0009",
+      "category": "camelcase_compound",
+      "target": "Tailscale",
+      "context_before": "",
+      "raw": "I connected to the build server via tailscale",
+      "out": "I connected to the build server via Tailscale",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 36,
+          "end": 45,
+          "orig": "tailscale",
+          "proposed": "Tailscale",
+          "target": "Tailscale",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0010",
+      "category": "camelcase_compound",
+      "target": "Tailscale",
+      "context_before": "",
+      "raw": "Tailscale's Mesh network simplifies remote debugging.",
+      "out": "Tailscale's Mesh network simplifies remote debugging.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0011",
+      "category": "camelcase_compound",
+      "target": "FastConformer",
+      "context_before": "",
+      "raw": "The fast conformer encoder runs in a single pass",
+      "out": "The FastConformer encoder runs in a single pass",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 4,
+          "end": 18,
+          "orig": "fast conformer",
+          "proposed": "FastConformer",
+          "target": "FastConformer",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0012",
+      "category": "camelcase_compound",
+      "target": "Zipformer",
+      "context_before": "",
+      "raw": "The zip forer transducer achieves low character error rate",
+      "out": "The Zipformer transducer achieves low character error rate",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 4,
+          "end": 13,
+          "orig": "zip forer",
+          "proposed": "Zipformer",
+          "target": "Zipformer",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.2222,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0013",
+      "category": "camelcase_compound",
+      "target": "Datadog",
+      "context_before": "",
+      "raw": "Check the memory metrics in Dataog right now",
+      "out": "Check the memory metrics in Datadog right now",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 28,
+          "end": 34,
+          "orig": "Dataog",
+          "proposed": "Datadog",
+          "target": "Datadog",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.4286,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0014",
+      "category": "camelcase_compound",
+      "target": "Cloudflare",
+      "context_before": "",
+      "raw": "We deployed the worker Edge script to Cloudflare",
+      "out": "We deployed the worker Edge script to Cloudflare",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0015",
+      "category": "camelcase_compound",
+      "target": "Cloudflare",
+      "context_before": "",
+      "raw": "Cloudflare's DNS resolver lowered our latency",
+      "out": "Cloudflare's DNS resolver lowered our latency",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0016",
+      "category": "camelcase_compound",
+      "target": "LangChain",
+      "context_before": "We are building an LLM pipeline. ",
+      "raw": "We built a retrieval agent with Lang Chain",
+      "out": "We built a retrieval agent with LangChain",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 32,
+          "end": 42,
+          "orig": "Lang Chain",
+          "proposed": "LangChain",
+          "target": "LangChain",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0017",
+      "category": "camelcase_compound",
+      "target": "SymSpell",
+      "context_before": "",
+      "raw": "The English typo corctor relies on Sim spell",
+      "out": "The English typo corctor relies on SymSpell",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 35,
+          "end": 44,
+          "orig": "Sim spell",
+          "proposed": "SymSpell",
+          "target": "SymSpell",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.125,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0018",
+      "category": "camelcase_compound",
+      "target": "Supabase",
+      "context_before": "",
+      "raw": "Authentication and storage are hosted on Superabase",
+      "out": "Authentication and storage are hosted on Supabase",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 41,
+          "end": 51,
+          "orig": "Superabase",
+          "proposed": "Supabase",
+          "target": "Supabase",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.3667,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0019",
+      "category": "camelcase_compound",
+      "target": "Supabase",
+      "context_before": "",
+      "raw": "Superbase Row level security protects user records",
+      "out": "Supabase Row level security protects user records",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 9,
+          "orig": "Superbase",
+          "proposed": "Supabase",
+          "target": "Supabase",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.2847,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0020",
+      "category": "camelcase_compound",
+      "target": "KanaKanji",
+      "context_before": "",
+      "raw": "The Konickoni lattice search runs in milliseconds",
+      "out": "The KanaKanji lattice search runs in milliseconds",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 4,
+          "end": 13,
+          "orig": "Konickoni",
+          "proposed": "KanaKanji",
+          "target": "KanaKanji",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.6667,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0021",
+      "category": "camelcase_compound",
+      "target": "SudachiDict",
+      "context_before": "",
+      "raw": "We downloaded the optional Sadaci Dict Lexicon",
+      "out": "We downloaded the optional SudachiDict Lexicon",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 27,
+          "end": 38,
+          "orig": "Sadaci Dict",
+          "proposed": "SudachiDict",
+          "target": "SudachiDict",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.2818,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0022",
+      "category": "camelcase_compound",
+      "target": "vLLM",
+      "context_before": "",
+      "raw": "We benchmarked throughput using VLLM on Linux",
+      "out": "We benchmarked throughput using vLLM on Linux",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 32,
+          "end": 36,
+          "orig": "VLLM",
+          "proposed": "vLLM",
+          "target": "vLLM",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0023",
+      "category": "camelcase_compound",
+      "target": "OAuth",
+      "context_before": "",
+      "raw": "The client refreshes Oh access tokens automatically",
+      "out": "The client refreshes Oh access tokens automatically",
+      "hit_exact": false,
+      "chip_hit": false,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0024",
+      "category": "camelcase_compound",
+      "target": "NixOS",
+      "context_before": "",
+      "raw": "Our reproducible buildildbox runs NXOS.",
+      "out": "Our reproducible buildildbox runs NixOS.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 34,
+          "end": 38,
+          "orig": "NXOS",
+          "proposed": "NixOS",
+          "target": "NixOS",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.3667,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0025",
+      "category": "camelcase_compound",
+      "target": "Antigravity",
+      "context_before": "",
+      "raw": "Let's test this workflow inside antigravity",
+      "out": "Let's test this workflow inside Antigravity",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 32,
+          "end": 43,
+          "orig": "antigravity",
+          "proposed": "Antigravity",
+          "target": "Antigravity",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0026",
+      "category": "proper_nouns_ja",
+      "target": "Kurihara",
+      "context_before": "",
+      "raw": "Please send the report to Korihara before noon.",
+      "out": "Please send the report to Kurihara before noon.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 26,
+          "end": 34,
+          "orig": "Korihara",
+          "proposed": "Kurihara",
+          "target": "Kurihara",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.125,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0027",
+      "category": "proper_nouns_ja",
+      "target": "Kurihara",
+      "context_before": "",
+      "raw": "Curihara's poull request fixed the regression",
+      "out": "Kurihara's poull request fixed the regression",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 10,
+          "orig": "Curihara's",
+          "proposed": "Kurihara's",
+          "target": "Kurihara",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.125,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0028",
+      "category": "proper_nouns_ja",
+      "target": "Kenichi",
+      "context_before": "",
+      "raw": "Kenichi reviewed the architectural design document",
+      "out": "Kenichi reviewed the architectural design document",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0029",
+      "category": "proper_nouns_ja",
+      "target": "Anthropic",
+      "context_before": "",
+      "raw": "We read the safety paper published by Anthropic",
+      "out": "We read the safety paper published by Anthropic",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0030",
+      "category": "proper_nouns_ja",
+      "target": "Qwen",
+      "context_before": "We loaded the GGUF language model. ",
+      "raw": "The O device Rranker uses Quenn for scoring",
+      "out": "The O device Rranker uses Qwen for scoring",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 26,
+          "end": 31,
+          "orig": "Quenn",
+          "proposed": "Qwen",
+          "target": "Qwen",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.4,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0031",
+      "category": "proper_nouns_ja",
+      "target": "Qwen",
+      "context_before": "Benchmarking local language models: ",
+      "raw": "Quen achieved high top one accuracy after tuning",
+      "out": "Qwen achieved high top one accuracy after tuning",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 4,
+          "orig": "Quen",
+          "proposed": "Qwen",
+          "target": "Qwen",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.25,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0032",
+      "category": "proper_nouns_ja",
+      "target": "Mozc",
+      "context_before": "Working on Japanese IME conversion. ",
+      "raw": "We updated the Mosque dictionary",
+      "out": "We updated the Mozc dictionary",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 15,
+          "end": 21,
+          "orig": "Mosque",
+          "proposed": "Mozc",
+          "target": "Mozc",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": true,
+          "rank": [
+            2,
+            0.7292,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0033",
+      "category": "proper_nouns_ja",
+      "target": "Mozc",
+      "context_before": "Japanese morphological analysis: ",
+      "raw": "The Mos connection matrix fits inside the package",
+      "out": "The Mos connection matrix fits inside the package",
+      "hit_exact": false,
+      "chip_hit": false,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0034",
+      "category": "proper_nouns_ja",
+      "target": "Konsist",
+      "context_before": "Verify the DDD bounded contexts. ",
+      "raw": "Run consists architecture tests",
+      "out": "Run Konsist architecture tests",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 4,
+          "end": 12,
+          "orig": "consists",
+          "proposed": "Konsist",
+          "target": "Konsist",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": true,
+          "rank": [
+            1,
+            0.1429,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0035",
+      "category": "proper_nouns_ja",
+      "target": "Konsist",
+      "context_before": "",
+      "raw": "Our CI pipeline checks Kotlin modules with Cist.",
+      "out": "Our CI pipeline checks Kotlin modules with Cist.",
+      "hit_exact": false,
+      "chip_hit": false,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0036",
+      "category": "acronyms_symbols",
+      "target": "CI/CD",
+      "context_before": "",
+      "raw": "RurCI slash CD workflow builds the debug package",
+      "out": "RurCI slash CD workflow builds the debug package",
+      "hit_exact": false,
+      "chip_hit": false,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0037",
+      "category": "acronyms_symbols",
+      "target": "CI/CD",
+      "context_before": "",
+      "raw": "Check the CI slash CD logs for any failing unit test",
+      "out": "Check the CI/CD logs for any failing unit test",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 10,
+          "end": 21,
+          "orig": "CI slash CD",
+          "proposed": "CI/CD",
+          "target": "CI/CD",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -3
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0038",
+      "category": "acronyms_symbols",
+      "target": "llama.cpp",
+      "context_before": "",
+      "raw": "Inference runs natively through lamma. cPp",
+      "out": "Inference runs natively through llama.cpp",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 32,
+          "end": 42,
+          "orig": "lamma. cPp",
+          "proposed": "llama.cpp",
+          "target": "llama.cpp",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.25,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0039",
+      "category": "acronyms_symbols",
+      "target": "llama.cpp",
+      "context_before": "",
+      "raw": "We updated the lama.cPP submodule yesterday",
+      "out": "We updated the llama.cpp submodule yesterday",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 15,
+          "end": 23,
+          "orig": "lama.cPP",
+          "proposed": "llama.cpp",
+          "target": "llama.cpp",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.125,
+            -3,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0040",
+      "category": "acronyms_symbols",
+      "target": "Node.js",
+      "context_before": "",
+      "raw": "The script requires node.js version twenty",
+      "out": "The script requires Node.js version twenty",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 20,
+          "end": 27,
+          "orig": "node.js",
+          "proposed": "Node.js",
+          "target": "Node.js",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0041",
+      "category": "acronyms_symbols",
+      "target": "C++",
+      "context_before": "",
+      "raw": "The core decoder is written in C plus plus",
+      "out": "The core decoder is written in C++",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 31,
+          "end": 42,
+          "orig": "C plus plus",
+          "proposed": "C++",
+          "target": "C++",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -3
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0042",
+      "category": "acronyms_symbols",
+      "target": "SLM",
+      "context_before": "",
+      "raw": "Our SLM reranker runs completely offline",
+      "out": "Our SLM reranker runs completely offline",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0043",
+      "category": "acronyms_symbols",
+      "target": "SLM",
+      "context_before": "",
+      "raw": "We evaluated the SLM latency on mobile cores",
+      "out": "We evaluated the SLM latency on mobile cores",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0044",
+      "category": "acronyms_symbols",
+      "target": "VAD",
+      "context_before": "",
+      "raw": "The VAD module detects pauses within two hundred milliseconds",
+      "out": "The VAD module detects pauses within two hundred milliseconds",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0045",
+      "category": "acronyms_symbols",
+      "target": "VAD",
+      "context_before": "",
+      "raw": "Tune the VAD silence threshold carefully",
+      "out": "Tune the VAD silence threshold carefully",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0046",
+      "category": "acronyms_symbols",
+      "target": "IME",
+      "context_before": "",
+      "raw": "The Android IME handles both speech and touch",
+      "out": "The Android IME handles both speech and touch",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0047",
+      "category": "acronyms_symbols",
+      "target": "IME",
+      "context_before": "",
+      "raw": "Switch the default IME in System settings",
+      "out": "Switch the default IME in System settings",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0048",
+      "category": "acronyms_symbols",
+      "target": "UI",
+      "context_before": "",
+      "raw": "We simplified the mainuIe into three tabs",
+      "out": "We simplified the mainuIe into three tabs",
+      "hit_exact": false,
+      "chip_hit": false,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0049",
+      "category": "acronyms_symbols",
+      "target": "UI",
+      "context_before": "",
+      "raw": "Inspect the UI layout hierarchy on the phone",
+      "out": "Inspect the UI layout hierarchy on the phone",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0050",
+      "category": "acronyms_symbols",
+      "target": "kubectl",
+      "context_before": "Check the Kubernetes cluster. ",
+      "raw": "Run Kuber CTL apply on the production manifest",
+      "out": "Run kubectl apply on the production manifest",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 4,
+          "end": 13,
+          "orig": "Kuber CTL",
+          "proposed": "kubectl",
+          "target": "kubectl",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.1875,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0051",
+      "category": "acronyms_symbols",
+      "target": "kubectl",
+      "context_before": "Kubernetes deployment debug: ",
+      "raw": "Use Kuber Control Git pods to inspect the cluster",
+      "out": "Use kubectl Git pods to inspect the cluster",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 4,
+          "end": 17,
+          "orig": "Kuber Control",
+          "proposed": "kubectl",
+          "target": "kubectl",
+          "action": "AUTO_REPLACE",
+          "match_kind": "ABBREVIATION_SUBSEQUENCE",
+          "is_common_collision": true,
+          "rank": [
+            3,
+            0.5,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0052",
+      "category": "acronyms_symbols",
+      "target": "gRPC",
+      "context_before": "",
+      "raw": "We defined the service interface with GRPC",
+      "out": "We defined the service interface with gRPC",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 38,
+          "end": 42,
+          "orig": "GRPC",
+          "proposed": "gRPC",
+          "target": "gRPC",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0053",
+      "category": "multiword_phrases",
+      "target": "Google DeepMind",
+      "context_before": "",
+      "raw": "Researchers at Google Deepmind published the benchmark",
+      "out": "Researchers at Google DeepMind published the benchmark",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 15,
+          "end": 30,
+          "orig": "Google Deepmind",
+          "proposed": "Google DeepMind",
+          "target": "Google DeepMind",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0054",
+      "category": "multiword_phrases",
+      "target": "Google DeepMind",
+      "context_before": "",
+      "raw": "She joined Google Deepmind as a research engineer",
+      "out": "She joined Google DeepMind as a research engineer",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 11,
+          "end": 26,
+          "orig": "Google Deepmind",
+          "proposed": "Google DeepMind",
+          "target": "Google DeepMind",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0055",
+      "category": "multiword_phrases",
+      "target": "Pixel 10 Pro",
+      "context_before": "",
+      "raw": "We verified the keyboard layout on Pixel ten Pro",
+      "out": "We verified the keyboard layout on Pixel 10 Pro",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 35,
+          "end": 48,
+          "orig": "Pixel ten Pro",
+          "proposed": "Pixel 10 Pro",
+          "target": "Pixel 10 Pro",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -3
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0056",
+      "category": "multiword_phrases",
+      "target": "Pixel 10 Pro",
+      "context_before": "",
+      "raw": "Depoy the debug buildild to Pixel ten Pro over WiFi.",
+      "out": "Depoy the debug buildild to Pixel 10 Pro over WiFi.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 28,
+          "end": 41,
+          "orig": "Pixel ten Pro",
+          "proposed": "Pixel 10 Pro",
+          "target": "Pixel 10 Pro",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -3
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0057",
+      "category": "multi_term_sentences",
+      "target": "PyTorch",
+      "context_before": "",
+      "raw": "Export the PyTorch cheheckpoint into ONX format",
+      "out": "Export the PyTorch cheheckpoint into ONX format",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0058",
+      "category": "multi_term_sentences",
+      "target": "GraphQL",
+      "context_before": "",
+      "raw": "Compare graphQL queries against rest endndpoints.",
+      "out": "Compare GraphQL queries against rest endndpoints.",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 8,
+          "end": 15,
+          "orig": "graphQL",
+          "proposed": "GraphQL",
+          "target": "GraphQL",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0059",
+      "category": "multi_term_sentences",
+      "target": "Datadog",
+      "context_before": "",
+      "raw": "Dataog alerts triggered when CPU usage spiked",
+      "out": "Datadog alerts triggered when CPU usage spiked",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 6,
+          "orig": "Dataog",
+          "proposed": "Datadog",
+          "target": "Datadog",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.4286,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0060",
+      "category": "multi_term_sentences",
+      "target": "FastConformer",
+      "context_before": "",
+      "raw": "Parakeed uses a fast conformer backbone for streaming",
+      "out": "Parakeed uses a FastConformer backbone for streaming",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 16,
+          "end": 30,
+          "orig": "fast conformer",
+          "proposed": "FastConformer",
+          "target": "FastConformer",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0061",
+      "category": "multi_term_sentences",
+      "target": "Zipformer",
+      "context_before": "",
+      "raw": "Risent speech relies on his zip former encoder",
+      "out": "ReazonSpeech relies on his Zipformer encoder",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 13,
+          "orig": "Risent speech",
+          "proposed": "ReazonSpeech",
+          "target": "ReazonSpeech",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.5417,
+            -3,
+            -2
+          ]
+        },
+        {
+          "start": 28,
+          "end": 38,
+          "orig": "zip former",
+          "proposed": "Zipformer",
+          "target": "Zipformer",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0062",
+      "category": "multi_term_sentences",
+      "target": "KanaKanji",
+      "context_before": "",
+      "raw": "Ar Konikonji conversion uses mosqu Big RAam costs",
+      "out": "Ar KanaKanji conversion uses mosqu Big RAam costs",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 3,
+          "end": 12,
+          "orig": "Konikonji",
+          "proposed": "KanaKanji",
+          "target": "KanaKanji",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.3333,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0063",
+      "category": "multi_term_sentences",
+      "target": "SudachiDict",
+      "context_before": "",
+      "raw": "Sudaci dict expands proper noun coverage offline",
+      "out": "SudachiDict expands proper noun coverage offline",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 11,
+          "orig": "Sudaci dict",
+          "proposed": "SudachiDict",
+          "target": "SudachiDict",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.1909,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0064",
+      "category": "multi_term_sentences",
+      "target": "vLLM",
+      "context_before": "",
+      "raw": "Compare lamma. cPP latency against VLLM serving",
+      "out": "Compare llama.cpp latency against vLLM serving",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 8,
+          "end": 18,
+          "orig": "lamma. cPP",
+          "proposed": "llama.cpp",
+          "target": "llama.cpp",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.25,
+            -3,
+            -2
+          ]
+        },
+        {
+          "start": 35,
+          "end": 39,
+          "orig": "VLLM",
+          "proposed": "vLLM",
+          "target": "vLLM",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0065",
+      "category": "multi_term_sentences",
+      "target": "SymSpell",
+      "context_before": "",
+      "raw": "Sim spell generates typo candidates in under a millisecond",
+      "out": "SymSpell generates typo candidates in under a millisecond",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 9,
+          "orig": "Sim spell",
+          "proposed": "SymSpell",
+          "target": "SymSpell",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_EXACT",
+          "is_common_collision": false,
+          "rank": [
+            1,
+            0.125,
+            -2,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0066",
+      "category": "multi_term_sentences",
+      "target": "NixOS",
+      "context_before": "",
+      "raw": "We provisioned the CI rununner on NXOS",
+      "out": "We provisioned the CI rununner on NixOS",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 34,
+          "end": 38,
+          "orig": "NXOS",
+          "proposed": "NixOS",
+          "target": "NixOS",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.3667,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0067",
+      "category": "multi_term_sentences",
+      "target": "Antigravity",
+      "context_before": "",
+      "raw": "Antiravity orchestrated the verification steps automatically",
+      "out": "Antigravity orchestrated the verification steps automatically",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 0,
+          "end": 10,
+          "orig": "Antiravity",
+          "proposed": "Antigravity",
+          "target": "Antigravity",
+          "action": "AUTO_REPLACE",
+          "match_kind": "PHONETIC_NEAR_MISS",
+          "is_common_collision": false,
+          "rank": [
+            2,
+            0.1818,
+            -2,
+            -1
+          ]
+        }
+      ],
+      "chips": []
+    },
+    {
+      "id": "ud_pos_0068",
+      "category": "multi_term_sentences",
+      "target": "JotInput",
+      "context_before": "",
+      "raw": "Open jot input settings to configure voice punctuation",
+      "out": "Open JotInput settings to configure voice punctuation",
+      "hit_exact": true,
+      "chip_hit": true,
+      "autos": [
+        {
+          "start": 5,
+          "end": 14,
+          "orig": "jot input",
+          "proposed": "JotInput",
+          "target": "JotInput",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -3,
+            -2
+          ]
+        }
+      ],
+      "chips": []
+    }
+  ],
+  "neg_slm_on_all": [
+    {
+      "id": "ud_neg_0001",
+      "lookalike": "Konsist",
+      "raw": "The tests consist of three parts",
+      "out": "The tests consist of three parts"
+    },
+    {
+      "id": "ud_neg_0002",
+      "lookalike": "Mozc",
+      "raw": "We visited the Blue Mosque in Istanbul.",
+      "out": "We visited the Blue Mosque in Istanbul."
+    },
+    {
+      "id": "ud_neg_0003",
+      "lookalike": "LangChain",
+      "raw": "This caused a long chain of events",
+      "out": "This caused a long chain of events"
+    },
+    {
+      "id": "ud_neg_0004",
+      "lookalike": "JotInput",
+      "raw": "Please jot down your input before the meeting.",
+      "out": "Please jot down your input before the meeting."
+    },
+    {
+      "id": "ud_neg_0005",
+      "lookalike": "VAD",
+      "raw": "That was a bad idea from the start",
+      "out": "That was a bad idea from the start"
+    },
+    {
+      "id": "ud_neg_0006",
+      "lookalike": "IME",
+      "raw": "I am happy to help you today",
+      "out": "I am happy to help you today"
+    },
+    {
+      "id": "ud_neg_0007",
+      "lookalike": "Go",
+      "raw": "Let's go home after we finish",
+      "out": "Let's go home after we finish"
+    },
+    {
+      "id": "ud_neg_0008",
+      "lookalike": "Go",
+      "raw": "Don't go too far ahead on the trail",
+      "out": "Don't go too far ahead on the trail"
+    },
+    {
+      "id": "ud_neg_0009",
+      "lookalike": "Go",
+      "raw": "I had to go to the grocery store",
+      "out": "I had to go to the grocery store"
+    },
+    {
+      "id": "ud_neg_0010",
+      "lookalike": "OAuth",
+      "raw": "He took an oath to tell the truth",
+      "out": "He took an oath to tell the truth"
+    },
+    {
+      "id": "ud_neg_0011",
+      "lookalike": "Qwen",
+      "raw": "My friend Quinn lives in Seattle",
+      "out": "My friend Quinn lives in Seattle"
+    },
+    {
+      "id": "ud_neg_0012",
+      "lookalike": "PyTorch",
+      "raw": "He ate apple pie by the torch",
+      "out": "He ate apple pie by the torch"
+    },
+    {
+      "id": "ud_neg_0013",
+      "lookalike": "Tailscale",
+      "raw": "The cat's tail tipped the scale.",
+      "out": "The cat's tail tipped the scale."
+    },
+    {
+      "id": "ud_neg_0014",
+      "lookalike": "Datadog",
+      "raw": "The data shows my dog is healthy",
+      "out": "The data shows my dog is healthy"
+    },
+    {
+      "id": "ud_neg_0015",
+      "lookalike": "Kurihara",
+      "raw": "Let's eat curry for dinner tonight",
+      "out": "Let's eat curry for dinner tonight"
+    },
+    {
+      "id": "ud_neg_0016",
+      "lookalike": "NixOS",
+      "raw": "Nick's office is on the fifth floor",
+      "out": "Nick's office is on the fifth floor"
+    },
+    {
+      "id": "ud_neg_0017",
+      "lookalike": "OAuth",
+      "raw": "Meet me at the train station",
+      "out": "Meet me at the train station"
+    },
+    {
+      "id": "ud_neg_0018",
+      "lookalike": "ReazonSpeech",
+      "raw": "There is no reason for a long speech today",
+      "out": "There is no reason for a long speech today"
+    },
+    {
+      "id": "ud_neg_0019",
+      "lookalike": "FastConformer",
+      "raw": "We need a fast confirmation of the schedule",
+      "out": "We need a fast confirmation of the schedule"
+    },
+    {
+      "id": "ud_neg_0020",
+      "lookalike": "Zipformer",
+      "raw": "Zip up the former folder first",
+      "out": "Zip up the former folder first"
+    },
+    {
+      "id": "ud_neg_0021",
+      "lookalike": "Supabase",
+      "raw": "The super base coat dried very quickly",
+      "out": "The super base coat dried very quickly"
+    },
+    {
+      "id": "ud_neg_0022",
+      "lookalike": "Cloudflare",
+      "raw": "There was a bright flare above the cloud",
+      "out": "There was a bright flare above the cloud"
+    },
+    {
+      "id": "ud_neg_0023",
+      "lookalike": "SymSpell",
+      "raw": "Can you spell the simple word clearly",
+      "out": "Can you spell the simple word clearly"
+    },
+    {
+      "id": "ud_neg_0024",
+      "lookalike": "GraphQL",
+      "raw": "The graph has a cool curve at the end",
+      "out": "The graph has a cool curve at the end"
+    },
+    {
+      "id": "ud_neg_0025",
+      "lookalike": "gRPC",
+      "raw": "Grip the handle tightly while climbing",
+      "out": "Grip the handle tightly while climbing"
+    },
+    {
+      "id": "ud_neg_0026",
+      "lookalike": "llama.cpp",
+      "raw": "The ama walked slowly across the meadow",
+      "out": "The ama walked slowly across the meadow"
+    },
+    {
+      "id": "ud_neg_0027",
+      "lookalike": "Node.js",
+      "raw": "Check the central node on the network map",
+      "out": "Check the central node on the network map"
+    },
+    {
+      "id": "ud_neg_0028",
+      "lookalike": "kubectl",
+      "raw": "The wooden cube fell off the table",
+      "out": "The wooden cube fell off the table"
+    },
+    {
+      "id": "ud_neg_0029",
+      "lookalike": "Antigravity",
+      "raw": "Gravity pulls every object toward the ground",
+      "out": "Gravity pulls every object toward the ground"
+    },
+    {
+      "id": "ud_neg_0030",
+      "lookalike": "Anthropic",
+      "raw": "She read a textbook on anthropology",
+      "out": "She read a textbook on anthropology"
+    },
+    {
+      "id": "ud_neg_0031",
+      "lookalike": "Pixel 10 Pro",
+      "raw": "I see a bright pixel near the corner",
+      "out": "I see a bright pixel near the corner"
+    },
+    {
+      "id": "ud_neg_0032",
+      "lookalike": "Google DeepMind",
+      "raw": "He has a deep mind for complex puzzles",
+      "out": "He has a deep mind for complex puzzles"
+    },
+    {
+      "id": "ud_neg_0033",
+      "lookalike": "CI/CD",
+      "raw": "See if the music CD plays properly",
+      "out": "See if the music CD plays properly"
+    },
+    {
+      "id": "ud_neg_0034",
+      "lookalike": "UI",
+      "raw": "Look at you, I am doing well.",
+      "out": "Look at you, I am doing well."
+    },
+    {
+      "id": "ud_neg_0035",
+      "lookalike": "SLM",
+      "raw": "The slim binder sits on the desk",
+      "out": "The slim binder sits on the desk"
+    },
+    {
+      "id": "ud_neg_0036",
+      "lookalike": "Kenichi",
+      "raw": "Ken had an itchy throat this morning",
+      "out": "Ken had an itchy throat this morning"
+    },
+    {
+      "id": "ud_neg_0037",
+      "lookalike": "SymSpell",
+      "raw": "The sum of two numbers is five",
+      "out": "The sum of two numbers is five"
+    },
+    {
+      "id": "ud_neg_0038",
+      "lookalike": "Tailscale",
+      "raw": "Wait until the scale settles down.",
+      "out": "Wait until the scale settles down."
+    },
+    {
+      "id": "ud_neg_0039",
+      "lookalike": "DisabledTerm",
+      "raw": "The disabled term was removed from the contract",
+      "out": "The disabled term was removed from the contract"
+    },
+    {
+      "id": "ud_neg_0040",
+      "lookalike": "C++",
+      "raw": "See what happens plus what we planned",
+      "out": "See what happens plus what we planned"
+    },
+    {
+      "id": "ud_neg_0041",
+      "lookalike": "vLLM",
+      "raw": "The film received great reviews yesterday",
+      "out": "The film received great reviews yesterday"
+    },
+    {
+      "id": "ud_neg_0042",
+      "lookalike": "Antigravity",
+      "raw": "Please handle fragile glasswar with gravity and care",
+      "out": "Please handle fragile glasswar with gravity and care"
+    }
+  ],
+  "neg_slm_on_fps": [],
+  "baseline300_tp": [
+    {
+      "id": "en_voice_0108",
+      "gt": "The microservices communicate over lightweight gRPC protocols.",
+      "raw": "The microservices communicate over lightweight GRPC protocols",
+      "out": "The microservices communicate over lightweight gRPC protocols",
+      "autos": [
+        {
+          "start": 47,
+          "end": 51,
+          "orig": "GRPC",
+          "proposed": "gRPC",
+          "target": "gRPC",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "en_voice_0225",
+      "gt": "Dr. Anderson presented a paper titled 'Advances in FastConformer Speech Models'.",
+      "raw": "Doctor, Anderson presented a paper titled Advances in Fast Conformer speech models",
+      "out": "Doctor, Anderson presented a paper titled Advances in FastConformer speech models",
+      "autos": [
+        {
+          "start": 54,
+          "end": 68,
+          "orig": "Fast Conformer",
+          "proposed": "FastConformer",
+          "target": "FastConformer",
+          "action": "AUTO_REPLACE",
+          "match_kind": "EXACT_NORMALIZED",
+          "is_common_collision": false,
+          "rank": [
+            0,
+            0.0,
+            -2,
+            -2
+          ]
+        }
+      ]
+    }
+  ],
+  "baseline300_fp": [],
+  "slm_delta_cache": {
+    "Working on Japanese IME conversion. We updated the||| Mosque dictionary||| Mozc dictionary": -2.9151,
+    "Verify the DDD bounded contexts. Run||| consists architecture tests||| Konsist architecture tests": 3.717,
+    "Kubernetes deployment debug: Use||| Kuber Control Git pods to||| kubectl Git pods to": -18.4149,
+    "The tests||| consist of three parts||| Konsist of three parts": 35.3305,
+    "We visited the Blue||| Mosque in Istanbul.||| Mozc in Istanbul.": 34.8608,
+    "This caused a||| long chain of events||| LangChain of events": 25.3658,
+    "Let's||| go home after we||| Go home after we": 7.3689,
+    "Don't||| go too far ahead||| Go too far ahead": 8.6727,
+    "I had to||| go to the grocery||| Go to the grocery": 8.0084,
+    "My friend||| Quinn lives in Seattle||| Qwen lives in Seattle": 4.9765,
+    "The||| super base coat dried very||| Supabase coat dried very": 11.7022,
+    "How did your interview||| go yesterday||| Go yesterday": 12.1532
+  }
+}

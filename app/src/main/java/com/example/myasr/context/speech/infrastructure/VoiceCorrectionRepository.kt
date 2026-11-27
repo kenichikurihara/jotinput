@@ -75,6 +75,27 @@ class VoiceCorrectionRepository(
         }
     }
 
+    /**
+     * Returns `(normalizedOriginalSurface, correctedSurface)` pairs that were suppressed by
+     * user revert feedback (`revertCount > 0 && netCount() == 0`).
+     */
+    fun getSuppressedPairs(language: AsrLanguage): Set<Pair<String, String>> {
+        synchronized(lock) {
+            val out = HashSet<Pair<String, String>>()
+            for (entry in entries) {
+                if (entry.language == language && entry.revertCount > 0 && entry.netCount() == 0) {
+                    val keyOrig = if (language == AsrLanguage.ENGLISH) {
+                        entry.originalSurface.lowercase()
+                    } else {
+                        entry.originalSurface
+                    }
+                    out.add(keyOrig to entry.correctedSurface)
+                }
+            }
+            return out
+        }
+    }
+
     fun recordCorrection(
         language: AsrLanguage,
         originalSurface: String,
@@ -142,23 +163,67 @@ class VoiceCorrectionRepository(
         language: AsrLanguage,
         originalSurface: String,
         correctedSurface: String,
+        contextTokens: List<String> = emptyList(),
         nowMs: Long = System.currentTimeMillis()
     ) {
+        val updatedEntry: VoiceCorrectionEntry
         synchronized(lock) {
             val idx = entries.indexOfFirst {
                 it.language == language &&
                     it.originalSurface.equals(originalSurface, ignoreCase = language == AsrLanguage.ENGLISH) &&
                     it.correctedSurface == correctedSurface
             }
-            if (idx >= 0) {
+            updatedEntry = if (idx >= 0) {
                 val existing = entries[idx]
-                entries[idx] = existing.copy(
+                val mergedTokens = if (contextTokens.isEmpty()) {
+                    existing.recentContextTokens
+                } else {
+                    (existing.recentContextTokens + contextTokens).distinct().takeLast(16)
+                }
+                val updated = existing.copy(
                     acceptCount = existing.acceptCount + 1,
-                    lastCorrectedAtMs = nowMs
+                    lastCorrectedAtMs = nowMs,
+                    recentContextTokens = mergedTokens
                 )
-                saveToDiskLocked()
+                entries[idx] = updated
+                updated
+            } else {
+                val normReading = if (language == AsrLanguage.ENGLISH) {
+                    correctedSurface.lowercase().replace(Regex("[\\s\\-']+"), "")
+                } else {
+                    correctedSurface
+                }
+                val created = VoiceCorrectionEntry(
+                    language = language,
+                    originalSurface = originalSurface,
+                    correctedSurface = correctedSurface,
+                    normalizedReading = normReading,
+                    correctionCount = 1,
+                    acceptCount = 1,
+                    firstCorrectedAtMs = nowMs,
+                    lastCorrectedAtMs = nowMs,
+                    recentContextTokens = contextTokens.distinct().takeLast(16)
+                )
+                entries.add(created)
+                if (entries.size > MAX_ENTRIES) {
+                    val victimIdx = entries.indices.minByOrNull { entries[it].lastCorrectedAtMs } ?: 0
+                    entries.removeAt(victimIdx)
+                }
+                created
             }
+            saveToDiskLocked()
         }
+
+        eventBus.publish(
+            VoiceCorrectionLearnedEvent(
+                language = if (language == AsrLanguage.ENGLISH) InputLanguage.ENGLISH else InputLanguage.JAPANESE,
+                originalSurface = updatedEntry.originalSurface,
+                correctedSurface = updatedEntry.correctedSurface,
+                normalizedReading = updatedEntry.normalizedReading,
+                netCount = updatedEntry.netCount(),
+                occurredAtMillis = nowMs
+            )
+        )
     }
 
     fun recordRevert(
@@ -179,8 +244,31 @@ class VoiceCorrectionRepository(
                     revertCount = existing.revertCount + 1,
                     lastCorrectedAtMs = nowMs
                 )
-                saveToDiskLocked()
+            } else {
+                val normReading = if (language == AsrLanguage.ENGLISH) {
+                    correctedSurface.lowercase().replace(Regex("[\\s\\-']+"), "")
+                } else {
+                    correctedSurface
+                }
+                entries.add(
+                    VoiceCorrectionEntry(
+                        language = language,
+                        originalSurface = originalSurface,
+                        correctedSurface = correctedSurface,
+                        normalizedReading = normReading,
+                        correctionCount = 0,
+                        acceptCount = 0,
+                        revertCount = 1,
+                        firstCorrectedAtMs = nowMs,
+                        lastCorrectedAtMs = nowMs
+                    )
+                )
+                if (entries.size > MAX_ENTRIES) {
+                    val victimIdx = entries.indices.minByOrNull { entries[it].lastCorrectedAtMs } ?: 0
+                    entries.removeAt(victimIdx)
+                }
             }
+            saveToDiskLocked()
         }
     }
 

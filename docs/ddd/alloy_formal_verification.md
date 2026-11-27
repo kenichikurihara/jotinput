@@ -143,6 +143,15 @@ Debug 限定 GitHub Actions ビルド更新チェック・バックグラウン�
 - **`SingleUnverifiedRawTypoNeverEntersActiveCache`**: 未検証スペース確定の単発入力が即座にアクティブキャッシュに入らず 1-shot ガードに留保されること。
 - **`CustomDictAndBaseVocabIsolatedFromAdaptiveCache`**: `custom_dictionary.json` および Base 32k 語彙が適応キャッシュから厳格に隔離・維持されること。
 
+### 3.17 [`english_voice_user_dict.als`](app/src/test/resources/alloy/english_voice_user_dict.als)
+英語音声入力（Parakeet TDT-CTC 110M）におけるユーザー辞書優先適用ポリシー（[`EnglishUserDictDecisionModel`](app/src/main/java/com/example/myasr/context/speech/domain/EnglishUserDictDecisionModel.kt) `EnglishVoiceUserDictResolutionPolicy`）およびストレージ隔離不変条件をモデル化し、以下を検証する：
+- **`ResolutionTableIsTotal`**: `EnglishVoiceUserDictResolutionPolicy` があらゆる入力組み合わせに対して一意のアクションへ解決されること。
+- **`DisabledOrAlreadyExactNeverMutates`**: 無効化された辞書項目・一致なし・すでに表層完全一致の語に対して一切の置換・チップ提案を行わないこと。
+- **`ShortTargetNeverFuzzyReplaces`**: 3文字以下の短縮語に対して非完全一致（音韻類似・部分列一致）による自動置換を禁止し誤爆を防止すること。
+- **`RevertedNonExactNeverAutoReplaces`**: ユーザーによりリバートされたペアに対して非完全一致での再自動置換を禁止し、1タップ提案チップへ降格すること。
+- **`CommonWordCollisionNeverBlindlyAutoReplaces`**: 一般英単語と衝突する候補（`Go`, `Mosque`, `consists` 等）が先行文脈・SLM文脈整合性ゲートの確認なしに盲目的に自動置換されないこと。
+- **`CustomDictionaryNeverMutatedByVoiceResolution`**: 音声解決・リバート記録・チップ承認の遷移が `custom_dictionary.json`（ユーザー辞書）を一切変更・消去しないこと。
+
 ---
 
 ## 4. 自動同期ルール

@@ -213,6 +213,91 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             return fullCount >= 2
         }
 
+        /**
+         * Shifts shared prefix of [origText] and [corrText] into the SLM context and caps
+         * the trailing common tail so forced Stage-2 multi-token scoring evaluates the
+         * actual diverging span within its 8-token budget.
+         */
+        internal fun extractDivergingPairWindow(
+            contextPrefix: String,
+            origText: String,
+            corrText: String,
+            maxTrailingWords: Int = 4,
+            maxTrailingChars: Int = 48
+        ): Triple<String, String, String> {
+            val minLen = minOf(origText.length, corrText.length)
+            var prefixLen = 0
+            while (prefixLen < minLen && origText[prefixLen] == corrText[prefixLen]) {
+                prefixLen++
+            }
+            if (prefixLen in 1 until minLen) {
+                val isAsciiWordChar = { ch: Char ->
+                    ch in 'a'..'z' || ch in 'A'..'Z' || ch in '0'..'9' || ch == '\'' || ch == '-'
+                }
+                if (isAsciiWordChar(origText[prefixLen - 1]) && isAsciiWordChar(origText[prefixLen])) {
+                    while (prefixLen > 0 && isAsciiWordChar(origText[prefixLen - 1])) {
+                        prefixLen--
+                    }
+                }
+            }
+
+            val sharedPrefix = origText.substring(0, prefixLen)
+            val origRem = origText.substring(prefixLen)
+            val corrRem = corrText.substring(prefixLen)
+
+            val remMin = minOf(origRem.length, corrRem.length)
+            var sufLen = 0
+            while (sufLen < remMin &&
+                origRem[origRem.length - 1 - sufLen] == corrRem[corrRem.length - 1 - sufLen]
+            ) {
+                sufLen++
+            }
+            val origDivLen = origRem.length - sufLen
+            val corrDivLen = corrRem.length - sufLen
+            var commonTail = origRem.substring(origDivLen)
+
+            if (commonTail.isNotEmpty()) {
+                var wordsSeen = 0
+                var inWord = false
+                var cut = minOf(commonTail.length, maxTrailingChars)
+                for (i in 0 until cut) {
+                    val ch = commonTail[i]
+                    if (ch.isWhitespace()) {
+                        if (inWord) {
+                            wordsSeen++
+                            inWord = false
+                            if (wordsSeen >= maxTrailingWords) {
+                                cut = i
+                                break
+                            }
+                        }
+                    } else {
+                        inWord = true
+                    }
+                }
+                commonTail = commonTail.substring(0, cut)
+            }
+
+            val combinedContext = contextPrefix + sharedPrefix
+            val trimmedCtx = ContextWindowTrimmer.trimToOptimalContext(
+                combinedContext.trimEnd(),
+                targetTokens = ContextWindowTrimmer.DEFAULT_TARGET_TOKENS
+            )
+            val effectiveCtx = if (trimmedCtx.isBlank()) "<s>" else trimmedCtx
+
+            val hadSpaceBeforeDivergence = sharedPrefix.lastOrNull()?.isWhitespace() == true ||
+                (sharedPrefix.isEmpty() && contextPrefix.lastOrNull()?.isWhitespace() == true)
+
+            var origWin = (origRem.substring(0, origDivLen) + commonTail).ifEmpty { origText }
+            var corrWin = (corrRem.substring(0, corrDivLen) + commonTail).ifEmpty { corrText }
+            if (hadSpaceBeforeDivergence && effectiveCtx != "<s>") {
+                origWin = " " + origWin.trimStart()
+                corrWin = " " + corrWin.trimStart()
+            }
+
+            return Triple(effectiveCtx, origWin, corrWin)
+        }
+
         private fun computeObsDiscount(
             rawNll: Float,
             obsPenalty: Float,
@@ -1527,6 +1612,8 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
 
     /**
      * S3: Computes NLL(corrText | contextPrefix) - NLL(origText | contextPrefix) in nats.
+     * Uses [extractDivergingPairWindow] + forced Stage-2 multi-token scoring so shared sentence
+     * prefixes never bypass Stage 2 under [Stage2Policy.NEVER_TOKEN0_ONLY].
      * Returns null if SLM is not ready or scoring fails/is aborted.
      */
     fun scorePairDeltaNll(contextPrefix: String, origText: String, corrText: String): Float? {
@@ -1534,12 +1621,21 @@ class LlmReranker private constructor(private val context: Context) : CandidateR
             return null
         }
         return try {
-            val trimmedContext = ContextWindowTrimmer.trimToOptimalContext(
-                contextPrefix,
-                targetTokens = ContextWindowTrimmer.VOICE_CORRECTION_GATE_TARGET_TOKENS
+            val (effectiveContext, origWin, corrWin) = extractDivergingPairWindow(
+                contextPrefix = contextPrefix,
+                origText = origText,
+                corrText = corrText
             )
-            val effectiveContext = if (trimmedContext.isBlank()) "<s>" else trimmedContext
-            val scores = nativeScoreCandidates(effectiveContext, arrayOf(origText, corrText))
+            if (origWin.isBlank() || corrWin.isBlank() || origWin == corrWin) {
+                return null
+            }
+            val zeroPriors = floatArrayOf(0.0f, 0.0f)
+            val scores = nativeScoreCandidatesWithPriorsForceStage2(
+                effectiveContext,
+                arrayOf(origWin, corrWin),
+                zeroPriors,
+                2
+            )
             if (scores != null && scores.size == 2) {
                 scores[1] - scores[0]
             } else {

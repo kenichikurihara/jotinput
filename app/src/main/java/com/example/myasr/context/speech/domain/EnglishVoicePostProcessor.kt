@@ -1,5 +1,7 @@
 package com.example.myasr.context.speech.domain
 
+import com.example.myasr.context.vocabulary.domain.DictionaryEntry
+
 /**
  * Pure domain post-processor for English ASR outputs (Parakeet TDT-CTC 110M).
  *
@@ -27,27 +29,98 @@ object EnglishVoicePostProcessor {
     }
 
     /**
-     * Formats English ASR output and applies learned voice corrections (S2/S3/S4/S5).
+     * Formats English ASR output, applies learned voice corrections (S2/S3/S4/S5),
+     * and resolves active custom user dictionary entries.
      */
     fun formatWithCorrections(
         rawText: String,
         contextBefore: String = "",
         learnedCorrections: List<VoiceCorrectionEntry> = emptyList(),
         nowMs: Long = System.currentTimeMillis(),
-        slmCoherenceDeltaProvider: ((origSentence: String, corrSentence: String) -> Float?)? = null
+        slmCoherenceDeltaProvider: ((origSentence: String, corrSentence: String) -> Float?)? = null,
+        userDictionaryEntries: List<DictionaryEntry> = emptyList(),
+        wordLogFreqProvider: ((String) -> Float?)? = null,
+        suppressedPairs: Set<Pair<String, String>> = emptySet()
     ): VoiceCorrectionApplyResult {
         val baseFormatted = format(rawText, contextBefore)
-        if (baseFormatted.isEmpty() || learnedCorrections.isEmpty()) {
+        if (baseFormatted.isEmpty()) {
             return VoiceCorrectionApplyResult(baseFormatted, emptyList(), emptyList())
         }
-        return VoiceCorrectionScoring.applyCorrections(
-            text = baseFormatted,
-            contextBefore = contextBefore,
-            entries = learnedCorrections,
-            language = AsrLanguage.ENGLISH,
-            nowMs = nowMs,
-            slmCoherenceDeltaProvider = slmCoherenceDeltaProvider
+
+        val correctionRes = if (learnedCorrections.isNotEmpty()) {
+            VoiceCorrectionScoring.applyCorrections(
+                text = baseFormatted,
+                contextBefore = contextBefore,
+                entries = learnedCorrections,
+                language = AsrLanguage.ENGLISH,
+                nowMs = nowMs,
+                slmCoherenceDeltaProvider = slmCoherenceDeltaProvider
+            )
+        } else {
+            VoiceCorrectionApplyResult(baseFormatted, emptyList(), emptyList())
+        }
+
+        if (userDictionaryEntries.isEmpty()) {
+            return correctionRes
+        }
+
+        val protectedRanges = computeProtectedRanges(
+            text = correctionRes.formattedText,
+            appliedCorrections = correctionRes.appliedCorrections
         )
+        val userDictRes = EnglishVoiceUserDictionaryResolver.apply(
+            text = correctionRes.formattedText,
+            contextBefore = contextBefore,
+            entries = userDictionaryEntries,
+            wordLogFreqProvider = wordLogFreqProvider,
+            slmCoherenceDeltaProvider = slmCoherenceDeltaProvider,
+            suppressedPairs = suppressedPairs,
+            protectedRanges = protectedRanges
+        )
+
+        val mergedApplied = correctionRes.appliedCorrections + userDictRes.appliedCorrections
+        val seenChips = HashSet<Pair<String, String>>(
+            correctionRes.suggestedChips.size + userDictRes.suggestedChips.size
+        )
+        val mergedChips = ArrayList<VoiceCorrectionSuggestion>(
+            correctionRes.suggestedChips.size + userDictRes.suggestedChips.size
+        )
+        for (chip in correctionRes.suggestedChips) {
+            if (seenChips.add(chip.originalSurface.lowercase() to chip.correctedSurface)) {
+                mergedChips.add(chip)
+            }
+        }
+        for (chip in userDictRes.suggestedChips) {
+            if (seenChips.add(chip.originalSurface.lowercase() to chip.correctedSurface)) {
+                mergedChips.add(chip)
+            }
+        }
+
+        return VoiceCorrectionApplyResult(
+            formattedText = userDictRes.formattedText,
+            appliedCorrections = mergedApplied,
+            suggestedChips = mergedChips
+        )
+    }
+
+    private fun computeProtectedRanges(
+        text: String,
+        appliedCorrections: List<VoiceCorrectionSuggestion>
+    ): List<IntRange> {
+        if (appliedCorrections.isEmpty() || text.isEmpty()) return emptyList()
+        val ranges = ArrayList<IntRange>(appliedCorrections.size)
+        for (corr in appliedCorrections) {
+            val surface = corr.correctedSurface
+            if (surface.isEmpty()) continue
+            var startIdx = 0
+            while (startIdx < text.length) {
+                val found = text.indexOf(surface, startIndex = startIdx)
+                if (found < 0) break
+                ranges.add(found until (found + surface.length))
+                startIdx = found + surface.length
+            }
+        }
+        return ranges
     }
 
     /**

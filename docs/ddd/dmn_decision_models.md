@@ -68,6 +68,7 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-6: Provisioning** | `AppUpdateDecisionModel` | `AppUpdateUiDecisionTable` | `FIRST` | Debug 限定 GitHub ビルド更新カードの Fail-Safe 状態・CTA・進捗表示決定 |
 | **BC-3: Speech Recognition** | `VoiceCorrectionDecisionModel` | `VoiceCorrectionEligibilityDecisionTable` | `FIRST` | 音声確定後編集の修正検知妥当性・意味的書き換え除外判定 |
 | **BC-3: Speech Recognition** | `VoiceCorrectionDecisionModel` | `VoiceCorrectionBoostPolicyDecisionTable` | `FIRST` | 学習済み音声修正の3段階昇格・SLM文脈整合性ゲート・自己修復抑制決定 |
+| **BC-3: Speech Recognition** | `EnglishUserDictDecisionModel` | `EnglishVoiceUserDictResolutionPolicy` | `FIRST` | 英語音声入力におけるユーザー辞書優先適用（完全正規化・音韻類似・一般英単語保護・SLM文脈整合性ゲート・1タップ提案チップ）裁定 |
 
 ---
 

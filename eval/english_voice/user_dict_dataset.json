@@ -1,0 +1,1374 @@
+{
+  "dictionary_entries": [
+    {
+      "id": "ud_01",
+      "word": "JotInput",
+      "reading": "じょっといんぷっと",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_02",
+      "word": "ReazonSpeech",
+      "reading": "reazonspeech",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_03",
+      "word": "PyTorch",
+      "reading": "pytorch",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_04",
+      "word": "GraphQL",
+      "reading": "graphql",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_05",
+      "word": "gRPC",
+      "reading": "grpc",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_06",
+      "word": "Tailscale",
+      "reading": "tailscale",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_07",
+      "word": "FastConformer",
+      "reading": "fastconformer",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_08",
+      "word": "Zipformer",
+      "reading": "zipformer",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_09",
+      "word": "Datadog",
+      "reading": "datadog",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_10",
+      "word": "Cloudflare",
+      "reading": "cloudflare",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_11",
+      "word": "LangChain",
+      "reading": "langchain",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_12",
+      "word": "SymSpell",
+      "reading": "symspell",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_13",
+      "word": "Supabase",
+      "reading": "supabase",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_14",
+      "word": "KanaKanji",
+      "reading": "kanakanji",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_15",
+      "word": "SudachiDict",
+      "reading": "sudachidict",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_16",
+      "word": "vLLM",
+      "reading": "vllm",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_17",
+      "word": "OAuth",
+      "reading": "oauth",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_18",
+      "word": "NixOS",
+      "reading": "nixos",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_19",
+      "word": "Antigravity",
+      "reading": "antigravity",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_20",
+      "word": "Kurihara",
+      "reading": "くりはら",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_21",
+      "word": "Kenichi",
+      "reading": "けんいち",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_22",
+      "word": "Anthropic",
+      "reading": "anthropic",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_23",
+      "word": "Qwen",
+      "reading": "qwen",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_24",
+      "word": "Mozc",
+      "reading": "mozc",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_25",
+      "word": "Konsist",
+      "reading": "konsist",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_26",
+      "word": "CI/CD",
+      "reading": "しーあいしーでぃー",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_27",
+      "word": "llama.cpp",
+      "reading": "llama.cpp",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_28",
+      "word": "Node.js",
+      "reading": "node.js",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_29",
+      "word": "C++",
+      "reading": "c++",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_30",
+      "word": "SLM",
+      "reading": "slm",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_31",
+      "word": "VAD",
+      "reading": "vad",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_32",
+      "word": "IME",
+      "reading": "ime",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_33",
+      "word": "UI",
+      "reading": "ui",
+      "priority": "NORMAL",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_34",
+      "word": "kubectl",
+      "reading": "kubectl",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_35",
+      "word": "Google DeepMind",
+      "reading": "google deepmind",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_36",
+      "word": "Pixel 10 Pro",
+      "reading": "pixel 10 pro",
+      "priority": "HIGH",
+      "is_enabled": true
+    },
+    {
+      "id": "ud_37",
+      "word": "DisabledTerm",
+      "reading": "disabledterm",
+      "priority": "HIGH",
+      "is_enabled": false
+    },
+    {
+      "id": "ud_38",
+      "word": "Go",
+      "reading": "go",
+      "priority": "NORMAL",
+      "is_enabled": true
+    }
+  ],
+  "positive_cases": [
+    {
+      "id": "ud_pos_0001",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "JotInput",
+      "sentence": "I use JotInput on my Android phone every day.",
+      "expected": "I use JotInput on my Android phone every day.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0002",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "JotInput",
+      "sentence": "JotInput's voice recognition runs locally.",
+      "expected": "JotInput's voice recognition runs locally.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0003",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "ReazonSpeech",
+      "sentence": "ReazonSpeech transcribes Japanese audio accurately.",
+      "expected": "ReazonSpeech transcribes Japanese audio accurately.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0004",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "ReazonSpeech",
+      "sentence": "We benchmarked ReazonSpeech on mobile CPUs.",
+      "expected": "We benchmarked ReazonSpeech on mobile CPUs.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0005",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "PyTorch",
+      "sentence": "We trained the acoustic model using PyTorch.",
+      "expected": "We trained the acoustic model using PyTorch.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0006",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "PyTorch",
+      "sentence": "PyTorch's eager execution makes debugging easy.",
+      "expected": "PyTorch's eager execution makes debugging easy.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0007",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "GraphQL",
+      "sentence": "Our backend exposes a unified GraphQL schema.",
+      "expected": "Our backend exposes a unified GraphQL schema.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0008",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "gRPC",
+      "sentence": "The microservices communicate over gRPC streams.",
+      "expected": "The microservices communicate over gRPC streams.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0009",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "Tailscale",
+      "sentence": "I connected to the build server via Tailscale.",
+      "expected": "I connected to the build server via Tailscale.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0010",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "Tailscale",
+      "sentence": "Tailscale's mesh network simplifies remote debugging.",
+      "expected": "Tailscale's mesh network simplifies remote debugging.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0011",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "FastConformer",
+      "sentence": "The FastConformer encoder runs in a single pass.",
+      "expected": "The FastConformer encoder runs in a single pass.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0012",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "Zipformer",
+      "sentence": "The Zipformer transducer achieves low character error rate.",
+      "expected": "The Zipformer transducer achieves low character error rate.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0013",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "Datadog",
+      "sentence": "Check the memory metrics in Datadog right now.",
+      "expected": "Check the memory metrics in Datadog right now.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0014",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "Cloudflare",
+      "sentence": "We deployed the worker edge script to Cloudflare.",
+      "expected": "We deployed the worker edge script to Cloudflare.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0015",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "Cloudflare",
+      "sentence": "Cloudflare's DNS resolver lowered our latency.",
+      "expected": "Cloudflare's DNS resolver lowered our latency.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0016",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "LangChain",
+      "sentence": "We built a retrieval agent with LangChain.",
+      "expected": "We built a retrieval agent with LangChain.",
+      "context_before": "We are building an LLM pipeline. ",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0017",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "SymSpell",
+      "sentence": "The English typo corrector relies on SymSpell.",
+      "expected": "The English typo corrector relies on SymSpell.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0018",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "Supabase",
+      "sentence": "Authentication and storage are hosted on Supabase.",
+      "expected": "Authentication and storage are hosted on Supabase.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0019",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "Supabase",
+      "sentence": "Supabase's row level security protects user records.",
+      "expected": "Supabase's row level security protects user records.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0020",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "KanaKanji",
+      "sentence": "The KanaKanji lattice search runs in milliseconds.",
+      "expected": "The KanaKanji lattice search runs in milliseconds.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0021",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "SudachiDict",
+      "sentence": "We downloaded the optional SudachiDict lexicon.",
+      "expected": "We downloaded the optional SudachiDict lexicon.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0022",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "vLLM",
+      "sentence": "We benchmarked throughput using vLLM on Linux.",
+      "expected": "We benchmarked throughput using vLLM on Linux.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0023",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "OAuth",
+      "sentence": "The client refreshes OAuth access tokens automatically.",
+      "expected": "The client refreshes OAuth access tokens automatically.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0024",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "NixOS",
+      "sentence": "Our reproducible build box runs NixOS.",
+      "expected": "Our reproducible build box runs NixOS.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0025",
+      "split": "positive",
+      "category": "camelcase_compound",
+      "target": "Antigravity",
+      "sentence": "Let's test this workflow inside Antigravity.",
+      "expected": "Let's test this workflow inside Antigravity.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0026",
+      "split": "positive",
+      "category": "proper_nouns_ja",
+      "target": "Kurihara",
+      "sentence": "Please send the report to Kurihara before noon.",
+      "expected": "Please send the report to Kurihara before noon.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0027",
+      "split": "positive",
+      "category": "proper_nouns_ja",
+      "target": "Kurihara",
+      "sentence": "Kurihara's pull request fixed the regression.",
+      "expected": "Kurihara's pull request fixed the regression.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0028",
+      "split": "positive",
+      "category": "proper_nouns_ja",
+      "target": "Kenichi",
+      "sentence": "Kenichi reviewed the architectural design document.",
+      "expected": "Kenichi reviewed the architectural design document.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0029",
+      "split": "positive",
+      "category": "proper_nouns_ja",
+      "target": "Anthropic",
+      "sentence": "We read the safety paper published by Anthropic.",
+      "expected": "We read the safety paper published by Anthropic.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0030",
+      "split": "positive",
+      "category": "proper_nouns_ja",
+      "target": "Qwen",
+      "sentence": "The on-device reranker uses Qwen for scoring.",
+      "expected": "The on-device reranker uses Qwen for scoring.",
+      "context_before": "We loaded the GGUF language model. ",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0031",
+      "split": "positive",
+      "category": "proper_nouns_ja",
+      "target": "Qwen",
+      "sentence": "Qwen achieved high top-one accuracy after tuning.",
+      "expected": "Qwen achieved high top-one accuracy after tuning.",
+      "context_before": "Benchmarking local language models: ",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0032",
+      "split": "positive",
+      "category": "proper_nouns_ja",
+      "target": "Mozc",
+      "sentence": "We updated the Mozc dictionary.",
+      "expected": "We updated the Mozc dictionary.",
+      "context_before": "Working on Japanese IME conversion. ",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0033",
+      "split": "positive",
+      "category": "proper_nouns_ja",
+      "target": "Mozc",
+      "sentence": "The Mozc connection matrix fits inside the package.",
+      "expected": "The Mozc connection matrix fits inside the package.",
+      "context_before": "Japanese morphological analysis: ",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0034",
+      "split": "positive",
+      "category": "proper_nouns_ja",
+      "target": "Konsist",
+      "sentence": "Run Konsist architecture tests.",
+      "expected": "Run Konsist architecture tests.",
+      "context_before": "Verify the DDD bounded contexts. ",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0035",
+      "split": "positive",
+      "category": "proper_nouns_ja",
+      "target": "Konsist",
+      "sentence": "Our CI pipeline checks Kotlin modules with Konsist.",
+      "expected": "Our CI pipeline checks Kotlin modules with Konsist.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0036",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "CI/CD",
+      "sentence": "Our C I slash C D workflow builds the debug package.",
+      "expected": "Our CI/CD workflow builds the debug package.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0037",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "CI/CD",
+      "sentence": "Check the CI/CD logs for any failing unit test.",
+      "expected": "Check the CI/CD logs for any failing unit test.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0038",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "llama.cpp",
+      "sentence": "Inference runs natively through llama dot cpp.",
+      "expected": "Inference runs natively through llama.cpp.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0039",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "llama.cpp",
+      "sentence": "We updated the llama dot cpp submodule yesterday.",
+      "expected": "We updated the llama.cpp submodule yesterday.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0040",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "Node.js",
+      "sentence": "The script requires Node dot JS version twenty.",
+      "expected": "The script requires Node.js version twenty.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0041",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "C++",
+      "sentence": "The core decoder is written in C plus plus.",
+      "expected": "The core decoder is written in C++.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0042",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "SLM",
+      "sentence": "Our S L M reranker runs completely offline.",
+      "expected": "Our SLM reranker runs completely offline.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0043",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "SLM",
+      "sentence": "We evaluated the SLM latency on mobile cores.",
+      "expected": "We evaluated the SLM latency on mobile cores.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0044",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "VAD",
+      "sentence": "The V A D module detects pauses within two hundred milliseconds.",
+      "expected": "The VAD module detects pauses within two hundred milliseconds.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0045",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "VAD",
+      "sentence": "Tune the VAD silence threshold carefully.",
+      "expected": "Tune the VAD silence threshold carefully.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0046",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "IME",
+      "sentence": "The Android I M E handles both speech and touch.",
+      "expected": "The Android IME handles both speech and touch.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0047",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "IME",
+      "sentence": "Switch the default IME in system settings.",
+      "expected": "Switch the default IME in system settings.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0048",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "UI",
+      "sentence": "We simplified the main U I into three tabs.",
+      "expected": "We simplified the main UI into three tabs.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0049",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "UI",
+      "sentence": "Inspect the UI layout hierarchy on the phone.",
+      "expected": "Inspect the UI layout hierarchy on the phone.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0050",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "kubectl",
+      "sentence": "Run kubectl apply on the production manifest.",
+      "expected": "Run kubectl apply on the production manifest.",
+      "context_before": "Check the Kubernetes cluster. ",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0051",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "kubectl",
+      "sentence": "Use kuber control get pods to inspect the cluster.",
+      "expected": "Use kubectl get pods to inspect the cluster.",
+      "context_before": "Kubernetes deployment debug: ",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0052",
+      "split": "positive",
+      "category": "acronyms_symbols",
+      "target": "gRPC",
+      "sentence": "We defined the service interface with G R P C.",
+      "expected": "We defined the service interface with gRPC.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0053",
+      "split": "positive",
+      "category": "multiword_phrases",
+      "target": "Google DeepMind",
+      "sentence": "Researchers at Google DeepMind published the benchmark.",
+      "expected": "Researchers at Google DeepMind published the benchmark.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0054",
+      "split": "positive",
+      "category": "multiword_phrases",
+      "target": "Google DeepMind",
+      "sentence": "She joined Google DeepMind as a research engineer.",
+      "expected": "She joined Google DeepMind as a research engineer.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0055",
+      "split": "positive",
+      "category": "multiword_phrases",
+      "target": "Pixel 10 Pro",
+      "sentence": "We verified the keyboard layout on Pixel 10 Pro.",
+      "expected": "We verified the keyboard layout on Pixel 10 Pro.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0056",
+      "split": "positive",
+      "category": "multiword_phrases",
+      "target": "Pixel 10 Pro",
+      "sentence": "Deploy the debug build to Pixel ten Pro over Wi-Fi.",
+      "expected": "Deploy the debug build to Pixel 10 Pro over Wi-Fi.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0057",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "PyTorch",
+      "sentence": "Export the PyTorch checkpoint into ONNX format.",
+      "expected": "Export the PyTorch checkpoint into ONNX format.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0058",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "GraphQL",
+      "sentence": "Compare GraphQL queries against REST endpoints.",
+      "expected": "Compare GraphQL queries against REST endpoints.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0059",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "Datadog",
+      "sentence": "Datadog alerts triggered when CPU usage spiked.",
+      "expected": "Datadog alerts triggered when CPU usage spiked.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0060",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "FastConformer",
+      "sentence": "Parakeet uses a FastConformer backbone for streaming.",
+      "expected": "Parakeet uses a FastConformer backbone for streaming.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0061",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "Zipformer",
+      "sentence": "ReazonSpeech relies on a Zipformer encoder.",
+      "expected": "ReazonSpeech relies on a Zipformer encoder.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0062",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "KanaKanji",
+      "sentence": "Our KanaKanji conversion uses Mozc bigram costs.",
+      "expected": "Our KanaKanji conversion uses Mozc bigram costs.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0063",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "SudachiDict",
+      "sentence": "SudachiDict expands proper noun coverage offline.",
+      "expected": "SudachiDict expands proper noun coverage offline.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0064",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "vLLM",
+      "sentence": "Compare llama dot cpp latency against vLLM serving.",
+      "expected": "Compare llama.cpp latency against vLLM serving.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_pos_0065",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "SymSpell",
+      "sentence": "SymSpell generates typo candidates in under a millisecond.",
+      "expected": "SymSpell generates typo candidates in under a millisecond.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_pos_0066",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "NixOS",
+      "sentence": "We provisioned the CI runner on NixOS.",
+      "expected": "We provisioned the CI runner on NixOS.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_pos_0067",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "Antigravity",
+      "sentence": "Antigravity orchestrated the verification steps automatically.",
+      "expected": "Antigravity orchestrated the verification steps automatically.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_pos_0068",
+      "split": "positive",
+      "category": "multi_term_sentences",
+      "target": "JotInput",
+      "sentence": "Open JotInput settings to configure voice punctuation.",
+      "expected": "Open JotInput settings to configure voice punctuation.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    }
+  ],
+  "adversarial_negatives": [
+    {
+      "id": "ud_neg_0001",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Konsist",
+      "sentence": "The tests consist of three parts.",
+      "expected": "The tests consist of three parts.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_neg_0002",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Mozc",
+      "sentence": "We visited the blue mosque in Istanbul.",
+      "expected": "We visited the blue mosque in Istanbul.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_neg_0003",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "LangChain",
+      "sentence": "This caused a long chain of events.",
+      "expected": "This caused a long chain of events.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_neg_0004",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "JotInput",
+      "sentence": "Please jot down your input before the meeting.",
+      "expected": "Please jot down your input before the meeting.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_neg_0005",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "VAD",
+      "sentence": "That was a bad idea from the start.",
+      "expected": "That was a bad idea from the start.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_neg_0006",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "IME",
+      "sentence": "I am happy to help you today.",
+      "expected": "I am happy to help you today.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_neg_0007",
+      "split": "adversarial_negative",
+      "category": "adversarial_common_case",
+      "lookalike_for": "Go",
+      "sentence": "Let's go home after we finish.",
+      "expected": "Let's go home after we finish.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_neg_0008",
+      "split": "adversarial_negative",
+      "category": "adversarial_common_case",
+      "lookalike_for": "Go",
+      "sentence": "Don't go too far ahead on the trail.",
+      "expected": "Don't go too far ahead on the trail.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_neg_0009",
+      "split": "adversarial_negative",
+      "category": "adversarial_common_case",
+      "lookalike_for": "Go",
+      "sentence": "I had to go to the grocery store.",
+      "expected": "I had to go to the grocery store.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_neg_0010",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "OAuth",
+      "sentence": "He took an oath to tell the truth.",
+      "expected": "He took an oath to tell the truth.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_neg_0011",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Qwen",
+      "sentence": "My friend Quinn lives in Seattle.",
+      "expected": "My friend Quinn lives in Seattle.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_neg_0012",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "PyTorch",
+      "sentence": "He ate apple pie by the torch.",
+      "expected": "He ate apple pie by the torch.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_neg_0013",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Tailscale",
+      "sentence": "The cat's tail tipped the scale.",
+      "expected": "The cat's tail tipped the scale.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_neg_0014",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Datadog",
+      "sentence": "The data shows my dog is healthy.",
+      "expected": "The data shows my dog is healthy.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_neg_0015",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Kurihara",
+      "sentence": "Let's eat curry for dinner tonight.",
+      "expected": "Let's eat curry for dinner tonight.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_neg_0016",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "NixOS",
+      "sentence": "Nick's office is on the fifth floor.",
+      "expected": "Nick's office is on the fifth floor.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_neg_0017",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "OAuth",
+      "sentence": "Meet me at the train station.",
+      "expected": "Meet me at the train station.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_neg_0018",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "ReazonSpeech",
+      "sentence": "There is no reason for a long speech today.",
+      "expected": "There is no reason for a long speech today.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_neg_0019",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "FastConformer",
+      "sentence": "We need a fast confirmation of the schedule.",
+      "expected": "We need a fast confirmation of the schedule.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_neg_0020",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Zipformer",
+      "sentence": "Zip up the former folder first.",
+      "expected": "Zip up the former folder first.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_neg_0021",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Supabase",
+      "sentence": "The super base coat dried very quickly.",
+      "expected": "The super base coat dried very quickly.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_neg_0022",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Cloudflare",
+      "sentence": "There was a bright flare above the cloud.",
+      "expected": "There was a bright flare above the cloud.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_neg_0023",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "SymSpell",
+      "sentence": "Can you spell the simple word clearly?",
+      "expected": "Can you spell the simple word clearly?",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_neg_0024",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "GraphQL",
+      "sentence": "The graph has a cool curve at the end.",
+      "expected": "The graph has a cool curve at the end.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_neg_0025",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "gRPC",
+      "sentence": "Grip the handle tightly while climbing.",
+      "expected": "Grip the handle tightly while climbing.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_neg_0026",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "llama.cpp",
+      "sentence": "The llama walked slowly across the meadow.",
+      "expected": "The llama walked slowly across the meadow.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_neg_0027",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Node.js",
+      "sentence": "Check the central node on the network map.",
+      "expected": "Check the central node on the network map.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_neg_0028",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "kubectl",
+      "sentence": "The wooden cube fell off the table.",
+      "expected": "The wooden cube fell off the table.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_neg_0029",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Antigravity",
+      "sentence": "Gravity pulls every object toward the ground.",
+      "expected": "Gravity pulls every object toward the ground.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_neg_0030",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Anthropic",
+      "sentence": "She read a textbook on anthropology.",
+      "expected": "She read a textbook on anthropology.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_neg_0031",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Pixel 10 Pro",
+      "sentence": "I see a bright pixel near the corner.",
+      "expected": "I see a bright pixel near the corner.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_neg_0032",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Google DeepMind",
+      "sentence": "He has a deep mind for complex puzzles.",
+      "expected": "He has a deep mind for complex puzzles.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_neg_0033",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "CI/CD",
+      "sentence": "See if the music CD plays properly.",
+      "expected": "See if the music CD plays properly.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_neg_0034",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "UI",
+      "sentence": "Look at you, I am doing well.",
+      "expected": "Look at you, I am doing well.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_neg_0035",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "SLM",
+      "sentence": "The slim binder sits on the desk.",
+      "expected": "The slim binder sits on the desk.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_neg_0036",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Kenichi",
+      "sentence": "Ken had an itchy throat this morning.",
+      "expected": "Ken had an itchy throat this morning.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_neg_0037",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "SymSpell",
+      "sentence": "The sum of two numbers is five.",
+      "expected": "The sum of two numbers is five.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_neg_0038",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Tailscale",
+      "sentence": "Wait until the scale settles down.",
+      "expected": "Wait until the scale settles down.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    },
+    {
+      "id": "ud_neg_0039",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "DisabledTerm",
+      "sentence": "The disabled term was removed from the contract.",
+      "expected": "The disabled term was removed from the contract.",
+      "context_before": "",
+      "voice": "en-US-GuyNeural"
+    },
+    {
+      "id": "ud_neg_0040",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "C++",
+      "sentence": "See what happens plus what we planned.",
+      "expected": "See what happens plus what we planned.",
+      "context_before": "",
+      "voice": "en-US-JennyNeural"
+    },
+    {
+      "id": "ud_neg_0041",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "vLLM",
+      "sentence": "The film received great reviews yesterday.",
+      "expected": "The film received great reviews yesterday.",
+      "context_before": "",
+      "voice": "en-US-AndrewNeural"
+    },
+    {
+      "id": "ud_neg_0042",
+      "split": "adversarial_negative",
+      "category": "adversarial_lookalike",
+      "lookalike_for": "Antigravity",
+      "sentence": "Please handle fragile glassware with gravity and care.",
+      "expected": "Please handle fragile glassware with gravity and care.",
+      "context_before": "",
+      "voice": "en-US-AriaNeural"
+    }
+  ]
+}

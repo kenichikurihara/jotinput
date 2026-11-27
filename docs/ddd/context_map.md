@@ -74,7 +74,7 @@ flowchart TB
   - `Custom Vocabulary` は語彙の追加・更新・削除・有効化切替時に `UserDictionaryChangedEvent(activeItems: List<VocabularyItem>)` を発行する。
   - 各下流コンテキストは自身のモデル都合に合わせて **ACL（腐敗防止層）** で変換する：
     - **BC-1 (Kana-Kanji)**: `VocabularySyncAdapter` が `VocabularyItem` をひらがな読み正規化＋Mozc品詞ID/低コスト辞書エントリへ変換。
-    - **BC-3 (Speech)**: `HotwordsGenerator` が日本語を `表層/ひらがな/カタカナ` の `cjkchar` スペース区切り形式へ変換し、`DictionaryPostProcessor` が決定論的置換ルールへ変換。
+    - **BC-3 (Speech)**: 日本語では `HotwordsGenerator` が `表層/ひらがな/カタカナ` の `cjkchar` スペース区切り形式へ変換し、`DictionaryPostProcessor` が決定論的置換ルールへ変換。英語では `EnglishVoiceUserDictionaryResolver` と `EnglishUserDictDecisionModel` がカタカナ/ひらがな読みを含む ASCII 表層エントリも含めて有効語彙を取り込み、一般英単語の誤爆を防ぎつつ（コーパス頻度＋SLM文脈整合性ゲート＋1タップ提案チップ）Parakeet CTC 出力をユーザー辞書表記へ解決する。
     - **BC-4 (English)**: `EnglishTyping` が英語エントリのみを抽出し、C++ JNI 経由で FUTO Swipe Trie と SymSpell 辞書へ同期。また、`SwipeVocabularyJudgement` の DMN 規則に基づき Compact CSR Dual-Trie 拡張 68k+ 語彙（OTA 連動）および独立ストア `SwipeAdaptiveCacheRepository`（最大 500 語 LRU）を管理し、`custom_dictionary.json` を完全に隔離する。
 
 ---

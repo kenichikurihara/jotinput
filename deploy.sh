@@ -16,14 +16,29 @@ fi
 APP_ID="io.github.kenichikurihara.jotinput"
 APP_NAMESPACE="com.example.myasr"
 
-echo "=== 1. Building Debug APK ==="
-./gradlew assembleDebug
+BUILD_VARIANT="debug"
+if [ "${1:-}" = "--release" ]; then
+    BUILD_VARIANT="release"
+elif [ -n "${1:-}" ]; then
+    echo "Usage: ./deploy.sh [--release]"
+    exit 1
+fi
 
-APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+if [ "$BUILD_VARIANT" = "release" ]; then
+    echo "=== 1. Building Release APK ==="
+    ./gradlew assembleRelease
+    APK_PATH="app/build/outputs/apk/release/app-release.apk"
+else
+    echo "=== 1. Building Debug APK ==="
+    ./gradlew assembleDebug
+    APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+fi
+
 if [ ! -f "$APK_PATH" ]; then
     echo "Error: APK not found at $APK_PATH"
     exit 1
 fi
+ls -lh "$APK_PATH"
 
 
 echo ""
@@ -93,6 +108,20 @@ for DEV in $DEVICES; do
             for MFILE in tokens.txt decoder-epoch-99-avg-1.onnx joiner-epoch-99-avg-1.onnx encoder-epoch-99-avg-1.int8.onnx; do
                 if [ -f "$REPO_DIR/tools/models/reazonspeech/$MFILE" ]; then
                     adb -s "$DEV" push "$REPO_DIR/tools/models/reazonspeech/$MFILE" "/sdcard/Android/data/$APP_ID/files/reazonspeech/$MFILE"
+                fi
+            done
+        fi
+    fi
+
+    # Ensure English Parakeet TDT-CTC 110M model is present in device storage if available locally
+    if [ -d "$REPO_DIR/tools/models/parakeet-en-110m" ]; then
+        DEV_EN_MODEL=$(adb -s "$DEV" shell "[ -f /sdcard/Android/data/$APP_ID/files/parakeet-en-110m/model.int8.onnx ] && [ -f /sdcard/Android/data/$APP_ID/files/parakeet-en-110m/tokens.txt ] && echo exists" 2>/dev/null | tr -d '\r')
+        if [ "$DEV_EN_MODEL" != "exists" ]; then
+            echo "  -> Provisioning English Parakeet ASR model to storage..."
+            adb -s "$DEV" shell "mkdir -p /sdcard/Android/data/$APP_ID/files/parakeet-en-110m && chmod 2775 /sdcard/Android/data/$APP_ID/files/parakeet-en-110m 2>/dev/null" || true
+            for ENFILE in model.int8.onnx tokens.txt; do
+                if [ -f "$REPO_DIR/tools/models/parakeet-en-110m/$ENFILE" ]; then
+                    adb -s "$DEV" push "$REPO_DIR/tools/models/parakeet-en-110m/$ENFILE" "/sdcard/Android/data/$APP_ID/files/parakeet-en-110m/$ENFILE"
                 fi
             done
         fi
