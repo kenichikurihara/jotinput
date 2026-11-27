@@ -189,12 +189,12 @@ assert SearchFilterPreservesRepository {
         )
 }
 
-check ActiveAndTombstoneDisjoint for 6 State, 4 IdentityKey
-check UndoSlotConsistent for 6 State, 4 IdentityKey
-check UndoRestoresDeletedAndClearsTombstone for 6 State, 4 IdentityKey
-check VisibleSubsetOfActive for 6 State, 4 IdentityKey
-check UnfilteredShowsAllActive for 6 State, 4 IdentityKey
-check SearchFilterPreservesRepository for 6 State, 4 IdentityKey
+check ActiveAndTombstoneDisjoint for 4 but 6 State, 4 IdentityKey
+check UndoSlotConsistent for 4 but 6 State, 4 IdentityKey
+check UndoRestoresDeletedAndClearsTombstone for 4 but 6 State, 4 IdentityKey
+check VisibleSubsetOfActive for 4 but 6 State, 4 IdentityKey
+check UnfilteredShowsAllActive for 4 but 6 State, 4 IdentityKey
+check SearchFilterPreservesRepository for 4 but 6 State, 4 IdentityKey
 
 // ============================================================================
 // Reachability (Non-Vacuity)
@@ -218,5 +218,122 @@ pred canFilterAndClearFilter {
         s3.visibleEntries = s3.activeEntries
 }
 
-run canAddDeleteAndUndo for 5 State, 3 IdentityKey
-run canFilterAndClearFilter for 5 State, 3 IdentityKey
+run canAddDeleteAndUndo for 3 but 5 State, 3 IdentityKey
+run canFilterAndClearFilter for 3 but 5 State, 3 IdentityKey
+
+// ============================================================================
+// DMN Form UI & Bilingual Registration Policy Specification
+// (Mirrors DictionaryReadingFormUiPolicy & DictionaryEntryRegistrationPolicy)
+// ============================================================================
+
+abstract sig FormGuideMode {}
+one sig
+    GuideNone,
+    GuideEnglishOptionalReading,
+    GuideBilingualReady,
+    GuideReadingKanaRequired
+extends FormGuideMode {}
+
+sig FormInput {
+    hasWord: one Bool,
+    isValidEnglishWord: one Bool,
+    hasReading: one Bool,
+    isValidKanaReading: one Bool
+} {
+    isValidEnglishWord = True implies hasWord = True
+    isValidKanaReading = True implies hasReading = True
+}
+
+fun evalFormReadingVisible[i: FormInput]: one Bool {
+    True
+}
+
+fun evalFormGuideMode[i: FormInput]: one FormGuideMode {
+    (i.hasWord = False) => GuideNone else
+    (i.isValidEnglishWord = True and i.hasReading = True and i.isValidKanaReading = True) => GuideBilingualReady else
+    (i.isValidEnglishWord = True and i.hasReading = True and i.isValidKanaReading = False) => GuideReadingKanaRequired else
+    (i.isValidEnglishWord = True and i.hasReading = False) => GuideEnglishOptionalReading else
+    GuideNone
+}
+
+abstract sig RegOutcome {}
+one sig
+    RegBilingualAsciiWithKana,
+    RegEnglishOnlyFromWord,
+    RegEnglishOnlyFromReading,
+    RegJapaneseWithKana,
+    ErrWordRequired,
+    ErrReadingRequired,
+    ErrReadingInvalidKana
+extends RegOutcome {}
+
+sig RegInput {
+    hasWord: one Bool,
+    isWordValidEnglish: one Bool,
+    hasReading: one Bool,
+    isReadingValidKana: one Bool,
+    isReadingValidEnglish: one Bool
+} {
+    isWordValidEnglish = True implies hasWord = True
+    isReadingValidKana = True implies hasReading = True
+    isReadingValidEnglish = True implies hasReading = True
+    !(isReadingValidKana = True and isReadingValidEnglish = True)
+}
+
+fun evalRegistrationPolicy[i: RegInput]: one RegOutcome {
+    (i.hasWord = True and i.isWordValidEnglish = True and i.hasReading = True and i.isReadingValidKana = True) => RegBilingualAsciiWithKana else
+    (i.hasWord = True and i.isWordValidEnglish = True and i.hasReading = False) => RegEnglishOnlyFromWord else
+    (i.hasWord = False and i.hasReading = True and i.isReadingValidEnglish = True) => RegEnglishOnlyFromReading else
+    (i.hasWord = False) => ErrWordRequired else
+    (i.hasReading = False) => ErrReadingRequired else
+    (i.isReadingValidKana = False) => ErrReadingInvalidKana else
+    RegJapaneseWithKana
+}
+
+assert FormPolicyIsTotal {
+    all i: FormInput | one evalFormReadingVisible[i] and one evalFormGuideMode[i]
+}
+
+assert ReadingFieldAlwaysVisibleForAllInputs {
+    all i: FormInput | evalFormReadingVisible[i] = True
+}
+
+assert RegistrationPolicyIsTotal {
+    all i: RegInput | one evalRegistrationPolicy[i]
+}
+
+assert AsciiWordWithValidKanaAlwaysRegistersBilingual {
+    all i: RegInput |
+        (i.hasWord = True and i.isWordValidEnglish = True and i.hasReading = True and i.isReadingValidKana = True)
+        implies evalRegistrationPolicy[i] = RegBilingualAsciiWithKana
+}
+
+assert AsciiWordWithoutReadingStillAllowsOneStepEnglish {
+    all i: RegInput |
+        (i.hasWord = True and i.isWordValidEnglish = True and i.hasReading = False)
+        implies evalRegistrationPolicy[i] = RegEnglishOnlyFromWord
+}
+
+assert AsciiWordWithInvalidNonKanaReadingRejected {
+    all i: RegInput |
+        (i.hasWord = True and i.isWordValidEnglish = True and i.hasReading = True and i.isReadingValidKana = False)
+        implies evalRegistrationPolicy[i] = ErrReadingInvalidKana
+}
+
+check FormPolicyIsTotal for 4
+check ReadingFieldAlwaysVisibleForAllInputs for 4
+check RegistrationPolicyIsTotal for 4
+check AsciiWordWithValidKanaAlwaysRegistersBilingual for 4
+check AsciiWordWithoutReadingStillAllowsOneStepEnglish for 4
+check AsciiWordWithInvalidNonKanaReadingRejected for 4
+
+pred canRegisterBilingualAsciiWithKana {
+    some i: RegInput | evalRegistrationPolicy[i] = RegBilingualAsciiWithKana
+}
+
+pred canRegisterOneStepEnglish {
+    some i: RegInput | evalRegistrationPolicy[i] = RegEnglishOnlyFromWord
+}
+
+run canRegisterBilingualAsciiWithKana for 3
+run canRegisterOneStepEnglish for 3

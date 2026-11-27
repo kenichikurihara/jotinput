@@ -1,8 +1,8 @@
 package com.example.myasr.context.vocabulary.presentation
 
 import com.example.myasr.R
-import com.example.myasr.context.kanakanji.domain.JapaneseKanaUtils
 import com.example.myasr.context.vocabulary.domain.DictionaryEntry
+import com.example.myasr.context.vocabulary.domain.DictionaryInputLogic
 import com.example.myasr.context.vocabulary.domain.Priority
 
 import android.view.LayoutInflater
@@ -42,13 +42,7 @@ class DictionaryAdapter(
 
         holder.tvWord.text = entry.word
         holder.tvPriorityBadge.visibility = if (entry.priority == Priority.HIGH) View.VISIBLE else View.GONE
-
-        if (entry.isEnglishOnlyEntry) {
-            holder.tvReading.text = "英語 (よみ不要)"
-        } else {
-            val katakana = JapaneseKanaUtils.hiraganaToKatakana(entry.reading)
-            holder.tvReading.text = "${entry.reading} ($katakana)"
-        }
+        holder.tvReading.text = DictionaryInputLogic.formatEntryReadingLabel(entry)
 
         val contentAlpha = if (entry.isEnabled) 1.0f else 0.45f
         holder.tvWord.alpha = contentAlpha

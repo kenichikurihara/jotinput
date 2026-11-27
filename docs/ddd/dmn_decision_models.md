@@ -69,6 +69,8 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-3: Speech Recognition** | `VoiceCorrectionDecisionModel` | `VoiceCorrectionEligibilityDecisionTable` | `FIRST` | 音声確定後編集の修正検知妥当性・意味的書き換え除外判定 |
 | **BC-3: Speech Recognition** | `VoiceCorrectionDecisionModel` | `VoiceCorrectionBoostPolicyDecisionTable` | `FIRST` | 学習済み音声修正の3段階昇格・SLM文脈整合性ゲート・自己修復抑制決定 |
 | **BC-3: Speech Recognition** | `EnglishUserDictDecisionModel` | `EnglishVoiceUserDictResolutionPolicy` | `FIRST` | 英語音声入力におけるユーザー辞書優先適用（完全正規化・音韻類似・一般英単語保護・SLM文脈整合性ゲート・1タップ提案チップ）裁定 |
+| **BC-5: Custom Vocabulary** | `DictionaryInputDecisionModel` | `DictionaryReadingFormUiPolicy` | `FIRST` | ユーザー辞書フォーム（新規・編集）におけるよみ入力欄の常時表示保証・任意性・日英バイリンガルガイド表示裁定 |
+| **BC-5: Custom Vocabulary** | `DictionaryInputDecisionModel` | `DictionaryEntryRegistrationPolicy` | `FIRST` | 単語・よみ入力ペアからの登録種別（日英バイリンガル ASCII+かな / 英語単独1ステップ / 日本語かな / 各種バリデーションエラー）裁定 |
 
 ---
 

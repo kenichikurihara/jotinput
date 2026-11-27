@@ -36,10 +36,12 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`ClipboardNeverIntrudesDuringActiveInput`**: 入力中・音声アクティブ時にクリップボード提案が割り込まないこと。
 
 ### 3.3 [`custom_dictionary_ui.als`](app/src/test/resources/alloy/custom_dictionary_ui.als)
-ユーザー辞書画面（[`DictionaryActivity`](app/src/main/java/com/example/myasr/DictionaryActivity.kt)）および [`DictionaryRepository`](app/src/main/java/com/example/myasr/context/vocabulary/infrastructure/DictionaryRepository.kt) の状態遷移をモデル化し、以下を検証する：
+ユーザー辞書画面（[`DictionaryActivity`](app/src/main/java/com/example/myasr/DictionaryActivity.kt)）、DMN 入力・UI 決定モデル（[`DictionaryInputDecisionModel`](app/src/main/java/com/example/myasr/context/vocabulary/domain/DictionaryInputDecisionModel.kt)）、および [`DictionaryRepository`](app/src/main/java/com/example/myasr/context/vocabulary/infrastructure/DictionaryRepository.kt) の状態遷移をモデル化し、以下を検証する：
 - **`ActiveAndTombstoneDisjoint`**: アクティブ単語と削除墓標（Tombstone）が同一キーで同時存在しないこと。
 - **`UndoSlotConsistent` / `UndoRestoresDeletedAndClearsTombstone`**: 削除直後の Undo が確実に単語を復元し Tombstone を除去すること。
 - **`VisibleSubsetOfActive` / `UnfilteredShowsAllActive` / `SearchFilterPreservesRepository`**: 検索フィルタがリポジトリ状態を変更せず、常に整合した部分集合のみを表示すること。
+- **`FormPolicyIsTotal` / `ReadingFieldAlwaysVisibleForAllInputs`**: `DictionaryReadingFormUiPolicy` が全入力に対して一意のガイド状態へ解決され、ASCII/英単語入力時を含め常に「よみ」入力欄が表示され続けること。
+- **`RegistrationPolicyIsTotal` / `AsciiWordWithValidKanaAlwaysRegistersBilingual` / `AsciiWordWithoutReadingStillAllowsOneStepEnglish` / `AsciiWordWithInvalidNonKanaReadingRejected`**: `DictionaryEntryRegistrationPolicy` が全入力に対して一意に解決され、ASCII単語＋かな読みで日英バイリンガル登録、ASCII単語＋空欄で英語1ステップ登録、ASCII単語＋非かな読みでエラー拒否されること。
 
 ### 3.4 [`main_app_ui_state.als`](app/src/test/resources/alloy/main_app_ui_state.als)
 メインアプリ画面（[`MainActivity`](app/src/main/java/com/example/myasr/MainActivity.kt) v2）の 3 タブ構成・DMN スマートガイド・プロビジョニング進捗状態をモデル化し、以下を検証する：

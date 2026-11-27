@@ -31,8 +31,17 @@ JotInput のユーザー辞書画面（[`DictionaryActivity`](app/src/main/java/
 
 #### CUJ-2: 英単語・英語フレーズの 1 ステップ登録（例:「Antigravity」）
 1. ユーザーは **「単語（表記）」** 入力欄に英単語（例: `Antigravity`）を入力する。
-2. UI が英語入力を自動検知し、「よみ」入力欄を自動的に非表示（`View.GONE`）にするとともに、「英語として登録（よみ入力不要）」のガイドを表示する。
-3. ユーザーは「完了」または「辞書に追加」を 1 タップするだけで登録を完了する。（※従来「よみ」欄に英単語を入力していたユーザーの習慣にも後方互換フォールバックで対応する）。
+2. UI が英語入力を自動検知し、「よみ」入力欄（`layoutReading`）を **常時表示したまま** ヒントを `よみ (任意・ひらがな、例: くろーど)` へ切り替え、ガイドバッジに「よみ空欄で英語のみ登録可（かな入力で日本語音声・変換にも対応）」を表示する。
+3. ユーザーは「よみ」を空欄のまま「追加」または「完了」を 1 タップするだけで英語専用エントリとして登録を完了できる。（※従来「よみ」欄に英単語を入力していたユーザーの習慣にも後方互換フォールバックで対応する）。
+
+#### CUJ-2b: ASCII・英単語への日本語よみ付与による日英バイリンガル登録・編集（例:「Claude / くろーど」「API / えーぴーあい」「C++ / しーぷらぷら」）
+1. ユーザーは **「単語（表記）」** 欄に `Claude` や `API` などの ASCII/英単語を入力し、**常時表示されている「よみ」欄** へひらがな・カタカナ（例: `くろーど`、`クロード`、`えーぴーあい`）を入力する。
+2. ガイドバッジがリアルタイムに「日英両対応（日本語音声・変換 ＋ 英語入力）」へ切り替わり、保存すると `isJapaneseEntry = true` かつ `hasEnglishSurface = true` のバイリンガルエントリとして登録される。
+   - **日本語音声入力**: `HotwordsGenerator` がひらがな・カタカナ双方のホットワードを生成し、`ContextAwareProcessor` が音声認識結果（`クロード` 等）を `Claude` へ決定論的に置換する。
+   - **かな漢字変換・英語入力**: Mozc かな漢字変換（`くろーど` → `Claude`）と英語スワイプ・スペル補正の双方で即座に利用可能になる。
+   - **誤入力防止**: `Claude` 等の英単語入力中に「よみ」欄へ非かな文字列（例: `reazon`）を入力した場合は、英語専用と誤解されて無言で破棄されることなく明確なバリデーションエラーを返す。
+3. **既存エントリの編集**: 英語専用エントリ（例: `Antigravity`）を編集ボトムシートで開いた際も「よみ」欄が常時表示（初期値空欄）され、日本語よみを後から追記して日英バイリンガルへ昇格できる。日英バイリンガルエントリの単語・よみを編集する際も、既存のよみが消去されず保持される。
+4. **LWW + Tombstone 整合性**: 編集によりエントリの識別キーが変化した場合（例: 英語専用 `("Claude", "claude")` → 日英バイリンガル `("Claude", "くろーど")`）、旧キーの重複・Tombstone 不整合を残さず安全に更新する。
 
 #### CUJ-3: 登録済み単語のリアルタイム検索・インプレース編集・ON/OFF切替
 1. ユーザーはリスト直上の **検索バー** にキーワード（表記、ひらがな読み、カタカナ読みのいずれでも可）を入力し、リアルタイムにリストを絞り込む。
@@ -60,12 +69,18 @@ JotInput のユーザー辞書画面（[`DictionaryActivity`](app/src/main/java/
 
 ---
 
-## Part 2: Alloy による形式仕様と不変条件 (Formal Specification)
+## Part 2: DMN 決定表および Alloy による形式仕様と不変条件 (DMN & Formal Specification)
 
 ### 1. モデル化の目的
-UI の刷新に伴い導入する **「検索フィルタリング」「編集ボトムシート」「即時削除＋Snackbar Undo」** が、既存の **LWW + Tombstone 同期アーキテクチャ**（[`DictionaryRepository`](app/src/main/java/com/example/myasr/context/vocabulary/infrastructure/DictionaryRepository.kt)）と矛盾しないことを数学的に保証する。
+UI の刷新に伴い導入する **「検索フィルタリング」「編集ボトムシート」「即時削除＋Snackbar Undo」**、および ASCII/英単語への日本語よみ付与・1ステップ英語登録を両立する **「よみ入力欄常時表示・日英バイリンガル登録 DMN ポリシー」**（[`DictionaryInputDecisionModel`](app/src/main/java/com/example/myasr/context/vocabulary/domain/DictionaryInputDecisionModel.kt)）が、既存の **LWW + Tombstone 同期アーキテクチャ**（[`DictionaryRepository`](app/src/main/java/com/example/myasr/context/vocabulary/infrastructure/DictionaryRepository.kt)）と矛盾しないことを数学的に保証する。
 
 モデルファイル: [`custom_dictionary_ui.als`](app/src/test/resources/alloy/custom_dictionary_ui.als)
+
+### 1.5 DMN 決定表 (`DictionaryInputDecisionModel`)
+| 決定表名 | Hit Policy | 役割 |
+|---|---|---|
+| **`DictionaryReadingFormUiPolicy`** | `FIRST` | 単語・よみの入力状態から「よみ欄の常時表示 (`readingFieldVisible = true`)」「任意フラグ」「ガイドバッジ種別 (`NONE` / `ENGLISH_OPTIONAL_READING` / `BILINGUAL_READY` / `READING_KANA_REQUIRED`)」を決定する。 |
+| **`DictionaryEntryRegistrationPolicy`** | `FIRST` | 単語・よみの組み合わせから登録結果（`REGISTER_BILINGUAL_ASCII_WITH_KANA` / `REGISTER_ENGLISH_ONLY_FROM_WORD` / `REGISTER_ENGLISH_ONLY_FROM_READING` / `REGISTER_JAPANESE_WITH_KANA` / 各種エラー）を決定する。 |
 
 ### 2. 検証する安全不変条件 (Safety Invariants)
 
@@ -77,6 +92,12 @@ UI の刷新に伴い導入する **「検索フィルタリング」「編集�
 | **`VisibleSubsetOfActive`** | 検索フィルタの有無にかかわらず、画面に表示される単語集合（`visibleEntries`）は常に `activeEntries` の部分集合である。 |
 | **`UnfilteredShowsAllActive`** | 検索クエリが空（`filterActive = False`）のとき、表示集合は常に `activeEntries` と完全に一致する。 |
 | **`SearchFilterPreservesRepository`** | 検索フィルタの変更（`SearchFilter`）は、`activeEntries`、`tombstones`、`undoSlot` を一切変更しない（純粋なビュー投影である）。 |
+| **`FormPolicyIsTotal`** | `DictionaryReadingFormUiPolicy` は全入力組み合わせに対して一意のガイド状態へ解決される。 |
+| **`ReadingFieldAlwaysVisibleForAllInputs`** | いかなる単語・よみ入力（英単語含む）に対しても、「よみ」入力欄は常に表示状態（`True`）となる。 |
+| **`RegistrationPolicyIsTotal`** | `DictionaryEntryRegistrationPolicy` は全入力組み合わせに対して一意の登録結果へ解決される。 |
+| **`AsciiWordWithValidKanaAlwaysRegistersBilingual`** | ASCII/英単語に有効なひらがな/カタカナよみが入力された場合、常に日英バイリンガル登録（`RegBilingualAsciiWithKana`）となる。 |
+| **`AsciiWordWithoutReadingStillAllowsOneStepEnglish`** | ASCII/英単語でよみ空欄の場合、引き続き 1 ステップ英語登録（`RegEnglishOnlyFromWord`）が可能である。 |
+| **`AsciiWordWithInvalidNonKanaReadingRejected`** | ASCII/英単語に非かな文字列がよみとして入力された場合、無言で破棄せず `ErrReadingInvalidKana` として拒否される。 |
 
 ---
 

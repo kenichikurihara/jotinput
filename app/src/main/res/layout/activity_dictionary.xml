@@ -71,23 +71,7 @@
                         android:textSize="15sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Auto-detected English 1-step indicator -->
-                <TextView
-                    android:id="@+id/tvEnglishAutoBadge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:background="@drawable/badge_background"
-                    android:backgroundTint="@color/badge_info_bg"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="4dp"
-                    android:text="英語として登録（よみ入力不要）"
-                    android:textColor="@color/badge_info_text"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:visibility="gone" />
-
-                <!-- Secondary Input: Reading (Hiragana/Katakana; hidden automatically for English) -->
+                <!-- Secondary Input: Reading (always visible; optional for English/ASCII, required for Japanese) -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/layoutReading"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -109,6 +93,22 @@
                         android:textColor="@color/text_primary"
                         android:textSize="15sp" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Dynamic English / Bilingual Reading Guidance Badge -->
+                <TextView
+                    android:id="@+id/tvEnglishAutoBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/badge_background"
+                    android:backgroundTint="@color/badge_info_bg"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="4dp"
+                    android:text="よみ空欄で英語のみ登録可（かな入力で日本語音声・変換にも対応）"
+                    android:textColor="@color/badge_info_text"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
 
                 <!-- Compact Priority Chips + Add Button Row -->
                 <LinearLayout

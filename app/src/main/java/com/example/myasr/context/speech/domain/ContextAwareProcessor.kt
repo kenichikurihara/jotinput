@@ -8,6 +8,7 @@ import com.example.myasr.context.vocabulary.domain.DictionaryEntry
 import com.example.myasr.context.vocabulary.domain.Priority
 
 import android.util.Log
+import java.util.regex.Matcher
 import java.util.regex.Pattern
 
 /**
@@ -397,8 +398,18 @@ class ContextAwareProcessor(
         for (entry in entries) {
             val target = entry.word.trim()
             if (target.any { it in 'a'..'z' || it in 'A'..'Z' }) {
-                val pattern = Pattern.compile(Pattern.quote(target), Pattern.CASE_INSENSITIVE)
-                res = pattern.matcher(res).replaceAll(target)
+                val prefix = if (target.first().let { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' }) {
+                    "(?<![A-Za-z0-9])"
+                } else {
+                    ""
+                }
+                val suffix = if (target.last().let { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' }) {
+                    "(?![A-Za-z0-9])"
+                } else {
+                    ""
+                }
+                val pattern = Pattern.compile("$prefix${Pattern.quote(target)}$suffix", Pattern.CASE_INSENSITIVE)
+                res = pattern.matcher(res).replaceAll(Matcher.quoteReplacement(target))
             }
         }
         return res

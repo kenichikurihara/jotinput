@@ -28,69 +28,117 @@ object DictionaryInputLogic {
     }
 
     /**
-     * Resolves user input from the Word ("単語・表記") and Reading ("よみ") fields.
+     * Resolves user input from the Word ("単語・表記") and Reading ("よみ") fields
+     * via [DictionaryInputDecisionModel.registrationPolicy].
      *
      * Supports:
-     * 1. English word/phrase in Word field (no reading needed -> 1-step registration).
-     * 2. Backward-compatible fallback: English word/phrase in Reading field when Word is empty.
-     * 3. Japanese entry: non-empty Word + valid Hiragana/Katakana Reading.
+     * 1. Bilingual ASCII/English word in Word field + Hiragana/Katakana in Reading field.
+     * 2. English word/phrase in Word field with empty Reading -> 1-step English-only registration.
+     * 3. Backward-compatible fallback: English word/phrase in Reading field when Word is empty.
+     * 4. Japanese/symbol entry: non-empty Word + valid Hiragana/Katakana Reading.
      */
     fun resolveWordAndReading(rawWord: String, rawReading: String): ResolutionResult {
         val word = rawWord.trim()
         val reading = rawReading.trim()
 
-        // 1. Primary English 1-step mode: valid English word in Word field
-        if (word.isNotEmpty() && EnglishDictionaryUtils.isValidEnglishWord(word) && reading.isEmpty()) {
-            return ResolutionResult.Success(
+        val isWordValidEnglish = word.isNotEmpty() && EnglishDictionaryUtils.isValidEnglishWord(word)
+        val isReadingValidKana = reading.isNotEmpty() && JapaneseKanaUtils.isValidKana(reading)
+        val isReadingValidEnglish = reading.isNotEmpty() && EnglishDictionaryUtils.isValidEnglishWord(reading)
+
+        val outcome = DictionaryInputDecisionModel.evaluateRegistration(
+            DictionaryRegistrationInput(
+                hasWord = word.isNotEmpty(),
+                isWordValidEnglish = isWordValidEnglish,
+                hasReading = reading.isNotEmpty(),
+                isReadingValidKana = isReadingValidKana,
+                isReadingValidEnglish = isReadingValidEnglish
+            )
+        ).result
+
+        return when (outcome) {
+            DictionaryRegistrationOutcome.REGISTER_BILINGUAL_ASCII_WITH_KANA,
+            DictionaryRegistrationOutcome.REGISTER_JAPANESE_WITH_KANA -> ResolutionResult.Success(
+                word = word,
+                reading = JapaneseKanaUtils.normalizeReading(reading),
+                isEnglishOnly = false
+            )
+            DictionaryRegistrationOutcome.REGISTER_ENGLISH_ONLY_FROM_WORD -> ResolutionResult.Success(
                 word = word,
                 reading = EnglishDictionaryUtils.normalizeEnglishReading(word),
                 isEnglishOnly = true
             )
-        }
-
-        // 2. Backward-compatible English mode: valid English word in Reading field when Word is empty
-        if (word.isEmpty() && reading.isNotEmpty() && EnglishDictionaryUtils.isValidEnglishWord(reading)) {
-            return ResolutionResult.Success(
+            DictionaryRegistrationOutcome.REGISTER_ENGLISH_ONLY_FROM_READING -> ResolutionResult.Success(
                 word = reading,
                 reading = EnglishDictionaryUtils.normalizeEnglishReading(reading),
                 isEnglishOnly = true
             )
-        }
-
-        // 3. Japanese mode: both Word and valid Kana Reading are required
-        if (word.isEmpty()) {
-            return ResolutionResult.Error(
+            DictionaryRegistrationOutcome.ERROR_WORD_REQUIRED -> ResolutionResult.Error(
                 field = ErrorField.WORD,
                 message = "単語を入力してください"
             )
-        }
-        if (reading.isEmpty()) {
-            return ResolutionResult.Error(
+            DictionaryRegistrationOutcome.ERROR_READING_REQUIRED -> ResolutionResult.Error(
                 field = ErrorField.READING,
                 message = "よみを入力してください"
             )
-        }
-        if (!JapaneseKanaUtils.isValidKana(reading)) {
-            return ResolutionResult.Error(
+            DictionaryRegistrationOutcome.ERROR_READING_INVALID_KANA -> ResolutionResult.Error(
                 field = ErrorField.READING,
-                message = "よみはひらがな・カタカナで入力してください"
+                message = if (isWordValidEnglish) {
+                    "よみはひらがな・カタカナで入力してください（英語のみは空欄）"
+                } else {
+                    "よみはひらがな・カタカナで入力してください"
+                }
             )
         }
-
-        return ResolutionResult.Success(
-            word = word,
-            reading = JapaneseKanaUtils.normalizeReading(reading),
-            isEnglishOnly = false
-        )
     }
 
     /**
-     * Returns true if the Word field alone represents a valid English-only entry
-     * (used to collapse the Reading field for 1-step registration).
+     * Evaluates the Reading field UI visibility, optionality, and bilingual guide mode
+     * via [DictionaryInputDecisionModel.formUiPolicy].
+     */
+    fun evaluateFormUi(rawWord: String, rawReading: String): DictionaryReadingFormUiState {
+        val word = rawWord.trim()
+        val reading = rawReading.trim()
+        return DictionaryInputDecisionModel.evaluateFormUi(
+            DictionaryReadingFormUiInput(
+                hasWord = word.isNotEmpty(),
+                isValidEnglishWord = word.isNotEmpty() && EnglishDictionaryUtils.isValidEnglishWord(word),
+                hasReading = reading.isNotEmpty(),
+                isValidKanaReading = reading.isNotEmpty() && JapaneseKanaUtils.isValidKana(reading)
+            )
+        ).result
+    }
+
+    /**
+     * Returns true if the Word field alone represents a valid English word
+     * (meaning the Reading field is optional rather than hidden).
      */
     fun isEnglishOnlyWordInput(rawWord: String): Boolean {
         val trimmed = rawWord.trim()
         return trimmed.isNotEmpty() && EnglishDictionaryUtils.isValidEnglishWord(trimmed)
+    }
+
+    /**
+     * Initial text for the edit-sheet Reading field: empty for English-only entries
+     * (allowing users to either keep English-only or add a Kana reading) and the stored
+     * reading for Japanese/bilingual entries.
+     */
+    fun initialEditReading(entry: DictionaryEntry): String {
+        return if (entry.isEnglishOnlyEntry) "" else entry.reading
+    }
+
+    /**
+     * Formats the subtitle reading label displayed in the dictionary list.
+     */
+    fun formatEntryReadingLabel(entry: DictionaryEntry): String {
+        if (entry.isEnglishOnlyEntry) {
+            return "英語 (よみなし)"
+        }
+        val katakana = JapaneseKanaUtils.hiraganaToKatakana(entry.reading)
+        return if (entry.hasEnglishSurface) {
+            "${entry.reading} ($katakana) • 日英"
+        } else {
+            "${entry.reading} ($katakana)"
+        }
     }
 
     /**

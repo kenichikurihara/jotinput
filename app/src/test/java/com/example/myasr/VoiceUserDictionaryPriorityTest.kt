@@ -137,4 +137,41 @@ class VoiceUserDictionaryPriorityTest {
         val processed2 = postProcessor.process("れいぞんすぴーちを活用する", entries)
         assertEquals("ReazonSpeechを活用する", processed2)
     }
+
+    @Test
+    fun testAsciiWordWithReadingForJapaneseVoiceAndConversion() {
+        val generator = HotwordsGenerator(android.content.ContextWrapper(null))
+        val entries = listOf(
+            DictionaryEntry(word = "Claude", reading = "くろーど", priority = Priority.HIGH),
+            DictionaryEntry(word = "API", reading = "えーぴーあい", priority = Priority.HIGH),
+            DictionaryEntry(word = "AI", reading = "えーあい", priority = Priority.NORMAL),
+            DictionaryEntry(word = "C++", reading = "しーぷらぷら", priority = Priority.HIGH),
+            DictionaryEntry(word = "C\$", reading = "しーどる", priority = Priority.NORMAL)
+        )
+
+        // 1. HotwordsGenerator emits Hiragana & Katakana token rules for Japanese ASR biasing
+        val rules = generator.buildHotwordRules(entries)
+        assertTrue(rules.any { it.startsWith("く ろ ー ど") })
+        assertTrue(rules.any { it.startsWith("ク ロ ー ド") })
+        assertTrue(rules.any { it.startsWith("え ー ぴ ー あ い") })
+        assertTrue(rules.any { it.startsWith("し ー ぷ ら ぷ ら") })
+
+        // 2. ContextAwareProcessor deterministically converts Japanese ASR phonetic output to ASCII surface
+        val postProcessor = DictionaryPostProcessor { kanaEngine }
+        assertEquals("Claudeに質問する", postProcessor.process("クロードに質問する", entries))
+        assertEquals("APIを呼ぶ", postProcessor.process("えーぴーあいを呼ぶ", entries))
+        assertEquals("C++で書く", postProcessor.process("シープラプラで書く", entries))
+        assertEquals("C\$を使う", postProcessor.process("c\$を使う", entries))
+
+        // 3. Boundary-safe alphanumeric normalization must NOT corrupt substrings inside unrelated English words
+        assertEquals("rapidに開発する", postProcessor.process("rapidに開発する", entries))
+        assertEquals("Emailを送る", postProcessor.process("Emailを送る", entries))
+
+        // 4. KanaKanjiEngine returns ASCII surfaces for Japanese readings
+        kanaEngine.syncUserDictionary(entries)
+        val claudeCands = kanaEngine.getBaseCandidates("くろーど")
+        assertTrue("Expected Claude for reading くろーど", claudeCands.any { it.surface == "Claude" })
+        val apiCands = kanaEngine.getBaseCandidates("えーぴーあい")
+        assertTrue("Expected API for reading えーぴーあい", apiCands.any { it.surface == "API" })
+    }
 }

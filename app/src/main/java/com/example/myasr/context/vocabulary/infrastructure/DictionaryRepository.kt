@@ -98,8 +98,31 @@ class DictionaryRepository(private val context: Context) {
     fun update(updated: DictionaryEntry): Boolean {
         val index = entries.indexOfFirst { it.id == updated.id }
         if (index >= 0) {
-            val entryWithTime = updated.copy(updatedAtMillis = System.currentTimeMillis())
+            val existing = entries[index]
+            val now = System.currentTimeMillis()
+            val entryWithTime = updated.copy(updatedAtMillis = now)
+            val oldKey = makeIdentityKey(existing)
+            val newKey = makeIdentityKey(entryWithTime)
+
             entries[index] = entryWithTime
+
+            if (oldKey != newKey) {
+                entries.removeAll { it.id != entryWithTime.id && makeIdentityKey(it) == newKey }
+                tombstones.removeAll { makeIdentityKey(it) == newKey }
+                if (entries.none { makeIdentityKey(it) == oldKey }) {
+                    tombstones.removeAll { makeIdentityKey(it) == oldKey }
+                    tombstones.add(
+                        DictionaryTombstone(
+                            id = existing.id,
+                            word = existing.word,
+                            reading = existing.reading,
+                            deletedAtMillis = now
+                        )
+                    )
+                }
+                saveTombstones()
+            }
+
             val saved = save()
             if (saved) {
                 notifyMutated()

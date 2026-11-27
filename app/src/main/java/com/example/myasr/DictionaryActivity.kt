@@ -2,12 +2,15 @@ package com.example.myasr
 
 import com.example.myasr.context.kanakanji.application.UserHistorySyncManager
 import com.example.myasr.context.vocabulary.domain.DictionaryEntry
+import com.example.myasr.context.vocabulary.domain.DictionaryFormGuideMode
 import com.example.myasr.context.vocabulary.domain.DictionaryInputLogic
+import com.example.myasr.context.vocabulary.domain.DictionaryReadingFormUiState
 import com.example.myasr.context.vocabulary.domain.Priority
 import com.example.myasr.context.vocabulary.infrastructure.DictionaryRepository
 import com.example.myasr.context.vocabulary.presentation.DictionaryAdapter
 
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -160,6 +163,57 @@ class DictionaryActivity : AppCompatActivity() {
         rvDictionary.adapter = adapter
     }
 
+    private fun applyReadingFormUi(
+        targetLayoutReading: TextInputLayout,
+        badgeView: TextView,
+        state: DictionaryReadingFormUiState,
+        defaultRequiredHint: String
+    ) {
+        targetLayoutReading.visibility = if (state.readingFieldVisible) View.VISIBLE else View.GONE
+        targetLayoutReading.hint = if (state.readingOptional) {
+            "よみ (任意・ひらがな、例: くろーど)"
+        } else {
+            defaultRequiredHint
+        }
+
+        when (state.guideMode) {
+            DictionaryFormGuideMode.NONE -> {
+                badgeView.visibility = View.GONE
+            }
+            DictionaryFormGuideMode.ENGLISH_OPTIONAL_READING -> {
+                badgeView.visibility = View.VISIBLE
+                badgeView.text = "よみ空欄で英語のみ登録可（かな入力で日本語音声・変換にも対応）"
+                badgeView.backgroundTintList = ColorStateList.valueOf(getColor(R.color.badge_info_bg))
+                badgeView.setTextColor(getColor(R.color.badge_info_text))
+            }
+            DictionaryFormGuideMode.BILINGUAL_READY -> {
+                badgeView.visibility = View.VISIBLE
+                badgeView.text = "日英両対応（日本語音声・変換 ＋ 英語入力）"
+                badgeView.backgroundTintList = ColorStateList.valueOf(getColor(R.color.badge_success_bg))
+                badgeView.setTextColor(getColor(R.color.badge_success_text))
+            }
+            DictionaryFormGuideMode.READING_KANA_REQUIRED -> {
+                badgeView.visibility = View.VISIBLE
+                badgeView.text = "よみはひらがな・カタカナで入力（英語のみは空欄）"
+                badgeView.backgroundTintList = ColorStateList.valueOf(getColor(R.color.badge_warning_bg))
+                badgeView.setTextColor(getColor(R.color.badge_warning_text))
+            }
+        }
+    }
+
+    private fun updateQuickAddReadingUi() {
+        val state = DictionaryInputLogic.evaluateFormUi(
+            rawWord = etWord.text?.toString() ?: "",
+            rawReading = etReading.text?.toString() ?: ""
+        )
+        applyReadingFormUi(
+            targetLayoutReading = layoutReading,
+            badgeView = tvEnglishAutoBadge,
+            state = state,
+            defaultRequiredHint = "よみ (ひらがな、例: なかむら)"
+        )
+    }
+
     private fun setupListeners() {
         etWord.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -167,28 +221,19 @@ class DictionaryActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {
                 val text = s?.toString() ?: ""
                 layoutWord.error = null
+                layoutReading.visibility = View.VISIBLE
+                etWord.imeOptions = EditorInfo.IME_ACTION_NEXT
 
-                if (DictionaryInputLogic.isEnglishOnlyWordInput(text)) {
-                    // 1-step English registration: hide Reading field and switch IME action to Done
-                    layoutReading.visibility = View.GONE
-                    layoutReading.error = null
-                    tvEnglishAutoBadge.visibility = View.VISIBLE
-                    etWord.imeOptions = EditorInfo.IME_ACTION_DONE
-                } else {
-                    layoutReading.visibility = View.VISIBLE
-                    tvEnglishAutoBadge.visibility = View.GONE
-                    etWord.imeOptions = EditorInfo.IME_ACTION_NEXT
-
-                    // Smart auto-suggestion for Kana-only surface words (e.g. Katakana -> Hiragana)
-                    val suggested = DictionaryInputLogic.suggestReadingIfKanaOnly(text)
-                    val currentReading = etReading.text?.toString() ?: ""
-                    if (currentReading.isEmpty() || currentReading == lastAutoSuggestedReading) {
-                        isUpdatingReadingProgrammatically = true
-                        etReading.setText(suggested ?: "")
-                        isUpdatingReadingProgrammatically = false
-                        lastAutoSuggestedReading = suggested
-                    }
+                // Smart auto-suggestion for Kana-only surface words (e.g. Katakana -> Hiragana)
+                val suggested = DictionaryInputLogic.suggestReadingIfKanaOnly(text)
+                val currentReading = etReading.text?.toString() ?: ""
+                if (currentReading.isEmpty() || currentReading == lastAutoSuggestedReading) {
+                    isUpdatingReadingProgrammatically = true
+                    etReading.setText(suggested ?: "")
+                    isUpdatingReadingProgrammatically = false
+                    lastAutoSuggestedReading = suggested
                 }
+                updateQuickAddReadingUi()
             }
         })
 
@@ -202,6 +247,7 @@ class DictionaryActivity : AppCompatActivity() {
                     if (current != lastAutoSuggestedReading) {
                         lastAutoSuggestedReading = null
                     }
+                    updateQuickAddReadingUi()
                 }
             }
         })
@@ -254,11 +300,7 @@ class DictionaryActivity : AppCompatActivity() {
 
     private fun handleAddWord() {
         val rawWord = etWord.text?.toString() ?: ""
-        val rawReading = if (layoutReading.visibility == View.VISIBLE) {
-            etReading.text?.toString() ?: ""
-        } else {
-            ""
-        }
+        val rawReading = etReading.text?.toString() ?: ""
 
         layoutWord.error = null
         layoutReading.error = null
@@ -310,11 +352,10 @@ class DictionaryActivity : AppCompatActivity() {
         etReading.text?.clear()
         isUpdatingReadingProgrammatically = false
         chipPriorityNormal.isChecked = true
-        layoutReading.visibility = View.VISIBLE
-        tvEnglishAutoBadge.visibility = View.GONE
         layoutWord.error = null
         layoutReading.error = null
         etWord.imeOptions = EditorInfo.IME_ACTION_NEXT
+        updateQuickAddReadingUi()
     }
 
     private fun deleteEntryWithUndo(entry: DictionaryEntry) {
@@ -348,17 +389,23 @@ class DictionaryActivity : AppCompatActivity() {
         val btnEditDelete = view.findViewById<MaterialButton>(R.id.btnEditDelete)
         val btnEditSave = view.findViewById<MaterialButton>(R.id.btnEditSave)
 
+        fun updateEditReadingUi() {
+            val state = DictionaryInputLogic.evaluateFormUi(
+                rawWord = etEditWord.text?.toString() ?: "",
+                rawReading = etEditReading.text?.toString() ?: ""
+            )
+            applyReadingFormUi(
+                targetLayoutReading = layoutEditReading,
+                badgeView = tvEditEnglishBadge,
+                state = state,
+                defaultRequiredHint = "よみ (ひらがな)"
+            )
+        }
+
         etEditWord.setText(entry.word)
         etEditWord.setSelection(entry.word.length)
-
-        if (entry.isEnglishOnlyEntry) {
-            layoutEditReading.visibility = View.GONE
-            tvEditEnglishBadge.visibility = View.VISIBLE
-        } else {
-            layoutEditReading.visibility = View.VISIBLE
-            tvEditEnglishBadge.visibility = View.GONE
-            etEditReading.setText(entry.reading)
-        }
+        etEditReading.setText(DictionaryInputLogic.initialEditReading(entry))
+        updateEditReadingUi()
 
         if (entry.priority == Priority.HIGH) {
             chipEditHigh.isChecked = true
@@ -370,18 +417,28 @@ class DictionaryActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             override fun afterTextChanged(s: Editable?) {
-                val text = s?.toString() ?: ""
                 layoutEditWord.error = null
-                if (DictionaryInputLogic.isEnglishOnlyWordInput(text)) {
-                    layoutEditReading.visibility = View.GONE
-                    layoutEditReading.error = null
-                    tvEditEnglishBadge.visibility = View.VISIBLE
-                } else {
-                    layoutEditReading.visibility = View.VISIBLE
-                    tvEditEnglishBadge.visibility = View.GONE
-                }
+                updateEditReadingUi()
             }
         })
+
+        etEditReading.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                layoutEditReading.error = null
+                updateEditReadingUi()
+            }
+        })
+
+        etEditReading.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                btnEditSave.performClick()
+                true
+            } else {
+                false
+            }
+        }
 
         btnEditDelete.setOnClickListener {
             dialog.dismiss()
@@ -390,11 +447,7 @@ class DictionaryActivity : AppCompatActivity() {
 
         btnEditSave.setOnClickListener {
             val rawWord = etEditWord.text?.toString() ?: ""
-            val rawReading = if (layoutEditReading.visibility == View.VISIBLE) {
-                etEditReading.text?.toString() ?: ""
-            } else {
-                ""
-            }
+            val rawReading = etEditReading.text?.toString() ?: ""
 
             layoutEditWord.error = null
             layoutEditReading.error = null
