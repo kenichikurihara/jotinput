@@ -2459,7 +2459,7 @@ When Pixel 10 Pro (`<device-ip>:37801`) reconnected with commit `a2f9dfe` instal
 2. **NeMo CTC Greedy-Search Constraint ([`AsrManager.kt`](app/src/main/java/com/example/myasr/context/speech/infrastructure/AsrManager.kt))**:
    - English ASR runs NVIDIA Parakeet TDT-CTC 110M (`OfflineNemoEncDecCtcModelConfig`) with `decodingMethod = "greedy_search"`. Binary inspection of `sherpa-onnx` 1.13.8 confirms `OfflineRecognizerCtcImpl` supports only `OfflineCtcGreedySearchDecoder` and static `OfflineCtcFstDecoder` (no dynamic per-stream `hotwords` biasing).
 3. **Bilingual Kana-Reading & Symbol-Bearing Term Exclusion**:
-   - Bilingual Japanese/English users frequently register English surfaces with Kana readings (e.g. `JotInput` / `じょっといんぷっと`, `Kurihara` / `くりはら`, `CI/CD` / `しーあいしーでぃー`) or tech symbols (`llama.cpp`, `Node.js`, `C++`).
+   - Bilingual Japanese/English users frequently register English surfaces with Kana readings (e.g. `JotInput` / `じょっといんぷっと`, `Nakamura` / `なかむら`, `CI/CD` / `しーあいしーでぃー`) or tech symbols (`llama.cpp`, `Node.js`, `C++`).
 4. **Silent Stage-2 Bypass in `LlmReranker.scorePairDeltaNll()` ([`LlmReranker.kt`](app/src/main/java/com/example/myasr/context/reranking/infrastructure/LlmReranker.kt))**:
    - `scorePairDeltaNll()` called `nativeScoreCandidates()` (`force_stage2_prefix_count = 0`), which under `Stage2Policy::NEVER_TOKEN0_ONLY` evaluated only token-0 + heuristic surrogate. When `origText` and `corrText` shared a leading sentence prefix, both shared token-0 and skipped Stage 2 (`deltaNll ≈ 0.0`), neutralizing SLM coherence gating.
 

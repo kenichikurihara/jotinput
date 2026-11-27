@@ -63,7 +63,7 @@ JotInput のユーザー辞書（単語登録）機能を拡張し、**日本語
 | # | シナリオ | 辞書登録内容 | ユーザーの入力操作 | 期待されるシステム挙動 |
 |---|---|---|---|---|
 | 1 | **英語単語の新規登録（読みのみ）** | よみ: `Antigravity`（書き: 空欄、優先度: 高） | 「辞書に追加」をタップ | エラーなく登録完了。一覧に `Antigravity`（英語）として表示される |
-| 2 | **未知語のスワイプ入力** | `Nakamura`（標準） | QWERTY 上で `k-u-r-i-h-a-r-a` とスワイプ | `Nakamura` が Top-1 で即時入力される |
+| 2 | **未知語のスワイプ入力** | `Nakamura`（標準） | QWERTY 上で `n-a-k-a-m-u-r-a` とスワイプ | `Nakamura` が Top-1 で即時入力される |
 | 3 | **競合軌跡でのスワイプ優先** | `JotInput`（高） | `j-o-t-i-n-p-u-t` とスワイプ | 一般語に埋もれず `JotInput` が Top-1 候補として優先出力される |
 | 4 | **ミススペルからのコレクション候補** | `Nakamura`（標準） | QWERTY で `nakamuta`（`r` の隣の `t` を誤打）とタイプ | 候補ストリップの先頭に `Nakamura` が表示され、タップで `nakamuta` $\to$ `Nakamura` に置換される |
 | 5 | **長単語の脱字ミススペル補正** | `ReazonSpeech`（高） | QWERTY で `reazonspech` とタイプ | 候補ストリップに `ReazonSpeech` が優先表示され、タップで置換される |
@@ -344,7 +344,7 @@ struct TrieNode {
        - `"antigravty"` ($m=10$) vs `"Antigravity"` ($n=11$): `i` の脱字 1回で $\text{cost} = 1.2 \le 3.6 \implies$ **マッチ！**
        - `"nakmaura"` ($m=8$) vs `"Nakamura"` ($n=8$): `ri` $\to$ `ir` の転置 1回で $\text{cost} = 0.6 \le 3.6 \implies$ **マッチ！**
 3. **前方一致・ファジー接頭辞予測（Prefix / Fuzzy-Prefix Match）**:
-   - $m \ge 3$ かつ $n > m$ の場合、ユーザーが長い登録単語を途中まで入力している段階（例: `"reazon"` $\to$ `"ReazonSpeech"`, `"kurih"` $\to$ `"Nakamura"`）でも、先頭 $m$ 文字との編集コストが $\le 1.2$ 以内であれば予測・補完候補として提示する。
+   - $m \ge 3$ かつ $n > m$ の場合、ユーザーが長い登録単語を途中まで入力している段階（例: `"reazon"` $\to$ `"ReazonSpeech"`, `"nakam"` $\to$ `"Nakamura"`）でも、先頭 $m$ 文字との編集コストが $\le 1.2$ 以内であれば予測・補完候補として提示する。
 
 ##### (2) スコア計算と一般語候補との統合順位
 - C++ `EnglishSpellEngine::SuggestTypo` において、一般語は $\text{score} = \ln(\text{count} + 1) - 2.8 \times \text{cost}$（最大 $\ln(10^7) \approx 16.12$）でスコア付けされる。

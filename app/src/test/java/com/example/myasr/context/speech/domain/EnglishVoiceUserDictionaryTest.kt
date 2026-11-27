@@ -147,7 +147,7 @@ class EnglishVoiceUserDictionaryTest {
     fun `resolves mixed case, bilingual Kana readings, spoken symbols, acronyms, cardinals, and possessives`() {
         val entries = listOf(
             makeEntry("JotInput", reading = "じょっといんぷっと", priority = Priority.HIGH),
-            makeEntry("Kurihara", reading = "くりはら", priority = Priority.HIGH),
+            makeEntry("Nakamura", reading = "なかむら", priority = Priority.HIGH),
             makeEntry("CI/CD", reading = "しーあいしーでぃー", priority = Priority.HIGH),
             makeEntry("ReazonSpeech", priority = Priority.HIGH),
             makeEntry("PyTorch", priority = Priority.HIGH),
@@ -182,8 +182,8 @@ class EnglishVoiceUserDictionaryTest {
         val cases = listOf(
             "I use Jot input on my Android phone." to "I use JotInput on my Android phone.",
             "Jot inputs voice recognition runs locally." to "JotInputs voice recognition runs locally.",
-            "Please send the report to Korihara before noon." to "Please send the report to Kurihara before noon.",
-            "Curihara's pull request fixed it." to "Kurihara's pull request fixed it.",
+            "Please send the report to Nakamora before noon." to "Please send the report to Nakamura before noon.",
+            "Nacamura's pull request fixed it." to "Nakamura's pull request fixed it.",
             "Check the CI slash CD logs." to "Check the CI/CD logs.",
             "Reaisan speech transcribes audio." to "ReazonSpeech transcribes audio.",
             "We trained with pytorch." to "We trained with PyTorch.",
@@ -278,7 +278,7 @@ class EnglishVoiceUserDictionaryTest {
         val entries = listOf(
             makeEntry("Mozc", priority = Priority.HIGH),
             makeEntry("JotInput", reading = "じょっといんぷっと", priority = Priority.HIGH),
-            makeEntry("Kurihara", reading = "くりはら", priority = Priority.HIGH)
+            makeEntry("Nakamura", reading = "なかむら", priority = Priority.HIGH)
         )
 
         // 1. Common-word collision with SLM rejecting -> stays original and emits 1-tap chip
@@ -316,16 +316,16 @@ class EnglishVoiceUserDictionaryTest {
 
         // 4. Reverted non-exact pair downgrades to 1-tap chip even on OOV phonetic match
         val revertedRes = EnglishVoicePostProcessor.formatWithCorrections(
-            rawText = "Send it to Korihara.",
+            rawText = "Send it to Nakamora.",
             contextBefore = "",
             userDictionaryEntries = entries,
             wordLogFreqProvider = EnglishCaseModel::getWordLogFreq,
-            suppressedPairs = setOf("korihara" to "Kurihara")
+            suppressedPairs = setOf("nakamora" to "Nakamura")
         )
-        assertEquals("Send it to Korihara.", revertedRes.formattedText)
+        assertEquals("Send it to Nakamora.", revertedRes.formattedText)
         assertTrue(revertedRes.appliedCorrections.isEmpty())
         assertEquals(1, revertedRes.suggestedChips.size)
-        assertEquals("Kurihara", revertedRes.suggestedChips.first().correctedSurface)
+        assertEquals("Nakamura", revertedRes.suggestedChips.first().correctedSurface)
 
         // 5. Idempotency across repeated streaming formatting passes
         val firstPass = EnglishVoicePostProcessor.formatWithCorrections(

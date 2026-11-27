@@ -37,7 +37,7 @@
                     android:id="@+id/tvWord"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="中村"
+                    android:text="山田"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -63,7 +63,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="なかむら / ナカムラ"
+                android:text="やまだ (ヤマダ)"
                 android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
         </LinearLayout>

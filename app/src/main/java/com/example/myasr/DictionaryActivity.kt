@@ -171,7 +171,7 @@ class DictionaryActivity : AppCompatActivity() {
     ) {
         targetLayoutReading.visibility = if (state.readingFieldVisible) View.VISIBLE else View.GONE
         targetLayoutReading.hint = if (state.readingOptional) {
-            "よみ (任意・ひらがな、例: くろーど)"
+            "よみ (任意・ひらがな、例: わいふぁい)"
         } else {
             defaultRequiredHint
         }
@@ -210,7 +210,7 @@ class DictionaryActivity : AppCompatActivity() {
             targetLayoutReading = layoutReading,
             badgeView = tvEnglishAutoBadge,
             state = state,
-            defaultRequiredHint = "よみ (ひらがな、例: なかむら)"
+            defaultRequiredHint = "よみ (ひらがな、例: やまだ)"
         )
     }
 
