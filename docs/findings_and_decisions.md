@@ -2485,5 +2485,39 @@ Dataset: 38 dictionary entries, 68 positive utterances (`edge-tts` across 4 voic
 | **Improved (SLM-OFF)** | **88.24%** (60/68) | 89.71% | **92.65%** (63/68) | **0.0%** (0/42) | **0.0%** (0/300, +2 TP fixes) | 19.2 ms |
 | **Improved (SLM-ON, Qwen2.5-0.5B)** | **92.65%** (63/68) | **94.12%** | **92.65%** (63/68) | **0.0%** (0/42) | **0.0%** (0/300, +2 TP fixes) | 32.0 ms |
 
+---
+
+## Finding 62 & ADR-027: Persistent Debug Keystore Signing & Pre-Install APK Compatibility Verification
+
+### 1. Root Cause Analysis
+1. **Ephemeral Debug Keystore on GitHub Actions (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`)**:
+   - In commit `4cca3b5` (Phase 1 OSS public release), `app/debug.keystore` and `signingConfigs.debug` were removed from the repository and [`app/build.gradle.kts`](app/build.gradle.kts) so no keystore binary is committed to the public repository.
+   - Release signing was migrated to `~/.config/jotinput/` and GitHub `release` environment secrets, but Debug signing was left unconfigured.
+   - Consequently, local `./deploy.sh` builds used `~/.config/.android/debug.keystore` (`SHA-256: 542f51685d6834c0e60f1975fd71064e8341944778e7a5d4d9d21118ebfe6e7b`), whereas each GitHub Actions `Android CI` run on ephemeral `ubuntu-latest` runners auto-generated a brand new random debug keystore (e.g., Run `46083412056`: `1b30a13e...`; Run `46085339942`: `c83e6c9c...`).
+   - Verified on ARCVM (`arc:5555`): attempting to install CI artifact `app-debug.apk` over a local `./deploy.sh` debug install fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package io.github.kenichikurihara.jotinput signatures do not match newer version; ignoring!`, which Android's system PackageInstaller surfaces to users as「アプリがインストールされていません」.
+2. **Ruled Out**:
+   - Raw GitHub artifact ZIP extraction via `java.util.zip.ZipFile` (`ARTIFACT_ID=15238804549`) matched `app-debug.apk` bit-for-bit, passed `apksigner verify` (v2) and `zipalign -c -v 4`, and had `0x4000` (16 KB) ELF alignment on all `arm64-v8a` `.so` libraries.
+3. **Diagnostic UX Gap**:
+   - [`AppUpdateInstaller`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/AppUpdateInstaller.kt) previously launched Android's package installer without pre-checking package ID, version code non-downgrade, or signing certificate SHA-256 parity.
+
+### 2. Architectural & CI/CD Solution Implemented
+1. **Persistent Maintainer Debug Signing Outside Git ([`app/build.gradle.kts`](app/build.gradle.kts), [`.github/workflows/android-ci.yml`](.github/workflows/android-ci.yml))**:
+   - Configured `signingConfigs.getByName("debug")` to resolve `DEBUG_STORE_FILE` (env var) $\to$ `~/.config/jotinput/debug.keystore` $\to$ `~/.config/.android/debug.keystore`, falling back transparently to AGP's default debug keystore for external OSS contributors.
+   - Provisioned `DEBUG_KEYSTORE_BASE64` as a GitHub Actions repository secret matching `~/.config/jotinput/debug.keystore` (`SHA-256: 542f5168...`).
+   - Added `Decode Debug Keystore` (failing fast on `main` push if secret is absent), `Verify Debug APK Signature` (`apksigner` vs `keytool` SHA-256 parity assertion), and `Clean Up Debug Keystore` (`if: always()`) to [`android-ci.yml`](.github/workflows/android-ci.yml).
+2. **Pre-Install Compatibility DMN Policy & Actionable Dialog ([`AppUpdateDecisionModel.kt`](app/src/main/java/com/example/myasr/context/provisioning/domain/AppUpdateDecisionModel.kt), [`AppUpdateInstaller.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/AppUpdateInstaller.kt), [`AppUpdateRepository.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/AppUpdateRepository.kt), [`MainActivity.kt`](app/src/main/java/com/example/myasr/MainActivity.kt))**:
+   - Added `ApkInstallCompatibilityDecisionTable` (`HitPolicy.FIRST`, 7 rules) covering `UNREADABLE_ARCHIVE`, `PACKAGE_NAME_MISMATCH`, `VERSION_DOWNGRADE`, `SIGNATURE_MISMATCH`, `SIGNATURE_UNVERIFIABLE`, and `COMPATIBLE`.
+   - Implemented `AppUpdateInstaller.inspectApkCompatibility()` using API-level-aware `PackageManager.GET_SIGNING_CERTIFICATES` (with `GET_SIGNATURES` fallback) and `AppUpdateRepository.clearStagedDownloadedApk()`.
+   - When incompatible (e.g., upgrading from an older ephemeral CI build or Release build), `MainActivity` blocks the doomed system installer launch and presents a diagnostic dialog with certificate fingerprints, one-time reinstall guidance, and one-tap staged APK cleanup.
+3. **Tests & Documentation Sync**:
+   - Updated [`docs/prd_and_design_github_app_update.md`](docs/prd_and_design_github_app_update.md) and [`docs/ddd/dmn_decision_models.md`](docs/ddd/dmn_decision_models.md).
+   - Added unit tests in [`AppUpdateDecisionModelTest.kt`](app/src/test/java/com/example/myasr/AppUpdateDecisionModelTest.kt) and [`GitHubArtifactUpdateClientTest.kt`](app/src/test/java/com/example/myasr/GitHubArtifactUpdateClientTest.kt) (including CI/Gradle persistent debug signing contract guards).
+
+### 3. Verification
+- **Unit, Evaluation, Konsist & Alloy Suites**: `./gradlew testDebugUnitTest --stacktrace` passed 100% (**`Suites=85, Tests=556, Failures=0, Errors=0, Skipped=0`**).
+- **Local Debug & Release Builds**: `./gradlew assembleDebug assembleRelease` succeeded; `apksigner` verified Debug cert `542f5168...` and Release cert `a302f78d...`.
+- **ARCVM (`arc:5555`, Android API 33)**: Verified `./deploy.sh` deployment, `MainActivity` + `KanaKanjiEngine` + `AsrManager` (`Parakeet` & `ReazonSpeech` `READY`), and real `PackageManager` API 33 archive certificate inspection (`542f5168...` vs `c83e6c9c...`).
+
+
 
 

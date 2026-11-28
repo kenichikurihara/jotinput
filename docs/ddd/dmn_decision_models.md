@@ -66,6 +66,7 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-1: Kana-Kanji & Sync** | `HistorySyncDecisionModel` | `SettingsSyncCardDecisionTable` | `FIRST` | 設定タブ Google Drive 同期カードのUI状態・操作可否決定 |
 | **BC-6: Provisioning** | `AppUpdateDecisionModel` | `AppBuildFreshnessDecisionTable` | `FIRST` | 実行中ビルドと GitHub Actions 最新アーティファクト (`app-debug`) の新旧判定 |
 | **BC-6: Provisioning** | `AppUpdateDecisionModel` | `AppUpdateUiDecisionTable` | `FIRST` | Debug 限定 GitHub ビルド更新カードの Fail-Safe 状態・CTA・進捗表示決定 |
+| **BC-6: Provisioning** | `AppUpdateDecisionModel` | `ApkInstallCompatibilityDecisionTable` | `FIRST` | ダウンロード済みAPKのインストール前整合性（読込可否・パッケージID・ダウングレード・署名証明書SHA-256一致）判定 |
 | **BC-3: Speech Recognition** | `VoiceCorrectionDecisionModel` | `VoiceCorrectionEligibilityDecisionTable` | `FIRST` | 音声確定後編集の修正検知妥当性・意味的書き換え除外判定 |
 | **BC-3: Speech Recognition** | `VoiceCorrectionDecisionModel` | `VoiceCorrectionBoostPolicyDecisionTable` | `FIRST` | 学習済み音声修正の3段階昇格・SLM文脈整合性ゲート・自己修復抑制決定 |
 | **BC-3: Speech Recognition** | `EnglishUserDictDecisionModel` | `EnglishVoiceUserDictResolutionPolicy` | `FIRST` | 英語音声入力におけるユーザー辞書優先適用（完全正規化・音韻類似・一般英単語保護・SLM文脈整合性ゲート・1タップ提案チップ）裁定 |

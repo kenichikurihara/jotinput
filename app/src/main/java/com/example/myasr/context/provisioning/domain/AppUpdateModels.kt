@@ -106,3 +106,12 @@ enum class AppUpdateBadgeTone {
     WARNING,
     NEUTRAL
 }
+
+enum class ApkInstallCompatibilityStatus {
+    COMPATIBLE,
+    UNREADABLE_ARCHIVE,
+    PACKAGE_NAME_MISMATCH,
+    VERSION_DOWNGRADE,
+    SIGNATURE_MISMATCH,
+    SIGNATURE_UNVERIFIABLE
+}

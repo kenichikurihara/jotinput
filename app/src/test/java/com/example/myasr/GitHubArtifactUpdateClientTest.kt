@@ -1,9 +1,11 @@
 package com.example.myasr
 
 import android.app.Application
+import com.example.myasr.context.provisioning.domain.ApkInstallCompatibilityStatus
 import com.example.myasr.context.provisioning.domain.AppUpdateCheckErrorKind
 import com.example.myasr.context.provisioning.domain.AppUpdateCheckResult
 import com.example.myasr.context.provisioning.domain.BuildFreshnessStatus
+import com.example.myasr.context.provisioning.infrastructure.AppUpdateInstaller
 import com.example.myasr.context.provisioning.infrastructure.AppUpdateRepository
 import com.example.myasr.context.provisioning.infrastructure.GitHubArtifactUpdateClient
 import com.example.myasr.context.provisioning.infrastructure.GitHubTokenStore
@@ -356,5 +358,90 @@ class GitHubArtifactUpdateClientTest {
 
         val dlResult = repo.downloadLatestArtifact { _, _ -> }
         assertTrue(dlResult.isFailure)
+    }
+
+    @Test
+    fun `AppUpdateInstaller formats sha256 fingerprints and flags unreadable or missing APKs`() {
+        assertEquals(
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            AppUpdateInstaller.sha256Hex(ByteArray(0))
+        )
+        assertEquals(
+            "542F:5168:5D68:34C0",
+            AppUpdateInstaller.formatShortFingerprint(
+                "54:2f:51:68:5d:68:34:c0:e6:0f:19:75:fd:71:06:4e"
+            )
+        )
+        assertEquals("unknown", AppUpdateInstaller.formatShortFingerprint("   "))
+
+        val context = RuntimeEnvironment.getApplication()
+        val missingApk = File(tempFolder.root, "does-not-exist.apk")
+        val missingRes = AppUpdateInstaller.inspectApkCompatibility(context, missingApk)
+        assertEquals(ApkInstallCompatibilityStatus.UNREADABLE_ARCHIVE, missingRes.decision.status)
+        assertFalse(missingRes.decision.canProceedToInstaller)
+
+        val corruptApk = File(tempFolder.root, "corrupt.apk").apply {
+            writeText("not-a-valid-android-package")
+        }
+        val corruptRes = AppUpdateInstaller.inspectApkCompatibility(context, corruptApk)
+        assertEquals(ApkInstallCompatibilityStatus.UNREADABLE_ARCHIVE, corruptRes.decision.status)
+        assertFalse(corruptRes.decision.canProceedToInstaller)
+    }
+
+    @Test
+    fun `AppUpdateRepository clearStagedDownloadedApk deletes staged APK and metadata`() {
+        val context = RuntimeEnvironment.getApplication()
+        val repo = AppUpdateRepository(context)
+        val updatesDir = repo.getUpdatesDir()
+        val stagedApk = File(updatesDir, "jotinput-update-888.apk").apply {
+            outputStream().use { out ->
+                out.write(ByteArray(GitHubArtifactUpdateClient.MIN_VALID_APK_BYTES.toInt() + 1024))
+            }
+        }
+        assertTrue(stagedApk.exists())
+
+        val prefs = context.getSharedPreferences("app_update_metadata", android.content.Context.MODE_PRIVATE)
+        prefs.edit()
+            .putLong("dl_artifact_id", 888L)
+            .putString("dl_head_sha", "deadbeefdeadbeef")
+            .putLong("dl_run_id", 999999L)
+            .putLong("dl_created_at_ms", System.currentTimeMillis() + 60_000L)
+            .putString("dl_file_path", stagedApk.absolutePath)
+            .putLong("dl_size_bytes", stagedApk.length())
+            .apply()
+
+        assertNotNull(repo.getMatchingDownloadedApk(latestRemote = null))
+
+        repo.clearStagedDownloadedApk()
+
+        assertFalse("Staged APK file should be deleted", stagedApk.exists())
+        assertNull(repo.getMatchingDownloadedApk(latestRemote = null))
+    }
+
+    @Test
+    fun `CI and Gradle build enforce persistent debug keystore signing to prevent INSTALL_FAILED_UPDATE_INCOMPATIBLE`() {
+        var dir: File? = File(System.getProperty("user.dir") ?: ".").absoluteFile
+        while (dir != null &&
+            !(File(dir, ".github/workflows/android-ci.yml").isFile && File(dir, "app/build.gradle.kts").isFile)
+        ) {
+            dir = dir.parentFile
+        }
+        val repoRoot = dir ?: error("Cannot resolve repository root from ${System.getProperty("user.dir")}")
+
+        val gradleKts = File(repoRoot, "app/build.gradle.kts").readText()
+        assertTrue(
+            "app/build.gradle.kts must support DEBUG_STORE_FILE persistent debug signing",
+            gradleKts.contains("DEBUG_STORE_FILE") && gradleKts.contains(".config/jotinput/debug.keystore")
+        )
+
+        val ciYml = File(repoRoot, ".github/workflows/android-ci.yml").readText()
+        assertTrue(
+            "android-ci.yml must decode DEBUG_KEYSTORE_BASE64 and set DEBUG_STORE_FILE",
+            ciYml.contains("DEBUG_KEYSTORE_BASE64") && ciYml.contains("DEBUG_STORE_FILE=")
+        )
+        assertTrue(
+            "android-ci.yml must verify app-debug.apk signature against persistent debug keystore via apksigner",
+            ciYml.contains("apksigner") && ciYml.contains("Signer #1 certificate SHA-256 digest:")
+        )
     }
 }

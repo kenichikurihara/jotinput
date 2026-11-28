@@ -1,9 +1,11 @@
 package com.example.myasr
 
+import com.example.myasr.context.provisioning.domain.ApkInstallCompatibilityStatus
 import com.example.myasr.context.provisioning.domain.AppUpdateBadgeTone
 import com.example.myasr.context.provisioning.domain.AppUpdateCardState
 import com.example.myasr.context.provisioning.domain.AppUpdateCheckErrorKind
 import com.example.myasr.context.provisioning.domain.AppUpdateDecisionModel
+import com.example.myasr.context.provisioning.domain.AppUpdateDecisionModel.ApkInstallCompatibilityInput
 import com.example.myasr.context.provisioning.domain.AppUpdateDecisionModel.AppUpdateUiInput
 import com.example.myasr.context.provisioning.domain.AppUpdateDecisionModel.BuildFreshnessInput
 import com.example.myasr.context.provisioning.domain.AppUpdatePrimaryAction
@@ -338,5 +340,142 @@ class AppUpdateDecisionModelTest {
         assertEquals("APP_UPD_DEFAULT", idle.selectedRuleId)
         assertEquals(AppUpdateCardState.IDLE, idle.result.cardState)
         assertEquals(AppUpdatePrimaryAction.CHECK_UPDATE, idle.result.primaryAction)
+    }
+
+    // ------------------------------------------------------------------------
+    // ApkInstallCompatibilityDecisionTable tests
+    // ------------------------------------------------------------------------
+
+    @Test
+    fun `apk compatibility covers all 7 rules from unreadable archive to compatible`() {
+        val certA = "542f51685d6834c0e60f1975fd71064e8341944778e7a5d4d9d21118ebfe6e7b"
+        val certB = "c83e6c9c772498c2b5ca4e7dce1bf2d7da7e3444028d6ff18856abee36afc217"
+        val pkg = "io.github.kenichikurihara.jotinput"
+
+        // APK_COMPAT_R1: unreadable or blank package name
+        val r1Unreadable = AppUpdateDecisionModel.evaluateApkInstallCompatibilityWithTrace(
+            ApkInstallCompatibilityInput(
+                apkReadable = false,
+                installedPackageName = pkg,
+                archivePackageName = pkg,
+                installedVersionCode = 1L,
+                archiveVersionCode = 1L,
+                installedSigningCertSha256s = setOf(certA),
+                archiveSigningCertSha256s = setOf(certA)
+            )
+        )
+        assertEquals("APK_COMPAT_R1", r1Unreadable.selectedRuleId)
+        assertEquals(ApkInstallCompatibilityStatus.UNREADABLE_ARCHIVE, r1Unreadable.result.status)
+        assertFalse(r1Unreadable.result.canProceedToInstaller)
+
+        val r1BlankPkg = AppUpdateDecisionModel.evaluateApkInstallCompatibilityWithTrace(
+            ApkInstallCompatibilityInput(
+                apkReadable = true,
+                installedPackageName = pkg,
+                archivePackageName = " ",
+                installedVersionCode = 1L,
+                archiveVersionCode = 1L,
+                installedSigningCertSha256s = setOf(certA),
+                archiveSigningCertSha256s = setOf(certA)
+            )
+        )
+        assertEquals("APK_COMPAT_R1", r1BlankPkg.selectedRuleId)
+        assertFalse(r1BlankPkg.result.canProceedToInstaller)
+
+        // APK_COMPAT_R2: package ID mismatch
+        val r2PkgMismatch = AppUpdateDecisionModel.evaluateApkInstallCompatibilityWithTrace(
+            ApkInstallCompatibilityInput(
+                apkReadable = true,
+                installedPackageName = pkg,
+                archivePackageName = "com.example.other",
+                installedVersionCode = 1L,
+                archiveVersionCode = 2L,
+                installedSigningCertSha256s = setOf(certA),
+                archiveSigningCertSha256s = setOf(certA)
+            )
+        )
+        assertEquals("APK_COMPAT_R2", r2PkgMismatch.selectedRuleId)
+        assertEquals(ApkInstallCompatibilityStatus.PACKAGE_NAME_MISMATCH, r2PkgMismatch.result.status)
+        assertFalse(r2PkgMismatch.result.canProceedToInstaller)
+
+        // APK_COMPAT_R3: versionCode downgrade
+        val r3Downgrade = AppUpdateDecisionModel.evaluateApkInstallCompatibilityWithTrace(
+            ApkInstallCompatibilityInput(
+                apkReadable = true,
+                installedPackageName = pkg,
+                archivePackageName = pkg,
+                installedVersionCode = 5L,
+                archiveVersionCode = 4L,
+                installedSigningCertSha256s = setOf(certA),
+                archiveSigningCertSha256s = setOf(certA)
+            )
+        )
+        assertEquals("APK_COMPAT_R3", r3Downgrade.selectedRuleId)
+        assertEquals(ApkInstallCompatibilityStatus.VERSION_DOWNGRADE, r3Downgrade.result.status)
+        assertFalse(r3Downgrade.result.canProceedToInstaller)
+
+        // APK_COMPAT_R4: archive missing signing certificates while installed is signed
+        val r4MissingArchiveSig = AppUpdateDecisionModel.evaluateApkInstallCompatibilityWithTrace(
+            ApkInstallCompatibilityInput(
+                apkReadable = true,
+                installedPackageName = pkg,
+                archivePackageName = pkg,
+                installedVersionCode = 1L,
+                archiveVersionCode = 1L,
+                installedSigningCertSha256s = setOf(certA),
+                archiveSigningCertSha256s = emptySet()
+            )
+        )
+        assertEquals("APK_COMPAT_R4", r4MissingArchiveSig.selectedRuleId)
+        assertEquals(ApkInstallCompatibilityStatus.UNREADABLE_ARCHIVE, r4MissingArchiveSig.result.status)
+        assertFalse(r4MissingArchiveSig.result.canProceedToInstaller)
+
+        // APK_COMPAT_R5: signing certificate mismatch (ephemeral CI key vs local key)
+        val r5SigMismatch = AppUpdateDecisionModel.evaluateApkInstallCompatibilityWithTrace(
+            ApkInstallCompatibilityInput(
+                apkReadable = true,
+                installedPackageName = pkg,
+                archivePackageName = pkg,
+                installedVersionCode = 1L,
+                archiveVersionCode = 1L,
+                installedSigningCertSha256s = setOf(certA),
+                archiveSigningCertSha256s = setOf(certB)
+            )
+        )
+        assertEquals("APK_COMPAT_R5", r5SigMismatch.selectedRuleId)
+        assertEquals(ApkInstallCompatibilityStatus.SIGNATURE_MISMATCH, r5SigMismatch.result.status)
+        assertFalse(r5SigMismatch.result.canProceedToInstaller)
+
+        // APK_COMPAT_R6: installed signature unavailable -> allow system installer fallback
+        val r6InstalledSigUnavailable = AppUpdateDecisionModel.evaluateApkInstallCompatibilityWithTrace(
+            ApkInstallCompatibilityInput(
+                apkReadable = true,
+                installedPackageName = pkg,
+                archivePackageName = pkg,
+                installedVersionCode = 1L,
+                archiveVersionCode = 1L,
+                installedSigningCertSha256s = emptySet(),
+                archiveSigningCertSha256s = setOf(certA)
+            )
+        )
+        assertEquals("APK_COMPAT_R6", r6InstalledSigUnavailable.selectedRuleId)
+        assertEquals(ApkInstallCompatibilityStatus.SIGNATURE_UNVERIFIABLE, r6InstalledSigUnavailable.result.status)
+        assertTrue(r6InstalledSigUnavailable.result.canProceedToInstaller)
+
+        // APK_COMPAT_DEFAULT: compatible APK with matching certificate
+        val defaultCompat = AppUpdateDecisionModel.evaluateApkInstallCompatibilityWithTrace(
+            ApkInstallCompatibilityInput(
+                apkReadable = true,
+                installedPackageName = pkg,
+                archivePackageName = pkg,
+                installedVersionCode = 1L,
+                archiveVersionCode = 1L,
+                installedSigningCertSha256s = setOf(certA),
+                archiveSigningCertSha256s = setOf(certA)
+            )
+        )
+        assertEquals("APK_COMPAT_DEFAULT", defaultCompat.selectedRuleId)
+        assertEquals(ApkInstallCompatibilityStatus.COMPATIBLE, defaultCompat.result.status)
+        assertTrue(defaultCompat.result.canProceedToInstaller)
     }
 }

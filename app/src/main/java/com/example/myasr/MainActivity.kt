@@ -21,6 +21,7 @@ import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel.Setti
 import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel.SyncBadgeTone
 import com.example.myasr.context.kanakanji.domain.HistorySyncDecisionModel.SyncCardState
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.provisioning.domain.ApkInstallCompatibilityStatus
 import com.example.myasr.context.provisioning.domain.AppUpdateBadgeTone
 import com.example.myasr.context.provisioning.domain.AppUpdateCardState
 import com.example.myasr.context.provisioning.domain.AppUpdateCheckErrorKind
@@ -31,6 +32,7 @@ import com.example.myasr.context.provisioning.domain.DictUpdateState
 import com.example.myasr.context.provisioning.domain.DictionaryStatusInfo
 import com.example.myasr.context.provisioning.domain.DictionaryUpdateTracker
 import com.example.myasr.context.provisioning.infrastructure.AppUpdateInstaller
+import com.example.myasr.context.provisioning.infrastructure.AppUpdateRepository
 import com.example.myasr.context.provisioning.infrastructure.DictionaryType
 import com.example.myasr.context.provisioning.infrastructure.EnglishAsrModelDownloader
 import com.example.myasr.context.provisioning.infrastructure.EnglishSpellDownloader
@@ -2209,6 +2211,18 @@ class MainActivity : AppCompatActivity() {
             return
         }
         val apkFile = File(downloaded.filePath)
+        val inspection = AppUpdateInstaller.inspectApkCompatibility(this, apkFile)
+        if (!inspection.decision.canProceedToInstaller) {
+            Log.w(
+                "MainActivity",
+                "APK compatibility check blocked install: status=${inspection.decision.status}, " +
+                    "reason=${inspection.decision.reason}, " +
+                    "installedCert=${inspection.primaryInstalledCertShort()}, " +
+                    "archiveCert=${inspection.primaryArchiveCertShort()}"
+            )
+            showIncompatibleApkDialog(inspection, repo)
+            return
+        }
         if (!AppUpdateInstaller.canRequestPackageInstalls(this)) {
             com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
                 .setTitle("アプリのインストール許可が必要です")
@@ -2233,6 +2247,48 @@ class MainActivity : AppCompatActivity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    private fun showIncompatibleApkDialog(
+        inspection: AppUpdateInstaller.ApkInstallInspectionResult,
+        repo: AppUpdateRepository
+    ) {
+        val (title, message) = when (inspection.decision.status) {
+            ApkInstallCompatibilityStatus.SIGNATURE_MISMATCH -> {
+                val installedCert = inspection.primaryInstalledCertShort() ?: "不明"
+                val archiveCert = inspection.primaryArchiveCertShort() ?: "不明"
+                "署名鍵が一致しないため上書き更新できません" to
+                    "実行中の JotInput とダウンロード済み APK の署名鍵が異なるため、Android の仕様上そのまま更新インストールできません（「アプリがインストールされていません」の原因になります）。\n\n" +
+                    "• 実行中の署名: $installedCert\n" +
+                    "• 取得 APK の署名: $archiveCert\n\n" +
+                    "旧 CI ビルドや Release 版から移行する場合は、現在の JotInput を一度アンインストールして再導入（または ./deploy.sh で再導入）すると、以降の更新は上書き可能になります。"
+            }
+            ApkInstallCompatibilityStatus.VERSION_DOWNGRADE -> {
+                "バージョン番号が古いため更新できません" to
+                    "ダウンロード済み APK (versionCode=${inspection.archiveVersionCode ?: "?"}) は実行中のバージョン (versionCode=${inspection.installedVersionCode}) より古いため、Android が上書きを許可しません。"
+            }
+            ApkInstallCompatibilityStatus.PACKAGE_NAME_MISMATCH -> {
+                "パッケージ ID が一致しません" to
+                    "取得 APK (${inspection.archivePackageName ?: "不明"}) は実行中のアプリ (${inspection.installedPackageName}) と別のパッケージ ID です。"
+            }
+            ApkInstallCompatibilityStatus.UNREADABLE_ARCHIVE,
+            ApkInstallCompatibilityStatus.COMPATIBLE,
+            ApkInstallCompatibilityStatus.SIGNATURE_UNVERIFIABLE -> {
+                "APK ファイルの検証に失敗しました" to
+                    "ダウンロード済み APK を読み取れないか署名情報を確認できませんでした（${inspection.decision.reason}）。キャッシュを削除して再ダウンロードしてください。"
+            }
+        }
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("キャッシュAPKを削除") { _, _ ->
+                repo.clearStagedDownloadedApk()
+                refreshAppUpdateCard()
+                Toast.makeText(this, "キャッシュ済み更新 APK を削除しました", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("閉じる", null)
+            .show()
     }
 
     private fun handleAppUpdateInstallIntent(intent: Intent?) {

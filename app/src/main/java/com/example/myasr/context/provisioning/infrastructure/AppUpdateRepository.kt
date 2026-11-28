@@ -301,6 +301,15 @@ class AppUpdateRepository(
         }
     }
 
+    fun clearStagedDownloadedApk() {
+        val stagedPath = prefs.getString(KEY_DL_FILE_PATH, null)
+        if (!stagedPath.isNullOrBlank()) {
+            runCatching { File(stagedPath).delete() }
+        }
+        runCatching { cleanupArtifacts(getUpdatesDir(), keepApkName = null) }
+        clearDownloadedApkMetadata()
+    }
+
     fun clearCachedRemoteState() {
         prefs.edit()
             .remove(KEY_REMOTE_ID)

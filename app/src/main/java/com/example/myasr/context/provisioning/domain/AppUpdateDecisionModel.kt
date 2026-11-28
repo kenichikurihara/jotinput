@@ -423,4 +423,135 @@ object AppUpdateDecisionModel {
 
     fun evaluateUiWithTrace(input: AppUpdateUiInput): DecisionTrace<AppUpdateUiDecision> =
         appUpdateUiDecisionTable.evaluateWithTrace(input)
+
+    // ------------------------------------------------------------------------
+
+    data class ApkInstallCompatibilityInput(
+        val apkReadable: Boolean,
+        val installedPackageName: String,
+        val archivePackageName: String?,
+        val installedVersionCode: Long,
+        val archiveVersionCode: Long?,
+        val installedSigningCertSha256s: Set<String>,
+        val archiveSigningCertSha256s: Set<String>
+    )
+
+    data class ApkInstallCompatibilityDecision(
+        val status: ApkInstallCompatibilityStatus,
+        val canProceedToInstaller: Boolean,
+        val reason: String
+    )
+
+    val apkInstallCompatibilityDecisionTable: DecisionTable<ApkInstallCompatibilityInput, ApkInstallCompatibilityDecision> =
+        decisionTable(
+            name = "ApkInstallCompatibilityDecisionTable",
+            hitPolicy = HitPolicy.FIRST
+        ) {
+            rule(
+                id = "APK_COMPAT_R1",
+                description = "Archive file cannot be parsed or lacks a package name"
+            ) {
+                `when` { !it.apkReadable || it.archivePackageName.isNullOrBlank() }
+                thenValue(
+                    ApkInstallCompatibilityDecision(
+                        status = ApkInstallCompatibilityStatus.UNREADABLE_ARCHIVE,
+                        canProceedToInstaller = false,
+                        reason = "unreadable_apk_archive"
+                    )
+                )
+            }
+            rule(
+                id = "APK_COMPAT_R2",
+                description = "Downloaded APK applicationId differs from the installed package"
+            ) {
+                `when` { it.archivePackageName != it.installedPackageName }
+                thenValue(
+                    ApkInstallCompatibilityDecision(
+                        status = ApkInstallCompatibilityStatus.PACKAGE_NAME_MISMATCH,
+                        canProceedToInstaller = false,
+                        reason = "package_name_mismatch"
+                    )
+                )
+            }
+            rule(
+                id = "APK_COMPAT_R3",
+                description = "Downloaded APK versionCode is strictly lower than the installed versionCode"
+            ) {
+                `when` {
+                    it.archiveVersionCode != null &&
+                        it.archiveVersionCode > 0L &&
+                        it.installedVersionCode > 0L &&
+                        it.archiveVersionCode < it.installedVersionCode
+                }
+                thenValue(
+                    ApkInstallCompatibilityDecision(
+                        status = ApkInstallCompatibilityStatus.VERSION_DOWNGRADE,
+                        canProceedToInstaller = false,
+                        reason = "version_code_downgrade"
+                    )
+                )
+            }
+            rule(
+                id = "APK_COMPAT_R4",
+                description = "Archive lacks readable signing certificates while installed package is signed"
+            ) {
+                `when` {
+                    it.installedSigningCertSha256s.isNotEmpty() && it.archiveSigningCertSha256s.isEmpty()
+                }
+                thenValue(
+                    ApkInstallCompatibilityDecision(
+                        status = ApkInstallCompatibilityStatus.UNREADABLE_ARCHIVE,
+                        canProceedToInstaller = false,
+                        reason = "archive_missing_signing_certificates"
+                    )
+                )
+            }
+            rule(
+                id = "APK_COMPAT_R5",
+                description = "Signing certificate SHA-256 sets do not share any matching certificate"
+            ) {
+                `when` {
+                    it.installedSigningCertSha256s.isNotEmpty() &&
+                        it.archiveSigningCertSha256s.isNotEmpty() &&
+                        it.installedSigningCertSha256s.intersect(it.archiveSigningCertSha256s).isEmpty()
+                }
+                thenValue(
+                    ApkInstallCompatibilityDecision(
+                        status = ApkInstallCompatibilityStatus.SIGNATURE_MISMATCH,
+                        canProceedToInstaller = false,
+                        reason = "signing_certificate_mismatch"
+                    )
+                )
+            }
+            rule(
+                id = "APK_COMPAT_R6",
+                description = "Installed package signatures unavailable; defer final verification to system installer"
+            ) {
+                `when` { it.installedSigningCertSha256s.isEmpty() }
+                thenValue(
+                    ApkInstallCompatibilityDecision(
+                        status = ApkInstallCompatibilityStatus.SIGNATURE_UNVERIFIABLE,
+                        canProceedToInstaller = true,
+                        reason = "installed_signature_unavailable"
+                    )
+                )
+            }
+            defaultValue(
+                id = "APK_COMPAT_DEFAULT",
+                description = "Package ID, version code, and signing certificate match for in-place update",
+                value = ApkInstallCompatibilityDecision(
+                    status = ApkInstallCompatibilityStatus.COMPATIBLE,
+                    canProceedToInstaller = true,
+                    reason = "compatible_apk"
+                )
+            )
+        }
+
+    fun evaluateApkInstallCompatibility(input: ApkInstallCompatibilityInput): ApkInstallCompatibilityDecision =
+        apkInstallCompatibilityDecisionTable.evaluate(input)
+
+    fun evaluateApkInstallCompatibilityWithTrace(
+        input: ApkInstallCompatibilityInput
+    ): DecisionTrace<ApkInstallCompatibilityDecision> =
+        apkInstallCompatibilityDecisionTable.evaluateWithTrace(input)
 }

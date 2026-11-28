@@ -116,8 +116,38 @@ android {
         releaseKeyAlias != null &&
         releaseKeyPassword != null
 
-    if (hasReleaseSigning) {
-        signingConfigs {
+    val debugStoreFile = run {
+        val envStoreFile = providers.environmentVariable("DEBUG_STORE_FILE").orNull?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { path -> File(path).let { if (it.isAbsolute) it else rootProject.file(path) } }
+            ?.takeIf { it.isFile }
+        if (envStoreFile != null) {
+            envStoreFile
+        } else {
+            val userHome = System.getProperty("user.home")
+            listOf(
+                File(userHome, ".config/jotinput/debug.keystore"),
+                File(userHome, ".config/.android/debug.keystore")
+            ).firstOrNull { it.isFile }
+        }
+    }
+    val debugStorePassword = providers.environmentVariable("DEBUG_STORE_PASSWORD").orNull
+        ?.takeIf { it.isNotEmpty() } ?: "android"
+    val debugKeyAlias = providers.environmentVariable("DEBUG_KEY_ALIAS").orNull?.trim()
+        ?.takeIf { it.isNotEmpty() } ?: "androiddebugkey"
+    val debugKeyPassword = providers.environmentVariable("DEBUG_KEY_PASSWORD").orNull
+        ?.takeIf { it.isNotEmpty() } ?: "android"
+
+    signingConfigs {
+        if (debugStoreFile != null) {
+            getByName("debug") {
+                storeFile = debugStoreFile
+                storePassword = debugStorePassword
+                keyAlias = debugKeyAlias
+                keyPassword = debugKeyPassword
+            }
+        }
+        if (hasReleaseSigning) {
             create("release") {
                 storeFile = releaseStoreFile
                 storePassword = releaseStorePassword

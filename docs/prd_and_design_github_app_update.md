@@ -39,17 +39,18 @@ JotInput では GitHub Actions CI/CD ([`.github/workflows/android-ci.yml`](.gith
 5. ユーザーがダウンロードをタップすると、`ProvisioningForegroundService` に `ProvisioningTaskKind.APP_UPDATE_APK` がエンキューされる。
 6. タブ横断のグローバル進捗バナー・カード内プログレスバー・システム通知に進捗（0〜90%: ZIP 取得、90〜99%: APK 自動展開）が表示される。ユーザーは設定タブ・データタブ・別アプリへ自由に移動できる。
 7. ダウンロードと Zip-Slip 安全な APK 展開が完了すると、`完了通知`（「インストール」アクションおよびタップで即インストール起動）が発行され、ホームカードのボタンが **「インストール」** に変わる。
-8. ユーザーが「インストール」をタップすると、`AppUpdateInstaller` が `REQUEST_INSTALL_PACKAGES` 権限を確認し、未許可ならシステムの「不明なアプリのインストール」設定へ誘導して復帰後に自動再開、許可済みなら `FileProvider` 経由で Android パッケージインストーラを起動する。
+8. ユーザーが「インストール」をタップすると、`AppUpdateInstaller` が `ApkInstallCompatibilityDecisionTable` により展開済み APK の事前整合性検証（読込可否・パッケージ ID 一致・ダウングレード有無・インストール済みアプリとの署名証明書 SHA-256 一致）を実行する。不整合（例：署名鍵が異なるビルド間の更新）時はインストーラ起動前に理由・証明書フィンガープリントと「キャッシュAPKを削除」導線をダイアログ表示し、整合かつ `REQUEST_INSTALL_PACKAGES` 許可済みなら `FileProvider` 経由で Android パッケージインストーラを起動する（未許可なら設定画面へ誘導して復帰後に自動再開）。
 9. インストール後の新ビルドでアプリを開くと、`AppUpdateRepository` が古い/導入済みキャッシュ APK を自動クリーンアップし、最新状態を保つ。
 
 #### CUJ-U3: すでに最新ビルドを実行中
 1. ローカル `./deploy.sh` ビルドや最新 CI ビルドと同一 Run ID / 同一 SHA / 新しいコミット時刻のビルドを実行している状態で「更新を確認」をタップする。
 2. `AppBuildFreshnessDecisionTable` が `UP_TO_DATE` を返し、カードは緑バッジ `最新` となり「再確認」のみを表示する（不要なダウンロード・インストールボタンは表示しない）。
 
-#### CUJ-U4: オフライン / 認証エラー (401 / 403) / アーティファクト期限切れ・不在の Fail-Safe
+#### CUJ-U4: オフライン / 認証エラー (401 / 403) / アーティファクト期限切れ・署名不一致時の Fail-Safe
 1. ネットワークエラーやタイムアウト時は `NETWORK_ERROR` 状態へ遷移し、クラッシュせず再試行用「更新を確認」ボタンを表示する。
 2. HTTP 401 / 403（トークン失効・権限不足）時は `AUTH_ERROR` 状態へ遷移し、トークン再設定 CTA と再確認ボタンを表示する。
 3. 有効な `app-debug` アーティファクトが存在しない（全て `expired=true` 等）場合は `NO_ARTIFACT` 状態となり、安全に待機・再確認可能にする。
+4. 異なる署名鍵のビルド（旧 CI 一時鍵ビルドや Release ビルド等）から更新しようとした場合、Android システムの「アプリがインストールされていません」のみで終わらせず、`ApkInstallCompatibilityDecisionTable` が `SIGNATURE_MISMATCH` を事前検知して原因（署名鍵の不一致・証明書フィンガープリント比較）、1回限りの再インストール案内、および「キャッシュAPKを削除」ボタンを提示する。
 
 #### CUJ-U5: バックグラウンド中のタブ切替・タスク単位キャンセル
 1. ダウンロード中に他タブ（設定/データ）へ移動しても、`ProvisioningForegroundService` とグローバル進捗バナー（タップでホームタブへ遷移）により進捗が維持される。
@@ -70,10 +71,14 @@ JotInput では GitHub Actions CI/CD ([`.github/workflows/android-ci.yml`](.gith
   - [`GitHubTokenStore.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/GitHubTokenStore.kt) — Android Keystore (`AES/GCM/NoPadding`) + `noBackupFilesDir` 保存（Keystore 利用不可環境での Fail-Safe あり）
   - [`GitHubArtifactUpdateClient.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/GitHubArtifactUpdateClient.kt) — API クライアント・リダイレクト時トークン剥離・Zip-Slip 防御解凍
   - [`AppUpdateRepository.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/AppUpdateRepository.kt) — メタデータキャッシュ・APK 鮮度照合・クリーンアップ
-  - [`AppUpdateInstaller.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/AppUpdateInstaller.kt) — `FileProvider` + インストール許可判定
+  - [`AppUpdateInstaller.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/AppUpdateInstaller.kt) — `FileProvider` + インストール許可判定 + 署名証明書 SHA-256 / パッケージ整合性検査
   - [`ProvisioningForegroundService.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/ProvisioningForegroundService.kt) — `ProvisioningTaskKind.APP_UPDATE_APK` と `cancelKind(...)`
 
-### 2.2 リダイレクト時の Authorization 漏洩防止と Zip-Slip 防御
+### 2.2 永続 Debug 署名鍵と CI 署名一貫性（`INSTALL_FAILED_UPDATE_INCOMPATIBLE` 防止）
+- GitHub Actions ランナーはエフェメラル環境のため、署名鍵を固定しない場合ビルドごとにランダムな `debug.keystore` が自動生成され、ローカル `./deploy.sh` ビルドや過去の CI ビルドへの上書き更新がすべて「アプリがインストールされていません」で失敗する。
+- そのため公開リポジトリには keystore バイナリを含めず、メンテナンス環境では `~/.config/jotinput/debug.keystore`（フォールバック `~/.config/.android/debug.keystore`）を、CI (`main` push) では Repository Secret `DEBUG_KEYSTORE_BASE64`（`DEBUG_STORE_FILE` 経由）を参照し、`apksigner` で期待される SHA-256 証明書ダイジェスト一致を検証する（外部コントリビューターの環境では AGP 標準の debug keystore に安全フォールバックする）。
+
+### 2.3 リダイレクト時の Authorization 漏洩防止と Zip-Slip 防御
 - GitHub Actions の `/repos/{owner}/{repo}/actions/artifacts/{id}/zip` は HTTP 302 で Azure Blob Storage SAS URL へリダイレクトする。
 - `GitHubArtifactUpdateClient` は `instanceFollowRedirects = false` で手動追従し、`Authorization: Bearer <token>` は **`https://api.github.com` 宛てリクエストにのみ付与** し、別ホストへのリダイレクト時はヘッダを確実に剥離する（HTTP へのダウングレードも拒否）。
 - ZIP 解凍時はエントリ名をパス構築に一切使用せず固定の `destApkFile.tmp` へストリーミング展開し、`PK\x03\x04` マジックバイトとサイズ上下限を検証した上で原子的にリネームする。
@@ -82,7 +87,7 @@ JotInput では GitHub Actions CI/CD ([`.github/workflows/android-ci.yml`](.gith
 
 ## Part 3: DMN 決定表設計 (Decision Model and Notation)
 
-[`AppUpdateDecisionModel`](app/src/main/java/com/example/myasr/context/provisioning/domain/AppUpdateDecisionModel.kt) に 2 つの `HitPolicy.FIRST` 決定表を定義する：
+[`AppUpdateDecisionModel`](app/src/main/java/com/example/myasr/context/provisioning/domain/AppUpdateDecisionModel.kt) に 3 つの `HitPolicy.FIRST` 決定表を定義する：
 
 1. **`AppBuildFreshnessDecisionTable` (`HitPolicy.FIRST`)**:
    - 入力: `InstalledAppBuildInfo` + `RemoteBuildArtifact?`
@@ -95,6 +100,9 @@ JotInput では GitHub Actions CI/CD ([`.github/workflows/android-ci.yml`](.gith
 2. **`AppUpdateUiDecisionTable` (`HitPolicy.FIRST`)**:
    - 入力: `isDebugBuild`, `hasGitHubToken`, `isChecking`, `isDownloadActive`, `isDownloadQueued`, `freshnessStatus`, `hasMatchingDownloadedApk`, `lastErrorKind`
    - 出力: `AppUpdateCardState`, `AppUpdatePrimaryAction`, `AppUpdateBadgeTone`, `isCardVisible`, `primaryButtonEnabled`, `showProgressBar`, `showSecondaryCheckButton`
+3. **`ApkInstallCompatibilityDecisionTable` (`HitPolicy.FIRST`)**:
+   - 入力: `apkReadable`, `installedPackageName`, `archivePackageName`, `installedVersionCode`, `archiveVersionCode`, `installedSigningCertSha256s`, `archiveSigningCertSha256s`
+   - 出力: `ApkInstallCompatibilityStatus` (`COMPATIBLE`, `UNREADABLE_ARCHIVE`, `PACKAGE_NAME_MISMATCH`, `VERSION_DOWNGRADE`, `SIGNATURE_MISMATCH`, `SIGNATURE_UNVERIFIABLE`), `canProceedToInstaller`, `reason`
 
 ---
 
