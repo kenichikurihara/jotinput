@@ -14,6 +14,7 @@ import com.example.myasr.context.provisioning.domain.InstalledAppBuildInfo
 import com.example.myasr.context.provisioning.domain.RemoteBuildArtifact
 import java.io.File
 import java.util.Locale
+import java.util.Properties
 
 /**
  * Coordinates tokenless multi-channel (Stable Release / Remote HEAD) update checks,
@@ -25,9 +26,16 @@ class AppUpdateRepository(
     private val client: GitHubAppUpdateClient = GitHubAppUpdateClient(),
     private val isDebugBuild: Boolean = BuildConfig.DEBUG
 ) {
+    private data class BuildMetadata(
+        val gitSha: String,
+        val commitEpochMs: Long,
+        val githubRunId: Long
+    )
+
     companion object {
         private const val TAG = "AppUpdateRepository"
         private const val PREFS_NAME = "app_update_metadata"
+        private const val BUILD_METADATA_ASSET = "build_metadata.properties"
         private const val LEGACY_PAT_FILE = "github_actions_pat.dat"
 
         private const val KEY_SELECTED_CHANNEL = "selected_update_channel"
@@ -65,6 +73,7 @@ class AppUpdateRepository(
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val buildMetadata: BuildMetadata by lazy { loadBuildMetadata() }
 
     init {
         cleanupLegacyTokenFiles()
@@ -73,11 +82,34 @@ class AppUpdateRepository(
     fun getInstalledBuildInfo(): InstalledAppBuildInfo = InstalledAppBuildInfo(
         versionName = BuildConfig.VERSION_NAME,
         versionCode = BuildConfig.VERSION_CODE,
-        gitSha = BuildConfig.BUILD_GIT_SHA,
-        commitEpochMs = BuildConfig.BUILD_GIT_COMMIT_EPOCH_MS,
-        githubRunId = BuildConfig.BUILD_GITHUB_RUN_ID,
+        gitSha = buildMetadata.gitSha,
+        commitEpochMs = buildMetadata.commitEpochMs,
+        githubRunId = buildMetadata.githubRunId,
         isDebugBuild = isDebugBuild
     )
+
+    private fun loadBuildMetadata(): BuildMetadata {
+        return runCatching {
+            val props = Properties()
+            context.assets.open(BUILD_METADATA_ASSET).use { stream ->
+                props.load(stream)
+            }
+            val gitSha = props.getProperty("gitSha")
+                ?.trim()
+                ?.replace(Regex("[^0-9a-fA-F]"), "")
+                ?.ifEmpty { null }
+                ?: "unknown"
+            val commitEpochMs = props.getProperty("commitEpochMs")?.trim()?.toLongOrNull() ?: 0L
+            val githubRunId = props.getProperty("githubRunId")?.trim()?.toLongOrNull() ?: 0L
+            BuildMetadata(
+                gitSha = gitSha,
+                commitEpochMs = commitEpochMs,
+                githubRunId = githubRunId
+            )
+        }.getOrElse {
+            BuildMetadata(gitSha = "unknown", commitEpochMs = 0L, githubRunId = 0L)
+        }
+    }
 
     fun getDefaultChannel(): AppUpdateChannel =
         if (isDebugBuild) AppUpdateChannel.REMOTE_HEAD else AppUpdateChannel.RELEASE

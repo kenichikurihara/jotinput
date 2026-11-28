@@ -1,9 +1,65 @@
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Properties
+import javax.inject.Inject
+import org.gradle.api.DefaultTask
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.provider.Property
+import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+abstract class GenerateBuildMetadataTask : DefaultTask() {
+    @get:Input
+    abstract val repoRootPath: Property<String>
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @get:Inject
+    abstract val execOps: ExecOperations
+
+    @TaskAction
+    fun generate() {
+        val repoDir = File(repoRootPath.get())
+        val envSha = System.getenv("GITHUB_SHA")?.trim()?.takeIf { it.isNotEmpty() }
+        val rawSha = envSha ?: runGit(repoDir, "rev-parse", "HEAD")
+        val gitSha = rawSha.replace(Regex("[^0-9a-fA-F]"), "").ifEmpty { "unknown" }
+
+        val rawEpoch = runGit(repoDir, "show", "-s", "--format=%ct", "HEAD")
+        val commitEpochMs = (rawEpoch.toLongOrNull() ?: 0L) * 1000L
+
+        val githubRunId = System.getenv("GITHUB_RUN_ID")?.trim()?.toLongOrNull() ?: 0L
+
+        val content = buildString {
+            append("gitSha=").append(gitSha).append('\n')
+            append("commitEpochMs=").append(commitEpochMs).append('\n')
+            append("githubRunId=").append(githubRunId).append('\n')
+        }
+
+        val outFile = outputDir.get().file("build_metadata.properties").asFile
+        outFile.parentFile?.mkdirs()
+        if (!outFile.isFile || outFile.readText(Charsets.UTF_8) != content) {
+            outFile.writeText(content, Charsets.UTF_8)
+        }
+    }
+
+    private fun runGit(workDir: File, vararg args: String): String {
+        val stdout = ByteArrayOutputStream()
+        execOps.exec {
+            workingDir = workDir
+            commandLine("git", *args)
+            standardOutput = stdout
+            isIgnoreExitValue = true
+        }
+        return stdout.toString(Charsets.UTF_8.name()).trim()
+    }
 }
 
 android {
@@ -15,30 +71,6 @@ android {
         buildConfig = true
     }
 
-    val gitShaProvider = providers.environmentVariable("GITHUB_SHA")
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
-        .orElse(
-            providers.exec {
-                commandLine("git", "rev-parse", "HEAD")
-                isIgnoreExitValue = true
-            }.standardOutput.asText.map { it.trim() }
-        )
-        .map { raw ->
-            raw.replace(Regex("[^0-9a-fA-F]"), "").ifEmpty { "unknown" }
-        }
-
-    val gitCommitEpochMsProvider = providers.exec {
-        commandLine("git", "show", "-s", "--format=%ct", "HEAD")
-        isIgnoreExitValue = true
-    }.standardOutput.asText.map { out ->
-        (out.trim().toLongOrNull() ?: 0L) * 1000L
-    }
-
-    val githubRunIdProvider = providers.environmentVariable("GITHUB_RUN_ID")
-        .map { it.trim().toLongOrNull() ?: 0L }
-        .orElse(0L)
-
     defaultConfig {
         applicationId = "io.github.kenichikurihara.jotinput"
         minSdk = 26
@@ -48,9 +80,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         resourceConfigurations += listOf("en", "ja")
 
-        buildConfigField("String", "BUILD_GIT_SHA", "\"${gitShaProvider.get()}\"")
-        buildConfigField("long", "BUILD_GIT_COMMIT_EPOCH_MS", "${gitCommitEpochMsProvider.get()}L")
-        buildConfigField("long", "BUILD_GITHUB_RUN_ID", "${githubRunIdProvider.get()}L")
         buildConfigField("String", "GITHUB_REPO_OWNER", "\"kenichikurihara\"")
         buildConfigField("String", "GITHUB_REPO_NAME", "\"jotinput\"")
         buildConfigField("String", "GITHUB_HEAD_RELEASE_TAG", "\"main-head\"")
@@ -65,7 +94,10 @@ android {
             cmake {
                 cFlags += listOf("-O3")
                 cppFlags += listOf("-std=c++17", "-O3")
-                arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
+                arguments += listOf(
+                    "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+                    "-DCMAKE_BUILD_TYPE=RelWithDebInfo"
+                )
             }
         }
     }
@@ -206,6 +238,29 @@ android {
     }
 }
 
+androidComponents {
+    val rootDirPath = rootProject.layout.projectDirectory.asFile.absolutePath
+    onVariants { variant ->
+        val capName = variant.name.replaceFirstChar { it.uppercase() }
+        val taskProvider = tasks.register<GenerateBuildMetadataTask>(
+            "generate${capName}BuildMetadata"
+        ) {
+            repoRootPath.set(rootDirPath)
+            outputs.upToDateWhen { false }
+        }
+        variant.sources.assets?.addGeneratedSourceDirectory(
+            taskProvider,
+            GenerateBuildMetadataTask::outputDir
+        )
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 2)
+    forkEvery = 0
+    jvmArgs("-Xmx1024m")
+}
+
 dependencies {
     implementation(files("libs/sherpa-onnx-1.13.8.aar"))
 
@@ -223,6 +278,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
     testImplementation("org.json:json:20240303")
     testImplementation("com.lemonappdev:konsist:0.17.3")
     testImplementation("org.alloytools:org.alloytools.alloy.core:6.2.0")

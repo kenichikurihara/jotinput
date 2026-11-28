@@ -1,35 +1,95 @@
-#!/bin/bash
-# Pre-commit hook to guarantee CI passes before committing
-set -e
+#!/usr/bin/env bash
+# Smart pre-commit hook: fast hygiene checks always, Gradle only when build/code/contract docs change.
+set -euo pipefail
 
-echo "🔍 [Pre-commit Hook] Verifying unit tests before commit..."
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
 
-# 1. Ensure test lexicon assets are accessible
+GIT_DIR="$(git rev-parse --git-dir)"
+VERIFIED_TREE_FILE="${GIT_DIR}/.last-verified-tree"
+
+# 1. Ensure test lexicon assets are accessible via valid relative symlinks
 mkdir -p tools/mozc_dict
 if [ -f app/src/main/assets/mozc/connection_data.bin ] && [ ! -f tools/mozc_dict/connection_data.bin ]; then
-  ln -sf ../app/src/main/assets/mozc/connection_data.bin tools/mozc_dict/connection_data.bin
+  ln -sf ../../app/src/main/assets/mozc/connection_data.bin tools/mozc_dict/connection_data.bin
 fi
 if [ -f app/src/test/resources/mozc/system_dictionary.bin ] && [ ! -f tools/mozc_dict/system_dictionary.bin ]; then
-  ln -sf ../app/src/test/resources/mozc/system_dictionary.bin tools/mozc_dict/system_dictionary.bin
+  ln -sf ../../app/src/test/resources/mozc/system_dictionary.bin tools/mozc_dict/system_dictionary.bin
 fi
 
-# 2. Run unit tests
-echo "Running unit tests (testDebugUnitTest)..."
-if ! ./gradlew testDebugUnitTest --quiet; then
-  echo ""
-  echo "❌ [Pre-commit Hook Failed] Unit tests failed! Commit is blocked to ensure GitHub CI stays green."
-  echo "👉 Run './gradlew testDebugUnitTest' to inspect failure details."
-  exit 1
+STAGED_EXISTING=$(git diff --cached --name-only --diff-filter=ACMR || true)
+STAGED_ALL=$(git diff --cached --name-only --diff-filter=ACMRD || true)
+
+if [ -z "$STAGED_ALL" ]; then
+  exit 0
 fi
 
-# 3. Verify assembleDebug to guarantee native compilation and packaging pass
-echo "Running build check (assembleDebug)..."
-if ! ./gradlew assembleDebug --quiet; then
-  echo ""
-  echo "❌ [Pre-commit Hook Failed] assembleDebug failed! Commit is blocked to ensure GitHub CI stays green."
-  echo "👉 Run './gradlew assembleDebug' to inspect build failure details."
-  exit 1
-fi
+# 2. Fast hygiene checks on staged files (secrets, heavy APK assets, shell/YAML syntax)
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
+  case "$path" in
+    *.jks|*.keystore|keystore.properties|.env.local)
+      echo "❌ [Pre-commit Hook Blocked] Refusing to commit secret/keystore/local config file: $path"
+      exit 1
+      ;;
+    app/src/main/assets/*)
+      if [ "$path" != "app/src/main/assets/mozc/connection_data.bin" ]; then
+        echo "❌ [Pre-commit Hook Blocked] Prohibited file in app/src/main/assets/: $path"
+        echo "   Only app/src/main/assets/mozc/connection_data.bin may be bundled in APK assets."
+        exit 1
+      fi
+      ;;
+    *.sh|.githooks/*)
+      if [ -f "$path" ]; then
+        bash -n "$path"
+      fi
+      ;;
+    .github/workflows/*.yml|.github/workflows/*.yaml|.github/actions/*.yml|.github/actions/*/*.yml)
+      if [ -f "$path" ] && python3 -c "import yaml" >/dev/null 2>&1; then
+        python3 -c 'import yaml, sys; yaml.safe_load(open(sys.argv[1], encoding="utf-8"))' "$path"
+      fi
+      ;;
+  esac
+done <<< "$STAGED_EXISTING"
 
-echo "✅ [Pre-commit Hook] All unit tests and build checks passed! Proceeding with commit."
+# 3. Classify staged scope to avoid running full Gradle on pure docs/scripts commits
+NEEDS_FULL_GRADLE=false
+NEEDS_CONTRACT_TESTS=false
+
+while IFS= read -r path; do
+  [ -n "$path" ] || continue
+  case "$path" in
+    app/*|build.gradle.kts|settings.gradle.kts|gradle.properties|gradle/*|tools/setup_native_deps.sh|tools/onnxruntime_include/*)
+      NEEDS_FULL_GRADLE=true
+      ;;
+    AGENTS.md|GEMINI.md|docs/ddd/*)
+      NEEDS_CONTRACT_TESTS=true
+      ;;
+  esac
+done <<< "$STAGED_ALL"
+
+if [ "$NEEDS_FULL_GRADLE" = true ]; then
+  echo "🔍 [Pre-commit Hook] App/build changes detected; running testDebugUnitTest + assembleDebug..."
+  if ! ./gradlew testDebugUnitTest assembleDebug --quiet; then
+    echo ""
+    echo "❌ [Pre-commit Hook Failed] testDebugUnitTest or assembleDebug failed! Commit blocked."
+    echo "👉 Run './gradlew testDebugUnitTest assembleDebug' to inspect failure details."
+    exit 1
+  fi
+  git write-tree > "$VERIFIED_TREE_FILE"
+  echo "✅ [Pre-commit Hook] Unit tests and Debug build passed (verified tree recorded)."
+elif [ "$NEEDS_CONTRACT_TESTS" = true ]; then
+  echo "🔍 [Pre-commit Hook] Architecture/contract docs changed; running focused Konsist & CI contract tests..."
+  if ! ./gradlew testDebugUnitTest \
+      --tests "com.example.myasr.ddd.DddArchitectureKonsistTest" \
+      --tests "com.example.myasr.GitHubAppUpdateClientTest" \
+      --quiet; then
+    echo ""
+    echo "❌ [Pre-commit Hook Failed] Contract tests failed! Commit blocked."
+    exit 1
+  fi
+  echo "✅ [Pre-commit Hook] Focused contract tests passed."
+else
+  echo "⚡ [Pre-commit Hook] Docs/scripts/tooling-only commit: hygiene/syntax checks passed (Gradle skipped)."
+fi
 exit 0

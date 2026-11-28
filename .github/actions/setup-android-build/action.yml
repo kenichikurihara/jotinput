@@ -1,0 +1,112 @@
+name: Setup Android Build Environment
+description: Configures JDK 17, cached NDK/CMake, Gradle, static ccache, llama.cpp source, and test lexicon symlinks.
+
+inputs:
+  cache-read-only:
+    description: Whether Gradle cache writes are disabled
+    required: false
+    default: 'true'
+  cache-cleanup:
+    description: Gradle cache cleanup policy
+    required: false
+    default: 'never'
+  with-native:
+    description: Whether to restore NDK, CMake, ccache, and llama.cpp for native C++ builds
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Set up JDK 17
+      uses: actions/setup-java@v5
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Cache Android NDK and CMake
+      id: ndk-cache
+      if: inputs.with-native == 'true'
+      uses: actions/cache@v4
+      with:
+        path: |
+          /usr/local/lib/android/sdk/ndk/26.3.11579264
+          /usr/local/lib/android/sdk/cmake/3.22.1
+        key: ndk-26.3.11579264-cmake-3.22.1
+
+    - name: Set up Android NDK and CMake
+      if: inputs.with-native == 'true' && steps.ndk-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        SDKMANAGER=$(command -v sdkmanager || echo "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager")
+        yes | "${SDKMANAGER}" --licenses >/dev/null 2>&1 || true
+        "${SDKMANAGER}" "ndk;26.3.11579264" "cmake;3.22.1"
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        cache-read-only: ${{ inputs.cache-read-only }}
+        cache-cleanup: ${{ inputs.cache-cleanup }}
+
+    - name: Cache ccache binary
+      id: ccache-bin-cache
+      if: inputs.with-native == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/ccache-bin
+        key: ccache-bin-v4.14.3-${{ runner.os }}-x86_64
+
+    - name: Install ccache
+      if: inputs.with-native == 'true'
+      shell: bash
+      run: |
+        BIN_DIR="${RUNNER_TEMP}/ccache-bin"
+        if [ ! -x "${BIN_DIR}/ccache" ]; then
+          mkdir -p "${BIN_DIR}"
+          TMP_DIR=$(mktemp -d)
+          if curl -fsSL "https://github.com/ccache/ccache/releases/download/v4.14.3/ccache-4.14.3-linux-x86_64-musl-static.tar.xz" -o "${TMP_DIR}/ccache.tar.xz" \
+             && tar -xJf "${TMP_DIR}/ccache.tar.xz" -C "${TMP_DIR}"; then
+            CCACHE_FOUND=$(find "${TMP_DIR}" -type f -name ccache | head -n 1)
+            if [ -n "${CCACHE_FOUND}" ]; then
+              install -m 0755 "${CCACHE_FOUND}" "${BIN_DIR}/ccache"
+            fi
+          fi
+          rm -rf "${TMP_DIR}"
+        fi
+        if [ -x "${BIN_DIR}/ccache" ]; then
+          echo "${BIN_DIR}" >> "$GITHUB_PATH"
+        elif ! command -v ccache >/dev/null 2>&1; then
+          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ccache
+        fi
+
+    - name: Cache ccache
+      if: inputs.with-native == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/.ccache
+        key: ccache-v3-${{ runner.os }}-${{ hashFiles('app/src/main/cpp/**', 'tools/setup_native_deps.sh', 'app/build.gradle.kts') }}
+        restore-keys: |
+          ccache-v3-${{ runner.os }}-
+
+    - name: Cache llama.cpp source
+      if: inputs.with-native == 'true'
+      uses: actions/cache@v4
+      with:
+        path: tools/llama_cpp_src
+        key: llama-cpp-${{ hashFiles('tools/setup_native_deps.sh') }}
+
+    - name: Prepare Test Lexicon Assets
+      shell: bash
+      run: |
+        mkdir -p tools/mozc_dict
+        if [ -f app/src/main/assets/mozc/connection_data.bin ] && [ ! -f tools/mozc_dict/connection_data.bin ]; then
+          ln -sf ../../app/src/main/assets/mozc/connection_data.bin tools/mozc_dict/connection_data.bin
+        fi
+        if [ -f app/src/test/resources/mozc/system_dictionary.bin ] && [ ! -f tools/mozc_dict/system_dictionary.bin ]; then
+          ln -sf ../../app/src/test/resources/mozc/system_dictionary.bin tools/mozc_dict/system_dictionary.bin
+        fi
+
+    - name: Setup Native Dependencies
+      if: inputs.with-native == 'true'
+      shell: bash
+      run: ./tools/setup_native_deps.sh

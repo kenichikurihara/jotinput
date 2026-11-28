@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Pre-push hook:
 # 1. Enforce Mandatory Pull Request workflow by blocking direct pushes to refs/heads/main.
-# 2. Verify local unit tests and debug build before pushing to remote.
-set -e
+# 2. Avoid duplicating Gradle testDebugUnitTest/assembleDebug when HEAD^{tree} was already verified by pre-commit.
+set -euo pipefail
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   if [ "$remote_ref" = "refs/heads/main" ]; then
@@ -16,8 +16,42 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   fi
 done
 
-echo "🚀 [Pre-push Hook] Verifying unit tests before pushing to remote..."
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
 
+GIT_DIR="$(git rev-parse --git-dir)"
+VERIFIED_TREE_FILE="${GIT_DIR}/.last-verified-tree"
+CURRENT_TREE="$(git rev-parse HEAD^{tree})"
+
+if [ -f "$VERIFIED_TREE_FILE" ] && [ "$(cat "$VERIFIED_TREE_FILE" 2>/dev/null || true)" = "$CURRENT_TREE" ]; then
+  echo "⚡ [Pre-push Hook] Tree ${CURRENT_TREE:0:12} already verified by pre-commit; skipping redundant Gradle run."
+  exit 0
+fi
+
+NEEDS_GRADLE=false
+if git rev-parse --verify origin/main >/dev/null 2>&1; then
+  CHANGED=$(git diff --name-only origin/main...HEAD || true)
+  if [ -n "$CHANGED" ]; then
+    while IFS= read -r path; do
+      [ -n "$path" ] || continue
+      case "$path" in
+        app/*|build.gradle.kts|settings.gradle.kts|gradle.properties|gradle/*|tools/setup_native_deps.sh|tools/onnxruntime_include/*|AGENTS.md|GEMINI.md|docs/ddd/*)
+          NEEDS_GRADLE=true
+          break
+          ;;
+      esac
+    done <<< "$CHANGED"
+  fi
+else
+  NEEDS_GRADLE=true
+fi
+
+if [ "$NEEDS_GRADLE" = false ]; then
+  echo "⚡ [Pre-push Hook] No app/build/contract-doc changes relative to origin/main; skipping Gradle run."
+  exit 0
+fi
+
+echo "🚀 [Pre-push Hook] Verifying unit tests and Debug build before pushing to remote..."
 if ! ./gradlew testDebugUnitTest assembleDebug --quiet; then
   echo ""
   echo "❌ [Pre-push Hook Failed] Tests or assembleDebug failed! Push is blocked to prevent remote CI failures."
@@ -25,5 +59,6 @@ if ! ./gradlew testDebugUnitTest assembleDebug --quiet; then
   exit 1
 fi
 
+printf '%s\n' "$CURRENT_TREE" > "$VERIFIED_TREE_FILE"
 echo "✅ [Pre-push Hook] All unit tests and build checks passed! Proceeding with git push."
 exit 0

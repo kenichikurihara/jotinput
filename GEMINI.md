@@ -7,9 +7,9 @@ Whenever changes or fixes are made to the Android application, **always install 
 2. **Connected Phone (Pixel 10 Pro via USB or Wi-Fi)**: e.g. `<device-serial>` or `<device-ip>:<port>` (any active phone device listed in `adb devices`)
 
 ### Standard Deployment Workflow:
-Run `./deploy.sh` or execute the following steps for all connected targets in `adb devices`:
+Run `./deploy.sh` (pass `--verify` for automated logcat check, or `--skip-build` to reuse the already-built APK; duplicate ADB handles for the same device are skipped and targets deploy in parallel) or execute the following steps for all connected targets in `adb devices`:
 ```bash
-./deploy.sh
+./deploy.sh --verify
 ```
 Or manually:
 1. Compile APK: `./gradlew assembleDebug`
@@ -75,7 +75,7 @@ Whenever changes are made and pushed:
   - For every completed feature, bug fix, asset update, or documentation change:
     1. Create a topic branch from `main` (e.g., `git checkout -b feat/<topic>` or `fix/<topic>`).
     2. Commit verified changes and push the topic branch to `origin` (`git push -u origin <branch>`).
-    3. Open a Pull Request targeting `main` via `gh pr create --base main ...` following [`.github/pull_request_template.md`](.github/pull_request_template.md).
+    3. Open a Pull Request targeting `main` via `gh pr create --base main ...` following [`.github/pull_request_template.md`](.github/pull_request_template.md) (or use [`./scripts/pr_ship.sh`](scripts/pr_ship.sh) `open` / `merge`).
     4. **Pre-Merge CI/CD Gate**: Always wait for and verify that `Android CI` (`Build & Test`) passes 100% on the Pull Request **before merging** (`gh pr checks --watch` or `gh run watch <run_id>`). Never merge a PR while CI/CD is pending, failing, or skipped.
     5. Merge only after all required PR checks are green (`gh pr merge --admin --squash --delete-branch` when acting as the solo maintainer), then switch to `main` and `git pull --ff-only origin main`.
     6. Monitor the post-merge `Android CI` workflow run on `main` (including `Publish Remote HEAD Prerelease`) to 100% completion (`gh run watch <run_id>`).

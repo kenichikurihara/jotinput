@@ -15,7 +15,8 @@ enum class AppUpdateChannel(val id: String, val displayName: String) {
 }
 
 /**
- * Metadata describing the currently running JotInput APK build, embedded at compile time via BuildConfig.
+ * Metadata describing the currently running JotInput APK build, embedded at build time via
+ * BuildConfig and generated `assets/build_metadata.properties`.
  */
 data class InstalledAppBuildInfo(
     val versionName: String,

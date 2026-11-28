@@ -205,75 +205,78 @@ class JotInputPredictionEvaluationRunnerTest {
             put("english_cases", evaluatedEnResults)
         }
 
-        val rootOutDir = if (File("tools").exists()) File("tools/eval") else File("../tools/eval")
-        rootOutDir.mkdirs()
-        val outFile = File(rootOutDir, "jotinput_prediction_evaluation_results.json")
-        val isDualModeAlreadyPresent = outFile.exists() && outFile.readText().contains("\"slm_on\"")
-        if (!isDualModeAlreadyPresent) {
-            outFile.writeText(fullOutput.toString(2), Charsets.UTF_8)
-            println("Saved baseline evaluation results to: ${outFile.absolutePath}")
-        } else {
-            try {
-                val existingJson = JSONObject(outFile.readText())
-                val slmOff = existingJson.optJSONObject("slm_off")
-                if (slmOff != null) {
-                    slmOff.put("japanese_cases", evaluatedJaResults)
-                    slmOff.put("summary_metrics", summaryScores)
-                }
-                val slmOn = existingJson.optJSONObject("slm_on")
-                if (slmOn != null) {
-                    val onCases = slmOn.optJSONArray("japanese_cases")
-                    if (onCases != null) {
-                        for (idx in 0 until onCases.length()) {
-                            val cObj = onCases.getJSONObject(idx)
-                            val cId = cObj.optString("id")
-                            for (j in 0 until evaluatedJaResults.length()) {
-                                val evalObj = evaluatedJaResults.getJSONObject(j)
-                                if (evalObj.optString("id") == cId) {
-                                    val tgt = evalObj.optString("target_word")
-                                    val newPreds = evalObj.getJSONObject("predictions")
-                                    val curPreds = cObj.getJSONObject("predictions")
-                                    val zeroNo = newPreds.getJSONObject("zero_char").getJSONArray("no_history")
-                                    val curZeroNo = curPreds.getJSONObject("zero_char").getJSONArray("no_history")
-                                    val curZeroList = (0 until curZeroNo.length()).map { curZeroNo.getString(it) }
-                                    if (!curZeroList.contains(tgt)) {
-                                        val newZeroList = (0 until zeroNo.length()).map { zeroNo.getString(it) }
-                                        if (newZeroList.contains(tgt)) {
-                                            curPreds.getJSONObject("zero_char").put("no_history", zeroNo)
+        val shouldExport = System.getProperty("jotinput.exportEvalResults") == "true"
+        if (shouldExport) {
+            val rootOutDir = if (File("tools").exists()) File("tools/eval") else File("../tools/eval")
+            rootOutDir.mkdirs()
+            val outFile = File(rootOutDir, "jotinput_prediction_evaluation_results.json")
+            val isDualModeAlreadyPresent = outFile.exists() && outFile.readText().contains("\"slm_on\"")
+            if (!isDualModeAlreadyPresent) {
+                outFile.writeText(fullOutput.toString(2), Charsets.UTF_8)
+                println("Saved baseline evaluation results to: ${outFile.absolutePath}")
+            } else {
+                try {
+                    val existingJson = JSONObject(outFile.readText())
+                    val slmOff = existingJson.optJSONObject("slm_off")
+                    if (slmOff != null) {
+                        slmOff.put("japanese_cases", evaluatedJaResults)
+                        slmOff.put("summary_metrics", summaryScores)
+                    }
+                    val slmOn = existingJson.optJSONObject("slm_on")
+                    if (slmOn != null) {
+                        val onCases = slmOn.optJSONArray("japanese_cases")
+                        if (onCases != null) {
+                            for (idx in 0 until onCases.length()) {
+                                val cObj = onCases.getJSONObject(idx)
+                                val cId = cObj.optString("id")
+                                for (j in 0 until evaluatedJaResults.length()) {
+                                    val evalObj = evaluatedJaResults.getJSONObject(j)
+                                    if (evalObj.optString("id") == cId) {
+                                        val tgt = evalObj.optString("target_word")
+                                        val newPreds = evalObj.getJSONObject("predictions")
+                                        val curPreds = cObj.getJSONObject("predictions")
+                                        val zeroNo = newPreds.getJSONObject("zero_char").getJSONArray("no_history")
+                                        val curZeroNo = curPreds.getJSONObject("zero_char").getJSONArray("no_history")
+                                        val curZeroList = (0 until curZeroNo.length()).map { curZeroNo.getString(it) }
+                                        if (!curZeroList.contains(tgt)) {
+                                            val newZeroList = (0 until zeroNo.length()).map { zeroNo.getString(it) }
+                                            if (newZeroList.contains(tgt)) {
+                                                curPreds.getJSONObject("zero_char").put("no_history", zeroNo)
+                                            }
                                         }
-                                    }
-                                    val oneNo = newPreds.getJSONObject("one_char").getJSONArray("no_history")
-                                    val curOneNo = curPreds.getJSONObject("one_char").getJSONArray("no_history")
-                                    val curOneList = (0 until curOneNo.length()).map { curOneNo.getString(it) }
-                                    if (!curOneList.contains(tgt)) {
-                                        val newOneList = (0 until oneNo.length()).map { oneNo.getString(it) }
-                                        if (newOneList.contains(tgt)) {
-                                            curPreds.getJSONObject("one_char").put("no_history", oneNo)
+                                        val oneNo = newPreds.getJSONObject("one_char").getJSONArray("no_history")
+                                        val curOneNo = curPreds.getJSONObject("one_char").getJSONArray("no_history")
+                                        val curOneList = (0 until curOneNo.length()).map { curOneNo.getString(it) }
+                                        if (!curOneList.contains(tgt)) {
+                                            val newOneList = (0 until oneNo.length()).map { oneNo.getString(it) }
+                                            if (newOneList.contains(tgt)) {
+                                                curPreds.getJSONObject("one_char").put("no_history", oneNo)
+                                            }
                                         }
-                                    }
-                                    val twoNo = newPreds.getJSONObject("two_char").getJSONArray("no_history")
-                                    val curTwoNo = curPreds.getJSONObject("two_char").getJSONArray("no_history")
-                                    val curTwoList = (0 until curTwoNo.length()).map { curTwoNo.getString(it) }
-                                    if (!curTwoList.contains(tgt)) {
-                                        val newTwoList = (0 until twoNo.length()).map { twoNo.getString(it) }
-                                        if (newTwoList.contains(tgt)) {
-                                            curPreds.getJSONObject("two_char").put("no_history", twoNo)
+                                        val twoNo = newPreds.getJSONObject("two_char").getJSONArray("no_history")
+                                        val curTwoNo = curPreds.getJSONObject("two_char").getJSONArray("no_history")
+                                        val curTwoList = (0 until curTwoNo.length()).map { curTwoNo.getString(it) }
+                                        if (!curTwoList.contains(tgt)) {
+                                            val newTwoList = (0 until twoNo.length()).map { twoNo.getString(it) }
+                                            if (newTwoList.contains(tgt)) {
+                                                curPreds.getJSONObject("two_char").put("no_history", twoNo)
+                                            }
                                         }
+                                        break
                                     }
-                                    break
                                 }
                             }
                         }
                     }
+                    outFile.writeText(existingJson.toString(2), Charsets.UTF_8)
+                    println("Updated dual-mode evaluation in ${outFile.name}")
+                } catch (e: Exception) {
+                    println("Failed to update existing dual-mode JSON: ${e.message}")
                 }
-                outFile.writeText(existingJson.toString(2), Charsets.UTF_8)
-                println("Updated dual-mode evaluation in ${outFile.name}")
-            } catch (e: Exception) {
-                println("Failed to update existing dual-mode JSON: ${e.message}")
+                val baselineOut = File(rootOutDir, "jotinput_prediction_evaluation_results_baseline.json")
+                baselineOut.writeText(fullOutput.toString(2), Charsets.UTF_8)
+                println("Saved baseline to: ${baselineOut.absolutePath}")
             }
-            val baselineOut = File(rootOutDir, "jotinput_prediction_evaluation_results_baseline.json")
-            baselineOut.writeText(fullOutput.toString(2), Charsets.UTF_8)
-            println("Saved baseline to: ${baselineOut.absolutePath}")
         }
 
         // Validate that metrics are non-trivial

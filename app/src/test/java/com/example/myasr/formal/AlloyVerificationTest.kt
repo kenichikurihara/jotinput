@@ -21,7 +21,14 @@ import java.nio.file.Files
  */
 class AlloyVerificationTest {
 
+    companion object {
+        private val verifiedSpecs = mutableSetOf<String>()
+    }
+
     private fun verifyAlloyModel(resourcePath: String) {
+        if (!verifiedSpecs.add(resourcePath)) {
+            return
+        }
         val stream = javaClass.classLoader?.getResourceAsStream(resourcePath)
             ?: throw IllegalStateException("Alloy specification resource not found: $resourcePath")
 
