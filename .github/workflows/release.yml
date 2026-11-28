@@ -236,7 +236,7 @@ jobs:
           - **Tier 1 (Maintainer-verified)**: Google Pixel 10 Pro & ChromeOS ARCVM.
           - **Tier 2 (Best-effort)**: Other AOSP-compatible Android 8.0+ \`arm64-v8a\` / \`x86_64\` devices.
           - **Unsupported**: 32-bit ABIs (\`armeabi-v7a\`, \`x86\`) and Android < 8.0.
-          - Release builds update manually via GitHub Releases (debug-only CI artifact self-updater is disabled).
+          - Includes tokenless in-app updates (Release / Remote HEAD) on the **Home** tab with SHA-256 verification.
 
           See [\`CHANGELOG.md\`](https://github.com/kenichikurihara/jotinput/blob/main/CHANGELOG.md), [\`PRIVACY.md\`](https://github.com/kenichikurihara/jotinput/blob/main/PRIVACY.md), [\`NOTICE\`](https://github.com/kenichikurihara/jotinput/blob/main/NOTICE), and [\`SECURITY.md\`](https://github.com/kenichikurihara/jotinput/blob/main/SECURITY.md).
 

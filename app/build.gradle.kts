@@ -53,7 +53,8 @@ android {
         buildConfigField("long", "BUILD_GITHUB_RUN_ID", "${githubRunIdProvider.get()}L")
         buildConfigField("String", "GITHUB_REPO_OWNER", "\"kenichikurihara\"")
         buildConfigField("String", "GITHUB_REPO_NAME", "\"jotinput\"")
-        buildConfigField("String", "GITHUB_ARTIFACT_NAME", "\"app-debug\"")
+        buildConfigField("String", "GITHUB_HEAD_RELEASE_TAG", "\"main-head\"")
+        buildConfigField("String", "GITHUB_HEAD_METADATA_ASSET", "\"head-metadata.json\"")
         buildConfigField("String", "GITHUB_TARGET_BRANCH", "\"main\"")
 
         ndk {

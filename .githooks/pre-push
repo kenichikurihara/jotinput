@@ -1,6 +1,20 @@
 #!/bin/bash
-# Pre-push hook to guarantee CI passes before pushing to remote
+# Pre-push hook:
+# 1. Enforce Mandatory Pull Request workflow by blocking direct pushes to refs/heads/main.
+# 2. Verify local unit tests and debug build before pushing to remote.
 set -e
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ]; then
+    echo ""
+    echo "❌ [Pre-push Hook Blocked] Direct pushes to 'main' are prohibited now that the repository is public."
+    echo "👉 Create a topic branch, push it, and open a Pull Request so Android CI passes before merging:"
+    echo "   git checkout -b feat/<topic>"
+    echo "   git push -u origin feat/<topic>"
+    echo "   gh pr create --base main"
+    exit 1
+  fi
+done
 
 echo "🚀 [Pre-push Hook] Verifying unit tests before pushing to remote..."
 

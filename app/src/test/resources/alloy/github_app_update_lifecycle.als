@@ -4,40 +4,38 @@ open util/ordering[State]
 open util/boolean
 
 /**
- * Formal Alloy 6 Specification for Developer-Only GitHub Actions Build Update Checker
- * and Background Downloader (BC-6: AppUpdateDecisionModel).
+ * Formal Alloy 6 Specification for Tokenless Multi-Channel GitHub App Updater
+ * (`RELEASE` / `REMOTE_HEAD`) and Background Downloader (BC-6: AppUpdateDecisionModel).
  *
  * Verifies:
- * 1. ReleaseBuildNeverShowsCard: Release builds always hide the update card.
- * 2. NoTokenFailSafeNeverOffersDownload: Without a configured token, download is never offered
- *    (and install is never offered when no matching APK exists on disk).
- * 3. ErrorStateNeverOffersDownloadOrInstall: Auth, network, or download errors fail safe and
- *    never offer download or install.
- * 4. DownloadOnlyWhenTokenAndUpdateAvailable: Download CTA is shown only when debug, token
- *    configured, freshness is UPDATE_AVAILABLE, and no download/check/error is active.
- * 5. InstallOnlyWhenMatchingApkExistsAndDebug: Install CTA is shown only when debug and a
- *    matching verified APK exists on disk without errors.
+ * 1. BusyStateLocksChannelSelector: Channel selector is locked while checking, queued, or downloading.
+ * 2. ChannelNeverChangesWhileBusy: Selected update channel never mutates while checking, queued, or downloading.
+ * 3. ErrorStateNeverOffersDownloadOrInstall: Rate-limit, integrity, network, or download errors fail safe
+ *    and never offer download or install.
+ * 4. DownloadOnlyWhenUpdateAvailableAndNotBusy: Download CTA is shown only when freshness is
+ *    UPDATE_AVAILABLE and no error/check/download is active.
+ * 5. InstallOnlyWhenChannelMatchingApkExists: Install CTA is shown only when a verified APK matching
+ *    the currently selected channel exists on disk without errors (strict cross-channel isolation).
  * 6. UpToDateNeverOffersDownloadOrInstall: Up-to-date state never offers download or install.
- * 7. ActiveDownloadAlwaysShowsProgressAndCancel: Active/queued background downloads always show
- *    progress and a cancel action.
+ * 7. ActiveDownloadAlwaysShowsProgressAndCancel: Active/queued downloads always show progress and cancel.
  */
+
+abstract sig UpdateChannel {}
+one sig ChannelRelease, ChannelRemoteHead extends UpdateChannel {}
 
 abstract sig FreshnessStatus {}
 one sig FreshNone, FreshUpdateAvailable, FreshUpToDate, FreshNoArtifact extends FreshnessStatus {}
 
 abstract sig ErrorState {}
-one sig ErrNone, ErrTokenRequired, ErrAuthFailed, ErrNetworkError, ErrDownloadFailed extends ErrorState {}
+one sig ErrNone, ErrNetworkError, ErrRateLimited, ErrDownloadFailed, ErrIntegrityFailed extends ErrorState {}
 
 abstract sig CardState {}
 one sig
-    CardHidden,
     CardDownloading,
     CardQueued,
     CardChecking,
     CardReadyToInstall,
-    CardTokenMissing,
-    CardAuthError,
-    CardNetworkError,
+    CardError,
     CardUpdateAvailable,
     CardUpToDate,
     CardNoArtifact,
@@ -46,218 +44,191 @@ extends CardState {}
 
 abstract sig PrimaryAction {}
 one sig
-    ActNone,
     ActCancel,
     ActCheck,
     ActInstall,
-    ActConfigureToken,
     ActDownload
 extends PrimaryAction {}
 
 sig State {
-    isDebugBuild: one Bool,
-    hasToken: one Bool,
+    selectedChannel: one UpdateChannel,
     checking: one Bool,
     downloadActive: one Bool,
     downloadQueued: one Bool,
     freshness: one FreshnessStatus,
-    hasMatchingDownloadedApk: one Bool,
+    hasDownloadedApk: one Bool,
+    downloadedApkChannel: one UpdateChannel,
     errorState: one ErrorState,
     // Derived UI projections
     cardState: one CardState,
     primaryAction: one PrimaryAction,
     showProgress: one Bool,
-    isCardVisible: one Bool
+    channelSelectorEnabled: one Bool
+}
+
+pred hasMatchingDownloadedApk[s: State] {
+    s.hasDownloadedApk = True
+    s.downloadedApkChannel = s.selectedChannel
 }
 
 pred deriveUi[s: State] {
-    (s.isDebugBuild = False) implies {
-        s.cardState = CardHidden
-        s.primaryAction = ActNone
-        s.showProgress = False
-        s.isCardVisible = False
-    } else (s.downloadActive = True) implies {
+    (s.downloadActive = True) implies {
         s.cardState = CardDownloading
         s.primaryAction = ActCancel
         s.showProgress = True
-        s.isCardVisible = True
+        s.channelSelectorEnabled = False
     } else (s.downloadQueued = True) implies {
         s.cardState = CardQueued
         s.primaryAction = ActCancel
         s.showProgress = True
-        s.isCardVisible = True
+        s.channelSelectorEnabled = False
     } else (s.checking = True) implies {
         s.cardState = CardChecking
         s.primaryAction = ActCheck
         s.showProgress = False
-        s.isCardVisible = True
-    } else (s.hasMatchingDownloadedApk = True and s.errorState = ErrNone and (s.freshness = FreshNone or s.freshness = FreshUpdateAvailable)) implies {
+        s.channelSelectorEnabled = False
+    } else (hasMatchingDownloadedApk[s] and s.errorState = ErrNone and (s.freshness = FreshNone or s.freshness = FreshUpdateAvailable)) implies {
         s.cardState = CardReadyToInstall
         s.primaryAction = ActInstall
         s.showProgress = False
-        s.isCardVisible = True
-    } else (s.hasToken = False) implies {
-        s.cardState = CardTokenMissing
-        s.primaryAction = ActConfigureToken
-        s.showProgress = False
-        s.isCardVisible = True
-    } else (s.errorState = ErrAuthFailed or s.errorState = ErrTokenRequired) implies {
-        s.cardState = CardAuthError
-        s.primaryAction = ActConfigureToken
-        s.showProgress = False
-        s.isCardVisible = True
-    } else (s.errorState = ErrNetworkError or s.errorState = ErrDownloadFailed) implies {
-        s.cardState = CardNetworkError
+        s.channelSelectorEnabled = True
+    } else (s.errorState != ErrNone) implies {
+        s.cardState = CardError
         s.primaryAction = ActCheck
         s.showProgress = False
-        s.isCardVisible = True
+        s.channelSelectorEnabled = True
     } else (s.freshness = FreshUpdateAvailable) implies {
         s.cardState = CardUpdateAvailable
         s.primaryAction = ActDownload
         s.showProgress = False
-        s.isCardVisible = True
+        s.channelSelectorEnabled = True
     } else (s.freshness = FreshUpToDate) implies {
         s.cardState = CardUpToDate
         s.primaryAction = ActCheck
         s.showProgress = False
-        s.isCardVisible = True
+        s.channelSelectorEnabled = True
     } else (s.freshness = FreshNoArtifact) implies {
         s.cardState = CardNoArtifact
         s.primaryAction = ActCheck
         s.showProgress = False
-        s.isCardVisible = True
+        s.channelSelectorEnabled = True
     } else {
         s.cardState = CardIdle
         s.primaryAction = ActCheck
         s.showProgress = False
-        s.isCardVisible = True
+        s.channelSelectorEnabled = True
     }
 }
 
 pred init[s: State] {
-    s.hasToken = False
     s.checking = False
     s.downloadActive = False
     s.downloadQueued = False
     s.freshness = FreshNone
-    s.hasMatchingDownloadedApk = False
+    s.hasDownloadedApk = False
     s.errorState = ErrNone
     deriveUi[s]
 }
 
-pred configureToken[s, sNext: State] {
-    s.isDebugBuild = True
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = True
-    sNext.checking = s.checking
-    sNext.downloadActive = s.downloadActive
-    sNext.downloadQueued = s.downloadQueued
-    sNext.freshness = s.freshness
-    sNext.hasMatchingDownloadedApk = s.hasMatchingDownloadedApk
-    sNext.errorState = ErrNone
-    deriveUi[sNext]
-}
-
-pred clearToken[s, sNext: State] {
-    s.isDebugBuild = True
-    s.downloadActive = False
-    s.downloadQueued = False
-    s.checking = False
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = False
+pred switchChannel[s, sNext: State, target: UpdateChannel] {
+    s.channelSelectorEnabled = True
+    target != s.selectedChannel
+    sNext.selectedChannel = target
     sNext.checking = False
     sNext.downloadActive = False
     sNext.downloadQueued = False
     sNext.freshness = FreshNone
-    sNext.hasMatchingDownloadedApk = s.hasMatchingDownloadedApk
+    sNext.hasDownloadedApk = s.hasDownloadedApk
+    sNext.downloadedApkChannel = s.downloadedApkChannel
     sNext.errorState = ErrNone
     deriveUi[sNext]
 }
 
 pred startCheck[s, sNext: State] {
-    s.isDebugBuild = True
-    s.hasToken = True
     s.checking = False
     s.downloadActive = False
     s.downloadQueued = False
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = True
+    sNext.selectedChannel = s.selectedChannel
     sNext.checking = True
     sNext.downloadActive = False
     sNext.downloadQueued = False
     sNext.freshness = s.freshness
-    sNext.hasMatchingDownloadedApk = s.hasMatchingDownloadedApk
+    sNext.hasDownloadedApk = s.hasDownloadedApk
+    sNext.downloadedApkChannel = s.downloadedApkChannel
     sNext.errorState = ErrNone
     deriveUi[sNext]
 }
 
 pred finishCheckUpdateAvailable[s, sNext: State] {
-    s.isDebugBuild = True
     s.checking = True
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = s.hasToken
+    sNext.selectedChannel = s.selectedChannel
     sNext.checking = False
     sNext.downloadActive = s.downloadActive
     sNext.downloadQueued = s.downloadQueued
     sNext.freshness = FreshUpdateAvailable
-    sNext.hasMatchingDownloadedApk = s.hasMatchingDownloadedApk
+    sNext.hasDownloadedApk = s.hasDownloadedApk
+    sNext.downloadedApkChannel = s.downloadedApkChannel
     sNext.errorState = ErrNone
     deriveUi[sNext]
 }
 
 pred finishCheckUpToDate[s, sNext: State] {
-    s.isDebugBuild = True
     s.checking = True
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = s.hasToken
+    sNext.selectedChannel = s.selectedChannel
     sNext.checking = False
     sNext.downloadActive = s.downloadActive
     sNext.downloadQueued = s.downloadQueued
     sNext.freshness = FreshUpToDate
-    sNext.hasMatchingDownloadedApk = False
+    (s.downloadedApkChannel = s.selectedChannel) implies {
+        sNext.hasDownloadedApk = False
+        sNext.downloadedApkChannel = s.downloadedApkChannel
+    } else {
+        sNext.hasDownloadedApk = s.hasDownloadedApk
+        sNext.downloadedApkChannel = s.downloadedApkChannel
+    }
     sNext.errorState = ErrNone
     deriveUi[sNext]
 }
 
 pred finishCheckNoArtifact[s, sNext: State] {
-    s.isDebugBuild = True
     s.checking = True
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = s.hasToken
+    sNext.selectedChannel = s.selectedChannel
     sNext.checking = False
     sNext.downloadActive = s.downloadActive
     sNext.downloadQueued = s.downloadQueued
     sNext.freshness = FreshNoArtifact
-    sNext.hasMatchingDownloadedApk = False
+    (s.downloadedApkChannel = s.selectedChannel) implies {
+        sNext.hasDownloadedApk = False
+        sNext.downloadedApkChannel = s.downloadedApkChannel
+    } else {
+        sNext.hasDownloadedApk = s.hasDownloadedApk
+        sNext.downloadedApkChannel = s.downloadedApkChannel
+    }
     sNext.errorState = ErrNone
     deriveUi[sNext]
 }
 
 pred finishCheckError[s, sNext: State, err: ErrorState] {
-    s.isDebugBuild = True
     s.checking = True
-    err != ErrNone
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = s.hasToken
+    (err = ErrNetworkError or err = ErrRateLimited)
+    sNext.selectedChannel = s.selectedChannel
     sNext.checking = False
     sNext.downloadActive = s.downloadActive
     sNext.downloadQueued = s.downloadQueued
     sNext.freshness = s.freshness
-    sNext.hasMatchingDownloadedApk = s.hasMatchingDownloadedApk
+    sNext.hasDownloadedApk = s.hasDownloadedApk
+    sNext.downloadedApkChannel = s.downloadedApkChannel
     sNext.errorState = err
     deriveUi[sNext]
 }
 
 pred enqueueDownload[s, sNext: State, queued: Bool] {
-    s.isDebugBuild = True
-    s.hasToken = True
     s.checking = False
     s.downloadActive = False
     s.downloadQueued = False
     s.freshness = FreshUpdateAvailable
     s.errorState = ErrNone
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = True
+    sNext.selectedChannel = s.selectedChannel
     sNext.checking = False
     (queued = True) implies {
         sNext.downloadActive = False
@@ -267,102 +238,86 @@ pred enqueueDownload[s, sNext: State, queued: Bool] {
         sNext.downloadQueued = False
     }
     sNext.freshness = s.freshness
-    sNext.hasMatchingDownloadedApk = s.hasMatchingDownloadedApk
+    sNext.hasDownloadedApk = s.hasDownloadedApk
+    sNext.downloadedApkChannel = s.downloadedApkChannel
     sNext.errorState = ErrNone
     deriveUi[sNext]
 }
 
 pred startQueuedDownload[s, sNext: State] {
-    s.isDebugBuild = True
     s.downloadQueued = True
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = s.hasToken
+    sNext.selectedChannel = s.selectedChannel
     sNext.checking = s.checking
     sNext.downloadActive = True
     sNext.downloadQueued = False
     sNext.freshness = s.freshness
-    sNext.hasMatchingDownloadedApk = s.hasMatchingDownloadedApk
+    sNext.hasDownloadedApk = s.hasDownloadedApk
+    sNext.downloadedApkChannel = s.downloadedApkChannel
     sNext.errorState = ErrNone
     deriveUi[sNext]
 }
 
 pred finishDownloadSuccess[s, sNext: State] {
-    s.isDebugBuild = True
     s.downloadActive = True
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = s.hasToken
+    sNext.selectedChannel = s.selectedChannel
     sNext.checking = False
     sNext.downloadActive = False
     sNext.downloadQueued = False
     sNext.freshness = FreshUpdateAvailable
-    sNext.hasMatchingDownloadedApk = True
+    sNext.hasDownloadedApk = True
+    sNext.downloadedApkChannel = s.selectedChannel
     sNext.errorState = ErrNone
     deriveUi[sNext]
 }
 
 pred finishDownloadFailure[s, sNext: State, err: ErrorState] {
-    s.isDebugBuild = True
     s.downloadActive = True
-    (err = ErrAuthFailed or err = ErrDownloadFailed or err = ErrNetworkError)
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = s.hasToken
+    (err = ErrNetworkError or err = ErrRateLimited or err = ErrDownloadFailed or err = ErrIntegrityFailed)
+    sNext.selectedChannel = s.selectedChannel
     sNext.checking = False
     sNext.downloadActive = False
     sNext.downloadQueued = False
     sNext.freshness = s.freshness
-    sNext.hasMatchingDownloadedApk = s.hasMatchingDownloadedApk
+    sNext.hasDownloadedApk = s.hasDownloadedApk
+    sNext.downloadedApkChannel = s.downloadedApkChannel
     sNext.errorState = err
     deriveUi[sNext]
 }
 
 pred cancelDownload[s, sNext: State] {
-    s.isDebugBuild = True
     (s.downloadActive = True or s.downloadQueued = True)
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = s.hasToken
+    sNext.selectedChannel = s.selectedChannel
     sNext.checking = s.checking
     sNext.downloadActive = False
     sNext.downloadQueued = False
     sNext.freshness = s.freshness
-    sNext.hasMatchingDownloadedApk = s.hasMatchingDownloadedApk
+    sNext.hasDownloadedApk = s.hasDownloadedApk
+    sNext.downloadedApkChannel = s.downloadedApkChannel
     sNext.errorState = ErrNone
     deriveUi[sNext]
 }
 
 pred installAndUpgradeToLatest[s, sNext: State] {
-    s.isDebugBuild = True
-    s.hasMatchingDownloadedApk = True
+    hasMatchingDownloadedApk[s]
+    s.errorState = ErrNone
     s.downloadActive = False
     s.downloadQueued = False
-    sNext.isDebugBuild = s.isDebugBuild
-    sNext.hasToken = s.hasToken
+    s.checking = False
+    sNext.selectedChannel = s.selectedChannel
     sNext.checking = False
     sNext.downloadActive = False
     sNext.downloadQueued = False
     sNext.freshness = FreshUpToDate
-    sNext.hasMatchingDownloadedApk = False
+    sNext.hasDownloadedApk = False
+    sNext.downloadedApkChannel = s.downloadedApkChannel
     sNext.errorState = ErrNone
-    deriveUi[sNext]
-}
-
-pred stutterRelease[s, sNext: State] {
-    s.isDebugBuild = False
-    sNext.isDebugBuild = False
-    sNext.hasToken = s.hasToken
-    sNext.checking = s.checking
-    sNext.downloadActive = s.downloadActive
-    sNext.downloadQueued = s.downloadQueued
-    sNext.freshness = s.freshness
-    sNext.hasMatchingDownloadedApk = s.hasMatchingDownloadedApk
-    sNext.errorState = s.errorState
     deriveUi[sNext]
 }
 
 fact Traces {
     init[first]
     all s: State - last | let sNext = s.next |
-        configureToken[s, sNext] or
-        clearToken[s, sNext] or
+        (some ch: UpdateChannel | switchChannel[s, sNext, ch]) or
         startCheck[s, sNext] or
         finishCheckUpdateAvailable[s, sNext] or
         finishCheckUpToDate[s, sNext] or
@@ -373,27 +328,21 @@ fact Traces {
         finishDownloadSuccess[s, sNext] or
         (some err: ErrorState | finishDownloadFailure[s, sNext, err]) or
         cancelDownload[s, sNext] or
-        installAndUpgradeToLatest[s, sNext] or
-        stutterRelease[s, sNext]
+        installAndUpgradeToLatest[s, sNext]
 }
 
 // ============================================================================
 // Safety Invariants
 // ============================================================================
 
-assert ReleaseBuildNeverShowsCard {
-    all s: State | s.isDebugBuild = False implies (
-        s.isCardVisible = False and
-        s.cardState = CardHidden and
-        s.primaryAction = ActNone
-    )
+assert BusyStateLocksChannelSelector {
+    all s: State | (s.checking = True or s.downloadActive = True or s.downloadQueued = True) implies
+        s.channelSelectorEnabled = False
 }
 
-assert NoTokenFailSafeNeverOffersDownload {
-    all s: State | s.hasToken = False implies (
-        s.primaryAction != ActDownload and
-        (s.hasMatchingDownloadedApk = False implies s.primaryAction != ActInstall)
-    )
+assert ChannelNeverChangesWhileBusy {
+    all s: State - last | (s.checking = True or s.downloadActive = True or s.downloadQueued = True) implies
+        s.next.selectedChannel = s.selectedChannel
 }
 
 assert ErrorStateNeverOffersDownloadOrInstall {
@@ -403,10 +352,8 @@ assert ErrorStateNeverOffersDownloadOrInstall {
     )
 }
 
-assert DownloadOnlyWhenTokenAndUpdateAvailable {
+assert DownloadOnlyWhenUpdateAvailableAndNotBusy {
     all s: State | s.primaryAction = ActDownload implies (
-        s.isDebugBuild = True and
-        s.hasToken = True and
         s.freshness = FreshUpdateAvailable and
         s.errorState = ErrNone and
         s.downloadActive = False and
@@ -415,10 +362,10 @@ assert DownloadOnlyWhenTokenAndUpdateAvailable {
     )
 }
 
-assert InstallOnlyWhenMatchingApkExistsAndDebug {
+assert InstallOnlyWhenChannelMatchingApkExists {
     all s: State | s.primaryAction = ActInstall implies (
-        s.isDebugBuild = True and
-        s.hasMatchingDownloadedApk = True and
+        s.hasDownloadedApk = True and
+        s.downloadedApkChannel = s.selectedChannel and
         s.errorState = ErrNone and
         s.downloadActive = False and
         s.downloadQueued = False and
@@ -434,17 +381,17 @@ assert UpToDateNeverOffersDownloadOrInstall {
 }
 
 assert ActiveDownloadAlwaysShowsProgressAndCancel {
-    all s: State | (s.isDebugBuild = True and (s.downloadActive = True or s.downloadQueued = True)) implies (
+    all s: State | (s.downloadActive = True or s.downloadQueued = True) implies (
         s.showProgress = True and
         s.primaryAction = ActCancel
     )
 }
 
-check ReleaseBuildNeverShowsCard for 6 State
-check NoTokenFailSafeNeverOffersDownload for 6 State
+check BusyStateLocksChannelSelector for 6 State
+check ChannelNeverChangesWhileBusy for 6 State
 check ErrorStateNeverOffersDownloadOrInstall for 6 State
-check DownloadOnlyWhenTokenAndUpdateAvailable for 6 State
-check InstallOnlyWhenMatchingApkExistsAndDebug for 6 State
+check DownloadOnlyWhenUpdateAvailableAndNotBusy for 6 State
+check InstallOnlyWhenChannelMatchingApkExists for 6 State
 check UpToDateNeverOffersDownloadOrInstall for 6 State
 check ActiveDownloadAlwaysShowsProgressAndCancel for 6 State
 
@@ -452,19 +399,44 @@ check ActiveDownloadAlwaysShowsProgressAndCancel for 6 State
 // Reachability (Non-Vacuity)
 // ============================================================================
 
-pred canConfigureTokenCheckDownloadAndInstall {
-    some s0, s1, s2, s3: State |
-        s0.cardState = CardTokenMissing and
-        s1.primaryAction = ActDownload and
-        s2.cardState = CardDownloading and
-        s2.showProgress = True and
-        s3.primaryAction = ActInstall and
-        s3.cardState = CardReadyToInstall
+pred canCheckDownloadAndInstallReleaseTokenless {
+    some s0, s1, s2, s3, s4, s5: State |
+        s0.selectedChannel = ChannelRelease and
+        s0.cardState = CardIdle and
+        s1.cardState = CardChecking and
+        s2.primaryAction = ActDownload and
+        s3.cardState = CardDownloading and
+        s3.showProgress = True and
+        s4.primaryAction = ActInstall and
+        s4.cardState = CardReadyToInstall and
+        s5.cardState = CardUpToDate
 }
 
-pred canFailSafeOnNetworkErrorAndRecover {
+pred canSwitchToRemoteHeadAndInstallTokenless {
+    some s0, s1, s2, s3, s4: State |
+        s0.selectedChannel = ChannelRelease and
+        s1.selectedChannel = ChannelRemoteHead and
+        s2.selectedChannel = ChannelRemoteHead and
+        s2.primaryAction = ActDownload and
+        s3.cardState = CardDownloading and
+        s4.selectedChannel = ChannelRemoteHead and
+        s4.primaryAction = ActInstall
+}
+
+pred canSwitchChannelWithoutCrossChannelInstallLeak {
     some s1, s2: State |
-        s1.cardState = CardNetworkError and
+        s2 = s1.next and
+        s1.selectedChannel = ChannelRemoteHead and
+        s1.primaryAction = ActInstall and
+        s2.selectedChannel = ChannelRelease and
+        s2.hasDownloadedApk = True and
+        s2.primaryAction != ActInstall
+}
+
+pred canFailSafeOnRateLimitOrIntegrityErrorAndRecover {
+    some s1, s2: State |
+        (s1.errorState = ErrRateLimited or s1.errorState = ErrIntegrityFailed) and
+        s1.cardState = CardError and
         s1.primaryAction = ActCheck and
         s2.cardState = CardUpToDate
 }
@@ -477,6 +449,8 @@ pred canCancelActiveDownload {
         s2.showProgress = False
 }
 
-run canConfigureTokenCheckDownloadAndInstall for 6 State
-run canFailSafeOnNetworkErrorAndRecover for 6 State
+run canCheckDownloadAndInstallReleaseTokenless for 6 State
+run canSwitchToRemoteHeadAndInstallTokenless for 6 State
+run canSwitchChannelWithoutCrossChannelInstallLeak for 6 State
+run canFailSafeOnRateLimitOrIntegrityErrorAndRecover for 6 State
 run canCancelActiveDownload for 6 State

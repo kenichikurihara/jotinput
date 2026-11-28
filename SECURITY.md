@@ -37,7 +37,7 @@ For full data-handling details, see [`PRIVACY.md`](PRIVACY.md). Key security con
 - **100% On-Device Processing & Zero Telemetry**: Voice audio, typed text, clipboard paste previews, and custom dictionaries are processed locally on-device with no analytics, ad SDKs, or cloud telemetry.
 - **No Cloud/ADB App Backup (`android:allowBackup="false"`)**: `AndroidManifest.xml` disables automatic backup so local user data such as `custom_dictionary.json` is not extracted via backup mechanisms.
 - **Restricted Internal Components**: Internal management activities (such as `DictionaryActivity`) use `android:exported="false"`.
-- **Debug vs. Release Self-Update Isolation**: `REQUEST_INSTALL_PACKAGES` is declared only in debug builds (`app/src/debug/AndroidManifest.xml`) and is excluded from Release builds (`!BuildConfig.DEBUG`).
+- **Tokenless Verified Self-Updates**: In-app updates on both Release and Debug builds work without tokens via public HTTPS GitHub Releases (`RELEASE` or `REMOTE_HEAD`), verifying APK archive headers, SHA-256 digests, package ID, non-downgrade version codes, and signing certificates (`AppUpdateInstaller`) before invoking Android's package installer (`REQUEST_INSTALL_PACKAGES`).
 - **HTTPS Model & Lexicon Downloads**: Optional neural models and dictionaries are fetched on demand exclusively over HTTPS from the upstream sources documented in [`PRIVACY.md`](PRIVACY.md).
 
 ---

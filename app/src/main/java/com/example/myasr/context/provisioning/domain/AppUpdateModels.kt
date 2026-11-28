@@ -1,6 +1,20 @@
 package com.example.myasr.context.provisioning.domain
 
 /**
+ * Selectable update distribution channel for tokenless public GitHub updates.
+ */
+enum class AppUpdateChannel(val id: String, val displayName: String) {
+    RELEASE("release", "リリース版"),
+    REMOTE_HEAD("remote_head", "リモートヘッド");
+
+    companion object {
+        fun fromId(id: String?, defaultChannel: AppUpdateChannel): AppUpdateChannel {
+            return entries.firstOrNull { it.id == id } ?: defaultChannel
+        }
+    }
+}
+
+/**
  * Metadata describing the currently running JotInput APK build, embedded at compile time via BuildConfig.
  */
 data class InstalledAppBuildInfo(
@@ -16,37 +30,68 @@ data class InstalledAppBuildInfo(
 }
 
 /**
- * Metadata for a GitHub Actions build artifact (`app-debug`) fetched from the GitHub REST API.
+ * Metadata for a downloadable public GitHub Release or `main-head` prerelease APK.
  */
 data class RemoteBuildArtifact(
+    val channel: AppUpdateChannel,
     val artifactId: Long,
+    val tagName: String,
+    val versionName: String,
+    val versionCode: Int,
     val name: String,
     val sizeInBytes: Long,
-    val archiveDownloadUrl: String,
+    val downloadUrl: String,
+    val sha256: String,
     val createdAtMs: Long,
-    val expiresAtMs: Long,
-    val expired: Boolean,
+    val commitEpochMs: Long,
     val runId: Long,
     val headSha: String,
-    val headBranch: String
+    val headBranch: String,
+    val isDebugVariant: Boolean,
+    val expired: Boolean = false
 ) {
     val shortSha: String
-        get() = headSha.trim().takeIf { it.isNotEmpty() }?.take(7) ?: "unknown"
+        get() = headSha.trim().takeIf { it.isNotEmpty() && !it.equals("unknown", ignoreCase = true) }?.take(7) ?: "unknown"
+
+    val effectiveTimestampMs: Long
+        get() = if (commitEpochMs > 0L) commitEpochMs else createdAtMs
+
+    val displayLabel: String
+        get() = when (channel) {
+            AppUpdateChannel.RELEASE -> tagName.trim().ifEmpty {
+                versionName.trim().takeIf { it.isNotEmpty() }?.let { "v$it" } ?: name
+            }
+            AppUpdateChannel.REMOTE_HEAD -> shortSha
+        }
 }
 
 /**
- * Metadata for an already-downloaded and extracted APK staged in app-private storage.
+ * Metadata for an already-downloaded and SHA-256 verified APK staged in app-private storage.
  */
 data class DownloadedApkInfo(
+    val channel: AppUpdateChannel,
     val artifactId: Long,
+    val tagName: String,
+    val versionName: String,
+    val versionCode: Int,
     val headSha: String,
     val runId: Long,
+    val commitEpochMs: Long,
     val createdAtMs: Long,
     val filePath: String,
-    val sizeInBytes: Long
+    val sizeInBytes: Long,
+    val sha256: String
 ) {
     val shortSha: String
-        get() = headSha.trim().takeIf { it.isNotEmpty() }?.take(7) ?: "unknown"
+        get() = headSha.trim().takeIf { it.isNotEmpty() && !it.equals("unknown", ignoreCase = true) }?.take(7) ?: "unknown"
+
+    val displayLabel: String
+        get() = when (channel) {
+            AppUpdateChannel.RELEASE -> tagName.trim().ifEmpty {
+                versionName.trim().takeIf { it.isNotEmpty() }?.let { "v$it" } ?: "release"
+            }
+            AppUpdateChannel.REMOTE_HEAD -> shortSha
+        }
 }
 
 enum class BuildFreshnessStatus {
@@ -56,20 +101,22 @@ enum class BuildFreshnessStatus {
 }
 
 enum class AppUpdateCheckErrorKind {
-    TOKEN_REQUIRED,
-    AUTH_FAILED,
     NETWORK_ERROR,
-    DOWNLOAD_FAILED
+    RATE_LIMITED,
+    DOWNLOAD_FAILED,
+    INTEGRITY_CHECK_FAILED
 }
 
 sealed class AppUpdateCheckResult {
     data class Checked(
+        val channel: AppUpdateChannel,
         val artifact: RemoteBuildArtifact?,
         val freshness: BuildFreshnessStatus,
         val checkedAtMs: Long
     ) : AppUpdateCheckResult()
 
     data class Failure(
+        val channel: AppUpdateChannel,
         val errorKind: AppUpdateCheckErrorKind,
         val message: String,
         val httpStatusCode: Int? = null
@@ -77,14 +124,11 @@ sealed class AppUpdateCheckResult {
 }
 
 enum class AppUpdateCardState {
-    HIDDEN,
     DOWNLOADING,
     QUEUED,
     CHECKING,
     READY_TO_INSTALL,
-    TOKEN_MISSING,
-    AUTH_ERROR,
-    NETWORK_ERROR,
+    ERROR,
     UPDATE_AVAILABLE,
     UP_TO_DATE,
     NO_ARTIFACT,
@@ -92,11 +136,9 @@ enum class AppUpdateCardState {
 }
 
 enum class AppUpdatePrimaryAction {
-    NONE,
     CANCEL_DOWNLOAD,
     CHECK_UPDATE,
     INSTALL_APK,
-    CONFIGURE_TOKEN,
     DOWNLOAD_UPDATE
 }
 

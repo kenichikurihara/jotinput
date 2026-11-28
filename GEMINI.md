@@ -23,9 +23,10 @@ Or manually:
 
 ## ☁️ APK Distribution Policy (GitHub CI/CD)
 Whenever changes are made and pushed:
-- **GitHub Actions Artifact Storage**:
-  - CI/CD (`.github/workflows/android-ci.yml`) automatically builds and archives the compiled debug APK (`app-debug.apk`) as a workflow artifact upon push to `main` or pull request.
-  - Sideloading and verification can download the fresh artifact directly from GitHub Actions runs.
+- **Pull Request CI (`Build & Test`) & Rolling Remote HEAD Prerelease (`main-head`)**:
+  - CI/CD ([`.github/workflows/android-ci.yml`](.github/workflows/android-ci.yml)) runs `Build & Test` on **every** pull request targeting `main` (without path skips) and on `main` pushes, archiving `app-debug.apk` and verifying both Debug (persistent keystore) and Release (R8 + 16KB ELF) builds.
+  - On every `main` push / workflow dispatch, `Publish Remote HEAD Prerelease` builds and publishes the rolling `main-head` prerelease (`jotinput-main-head-release.apk`, `jotinput-main-head-debug.apk`, `head-metadata.json`, `SHA256SUMS.txt`) for tokenless in-app updates without altering `/releases/latest`.
+  - Official `v*` tag pushes run [`.github/workflows/release.yml`](.github/workflows/release.yml) to publish signed stable GitHub Releases.
 
 ## 💾 Custom Dictionary Persistence Policy
 - Keep dictionary empty by default on fresh installs.
@@ -68,15 +69,18 @@ Whenever changes are made and pushed:
 - **Optimal Defaults Over UI Knobs**: When a parameter is proven optimal via cross-validation or corpus evaluation, apply it as the default constant in code rather than adding new visible controls to the primary UI.
 - **Zero Dead UI Resources**: Immediately delete obsolete layouts or classes when refactoring UI flows. Refer to [`docs/ui_design_and_simplicity_guidelines.md`](docs/ui_design_and_simplicity_guidelines.md) before adding any UI element.
 
-## 🚀 Remote Repository Synchronization & CI/CD Verification Policy (Mandatory)
-- **Continuous Remote Git Push**:
-  - Whenever any new feature, bug fix, asset addition, or documentation change is completed and verified, **always commit and push changes to the remote GitHub repository (`origin/main`)**.
-  - Never leave completed feature increments or tested fixes unpushed on the local branch.
-- **Mandatory CI/CD Completion & Success Verification**:
-  - After pushing commits to remote, **always monitor and verify that GitHub Actions CI/CD (`Android CI`) completes with success (`gh run watch <run_id>` or `gh run list` / `gh run view`)**.
-  - Never finish or conclude a task while CI/CD is failing or unresolved. If CI/CD fails, immediately investigate the failure logs, fix the root cause, and re-push until CI/CD is all green.
+## 🚀 Mandatory Pull Request & Pre-Merge CI/CD Policy
+- **Mandatory Topic Branch & Pull Request Workflow (No Direct Pushes to `main`)**:
+  - Because `kenichikurihara/jotinput` is a public repository with Branch Protection on `main`, **never commit directly to `main` or push directly to `origin/main`** (also enforced by [`.githooks/pre-push`](.githooks/pre-push)).
+  - For every completed feature, bug fix, asset update, or documentation change:
+    1. Create a topic branch from `main` (e.g., `git checkout -b feat/<topic>` or `fix/<topic>`).
+    2. Commit verified changes and push the topic branch to `origin` (`git push -u origin <branch>`).
+    3. Open a Pull Request targeting `main` via `gh pr create --base main ...` following [`.github/pull_request_template.md`](.github/pull_request_template.md).
+    4. **Pre-Merge CI/CD Gate**: Always wait for and verify that `Android CI` (`Build & Test`) passes 100% on the Pull Request **before merging** (`gh pr checks --watch` or `gh run watch <run_id>`). Never merge a PR while CI/CD is pending, failing, or skipped.
+    5. Merge only after all required PR checks are green (`gh pr merge --admin --squash --delete-branch` when acting as the solo maintainer), then switch to `main` and `git pull --ff-only origin main`.
+    6. Monitor the post-merge `Android CI` workflow run on `main` (including `Publish Remote HEAD Prerelease`) to 100% completion (`gh run watch <run_id>`).
 - **CI/CD Failure Feedback & Local Test Enhancement (Prevent Remote Regression Escapes)**:
-  - Whenever CI/CD fails, **always enhance or add local unit/integration tests (`./gradlew testDebugUnitTest`, Konsist, or evaluation suites) so that the regression is reliably reproduced and caught locally in future test runs**.
+  - Whenever CI/CD fails (on a PR or on `main`), **always enhance or add local unit/integration tests (`./gradlew testDebugUnitTest`, Konsist, or evaluation suites) so that the regression is reliably reproduced and caught locally in future test runs**.
   - Never patch a CI failure superficially or push trial-and-error fixes without establishing corresponding local test coverage to detect the failure beforehand.
 
 ## 🏛️ DDD / DSL Boundary Review & Architecture Enforcement (Mandatory)

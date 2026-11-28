@@ -23,32 +23,18 @@ on:
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - 'eval/**'
-      - 'LICENSES/**'
-      - 'LICENSE'
-      - '.agents/**'
-      - '.githooks/**'
-      - 'scripts/**'
-      - 'deploy.sh'
-      - 'download_model.sh'
-      - 'tools/*.py'
-      - 'tools/*.cc'
-      - 'tools/*.tsv'
-      - 'tools/*.jsonl'
-      - 'tools/push_model_to_device.sh'
   workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   build-and-test:
     name: Build & Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
@@ -215,3 +201,245 @@ jobs:
       - name: Clean Up Debug Keystore
         if: always()
         run: rm -f "${RUNNER_TEMP}/jotinput-debug.keystore"
+
+  publish-head:
+    name: Publish Remote HEAD Prerelease
+    needs: build-and-test
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_NOHASHDIR: 'true'
+      CCACHE_COMPILERCHECK: content
+      CCACHE_MAXSIZE: '500M'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Built Debug APK Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-debug
+          path: ${{ runner.temp }}/head-debug-artifact
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache Android NDK and CMake
+        id: ndk-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            /usr/local/lib/android/sdk/ndk/26.3.11579264
+            /usr/local/lib/android/sdk/cmake/3.22.1
+          key: ndk-26.3.11579264-cmake-3.22.1
+
+      - name: Set up Android NDK and CMake
+        if: steps.ndk-cache.outputs.cache-hit != 'true'
+        run: |
+          SDKMANAGER=$(command -v sdkmanager || echo "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager")
+          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "ndk;26.3.11579264" "cmake;3.22.1"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Install ccache
+        run: which ccache >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ccache)
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.ccache
+          key: ccache-v2-${{ runner.os }}-${{ hashFiles('app/src/main/cpp/**', 'tools/setup_native_deps.sh') }}
+          restore-keys: |
+            ccache-v2-${{ runner.os }}-
+
+      - name: Cache llama.cpp source
+        uses: actions/cache@v4
+        with:
+          path: tools/llama_cpp_src
+          key: llama-cpp-${{ hashFiles('tools/setup_native_deps.sh') }}
+
+      - name: Prepare Test Lexicon Assets
+        run: |
+          mkdir -p tools/mozc_dict
+          if [ -f app/src/main/assets/mozc/connection_data.bin ] && [ ! -f tools/mozc_dict/connection_data.bin ]; then
+            ln -sf ../../app/src/main/assets/mozc/connection_data.bin tools/mozc_dict/connection_data.bin
+          fi
+          if [ -f app/src/test/resources/mozc/system_dictionary.bin ] && [ ! -f tools/mozc_dict/system_dictionary.bin ]; then
+            ln -sf ../../app/src/test/resources/mozc/system_dictionary.bin tools/mozc_dict/system_dictionary.bin
+          fi
+
+      - name: Setup Native Dependencies
+        run: ./tools/setup_native_deps.sh
+
+      - name: Decode Release Keystore
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "${RELEASE_KEYSTORE_BASE64}" ]; then
+            echo "ERROR: RELEASE_KEYSTORE_BASE64 secret is missing in 'release' environment."
+            exit 1
+          fi
+          printf '%s' "${RELEASE_KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/jotinput-release.jks"
+          chmod 600 "${RUNNER_TEMP}/jotinput-release.jks"
+
+      - name: Assemble Signed Release APK
+        env:
+          RELEASE_STORE_FILE: ${{ runner.temp }}/jotinput-release.jks
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          ccache -z
+          ./gradlew assembleRelease --max-workers=2 --stacktrace
+          ccache -s
+
+      - name: Verify Signed Release & Debug APKs
+        run: |
+          RELEASE_APK="app/build/outputs/apk/release/app-release.apk"
+          DEBUG_APK="${RUNNER_TEMP}/head-debug-artifact/app-debug.apk"
+          APKSIGNER=$(ls -1 "${ANDROID_HOME}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "${APKSIGNER}" ]; then
+            echo "ERROR: apksigner not found under ${ANDROID_HOME}/build-tools"
+            exit 1
+          fi
+          "${APKSIGNER}" verify --verbose --print-certs "${RELEASE_APK}"
+          "${APKSIGNER}" verify --verbose --print-certs "${DEBUG_APK}"
+
+          TMP_SO_DIR=$(mktemp -d)
+          trap 'rm -rf "${TMP_SO_DIR}"' EXIT
+          unzip -q "${RELEASE_APK}" "lib/arm64-v8a/*.so" -d "${TMP_SO_DIR}"
+          python3 -c '
+          import glob, subprocess, sys
+          libs = sorted(glob.glob(sys.argv[1] + "/lib/arm64-v8a/*.so"))
+          if not libs:
+              print("ERROR: No arm64-v8a .so files found inside release APK", file=sys.stderr)
+              sys.exit(1)
+          for lib in libs:
+              out = subprocess.check_output(["readelf", "-lW", lib], text=True)
+              loads = [line.split()[-1] for line in out.splitlines() if line.strip().startswith("LOAD")]
+              for align in loads:
+                  val = int(align, 16)
+                  if val < 0x4000 or (val % 0x4000) != 0:
+                      print(f"ERROR: {lib} LOAD segment alignment {align} is not 16KB-aligned", file=sys.stderr)
+                      sys.exit(1)
+              print(f"OK {lib}: alignments={loads}")
+          ' "${TMP_SO_DIR}"
+
+      - name: Clean Up Release Keystore
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/jotinput-release.jks"
+
+      - name: Package Remote HEAD Assets & Metadata
+        run: |
+          OUT_DIR="${RUNNER_TEMP}/head-release-assets"
+          mkdir -p "${OUT_DIR}"
+          cp app/build/outputs/apk/release/app-release.apk "${OUT_DIR}/jotinput-main-head-release.apk"
+          cp "${RUNNER_TEMP}/head-debug-artifact/app-debug.apk" "${OUT_DIR}/jotinput-main-head-debug.apk"
+          (cd "${OUT_DIR}" && sha256sum jotinput-main-head-release.apk jotinput-main-head-debug.apk > SHA256SUMS.txt)
+          OUT_DIR="${OUT_DIR}" python3 -c '
+          import hashlib, json, os, re, subprocess, time
+
+          gradle_txt = open("app/build.gradle.kts", encoding="utf-8").read()
+          version_name = re.search(r"versionName\s*=\s*\"([^\"]+)\"", gradle_txt).group(1)
+          version_code = int(re.search(r"versionCode\s*=\s*(\d+)", gradle_txt).group(1))
+          commit_epoch_sec = int(subprocess.check_output(["git", "show", "-s", "--format=%ct", "HEAD"], text=True).strip())
+          out_dir = os.environ["OUT_DIR"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          tag = "main-head"
+
+          def file_info(filename):
+              path = os.path.join(out_dir, filename)
+              h = hashlib.sha256()
+              with open(path, "rb") as f:
+                  for chunk in iter(lambda: f.read(65536), b""):
+                      h.update(chunk)
+              return {
+                  "name": filename,
+                  "downloadUrl": f"https://github.com/{repo}/releases/download/{tag}/{filename}",
+                  "sizeBytes": os.path.getsize(path),
+                  "sha256": h.hexdigest(),
+              }
+
+          meta = {
+              "schemaVersion": 1,
+              "tag": tag,
+              "branch": "main",
+              "gitSha": os.environ["GITHUB_SHA"],
+              "commitEpochMs": commit_epoch_sec * 1000,
+              "publishedAtMs": int(time.time() * 1000),
+              "runId": int(os.environ["GITHUB_RUN_ID"]),
+              "versionName": version_name,
+              "versionCode": version_code,
+              "releaseApk": file_info("jotinput-main-head-release.apk"),
+              "debugApk": file_info("jotinput-main-head-debug.apk"),
+          }
+          with open(os.path.join(out_dir, "head-metadata.json"), "w", encoding="utf-8") as f:
+              json.dump(meta, f, indent=2)
+              f.write("\n")
+          print(json.dumps(meta, indent=2))
+          '
+
+      - name: Publish Rolling Remote HEAD Prerelease (main-head)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OUT_DIR="${RUNNER_TEMP}/head-release-assets"
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          NOTES_PATH="${OUT_DIR}/HEAD_NOTES.md"
+          cat > "${NOTES_PATH}" <<EOF
+          ## JotInput Remote HEAD (\`${SHORT_SHA}\`)
+
+          Rolling prerelease built automatically from \`main\` (Run \`#${GITHUB_RUN_ID}\`, commit \`${GITHUB_SHA}\`).
+          Used by the tokenless **Remote HEAD** channel in JotInput's in-app updater (does not replace official \`/releases/latest\`).
+
+          - \`jotinput-main-head-release.apk\`: Signed Release build (for Release installs)
+          - \`jotinput-main-head-debug.apk\`: Persistent-Debug-key signed build (for Debug installs)
+          - \`head-metadata.json\`: Machine-readable freshness & SHA-256 verification manifest
+          - \`SHA256SUMS.txt\`: Checksum manifest
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f main-head "${GITHUB_SHA}"
+          git push origin "refs/tags/main-head" --force
+
+          if gh release view main-head >/dev/null 2>&1; then
+            gh release upload main-head \
+              "${OUT_DIR}/jotinput-main-head-release.apk" \
+              "${OUT_DIR}/jotinput-main-head-debug.apk" \
+              "${OUT_DIR}/SHA256SUMS.txt" \
+              --clobber
+            gh release upload main-head "${OUT_DIR}/head-metadata.json" --clobber
+            gh release edit main-head \
+              --title "JotInput Remote HEAD (main)" \
+              --notes-file "${NOTES_PATH}" \
+              --prerelease \
+              --latest=false \
+              --target "${GITHUB_SHA}"
+          else
+            gh release create main-head \
+              "${OUT_DIR}/jotinput-main-head-release.apk" \
+              "${OUT_DIR}/jotinput-main-head-debug.apk" \
+              "${OUT_DIR}/SHA256SUMS.txt" \
+              --title "JotInput Remote HEAD (main)" \
+              --notes-file "${NOTES_PATH}" \
+              --prerelease \
+              --latest=false \
+              --target "${GITHUB_SHA}"
+            gh release upload main-head "${OUT_DIR}/head-metadata.json" --clobber
+          fi

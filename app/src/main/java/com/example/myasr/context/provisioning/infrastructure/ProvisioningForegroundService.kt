@@ -24,6 +24,7 @@ import com.example.myasr.R
 import com.example.myasr.context.english.infrastructure.EnglishSpellEngine
 import com.example.myasr.context.ime.presentation.KeyboardHeightManager
 import com.example.myasr.context.kanakanji.domain.KanaKanjiEngine
+import com.example.myasr.context.provisioning.domain.AppUpdateChannel
 import com.example.myasr.context.provisioning.domain.AppUpdateCheckErrorKind
 import com.example.myasr.context.provisioning.domain.DictUpdateState
 import com.example.myasr.context.provisioning.domain.DictionaryUpdateTracker
@@ -67,7 +68,11 @@ data class ProvisioningTaskRequest(
             val engine = RerankEngineType.fromId(dictId ?: "")
             if (engine != RerankEngineType.NONE) "${engine.displayName} AIモデル" else "AI変換モデル"
         }
-        ProvisioningTaskKind.APP_UPDATE_APK -> "アプリ最新ビルド"
+        ProvisioningTaskKind.APP_UPDATE_APK -> when (dictId) {
+            AppUpdateChannel.RELEASE.id -> "リリース版アプリ更新"
+            AppUpdateChannel.REMOTE_HEAD.id -> "リモートヘッド最新ビルド"
+            else -> "アプリ最新ビルド"
+        }
     }
 }
 
@@ -579,12 +584,17 @@ class ProvisioningForegroundService : Service() {
 
     private suspend fun runAppUpdateDownload(task: ProvisioningTaskRequest): ProvisioningEvent {
         val repo = AsrApp.instance.appUpdateRepository
-        val result = repo.downloadLatestArtifact { pct, statusText ->
+        val channel = AppUpdateChannel.fromId(task.dictId, repo.getSelectedChannel())
+        val notifTitle = when (channel) {
+            AppUpdateChannel.RELEASE -> "JotInput リリース版をダウンロード中"
+            AppUpdateChannel.REMOTE_HEAD -> "JotInput リモートヘッドをダウンロード中"
+        }
+        val result = repo.downloadLatestBuild(channel) { pct, statusText ->
             reportProgress(
                 task = task,
                 percent = pct,
                 statusText = statusText,
-                notifTitle = "JotInput 最新ビルドをダウンロード中"
+                notifTitle = notifTitle
             )
         }
         return if (result.isSuccess) {
@@ -593,17 +603,17 @@ class ProvisioningForegroundService : Service() {
                 eventId = eventCounter.incrementAndGet(),
                 task = task,
                 success = true,
-                message = "最新ビルド (${info.shortSha}) の準備が完了しました。タップしてインストールできます。"
+                message = "${channel.displayName} (${info.displayLabel}) の準備が完了しました。タップしてインストールできます。"
             )
         } else {
             val ex = result.exceptionOrNull()
-            val errKind = (ex as? GitHubArtifactUpdateClient.DownloadHttpException)?.errorKind
+            val errKind = (ex as? GitHubAppUpdateClient.DownloadHttpException)?.errorKind
                 ?: AppUpdateCheckErrorKind.DOWNLOAD_FAILED
             ProvisioningEvent(
                 eventId = eventCounter.incrementAndGet(),
                 task = task,
                 success = false,
-                message = "アプリビルド取得失敗: ${ex?.message ?: "Unknown error"}",
+                message = "アプリ更新取得失敗: ${ex?.message ?: "Unknown error"}",
                 errorKind = errKind
             )
         }
@@ -840,6 +850,7 @@ class ProvisioningForegroundService : Service() {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             if (isAppUpdateReady) {
                 putExtra(MainActivity.EXTRA_TRIGGER_APP_UPDATE_INSTALL, true)
+                event.task.dictId?.let { putExtra(MainActivity.EXTRA_APP_UPDATE_CHANNEL, it) }
             }
         }
         val pendingIntent = PendingIntent.getActivity(

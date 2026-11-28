@@ -299,13 +299,13 @@
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- 4. Developer-Only GitHub Actions Build Update Card -->
+        <!-- 4. Public GitHub App Update Card (Tokenless, Release / Remote HEAD) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardAppUpdate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:visibility="gone"
+            android:visibility="visible"
             app:cardBackgroundColor="@color/surface"
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp"
@@ -328,7 +328,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="開発ビルド更新 (GitHub)"
+                        android:text="アプリ更新 (GitHub)"
                         android:textColor="@color/text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -341,34 +341,52 @@
                         android:backgroundTint="@color/badge_neutral_bg"
                         android:paddingHorizontal="8dp"
                         android:paddingVertical="3dp"
-                        android:text="未連携"
+                        android:text="未確認"
                         android:textColor="@color/badge_neutral_text"
                         android:textSize="11sp"
                         android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/btnAppUpdateToken"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="?attr/selectableItemBackground"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:paddingHorizontal="6dp"
-                        android:paddingVertical="2dp"
-                        android:text="トークン設定"
-                        android:textColor="@color/primary"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
                 </LinearLayout>
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggleAppUpdateChannel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnChannelRelease"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="リリース版"
+                        android:textAllCaps="false"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnChannelRemoteHead"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="リモートヘッド"
+                        android:textAllCaps="false"
+                        android:textSize="12sp" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
 
                 <TextView
                     android:id="@+id/tvAppUpdateSummary"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="8dp"
                     android:lineSpacingMultiplier="1.15"
-                    android:text="GitHub Actions の最新ビルドを確認します。"
+                    android:text="リリース版またはリモートヘッドの最新更新を確認できます。"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp" />
 
