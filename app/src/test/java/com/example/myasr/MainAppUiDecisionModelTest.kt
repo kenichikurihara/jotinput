@@ -64,6 +64,54 @@ class MainAppUiDecisionModelTest {
     }
 
     @Test
+    fun `homeHeroDecisionTable always exposes SELECT_IME iff imeEnabled and not imeSelected`() {
+        val asrFlags = listOf(false, true)
+        val wordCounts = listOf(0, 150000)
+        val outdatedCounts = listOf(0, 2)
+
+        for (jaAsrReady in asrFlags) {
+            for (dictWords in wordCounts) {
+                for (outdated in outdatedCounts) {
+                    val enabledUnselected = MainAppUiDecisionModel.evaluateHomeHeroWithTrace(
+                        HomeHeroInput(
+                            imeEnabled = true,
+                            imeSelected = false,
+                            japaneseAsrReady = jaAsrReady,
+                            totalDictWords = dictWords,
+                            outdatedDictCount = outdated
+                        )
+                    )
+                    assertEquals("HERO_R2", enabledUnselected.selectedRuleId)
+                    assertEquals(HeroActionKind.SELECT_IME, enabledUnselected.result.actionKind)
+                    assertEquals("入力方法を切り替える", enabledUnselected.result.ctaLabel)
+
+                    val disabled = MainAppUiDecisionModel.evaluateHomeHero(
+                        HomeHeroInput(
+                            imeEnabled = false,
+                            imeSelected = false,
+                            japaneseAsrReady = jaAsrReady,
+                            totalDictWords = dictWords,
+                            outdatedDictCount = outdated
+                        )
+                    )
+                    assertTrue(disabled.actionKind != HeroActionKind.SELECT_IME)
+
+                    val selected = MainAppUiDecisionModel.evaluateHomeHero(
+                        HomeHeroInput(
+                            imeEnabled = true,
+                            imeSelected = true,
+                            japaneseAsrReady = jaAsrReady,
+                            totalDictWords = dictWords,
+                            outdatedDictCount = outdated
+                        )
+                    )
+                    assertTrue(selected.actionKind != HeroActionKind.SELECT_IME)
+                }
+            }
+        }
+    }
+
+    @Test
     fun `provisioningBannerDecisionTable handles active, queued, and idle states`() {
         val active = MainAppUiDecisionModel.evaluateProvisioningBanner(
             ProvisioningBannerInput(hasActiveTask = true, queuedCount = 1, progress = 42, statusText = "SudachiDict 取得中...")

@@ -49,6 +49,7 @@ sig State {
     isUserSelection: one Bool,
     // Derived UI projections
     heroAction: one HeroAction,
+    showHeroSwitchImeCta: one Bool,
     showGlobalBanner: one Bool,
     showSlmSelector: one Bool,
     showBottomNav: one Bool,
@@ -64,6 +65,9 @@ pred deriveUi[s: State] {
     (s.baseDictReady = False) implies (s.heroAction = HeroDownloadDicts) else
     (s.outdatedDicts = True) implies (s.heroAction = HeroUpdateDicts) else
     (s.heroAction = HeroReady)
+
+    // Single Switch-IME entry point on Home (DMN Hero Card only)
+    (s.heroAction = HeroSelectIme) implies (s.showHeroSwitchImeCta = True) else (s.showHeroSwitchImeCta = False)
 
     // Global Provisioning Banner
     s.showGlobalBanner = s.provisioningActive
@@ -119,6 +123,61 @@ pred enableAndSelectIme[s, sNext: State] {
     sNext.activeTab = s.activeTab
     sNext.imeEnabled = True
     sNext.imeSelected = True
+    sNext.jaAsrReady = s.jaAsrReady
+    sNext.baseDictReady = s.baseDictReady
+    sNext.outdatedDicts = s.outdatedDicts
+    sNext.provisioningActive = s.provisioningActive
+    sNext.slmEnabled = s.slmEnabled
+    sNext.selectedEngine = s.selectedEngine
+    sNext.imeInputActive = s.imeInputActive
+    sNext.selectedModelInstalled = s.selectedModelInstalled
+    sNext.slmDownloading = s.slmDownloading
+    sNext.isUserSelection = False
+    deriveUi[sNext]
+}
+
+pred enableIme[s, sNext: State] {
+    s.imeEnabled = False
+    sNext.activeTab = s.activeTab
+    sNext.imeEnabled = True
+    sNext.imeSelected = s.imeSelected
+    sNext.jaAsrReady = s.jaAsrReady
+    sNext.baseDictReady = s.baseDictReady
+    sNext.outdatedDicts = s.outdatedDicts
+    sNext.provisioningActive = s.provisioningActive
+    sNext.slmEnabled = s.slmEnabled
+    sNext.selectedEngine = s.selectedEngine
+    sNext.imeInputActive = s.imeInputActive
+    sNext.selectedModelInstalled = s.selectedModelInstalled
+    sNext.slmDownloading = s.slmDownloading
+    sNext.isUserSelection = False
+    deriveUi[sNext]
+}
+
+pred selectIme[s, sNext: State] {
+    s.imeEnabled = True
+    s.imeSelected = False
+    sNext.activeTab = s.activeTab
+    sNext.imeEnabled = True
+    sNext.imeSelected = True
+    sNext.jaAsrReady = s.jaAsrReady
+    sNext.baseDictReady = s.baseDictReady
+    sNext.outdatedDicts = s.outdatedDicts
+    sNext.provisioningActive = s.provisioningActive
+    sNext.slmEnabled = s.slmEnabled
+    sNext.selectedEngine = s.selectedEngine
+    sNext.imeInputActive = s.imeInputActive
+    sNext.selectedModelInstalled = s.selectedModelInstalled
+    sNext.slmDownloading = s.slmDownloading
+    sNext.isUserSelection = False
+    deriveUi[sNext]
+}
+
+pred deselectIme[s, sNext: State] {
+    s.imeSelected = True
+    sNext.activeTab = s.activeTab
+    sNext.imeEnabled = s.imeEnabled
+    sNext.imeSelected = False
     sNext.jaAsrReady = s.jaAsrReady
     sNext.baseDictReady = s.baseDictReady
     sNext.outdatedDicts = s.outdatedDicts
@@ -247,6 +306,9 @@ fact Traces {
     all s: State - last | let sNext = s.next |
         (some t: Tab | switchTab[s, sNext, t]) or
         enableAndSelectIme[s, sNext] or
+        enableIme[s, sNext] or
+        selectIme[s, sNext] or
+        deselectIme[s, sNext] or
         startProvisioning[s, sNext] or
         completeProvisioning[s, sNext] or
         toggleSlm[s, sNext] or
@@ -333,6 +395,16 @@ assert DownloadCtaOnlyWhenEnabledAndMissing {
     )
 }
 
+assert HeroSelectImeSingleSourceWhenEnabledAndUnselected {
+    all s: State | (s.imeEnabled = True and s.imeSelected = False) implies (
+        s.heroAction = HeroSelectIme and s.showHeroSwitchImeCta = True
+    )
+}
+
+assert NoSwitchImeCtaWhenAlreadySelectedOrDisabled {
+    all s: State | (s.imeEnabled = False or s.imeSelected = True) implies s.showHeroSwitchImeCta = False
+}
+
 check ReadyImpliesAllPrerequisitesMet for 6 State
 check HeroEnableImeHighestPriority for 6 State
 check TabSwitchPreservesState for 6 State
@@ -343,6 +415,8 @@ check RerankDisabledImpliesEngineNone for 6 State
 check BottomNavHiddenWhenImeActive for 6 State
 check NeverPromptDownloadWhenInstalledOrDisabled for 6 State
 check DownloadCtaOnlyWhenEnabledAndMissing for 6 State
+check HeroSelectImeSingleSourceWhenEnabledAndUnselected for 6 State
+check NoSwitchImeCtaWhenAlreadySelectedOrDisabled for 6 State
 
 // ============================================================================
 // Reachability (Non-Vacuity)
@@ -370,7 +444,21 @@ pred canEnterAndExitImeInput {
         s2.showBottomNav = True
 }
 
+pred canReachSelectImeAndRecover {
+    some s1, s2, s3: State |
+        s2 = s1.next and
+        s3 = s2.next and
+        s1.heroAction = HeroSelectIme and
+        s1.showHeroSwitchImeCta = True and
+        s2.imeSelected = True and
+        s2.showHeroSwitchImeCta = False and
+        deselectIme[s2, s3] and
+        s3.heroAction = HeroSelectIme and
+        s3.showHeroSwitchImeCta = True
+}
+
 run canReachReadyAfterSetup for 5 State
 run canSwitchTabsWhileProvisioning for 5 State
 run canEnterAndExitImeInput for 5 State
+run canReachSelectImeAndRecover for 5 State
 

@@ -53,6 +53,7 @@ DMN 決定表（BC-2 / BC-8）の不変条件を検証する：
 - **`RerankDisabledImpliesEngineNone`**: AI リランクが OFF のとき、エンジンは必ず NONE に解決されること。
 - **`BottomNavHiddenWhenImeActive`**: IME 入力中（`imeInputActive = True`）のときは、ボトムナビゲーションバーが必ず非表示（`showBottomNav = False`）となり、キーボード上の縦領域を最大化してタブの押し上げと無駄なホワイトスペースを完全に抑止すること。
 - **`NeverPromptDownloadWhenInstalledOrDisabled` / `DownloadCtaOnlyWhenEnabledAndMissing`**: 導入済み・無効化済み・ダウンロード中の SLM モデルに対して重複ダウンロード確認やインライン取得 CTA を表示しないこと。
+- **`HeroSelectImeSingleSourceWhenEnabledAndUnselected` / `NoSwitchImeCtaWhenAlreadySelectedOrDisabled`**: IME 有効かつ未選択時のみ Hero Card に `HeroSelectIme`（`showHeroSwitchImeCta = True`）を唯一提示し、IME 未有効時または選択済み時は非表示としてホーム画面上の入力方法切替 CTA の重複・残存を防ぐこと。
 
 
 ### 3.5 [`onboarding_flow.als`](app/src/test/resources/alloy/onboarding_flow.als)

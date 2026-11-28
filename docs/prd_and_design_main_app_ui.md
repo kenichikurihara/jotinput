@@ -37,8 +37,8 @@
 2. 各ステップが完了するごとにカードが次のステップへ自動遷移し、すべて揃うと **「準備完了 — すぐに入力できます」** 状態（緑）へ変化する。
 3. ユーザーはそのすぐ下にある **「入力テスト」** 欄をタップし、音声入力とフリック/QWERTY入力を即座に試せる。
 
-#### CUJ-M2: 日常利用（単語登録・入力テスト・IME再選択）
-1. すでにセットアップ完了済みのユーザーは、ホーム画面を開いた瞬間に「準備完了 ✓」のコンパクトなステータスと、広い「入力テスト」エリア、および **「単語登録を開く」**・**「入力方法を切替」** のクイックアクションに即座にアクセスできる。
+#### CUJ-M2: 日常利用（単語登録・入力テスト）
+1. すでにセットアップ完了済みのユーザーは、ホーム画面を開いた瞬間に「準備完了 ✓」のコンパクトなステータスと、広い「入力テスト」エリア、および **「単語登録」** クイックアクションカードに即座にアクセスできる。（「入力方法を切り替える」導線はホーム画面上での重複を排除するため DMN スマートガイドカード `HERO_R2: SELECT_IME` に一元化されており、`imeEnabled && !imeSelected` の場合のみ表示される。JotInput がすでに選択済みの状態で他キーボードへ切り替える場合は、IME の地球儀キーまたはシステム IME スイッチャーを使用する。）
 2. 辞書にリモート更新がある場合は、スマートガイドカードが「新しい辞書アップデートがあります」と通知し、ワンタップで更新を実行できる。
 
 #### CUJ-M3: 入力設定のカスタマイズ（設定タブ）
@@ -70,7 +70,7 @@
 ```mermaid
 flowchart TD
     Main["MainActivity (Toolbar + Global Progress Banner + BottomNavigationView)"]
-    TabHome["Tab 1: ホーム (Home)\n- DMN駆動スマートガイドカード (次の1アクション)\n- すぐ試せる入力テスト欄 (クリアボタン付)\n- クイックアクション (単語登録 / 入力方法切替)\n- [Debug限定] GitHub 開発ビルド更新チェック・バックグラウンドDLカード"]
+    TabHome["Tab 1: ホーム (Home)\n- DMN駆動スマートガイドカード (次の1アクション)\n- すぐ試せる入力テスト欄 (クリアボタン付)\n- クイックアクション (単語登録)\n- アプリ更新 (GitHub) カード (リリース版 / リモートヘッド)"]
     TabSettings["Tab 2: 設定 (Settings)\n- キーボード (高さ5段階 / QWERTY数字行)\n- 入力アシスト (英語スワイプ / リアルタイム音声)\n- AI変換エンジン (ON/OFF & 0.5B/1.5B)\n- [折りたたみ] 詳細設定・開発者ツール + OSSライセンス"]
     TabData["Tab 3: データ (Data)\n- 推奨拡張辞書 一括取得/更新 + 更新日バナー\n- 音声・スペルAIモデル (日ASR / 英ASR / 英スペル)\n- 個別拡張辞書リスト (7種) + 連接行列ステータス"]
 
@@ -88,6 +88,7 @@ flowchart TD
 1. **`HomeHeroActionDecisionTable` (`HitPolicy.FIRST`)**:
    - 入力: `imeEnabled`, `imeSelected`, `japaneseAsrReady`, `totalDictWords`, `outdatedDictCount`
    - 出力 (`HomeHeroDecision`): `HeroActionKind` (`ENABLE_IME`, `SELECT_IME`, `DOWNLOAD_JA_ASR`, `DOWNLOAD_DICTS`, `UPDATE_DICTS`, `READY`)、タイトル、説明文、CTAラベル、重要度トーン（`WARNING` / `INFO` / `SUCCESS`）。
+   - `SELECT_IME` (`HERO_R2`) をホーム画面における「入力方法を切り替える」の唯一のエントリポイントとし、静的なクイックアクション側への重複配置は行わない。
 2. **`ProvisioningBannerDecisionTable` (`HitPolicy.FIRST`)**:
    - 入力: `hasActiveTask`, `queuedCount`, `progress`, `statusText`
    - 出力 (`ProvisioningBannerDecision`): バナー表示可否、見出し、進捗率、インデターミネート判定。
@@ -116,5 +117,7 @@ flowchart TD
 - **`GlobalBannerVisibleDuringProvisioning`**: バックグラウンドでダウンロード/コンパイルが進行中または待機中のときは、どのタブを表示していてもグローバル進捗バナーが表示されること。
 - **`RerankEnabledImpliesValidModel`**: AI リランクが ON のとき、モデルは必ず有効なモデル（0.5B または 1.5B）が選択されており、モデル未選択（NONE）のまま放置されないこと。
 - **`BottomNavHiddenWhenImeActive`**: IME 入力中（`imeInputActive = True`）のときは、ボトムナビゲーションバーが必ず非表示（`showBottomNav = False`）となり、タブの押し上げ・不要なホワイトスペースを完全に抑止すること。
+- **`HeroSelectImeSingleSourceWhenEnabledAndUnselected`**: `imeEnabled = True` かつ `imeSelected = False` のときは、常に Hero Card が `HeroSelectIme`（`showHeroSwitchImeCta = True`）となり、唯一の入力方法切替 CTA が提示されること。
+- **`NoSwitchImeCtaWhenAlreadySelectedOrDisabled`**: `imeEnabled = False` または `imeSelected = True` のときは、`showHeroSwitchImeCta = False` となり、ホーム画面上に入力方法切替 CTA が重複・残存しないこと。
 
 

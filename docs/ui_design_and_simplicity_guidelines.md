@@ -10,7 +10,7 @@ v1 では単一縦スクロール画面（`MainActivity`）の肥大化を防ぐ
 ```mermaid
 flowchart TD
     Main["MainActivity (Toolbar + Global Progress Banner + BottomNavigationView)"]
-    Tab1["Tab 1: ホーム (Home)\n・DMN駆動スマートガイド (次の1アクションのみ提示)\n・すぐ試せる入力テスト欄\n・クイックアクション (単語登録 / 入力方法切替)"]
+    Tab1["Tab 1: ホーム (Home)\n・DMN駆動スマートガイド (次の1アクションのみ提示)\n・すぐ試せる入力テスト欄\n・クイックアクション (単語登録)"]
     Tab2["Tab 2: 設定 (Settings)\n・キーボード (高さ5段階 / QWERTY数字行)\n・入力アシスト (英語スワイプ / リアルタイム音声)\n・AI変換エンジン (ON/OFF ＆ 0.5B/1.5B)\n・[折りたたみ] 詳細設定・開発者ツール + OSSライセンス"]
     Tab3["Tab 3: データ (Data)\n・推奨拡張辞書 一括取得/更新 + 更新日バナー\n・音声・スペルAIモデル (日ASR / 英ASR / 英スペル)\n・個別拡張辞書 (7種) + 連接行列ステータス"]
 
@@ -37,6 +37,7 @@ flowchart TD
 
 ### 原則2: DMN による宣言的ガイド（「次の1アクション」原則）
 - ホーム画面では複数のセットアップ警告や複雑な技術バッジを並立させず、[`MainAppUiDecisionModel`](app/src/main/java/com/example/myasr/context/ime/domain/MainAppUiDecisionModel.kt) の DMN 決定表により、**現時点で最も優先度の高い唯一のアクション（または「準備完了」）** のみを提示すること。
+- DMN スマートガイドが担うアクション（例: `入力方法を切り替える`）を、ホーム画面の静的なクイックアクションカード等に重複配置してはならない。
 
 ### 原則3: 最適デフォルト優先と詳細設定の段階的開示（Progressive Disclosure）
 - コーパス統計や交差検証で最適値が証明できるパラメータ（$\alpha$, $\lambda$ など）はコード内のデフォルト定数として適用し、通常の「設定」領域に露出させないこと。

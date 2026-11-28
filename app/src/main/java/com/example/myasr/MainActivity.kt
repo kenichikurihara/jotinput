@@ -114,7 +114,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnClearTestInput: TextView
     private lateinit var etKeyboardTest: EditText
     private lateinit var cardQuickDictionary: View
-    private lateinit var cardQuickSwitchIme: View
     private lateinit var cardAppUpdate: View
     private lateinit var tvAppUpdateBadge: TextView
     private lateinit var toggleAppUpdateChannel: MaterialButtonToggleGroup
@@ -738,7 +737,6 @@ class MainActivity : AppCompatActivity() {
         btnClearTestInput = findViewById(R.id.btnClearTestInput)
         etKeyboardTest = findViewById(R.id.etKeyboardTest)
         cardQuickDictionary = findViewById(R.id.cardQuickDictionary)
-        cardQuickSwitchIme = findViewById(R.id.cardQuickSwitchIme)
         cardAppUpdate = findViewById(R.id.cardAppUpdate)
         tvAppUpdateBadge = findViewById(R.id.tvAppUpdateBadge)
         toggleAppUpdateChannel = findViewById(R.id.toggleAppUpdateChannel)
@@ -912,11 +910,6 @@ class MainActivity : AppCompatActivity() {
 
         cardQuickDictionary.setOnClickListener {
             startActivity(Intent(this, DictionaryActivity::class.java))
-        }
-
-        cardQuickSwitchIme.setOnClickListener {
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-            imm?.showInputMethodPicker()
         }
 
         setupMultiDictionaryUI()
