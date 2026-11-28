@@ -452,7 +452,33 @@ class GitHubArtifactUpdateClientTest {
         )
         assertTrue(
             "android-ci.yml must verify app-debug.apk signature against persistent debug keystore via apksigner",
-            ciYml.contains("apksigner") && ciYml.contains("Signer #1 certificate SHA-256 digest:")
+            ciYml.contains("apksigner") &&
+                ciYml.contains("certificate SHA-256 digest:") &&
+                !ciYml.contains("Signer #1 certificate SHA-256 digest:")
         )
+
+        // Verify the CI parser handles both build-tools 34 ('Signer #1 ...') and 35/36 ('V2 Signer: ...')
+        // while ignoring 'public key SHA-256 digest:'.
+        fun parseApksignerCertSha256(output: String): String? = output.lineSequence()
+            .firstOrNull { line ->
+                line.contains("certificate SHA-256 digest:") && !line.contains("public key")
+            }
+            ?.substringAfter("certificate SHA-256 digest:")
+            ?.replace(Regex("[^0-9a-fA-F]"), "")
+            ?.lowercase()
+            ?.takeIf { it.isNotEmpty() }
+
+        val expected = "542f51685d6834c0e60f1975fd71064e8341944778e7a5d4d9d21118ebfe6e7b"
+        val bt34Out = """
+            Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
+            Signer #1 certificate SHA-256 digest: $expected
+        """.trimIndent()
+        val bt36Out = """
+            V2 Signer: certificate DN: C=US, O=Android, CN=Android Debug
+            V2 Signer: public key SHA-256 digest: 1a5e68afdae2404c7ceaabccf76744747dedd0278b608e2ad10367e1b783cbe1
+            V2 Signer: certificate SHA-256 digest: $expected
+        """.trimIndent()
+        assertEquals(expected, parseApksignerCertSha256(bt34Out))
+        assertEquals(expected, parseApksignerCertSha256(bt36Out))
     }
 }
