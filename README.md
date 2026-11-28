@@ -1,71 +1,73 @@
-# JotInput - On-Device Japanese & English Voice + Flick/QWERTY Keyboard for Android
+# JotInput - オンデバイス日本語・英語 音声＋フリック／QWERTY キーボード（Android）
+
+> 🌐 **Language / 言語**: **日本語（このページ）** | [**English (`README.en.md`)**](README.en.md)
 
 > **JotInput** = **J**apanese **O**n-device **T**ext **Input**
 
-A lightweight, 100% offline, on-device Android Japanese & English voice + flick/QWERTY keyboard (IME) powered by **ReazonSpeech**, **NVIDIA Parakeet**, and **Sherpa-ONNX**, combined with a Mozc-based Kana-Kanji keyboard, neural swipe typing (**Powered by FUTO Swipe**), and optional on-device **Qwen3.5** SLM candidate re-ranking (`llama.cpp`).
+**ReazonSpeech**・**NVIDIA Parakeet**・**Sherpa-ONNX** を搭載し、Mozc ベースのかな漢字変換、ニューラルスワイプ入力（**Powered by FUTO Swipe**）、およびオプションのオンデバイス **Qwen3.5** SLM 候補リランキング（`llama.cpp`）を統合した、軽量かつ 100% オフライン・完全オンデバイス動作の Android 日本語＆英語音声＋フリック／QWERTY キーボード（IME）です。
 
-- **Documentation**: [日本語インデックス (`docs/index.md`)](docs/index.md) · [English Index (`docs/index.en.md`)](docs/index.en.md)
-- **License**: [Apache License 2.0](LICENSE) · [Third-Party Notices (`NOTICE`)](NOTICE)
-- **Privacy & Security**: [Privacy Policy (`PRIVACY.md`)](PRIVACY.md) · [Security Policy (`SECURITY.md`)](SECURITY.md)
-- **Contributing & Releases**: [Contributing Guide (`CONTRIBUTING.md`)](CONTRIBUTING.md) · [Changelog (`CHANGELOG.md`)](CHANGELOG.md)
-
----
-
-## 📖 Documentation
-
-Detailed documentation is available in the `docs/` folder ([**日本語インデックス (`docs/index.md`)**](docs/index.md) · [**English Index (`docs/index.en.md`)**](docs/index.en.md)):
-- [Top-Level PRD & North Star Metric (EIS)](docs/prd_top_level.md): Product vision, prioritized CUJs, and the single top-level metric (Effective Intended-text Speed) with release guardrails.
-- [System Architecture](docs/architecture.md): Audio pipeline, dictionary subsystem, keyboard (IME), SLM re-ranking, component breakdown, and data flow.
-- [Custom Dictionary Improvement & Evaluation Plan](docs/dictionary_improvement_plan.md): Root cause post-mortem, space tokenization fix, and 20-case quantitative evaluation benchmark.
-- [Custom Dictionary Implementation Plan](docs/dictionary_implementation_plan.md): Step-by-step design of repository, hotwords, post-processing, and UI.
-- [Custom Dictionary Solutions](docs/dictionary_solutions.md): Dual-key `(Word, Reading)` architecture, contextual biasing, and homophone resolution for Japanese ASR.
-- [Unified English & Japanese Dictionary PRD & Design](docs/prd_and_design_unified_english_dictionary.md): Unified dictionary UI, single-field English entry, FUTO swipe trie synchronization, and spatial misspelling candidate correction.
-- [ReazonSpeech Model & On-Device Optimization](docs/reazonspeech_model.md): Zipformer transducer architecture, int8 quantization, and latency/RAM analysis.
-- [Setup, Build, and Deployment Guide](docs/setup_and_development.md): Prerequisites, build steps, and ChromeOS ARCVM / device installation.
+- **ドキュメント**: [日本語インデックス (`docs/index.md`)](docs/index.md) · [English Index (`docs/index.en.md`)](docs/index.en.md)
+- **ライセンス**: [Apache License 2.0](LICENSE) · [サードパーティ表記 (`NOTICE`)](NOTICE)
+- **プライバシー・セキュリティ**: [プライバシーポリシー (`PRIVACY.md`)](PRIVACY.md) · [セキュリティポリシー (`SECURITY.md`)](SECURITY.md)
+- **コントリビュート・リリース**: [コントリビュートガイド (`CONTRIBUTING.md`)](CONTRIBUTING.md) · [変更履歴 (`CHANGELOG.md`)](CHANGELOG.md)
 
 ---
 
-## 📱 Supported Devices (Support Tiers)
+## 📖 ドキュメント
 
-JotInput is developed by a **solo maintainer** who only owns **Google Pixel 10 Pro** and **ChromeOS ARCVM** hardware:
+詳細な技術ドキュメントは `docs/` フォルダにあります（[**日本語インデックス (`docs/index.md`)**](docs/index.md) · [**English Index (`docs/index.en.md`)**](docs/index.en.md)）：
+- [トップレベル PRD & North Star Metric (EIS)](docs/prd_top_level.md): プロダクトビジョン、優先順位付き CUJ、最上位メトリック（有効入力速度: Effective Intended-text Speed）とリリースゲート。
+- [システムアーキテクチャ](docs/architecture.md): 音声パイプライン、辞書サブシステム、キーボード（IME）、SLM リランキング、コンポーネント構成とデータフロー。
+- [ユーザー辞書改善＆評価計画](docs/dictionary_improvement_plan.md): 根本原因ポストモーテム、空白トークナイズ修正、20ケース定量評価ベンチマーク。
+- [ユーザー辞書実装計画](docs/dictionary_implementation_plan.md): リポジトリ、ホットワード、後処理、UI の段階的設計。
+- [ユーザー辞書ソリューション](docs/dictionary_solutions.md): 日本語 ASR 向けのデュアルキー `(表記, よみ)` アーキテクチャ、文脈バイアス、同音異義語解決。
+- [統一英語・日本語ユーザー辞書 PRD & 設計](docs/prd_and_design_unified_english_dictionary.md): 日英統一辞書 UI、英語の単一よみ入力、FUTO Swipe Trie 同期、空間タイポ候補補正。
+- [ReazonSpeech モデル＆オンデバイス最適化](docs/reazonspeech_model.md): Zipformer Transducer アーキテクチャ、int8 量子化、レイテンシ／メモリ分析。
+- [セットアップ・ビルド・デプロイガイド](docs/setup_and_development.md): 前提環境、ビルド手順、ChromeOS ARCVM / 実機へのインストール方法。
 
-| Tier | Scope | Support Level |
+---
+
+## 📱 対応デバイス（サポート階層）
+
+JotInput は **Google Pixel 10 Pro** と **ChromeOS ARCVM** のみを実機保有する**単独メンテナ**によって開発されています：
+
+| 階層 | 対象 | サポートレベル |
 | :--- | :--- | :--- |
-| **Tier 1 (Primary)** | **Google Pixel 10 Pro** (physical device) & **ChromeOS ARCVM** (`x86_64`), Android 8.0+ (API 26+) | Maintainer-verified. Regressions block releases. |
-| **Tier 2 (Best-Effort)** | Other `arm64-v8a` / `x86_64` devices running stock/AOSP-compatible Android 8.0+ | Community-supported via standard Android APIs (requires logs/screenshots/tests in PRs; see [`CONTRIBUTING.md`](CONTRIBUTING.md)). |
-| **Tier 3 (Unsupported)** | 32-bit ABIs (`armeabi-v7a`, `x86`), Android `< 8.0`, custom-ROM hacks, or OEM proprietary workarounds | Not supported. |
+| **Tier 1（主要）** | **Google Pixel 10 Pro**（実機）＆ **ChromeOS ARCVM**（`x86_64`）、Android 8.0 以上（API 26+） | メンテナ検証済み。リグレッションはリリースをブロックします。 |
+| **Tier 2（ベストエフォート）** | その他の `arm64-v8a` / `x86_64` 端末（標準／AOSP 互換の Android 8.0 以上） | 標準 Android API によるコミュニティサポート（PR にはログ・スクリーンショット・テストが必要。[`CONTRIBUTING.md`](CONTRIBUTING.md) 参照）。 |
+| **Tier 3（非対応）** | 32bit ABI（`armeabi-v7a`, `x86`）、Android 8.0 未満、カスタム ROM ハック、OEM 独自の回避策 | サポート対象外。 |
 
 ---
 
-## 🌟 Features
+## 🌟 主な機能
 
-- **100% On-Device & Zero Telemetry**: Audio, typed keystrokes, clipboard previews, and custom dictionaries never leave your device. No analytics, ad SDKs, or cloud APIs ([`PRIVACY.md`](PRIVACY.md)).
-- **Japanese & Optional English Speech Recognition**:
-  - **Japanese ASR**: ReazonSpeech `reazonspeech-k2-v2` Zipformer int8 via `sherpa-onnx` (~169 MB extracted model files) with streaming VAD (`StreamingVadProcessor`) and spoken Japanese punctuation (`JapanesePunctuationEngine`) with vocabulary false-positive protection.
-  - **English ASR (Optional)**: On-demand download of **NVIDIA Parakeet TDT-CTC 110M INT8** (`EnglishAsrModelDownloader`, ~126 MB extracted).
-- **Mozc-Based Kana-Kanji Keyboard & On-Demand Lexicons**:
-  - System-wide `VoiceInputMethodService` with flick / QWERTY / symbol / numpad layouts, header clipboard paste, and dictionary shortcut.
-  - Viterbi Kana-Kanji conversion (`KanaKanjiEngine`) using a compact bundled 2D bigram connection matrix (`connection_data.bin`, ~14.28 MB) plus on-demand HTTPS downloads for Mozc base, SudachiDict, jawiki, place/personal name, and emoji dictionaries (`MultiDictionaryManager`, `BaseDictionaryDownloader`).
-- **Neural Swipe Typing & English Typo Correction**:
-  - **Powered by FUTO Swipe**: Cleanroom ONNX Runtime native C++ integration of FUTO Swipe spatial 1D-CNN/DFSMN + ContextLM models (`FutoSwipeEngine`, `FutoSwipeDownloader`) for fast QWERTY gesture typing with automatic inter-word spacing and single-tap gesture-word deletion.
-  - **Spatial Typo Correction**: `EnglishSpellEngine` (`gl-keyboard-correction` / SymSpell, `EnglishSpellDownloader`) surfaces English spelling corrections in the candidate strip.
-- **Optional On-Device SLM Candidate Re-Ranking**:
-  - `LlmReranker` (`llama.cpp`) supports quantized **Qwen3.5-0.8B / 2B GGUF** models downloaded directly in-app via `SlmModelDownloader` (or pushed with `tools/push_model_to_device.sh`).
-- **Unified Japanese & English Custom Dictionary (Respected Across Voice & Swipe Input)**:
-  - One of JotInput's core motivations is respecting your custom user dictionary not only in flick/QWERTY typing, but also in **Japanese & English voice input** and **English swipe input**.
-  - Persistent unified JSON repository (`custom_dictionary.json`, empty by default and preserved across upgrades; `android:allowBackup="false"`).
-  - Entering an English reading automatically collapses the surface field; custom entries synchronize across Japanese ASR hotword biasing/phonetic replacement (`HotwordsGenerator`, `DictionaryPostProcessor`), English voice user-dictionary prioritization (`EnglishVoiceUserDictionaryResolver`), the native C++ FUTO Swipe Trie (`FutoSwipeEngine`), and spatial typo/spelling candidates (`EnglishSpellEngine`).
-- **Compact APK & Modular Download-Only Architecture**:
-  - Signed Release APK is **~29 MB** (Debug APK is **~36 MB**), compiled for `arm64-v8a` & `x86_64` with **16KB ELF page alignment** (`arm64-v8a`).
-  - Only `app/src/main/assets/mozc/connection_data.bin` (~14.28 MB) is bundled in the APK; heavy neural models and large multi-dictionaries load from device storage via in-app HTTPS downloaders across `MainActivity`'s 3 tabs (`Home` / `Settings` / `Data`).
+- **100% オンデバイス＆テレメトリゼロ**: 音声・入力キーストローク・クリップボードプレビュー・ユーザー辞書は端末外へ一切送信されません。解析 SDK・広告 SDK・クラウド API は不使用です（[`PRIVACY.md`](PRIVACY.md)）。
+- **日本語＆英語（オプション）音声認識**:
+  - **日本語音声認識**: `sherpa-onnx` 経由の ReazonSpeech `reazonspeech-k2-v2` Zipformer int8（展開後約 169 MB）を搭載。ストリーミング VAD（`StreamingVadProcessor`）および保護語彙の誤爆防止を備えた日本語音声句読点復元（`JapanesePunctuationEngine`）に対応。
+  - **英語音声認識（オプション）**: **NVIDIA Parakeet TDT-CTC 110M INT8**（`EnglishAsrModelDownloader`、展開後約 126 MB）をオンデマンドでダウンロード可能。
+- **Mozc ベースかな漢字変換キーボード＆オンデマンド辞書**:
+  - システム標準 IME（`VoiceInputMethodService`）として動作し、フリック／QWERTY／記号／数字レイアウト、ヘッダクリップボード貼り付け、辞書ショートカットを装備。
+  - コンパクトな同梱 2D 連接コスト行列（`connection_data.bin`、約 14.28 MB）と、オンデマンド HTTPS ダウンロード可能な Mozc 基本辞書・SudachiDict・jawiki・地名／人名・絵文字辞書（`MultiDictionaryManager`, `BaseDictionaryDownloader`）を用いた Viterbi かな漢字変換（`KanaKanjiEngine`）。
+- **ニューラルスワイプ入力＆英語スペル補正**:
+  - **Powered by FUTO Swipe**: FUTO Swipe の空間 1D-CNN/DFSMN＋ContextLM モデルをクリーンルーム ONNX Runtime ネイティブ C++ で統合（`FutoSwipeEngine`, `FutoSwipeDownloader`）。自動単語間スペース挿入やワンタップでのスワイプ単語削除に対応。
+  - **空間タイポ補正**: `EnglishSpellEngine`（`gl-keyboard-correction` / SymSpell, `EnglishSpellDownloader`）により英語のスペル修正候補を候補ストリップへ表示。
+- **オンデバイス SLM 候補リランキング（オプション）**:
+  - `LlmReranker`（`llama.cpp`）により、アプリ内から `SlmModelDownloader` でダウンロード（または `tools/push_model_to_device.sh` で配置）した量子化 **Qwen3.5-0.8B / 2B GGUF** モデルを利用可能。
+- **日英統一ユーザー辞書（音声入力・スワイプ入力でも尊重）**:
+  - 本プロジェクトの大切な動機の一つは、フリック／QWERTY タップ入力だけでなく、**日本語・英語の音声入力**や**英語のスワイプ入力**でもユーザー辞書を一貫して尊重することです。
+  - 永続的な統一 JSON リポジトリ（`custom_dictionary.json`、初期状態は空でアプリ更新時も保持、`android:allowBackup="false"`）。
+  - 英語の「よみ」を入力すると「表記」欄が自動で折りたたまれ、登録語は日本語 ASR のホットワード音響バイアス／音韻置換（`HotwordsGenerator`, `DictionaryPostProcessor`）、英語音声のユーザー辞書優先解決（`EnglishVoiceUserDictionaryResolver`）、ネイティブ C++ FUTO Swipe Trie（`FutoSwipeEngine`）、および空間タイポ／スペル候補（`EnglishSpellEngine`）へ自動同期されます。
+- **コンパクトな APK ＆ モジュール式ダウンロード設計**:
+  - 署名済み Release APK は **約 29 MB**（Debug APK は **約 36 MB**）、`arm64-v8a` ＆ `x86_64` 対応（`arm64-v8a` は **16KB ELF ページアラインメント**対応）。
+  - APK に同梱されるのは `app/src/main/assets/mozc/connection_data.bin`（約 14.28 MB）のみ。重いニューラルモデルや大規模辞書は `MainActivity` の 3 タブ（`ホーム` / `設定` / `データ`）からアプリ内 HTTPS ダウンローダ経由で端末ストレージへ保存します。
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ アーキテクチャ
 
 ```mermaid
 flowchart LR
-    Mic[Microphone 16kHz PCM] --> Rec[AudioRecorder / StreamingVadProcessor]
+    Mic[マイク 16kHz PCM] --> Rec[AudioRecorder / StreamingVadProcessor]
     Rec --> Asr[AsrManager: sherpa-onnx Recognizer<br/>ReazonSpeech JA / Parakeet EN]
     Asr --> Post[DictionaryPostProcessor + JapanesePunctuationEngine]
     Post --> IME[VoiceInputMethodService]
@@ -73,70 +75,70 @@ flowchart LR
     Kana --> SLM[LlmReranker (Qwen3.5-0.8B / 2B GGUF)]
     SLM --> IME
     Kana --> IME
-    IME --> App[Target app text field]
-    Main[MainActivity: Home / Settings / Data] -.-> Asr
+    IME --> App[対象アプリの入力欄]
+    Main[MainActivity: ホーム / 設定 / データ] -.-> Asr
 ```
 
-See [System Architecture](docs/architecture.md) for details.
+詳細は [システムアーキテクチャ](docs/architecture.md) を参照してください。
 
 ---
 
-## 📥 Install v0.1.0 Release APK (End Users)
+## 📥 v0.1.0 リリース APK のインストール（一般ユーザー向け）
 
-> Official package ID: `io.github.kenichikurihara.jotinput` (Android 8.0+ / API 26+, `arm64-v8a` or `x86_64`).
+> 公式パッケージ ID: `io.github.kenichikurihara.jotinput`（Android 8.0 以上 / API 26+、`arm64-v8a` または `x86_64`）。
 
-1. Download `jotinput-0.1.0-universal-release.apk` and `SHA256SUMS.txt` from [GitHub Releases](https://github.com/kenichikurihara/jotinput/releases).
-2. *(Recommended)* Verify the download integrity and APK signature before installing:
+1. [GitHub Releases](https://github.com/kenichikurihara/jotinput/releases) から `jotinput-0.1.0-universal-release.apk` と `SHA256SUMS.txt` をダウンロードします。
+2. *（推奨）* インストール前にダウンロードの整合性と APK 署名を検証します：
    ```bash
    sha256sum -c SHA256SUMS.txt
    apksigner verify --print-certs jotinput-0.1.0-universal-release.apk
    ```
-3. Transfer `jotinput-0.1.0-universal-release.apk` to your Android device and allow **Install unknown apps** when prompted to complete installation (or install via USB: `adb install -r jotinput-0.1.0-universal-release.apk`).
-4. Open **JotInput**, grant microphone permission, and follow the **Home** / **Data** tabs to download the speech model and dictionaries over HTTPS.
-5. Enable **JotInput** in Android Language & Keyboard settings and switch the active input method to **JotInput**.
+3. `jotinput-0.1.0-universal-release.apk` を Android 端末に転送し、プロンプトに従って **不明なアプリのインストール** を許可してインストールします（USB 経由の場合：`adb install -r jotinput-0.1.0-universal-release.apk`）。
+4. **JotInput** を開き、マイク権限を許可して **ホーム** / **データ** タブから音声モデルと辞書を HTTPS 経由でダウンロードします。
+5. Android の「言語と入力 / キーボード設定」で **JotInput** を有効にし、使用する入力方法を **JotInput** に切り替えます。
 
-> **Note**: Both Release and Debug builds also include a tokenless in-app updater on the **Home** tab supporting **Release** (`リリース版`) and **Remote HEAD** (`リモートヘッド`) channels with SHA-256 and signing-key compatibility checks (do not upgrade between Debug and Release signing keys without uninstalling once).
+> **補足**: Release ビルド・Debug ビルドともに、**ホーム** タブにトークン不要のアプリ内アップデータを搭載しています。**リリース版**（Release）と **リモートヘッド**（Remote HEAD）チャンネルを切り替えられ、SHA-256 と署名鍵の互換性チェックも行われます（Debug 署名と Release 署名の間で切り替える場合は、一度アンインストールしてから再インストールしてください）。
 
 ---
 
-## 🛠️ Build & Test from Source (Developers)
+## 🛠️ ソースからのビルド＆テスト（開発者向け）
 
-### Prerequisites
-- Android device or emulator running **Android 8.0 (API 26)** or higher (`arm64-v8a` or `x86_64`; 32-bit ABIs are not supported).
-- Android SDK (`platform-tools`) and NDK 26.3 (for native `llama.cpp` / C++ engines).
+### 前提条件
+- **Android 8.0 (API 26)** 以上が動作する Android 実機またはエミュレータ（`arm64-v8a` または `x86_64`。32bit ABI は非対応）。
+- Android SDK（`platform-tools`）および NDK 26.3（ネイティブ `llama.cpp` / C++ エンジン用）。
 
-### Build, Unit Tests & Provisioning
+### ビルド・単体テスト・端末配備
 ```bash
-# Run unit, punctuation, Konsist DDD, and Alloy 6 formal verification tests
+# 単体テスト・句読点テスト・Konsist DDD 検査・Alloy 6 形式検証を実行
 ./gradlew testDebugUnitTest
 
-# Build Debug APK (app/build/outputs/apk/debug/app-debug.apk)
+# Debug APK をビルド (app/build/outputs/apk/debug/app-debug.apk)
 ./gradlew assembleDebug
 
-# Optional: pre-fetch models into tools/models/ and deploy Debug build to connected devices
+# 任意: モデルを tools/models/ へ事前取得し、接続端末へ Debug ビルドを配備
 ./download_model.sh
 ./deploy.sh
 ```
 
-> Release builds (`./gradlew assembleRelease`) produce an unsigned APK unless release signing variables/properties are configured locally (see [`SECURITY.md`](SECURITY.md) and [`app/build.gradle.kts`](app/build.gradle.kts)).
+> Release ビルド（`./gradlew assembleRelease`）は、ローカルでリリース署名用の環境変数またはプロパティが設定されていない限り未署名 APK を生成します（[`SECURITY.md`](SECURITY.md) および [`app/build.gradle.kts`](app/build.gradle.kts) 参照）。
 
 ---
 
-## 📱 How to Use
+## 📱 使い方
 
-1. Launch **JotInput** and grant microphone permission when prompted.
-2. Download the ReazonSpeech model and Mozc dictionaries from the **Home** / **Data** tabs (optional English ASR, FUTO Swipe, English Spell, and Qwen3.5 GGUF SLM models are also available on demand).
-3. Tap **音声キーボードを有効にする** to enable the keyboard, then switch the active IME to **JotInput**.
-4. Tap any text field (such as the in-app **キーボードテスト** box) and use the keyboard:
-   - Tap **🎙 話す** in the header, speak, and tap **完了** (or use streaming mode for hands-free sentence-boundary commits with voice punctuation).
-   - Type with the flick/QWERTY keyboard or swipe on the English QWERTY layout and select candidates from the header strip.
-5. Register custom Japanese or English words via the **Dict** shortcut or **Data** tab.
+1. **JotInput** を起動し、求められたらマイク権限を許可します。
+2. **ホーム** / **データ** タブから ReazonSpeech モデルと Mozc 辞書をダウンロードします（英語 ASR・FUTO Swipe・英語スペル補正・Qwen3.5 GGUF SLM モデルも必要に応じて追加できます）。
+3. **音声キーボードを有効にする** をタップしてキーボードを有効化し、使用する IME を **JotInput** に切り替えます。
+4. 任意のテキスト入力欄（アプリ内の **キーボードテスト** 欄など）をタップしてキーボードを使います：
+   - ヘッダの **🎙 話す** をタップして発話し、**完了** をタップします（ストリーミングモードでは、音声句読点とあわせてハンズフリーで文境界ごとに確定されます）。
+   - フリック／QWERTY キーボードでの入力や、英語 QWERTY レイアウトでのスワイプ入力を行い、ヘッダの候補ストリップから候補を選択します。
+5. **Dict** ショートカットまたは **データ** タブから日本語・英語のユーザー単語を登録します。
 
 ---
 
-## 📄 License, Privacy & Contributing
+## 📄 ライセンス・プライバシー・コントリビュート
 
-- Licensed under the [**Apache License 2.0**](LICENSE).
-- Third-party software, model weights, and lexicon attributions (including **"Powered by FUTO Swipe"**) are documented in [**`NOTICE`**](NOTICE).
-- Privacy details are documented in [**`PRIVACY.md`**](PRIVACY.md); vulnerability reporting is in [**`SECURITY.md`**](SECURITY.md).
-- Before opening a PR, please read [**`CONTRIBUTING.md`**](CONTRIBUTING.md) for solo-maintainer expectations, Issue-First rules, and multi-device evidence requirements.
+- [**Apache License 2.0**](LICENSE) の下でライセンスされています。
+- サードパーティソフトウェア、モデル重み、辞書帰属表記（**"Powered by FUTO Swipe"** を含む）は [**`NOTICE`**](NOTICE) に記載しています。
+- プライバシーの詳細は [**`PRIVACY.md`**](PRIVACY.md)、脆弱性報告手順は [**`SECURITY.md`**](SECURITY.md) を参照してください。
+- PR を作成する前に、単独メンテナ体制・Issue-First ルール・マルチデバイス検証証跡の要件について [**`CONTRIBUTING.md`**](CONTRIBUTING.md) をご確認ください。
