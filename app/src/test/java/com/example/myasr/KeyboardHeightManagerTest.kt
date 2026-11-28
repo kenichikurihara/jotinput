@@ -37,8 +37,8 @@ class KeyboardHeightManagerTest {
     }
 
     @Test
-    fun testSlmWeightAlphaPrefKey() {
-        assertEquals("slm_weight_alpha", KeyboardHeightManager.KEY_SLM_WEIGHT_ALPHA)
+    fun testSlmWeightAlphaIsFixedZero() {
+        assertEquals(0.0f, KeyboardHeightManager.DEFAULT_SLM_WEIGHT_ALPHA, 0.0f)
     }
 
     @Test

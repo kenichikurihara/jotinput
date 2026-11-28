@@ -74,7 +74,7 @@ class EnglishTypoRerankTest {
             "UI" to 13.05f
         )
 
-        val alpha = KeyboardHeightManager.DEFAULT_SLM_WEIGHT_ALPHA // 0.15f
+        val alpha = KeyboardHeightManager.DEFAULT_SLM_WEIGHT_ALPHA // 0.00f
         val lambdaObs = KeyboardHeightManager.DEFAULT_SLM_LAMBDA_OBS // 1.0f
         val gammaUser = KeyboardHeightManager.DEFAULT_SLM_GAMMA_USER // 0.65f
 

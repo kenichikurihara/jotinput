@@ -785,59 +785,6 @@
                             android:orientation="horizontal">
 
                             <TextView
-                                android:id="@+id/tvSlmAlphaTitle"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="SLM 重み係数 α (Mozc比率)"
-                                android:textColor="@color/text_primary"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-
-                            <TextView
-                                android:id="@+id/tvSlmAlphaValue"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="α = 0.20 (推奨値)"
-                                android:textColor="@color/primary"
-                                android:textSize="12sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
-
-                        <TextView
-                            android:id="@+id/tvSlmAlphaDesc"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="言語モデル事前分布とMozc辞書コストの最適バランス (Top-1 90.3%)"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="11sp" />
-
-                        <com.google.android.material.slider.Slider
-                            android:id="@+id/sliderSlmAlpha"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:stepSize="0.05"
-                            android:value="0.20"
-                            android:valueFrom="0.00"
-                            android:valueTo="1.00" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
-                        android:background="@drawable/result_background"
-                        android:orientation="vertical"
-                        android:padding="10dp">
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <TextView
                                 android:id="@+id/tvSlmLambdaTitle"
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
