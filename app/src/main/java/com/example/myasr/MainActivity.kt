@@ -155,9 +155,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutAdvancedHeader: LinearLayout
     private lateinit var tvAdvancedToggleIcon: TextView
     private lateinit var layoutAdvancedContent: LinearLayout
-    private lateinit var sliderSlmAlpha: com.google.android.material.slider.Slider
-    private lateinit var tvSlmAlphaValue: TextView
-    private lateinit var tvSlmAlphaDesc: TextView
     private lateinit var sliderSlmLambda: com.google.android.material.slider.Slider
     private lateinit var tvSlmLambdaValue: TextView
     private lateinit var tvSlmLambdaDesc: TextView
@@ -606,25 +603,6 @@ class MainActivity : AppCompatActivity() {
         applyBadgeTone(tvCard1AiStatusBadge, decision.tone)
     }
 
-    private fun updateAlphaDisplay(alpha: Float) {
-        val rounded = String.format(java.util.Locale.US, "%.2f", alpha)
-        tvSlmAlphaValue.text = when {
-            alpha in 0.15f..0.25f -> "α = $rounded (推奨値: Top-1 90.3%)"
-            alpha == 0.00f -> "α = $rounded (純粋SLM)"
-            alpha <= 0.10f -> "α = $rounded (SLM重視 + 辞書タイブレーク)"
-            alpha <= 0.30f -> "α = $rounded (ハイブリッド標準)"
-            alpha == 1.00f -> "α = $rounded (純粋Mozc)"
-            else -> "α = $rounded"
-        }
-        tvSlmAlphaDesc.text = when {
-            alpha in 0.15f..0.25f -> "言語モデル事前分布とMozc辞書コストの最適バランス (Top-1 90.3%)"
-            alpha == 0.00f -> "SLMの対数尤度を100%信頼"
-            alpha <= 0.10f -> "高精度を維持しつつ同スコア時にMozc辞書順位で補正"
-            alpha == 1.00f -> "SLMスコアを無視し、従来のMozc順位のみを使用"
-            else -> "Mozc順位 ${(alpha * 100).toInt()}% / SLM尤度 ${((1 - alpha) * 100).toInt()}% の配分"
-        }
-    }
-
     private fun updateLambdaDisplay(lambda: Float) {
         val rounded = String.format(java.util.Locale.US, "%.2f", lambda)
         tvSlmLambdaValue.text = when {
@@ -661,9 +639,6 @@ class MainActivity : AppCompatActivity() {
             switchDebugDisplay.isChecked = KeyboardHeightManager.isDebugDisplayEnabled(this)
             switchAntiJitterCandidateUi.isChecked = KeyboardHeightManager.isAntiJitterCandidateUiEnabled(this)
             switchSlmRerankEnabled.isChecked = KeyboardHeightManager.isSlmRerankEnabled(this)
-            val alpha = KeyboardHeightManager.getSlmWeightAlpha(this)
-            sliderSlmAlpha.value = alpha.coerceIn(0.00f, 1.00f)
-            updateAlphaDisplay(alpha)
             val lambda = KeyboardHeightManager.getSlmLambdaObs(this)
             sliderSlmLambda.value = lambda.coerceIn(0.10f, 2.00f)
             updateLambdaDisplay(lambda)
@@ -791,10 +766,6 @@ class MainActivity : AppCompatActivity() {
         rbEngineLocalSlm35_2B = findViewById(R.id.rbEngineLocalSlm35_2B)
         rbEngineNone = findViewById(R.id.rbEngineNone)
 
-        sliderSlmAlpha = findViewById(R.id.sliderSlmAlpha)
-        tvSlmAlphaValue = findViewById(R.id.tvSlmAlphaValue)
-        tvSlmAlphaDesc = findViewById(R.id.tvSlmAlphaDesc)
-
         sliderSlmLambda = findViewById(R.id.sliderSlmLambda)
         tvSlmLambdaValue = findViewById(R.id.tvSlmLambdaValue)
         tvSlmLambdaDesc = findViewById(R.id.tvSlmLambdaDesc)
@@ -858,10 +829,6 @@ class MainActivity : AppCompatActivity() {
         )
 
         setupRerankEngineUI()
-
-        val currentAlpha = KeyboardHeightManager.getSlmWeightAlpha(this)
-        sliderSlmAlpha.value = currentAlpha.coerceIn(0.00f, 1.00f)
-        updateAlphaDisplay(currentAlpha)
 
         val currentLambda = KeyboardHeightManager.getSlmLambdaObs(this)
         sliderSlmLambda.value = currentLambda.coerceIn(0.10f, 2.00f)
@@ -1009,13 +976,6 @@ class MainActivity : AppCompatActivity() {
             KeyboardHeightManager.setAntiJitterCandidateUiEnabled(this, isChecked)
             val status = if (isChecked) "有効 (ON: 50ms待機+AI予約枠+画面外リランク)" else "無効 (OFF: 従来方式)"
             Toast.makeText(this, "ゼロ・ジッター候補UI: $status", Toast.LENGTH_SHORT).show()
-        }
-
-        sliderSlmAlpha.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) {
-                KeyboardHeightManager.setSlmWeightAlpha(this, value)
-                updateAlphaDisplay(value)
-            }
         }
 
         sliderSlmLambda.addOnChangeListener { _, value, fromUser ->

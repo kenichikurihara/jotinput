@@ -17,8 +17,7 @@ object KeyboardHeightManager {
     private const val KEY_ENGLISH_AUTO_PERIOD = "english_auto_period_enabled"
     private const val KEY_JAPANESE_PERIOD_SUGGESTION = "japanese_period_suggestion_enabled"
     private const val KEY_LAST_KEYBOARD_MODE = "last_keyboard_mode"
-    const val KEY_SLM_WEIGHT_ALPHA = "slm_weight_alpha"
-    const val DEFAULT_SLM_WEIGHT_ALPHA = 0.20f
+    const val DEFAULT_SLM_WEIGHT_ALPHA = 0.00f
     const val KEY_SLM_LAMBDA_OBS = "slm_lambda_obs"
     const val DEFAULT_SLM_LAMBDA_OBS = 0.50f
     const val KEY_SLM_GAMMA_USER = "slm_gamma_user"
@@ -172,15 +171,7 @@ object KeyboardHeightManager {
         prefs.edit().putBoolean(KEY_JAPANESE_PERIOD_SUGGESTION, enabled).apply()
     }
 
-    fun getSlmWeightAlpha(context: Context): Float {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getFloat(KEY_SLM_WEIGHT_ALPHA, DEFAULT_SLM_WEIGHT_ALPHA)
-    }
-
-    fun setSlmWeightAlpha(context: Context, alpha: Float) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putFloat(KEY_SLM_WEIGHT_ALPHA, alpha).apply()
-    }
+    fun getSlmWeightAlpha(@Suppress("UNUSED_PARAMETER") context: Context): Float = DEFAULT_SLM_WEIGHT_ALPHA
 
     fun getSlmLambdaObs(context: Context): Float {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
