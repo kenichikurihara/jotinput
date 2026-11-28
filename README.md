@@ -4,6 +4,7 @@
 
 A lightweight, 100% offline, on-device Android Japanese & English voice + flick/QWERTY keyboard (IME) powered by **ReazonSpeech**, **NVIDIA Parakeet**, and **Sherpa-ONNX**, combined with a Mozc-based Kana-Kanji keyboard, neural swipe typing (**Powered by FUTO Swipe**), and optional on-device **Qwen3.5** SLM candidate re-ranking (`llama.cpp`).
 
+- **Documentation**: [日本語インデックス (`docs/index.md`)](docs/index.md) · [English Index (`docs/index.en.md`)](docs/index.en.md)
 - **License**: [Apache License 2.0](LICENSE) · [Third-Party Notices (`NOTICE`)](NOTICE)
 - **Privacy & Security**: [Privacy Policy (`PRIVACY.md`)](PRIVACY.md) · [Security Policy (`SECURITY.md`)](SECURITY.md)
 - **Contributing & Releases**: [Contributing Guide (`CONTRIBUTING.md`)](CONTRIBUTING.md) · [Changelog (`CHANGELOG.md`)](CHANGELOG.md)
@@ -12,7 +13,7 @@ A lightweight, 100% offline, on-device Android Japanese & English voice + flick/
 
 ## 📖 Documentation
 
-Detailed documentation is available in the [`docs/`](docs/index.md) folder:
+Detailed documentation is available in the `docs/` folder ([**日本語インデックス (`docs/index.md`)**](docs/index.md) · [**English Index (`docs/index.en.md`)**](docs/index.en.md)):
 - [Top-Level PRD & North Star Metric (EIS)](docs/prd_top_level.md): Product vision, prioritized CUJs, and the single top-level metric (Effective Intended-text Speed) with release guardrails.
 - [System Architecture](docs/architecture.md): Audio pipeline, dictionary subsystem, keyboard (IME), SLM re-ranking, component breakdown, and data flow.
 - [Custom Dictionary Improvement & Evaluation Plan](docs/dictionary_improvement_plan.md): Root cause post-mortem, space tokenization fix, and 20-case quantitative evaluation benchmark.
@@ -50,9 +51,10 @@ JotInput is developed by a **solo maintainer** who only owns **Google Pixel 10 P
   - **Spatial Typo Correction**: `EnglishSpellEngine` (`gl-keyboard-correction` / SymSpell, `EnglishSpellDownloader`) surfaces English spelling corrections in the candidate strip.
 - **Optional On-Device SLM Candidate Re-Ranking**:
   - `LlmReranker` (`llama.cpp`) supports quantized **Qwen3.5-0.8B / 2B GGUF** models downloaded directly in-app via `SlmModelDownloader` (or pushed with `tools/push_model_to_device.sh`).
-- **Unified Japanese & English Custom Dictionary**:
+- **Unified Japanese & English Custom Dictionary (Respected Across Voice & Swipe Input)**:
+  - One of JotInput's core motivations is respecting your custom user dictionary not only in flick/QWERTY typing, but also in **Japanese & English voice input** and **English swipe input**.
   - Persistent unified JSON repository (`custom_dictionary.json`, empty by default and preserved across upgrades; `android:allowBackup="false"`).
-  - Entering an English reading automatically collapses the surface field; custom entries synchronize into ASR hotword biasing/phonetic replacement and the native C++ FUTO Swipe Trie + spatial typo candidates.
+  - Entering an English reading automatically collapses the surface field; custom entries synchronize across Japanese ASR hotword biasing/phonetic replacement (`HotwordsGenerator`, `DictionaryPostProcessor`), English voice user-dictionary prioritization (`EnglishVoiceUserDictionaryResolver`), the native C++ FUTO Swipe Trie (`FutoSwipeEngine`), and spatial typo/spelling candidates (`EnglishSpellEngine`).
 - **Compact APK & Modular Download-Only Architecture**:
   - Signed Release APK is **~29 MB** (Debug APK is **~36 MB**), compiled for `arm64-v8a` & `x86_64` with **16KB ELF page alignment** (`arm64-v8a`).
   - Only `app/src/main/assets/mozc/connection_data.bin` (~14.28 MB) is bundled in the APK; heavy neural models and large multi-dictionaries load from device storage via in-app HTTPS downloaders across `MainActivity`'s 3 tabs (`Home` / `Settings` / `Data`).
