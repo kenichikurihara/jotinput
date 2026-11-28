@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">JotInput</string>
     <string name="download_model">Download ReazonSpeech Model (~160MB)</string>
-    <string name="ime_name">JotInput Voice Keyboard</string>
+    <string name="ime_name">JotInput</string>
     <string name="ime_subtype_japanese">日本語音声入力</string>
     <string name="keyboard_mic_permission_needed">音声入力にはマイクの権限が必要です</string>
     <string name="oss_licenses_button">ライセンスと権利表記 (Licenses &amp; Attributions)</string>
