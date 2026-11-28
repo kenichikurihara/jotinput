@@ -7,10 +7,80 @@ import com.example.myasr.shared.domain.dmn.decisionTable
 
 /**
  * BC-6 (Asset & Model Provisioning) pure-domain DMN DecisionModel for:
- * 1. Comparing the running JotInput build against the latest GitHub Actions artifact (`AppBuildFreshnessDecisionTable`).
- * 2. Determining fail-safe Home tab UI state & primary CTA (`AppUpdateUiDecisionTable`).
+ * 1. Comparing the running JotInput build against either the latest public GitHub Release
+ *    (`RELEASE`) or the rolling `main-head` prerelease (`REMOTE_HEAD`) via
+ *    `AppBuildFreshnessDecisionTable`.
+ * 2. Determining tokenless Home tab UI state, channel selector lock state, and primary CTA
+ *    (`AppUpdateUiDecisionTable`).
+ * 3. Pre-validating APK package ID, version code, and signing certificates before launching
+ *    the system package installer (`ApkInstallCompatibilityDecisionTable`).
  */
 object AppUpdateDecisionModel {
+
+    data class SemVer(
+        val coreParts: List<Int>,
+        val preReleaseParts: List<String>
+    )
+
+    fun parseSemVer(raw: String): SemVer? {
+        val cleaned = raw.trim().removePrefix("v").removePrefix("V")
+        if (cleaned.isEmpty()) return null
+        val withoutBuild = cleaned.substringBefore('+')
+        val hasDash = '-' in withoutBuild
+        val coreStr = withoutBuild.substringBefore('-')
+        val preStr = if (hasDash) withoutBuild.substringAfter('-') else null
+        if (hasDash && preStr.isNullOrEmpty()) return null
+        if (coreStr.isEmpty()) return null
+
+        val coreParts = coreStr.split('.').map { part ->
+            if (part.isEmpty()) return null
+            val num = part.toIntOrNull() ?: return null
+            if (num < 0) return null
+            num
+        }
+        val preParts = if (preStr != null) {
+            preStr.split('.').also { parts ->
+                if (parts.any { it.isEmpty() }) return null
+            }
+        } else {
+            emptyList()
+        }
+        return SemVer(coreParts = coreParts, preReleaseParts = preParts)
+    }
+
+    fun compareSemVer(a: String, b: String): Int? {
+        val va = parseSemVer(a) ?: return null
+        val vb = parseSemVer(b) ?: return null
+        val maxCore = maxOf(va.coreParts.size, vb.coreParts.size)
+        for (i in 0 until maxCore) {
+            val pa = va.coreParts.getOrElse(i) { 0 }
+            val pb = vb.coreParts.getOrElse(i) { 0 }
+            if (pa != pb) return pa.compareTo(pb)
+        }
+        val aHasPre = va.preReleaseParts.isNotEmpty()
+        val bHasPre = vb.preReleaseParts.isNotEmpty()
+        if (!aHasPre && !bHasPre) return 0
+        if (!aHasPre) return 1
+        if (!bHasPre) return -1
+
+        val minPre = minOf(va.preReleaseParts.size, vb.preReleaseParts.size)
+        for (i in 0 until minPre) {
+            val ia = va.preReleaseParts[i]
+            val ib = vb.preReleaseParts[i]
+            if (ia == ib) continue
+            val na = ia.toLongOrNull()
+            val nb = ib.toLongOrNull()
+            return when {
+                na != null && nb != null -> na.compareTo(nb)
+                na != null -> -1 // numeric identifiers always have lower precedence than non-numeric
+                nb != null -> 1
+                else -> ia.compareTo(ib)
+            }
+        }
+        return va.preReleaseParts.size.compareTo(vb.preReleaseParts.size)
+    }
+
+    // ------------------------------------------------------------------------
 
     data class BuildFreshnessInput(
         val installed: InstalledAppBuildInfo,
@@ -29,9 +99,12 @@ object AppUpdateDecisionModel {
         ) {
             rule(
                 id = "BUILD_FRESH_R1",
-                description = "No non-expired remote artifact available"
+                description = "No non-expired remote APK release or build available"
             ) {
-                `when` { it.remoteArtifact == null || it.remoteArtifact.expired }
+                `when` {
+                    val remote = it.remoteArtifact
+                    remote == null || remote.expired || remote.downloadUrl.isBlank()
+                }
                 thenValue(
                     BuildFreshnessDecision(
                         status = BuildFreshnessStatus.NO_ARTIFACT,
@@ -41,42 +114,77 @@ object AppUpdateDecisionModel {
             }
             rule(
                 id = "BUILD_FRESH_R2",
-                description = "CI run ID is strictly newer than the running CI build"
+                description = "Stable Release channel lacks version metadata"
             ) {
                 `when` {
                     val remote = it.remoteArtifact ?: return@`when` false
-                    it.installed.githubRunId > 0L && remote.runId > 0L && remote.runId > it.installed.githubRunId
+                    remote.channel == AppUpdateChannel.RELEASE && remote.versionName.isBlank()
                 }
                 thenValue(
                     BuildFreshnessDecision(
-                        status = BuildFreshnessStatus.UPDATE_AVAILABLE,
-                        reason = "newer_ci_run_id"
+                        status = BuildFreshnessStatus.NO_ARTIFACT,
+                        reason = "missing_release_version"
                     )
                 )
             }
             rule(
                 id = "BUILD_FRESH_R3",
-                description = "Running CI build run ID is already at or newer than remote artifact run ID"
+                description = "Stable Release SemVer is strictly newer than installed versionName"
             ) {
                 `when` {
                     val remote = it.remoteArtifact ?: return@`when` false
-                    it.installed.githubRunId > 0L && remote.runId > 0L && remote.runId <= it.installed.githubRunId
+                    remote.channel == AppUpdateChannel.RELEASE &&
+                        (compareSemVer(remote.versionName, it.installed.versionName) ?: 0) > 0
                 }
                 thenValue(
                     BuildFreshnessDecision(
-                        status = BuildFreshnessStatus.UP_TO_DATE,
-                        reason = "same_or_newer_ci_run_id"
+                        status = BuildFreshnessStatus.UPDATE_AVAILABLE,
+                        reason = "newer_release_version"
                     )
                 )
             }
             rule(
                 id = "BUILD_FRESH_R4",
-                description = "Installed Git commit SHA matches the latest remote artifact head SHA"
+                description = "Stable Release versionCode is strictly newer than installed versionCode"
+            ) {
+                `when` {
+                    val remote = it.remoteArtifact ?: return@`when` false
+                    remote.channel == AppUpdateChannel.RELEASE &&
+                        remote.versionCode > 0 &&
+                        it.installed.versionCode > 0 &&
+                        remote.versionCode > it.installed.versionCode
+                }
+                thenValue(
+                    BuildFreshnessDecision(
+                        status = BuildFreshnessStatus.UPDATE_AVAILABLE,
+                        reason = "newer_release_version_code"
+                    )
+                )
+            }
+            rule(
+                id = "BUILD_FRESH_R5",
+                description = "Installed build is already at or newer than the latest Stable Release"
+            ) {
+                `when` {
+                    val remote = it.remoteArtifact ?: return@`when` false
+                    remote.channel == AppUpdateChannel.RELEASE
+                }
+                thenValue(
+                    BuildFreshnessDecision(
+                        status = BuildFreshnessStatus.UP_TO_DATE,
+                        reason = "same_or_newer_release_version"
+                    )
+                )
+            }
+            rule(
+                id = "BUILD_FRESH_R6",
+                description = "Installed Git commit SHA matches the latest Remote HEAD build SHA"
             ) {
                 `when` {
                     val remote = it.remoteArtifact ?: return@`when` false
                     val localSha = it.installed.gitSha.trim()
-                    localSha.isNotEmpty() &&
+                    remote.channel == AppUpdateChannel.REMOTE_HEAD &&
+                        localSha.isNotEmpty() &&
                         !localSha.equals("unknown", ignoreCase = true) &&
                         remote.headSha.trim().equals(localSha, ignoreCase = true)
                 }
@@ -88,31 +196,69 @@ object AppUpdateDecisionModel {
                 )
             }
             rule(
-                id = "BUILD_FRESH_R5",
-                description = "Remote artifact was created after the local build commit timestamp"
+                id = "BUILD_FRESH_R7",
+                description = "Remote HEAD CI run ID is strictly newer than the running CI build"
             ) {
                 `when` {
                     val remote = it.remoteArtifact ?: return@`when` false
-                    it.installed.commitEpochMs > 0L &&
-                        remote.createdAtMs > 0L &&
-                        remote.createdAtMs > it.installed.commitEpochMs
+                    remote.channel == AppUpdateChannel.REMOTE_HEAD &&
+                        it.installed.githubRunId > 0L &&
+                        remote.runId > 0L &&
+                        remote.runId > it.installed.githubRunId
                 }
                 thenValue(
                     BuildFreshnessDecision(
                         status = BuildFreshnessStatus.UPDATE_AVAILABLE,
-                        reason = "newer_remote_artifact_timestamp"
+                        reason = "newer_ci_run_id"
                     )
                 )
             }
             rule(
-                id = "BUILD_FRESH_R6",
-                description = "Local build commit timestamp is at or newer than remote artifact creation timestamp"
+                id = "BUILD_FRESH_R8",
+                description = "Running CI build run ID is already at or newer than Remote HEAD run ID"
             ) {
                 `when` {
                     val remote = it.remoteArtifact ?: return@`when` false
-                    it.installed.commitEpochMs > 0L &&
-                        remote.createdAtMs > 0L &&
-                        remote.createdAtMs <= it.installed.commitEpochMs
+                    remote.channel == AppUpdateChannel.REMOTE_HEAD &&
+                        it.installed.githubRunId > 0L &&
+                        remote.runId > 0L &&
+                        remote.runId <= it.installed.githubRunId
+                }
+                thenValue(
+                    BuildFreshnessDecision(
+                        status = BuildFreshnessStatus.UP_TO_DATE,
+                        reason = "same_or_newer_ci_run_id"
+                    )
+                )
+            }
+            rule(
+                id = "BUILD_FRESH_R9",
+                description = "Remote HEAD build commit timestamp is strictly newer than local build commit timestamp"
+            ) {
+                `when` {
+                    val remote = it.remoteArtifact ?: return@`when` false
+                    remote.channel == AppUpdateChannel.REMOTE_HEAD &&
+                        it.installed.commitEpochMs > 0L &&
+                        remote.effectiveTimestampMs > 0L &&
+                        remote.effectiveTimestampMs > it.installed.commitEpochMs
+                }
+                thenValue(
+                    BuildFreshnessDecision(
+                        status = BuildFreshnessStatus.UPDATE_AVAILABLE,
+                        reason = "newer_remote_commit_timestamp"
+                    )
+                )
+            }
+            rule(
+                id = "BUILD_FRESH_R10",
+                description = "Local build commit timestamp is at or newer than Remote HEAD commit timestamp"
+            ) {
+                `when` {
+                    val remote = it.remoteArtifact ?: return@`when` false
+                    remote.channel == AppUpdateChannel.REMOTE_HEAD &&
+                        it.installed.commitEpochMs > 0L &&
+                        remote.effectiveTimestampMs > 0L &&
+                        remote.effectiveTimestampMs <= it.installed.commitEpochMs
                 }
                 thenValue(
                     BuildFreshnessDecision(
@@ -122,12 +268,12 @@ object AppUpdateDecisionModel {
                 )
             }
             rule(
-                id = "BUILD_FRESH_R7",
-                description = "Remote artifact lacks valid creation timestamp metadata"
+                id = "BUILD_FRESH_R11",
+                description = "Remote HEAD metadata lacks valid commit/creation timestamp"
             ) {
                 `when` {
                     val remote = it.remoteArtifact ?: return@`when` false
-                    remote.createdAtMs <= 0L
+                    remote.channel == AppUpdateChannel.REMOTE_HEAD && remote.effectiveTimestampMs <= 0L
                 }
                 thenValue(
                     BuildFreshnessDecision(
@@ -138,7 +284,7 @@ object AppUpdateDecisionModel {
             }
             defaultValue(
                 id = "BUILD_FRESH_DEFAULT",
-                description = "Fallback when local build metadata is unavailable but a valid remote artifact exists",
+                description = "Fallback when local build metadata is unavailable but a valid Remote HEAD build exists",
                 value = BuildFreshnessDecision(
                     status = BuildFreshnessStatus.UPDATE_AVAILABLE,
                     reason = "unknown_local_build_with_valid_remote"
@@ -155,8 +301,7 @@ object AppUpdateDecisionModel {
     // ------------------------------------------------------------------------
 
     data class AppUpdateUiInput(
-        val isDebugBuild: Boolean,
-        val hasGitHubToken: Boolean,
+        val selectedChannel: AppUpdateChannel,
         val isChecking: Boolean,
         val isDownloadActive: Boolean,
         val isDownloadQueued: Boolean,
@@ -169,8 +314,8 @@ object AppUpdateDecisionModel {
         val cardState: AppUpdateCardState,
         val primaryAction: AppUpdatePrimaryAction,
         val badgeTone: AppUpdateBadgeTone,
-        val isCardVisible: Boolean,
         val primaryButtonEnabled: Boolean,
+        val channelSelectorEnabled: Boolean,
         val showProgressBar: Boolean,
         val showSecondaryCheckButton: Boolean,
         val badgeText: String,
@@ -184,26 +329,7 @@ object AppUpdateDecisionModel {
         ) {
             rule(
                 id = "APP_UPD_R1",
-                description = "Hide developer GitHub update card completely in non-debug (release) builds"
-            ) {
-                `when` { !it.isDebugBuild }
-                thenValue(
-                    AppUpdateUiDecision(
-                        cardState = AppUpdateCardState.HIDDEN,
-                        primaryAction = AppUpdatePrimaryAction.NONE,
-                        badgeTone = AppUpdateBadgeTone.NEUTRAL,
-                        isCardVisible = false,
-                        primaryButtonEnabled = false,
-                        showProgressBar = false,
-                        showSecondaryCheckButton = false,
-                        badgeText = "",
-                        primaryButtonLabel = ""
-                    )
-                )
-            }
-            rule(
-                id = "APP_UPD_R2",
-                description = "Show active background download progress and allow per-task cancel"
+                description = "Show active background download progress, lock channel switch, and allow per-task cancel"
             ) {
                 `when` { it.isDownloadActive }
                 thenValue(
@@ -211,8 +337,8 @@ object AppUpdateDecisionModel {
                         cardState = AppUpdateCardState.DOWNLOADING,
                         primaryAction = AppUpdatePrimaryAction.CANCEL_DOWNLOAD,
                         badgeTone = AppUpdateBadgeTone.INFO,
-                        isCardVisible = true,
                         primaryButtonEnabled = true,
+                        channelSelectorEnabled = false,
                         showProgressBar = true,
                         showSecondaryCheckButton = false,
                         badgeText = "DL中...",
@@ -221,8 +347,8 @@ object AppUpdateDecisionModel {
                 )
             }
             rule(
-                id = "APP_UPD_R3",
-                description = "Show queued download state when another background provisioning task is ahead"
+                id = "APP_UPD_R2",
+                description = "Show queued download state and lock channel switch when another provisioning task is ahead"
             ) {
                 `when` { it.isDownloadQueued }
                 thenValue(
@@ -230,8 +356,8 @@ object AppUpdateDecisionModel {
                         cardState = AppUpdateCardState.QUEUED,
                         primaryAction = AppUpdatePrimaryAction.CANCEL_DOWNLOAD,
                         badgeTone = AppUpdateBadgeTone.INFO,
-                        isCardVisible = true,
                         primaryButtonEnabled = true,
+                        channelSelectorEnabled = false,
                         showProgressBar = true,
                         showSecondaryCheckButton = false,
                         badgeText = "待機中",
@@ -240,8 +366,8 @@ object AppUpdateDecisionModel {
                 )
             }
             rule(
-                id = "APP_UPD_R4",
-                description = "Disable primary button while GitHub API update check is in flight"
+                id = "APP_UPD_R3",
+                description = "Disable primary button and channel selector while update check is in flight"
             ) {
                 `when` { it.isChecking }
                 thenValue(
@@ -249,8 +375,8 @@ object AppUpdateDecisionModel {
                         cardState = AppUpdateCardState.CHECKING,
                         primaryAction = AppUpdatePrimaryAction.CHECK_UPDATE,
                         badgeTone = AppUpdateBadgeTone.INFO,
-                        isCardVisible = true,
                         primaryButtonEnabled = false,
+                        channelSelectorEnabled = false,
                         showProgressBar = false,
                         showSecondaryCheckButton = false,
                         badgeText = "確認中...",
@@ -259,8 +385,8 @@ object AppUpdateDecisionModel {
                 )
             }
             rule(
-                id = "APP_UPD_R5",
-                description = "Offer one-tap install when matching newer APK is downloaded and no error is pending"
+                id = "APP_UPD_R4",
+                description = "Offer one-tap install when a verified APK matching the selected channel is ready"
             ) {
                 `when` {
                     it.hasMatchingDownloadedApk &&
@@ -272,8 +398,8 @@ object AppUpdateDecisionModel {
                         cardState = AppUpdateCardState.READY_TO_INSTALL,
                         primaryAction = AppUpdatePrimaryAction.INSTALL_APK,
                         badgeTone = AppUpdateBadgeTone.SUCCESS,
-                        isCardVisible = true,
                         primaryButtonEnabled = true,
+                        channelSelectorEnabled = true,
                         showProgressBar = false,
                         showSecondaryCheckButton = true,
                         badgeText = "DL済",
@@ -282,48 +408,45 @@ object AppUpdateDecisionModel {
                 )
             }
             rule(
-                id = "APP_UPD_R6",
-                description = "Fail-safe when GitHub token is not configured"
+                id = "APP_UPD_R5",
+                description = "Fail-safe when GitHub unauthenticated API rate limit is exceeded"
             ) {
-                `when` { !it.hasGitHubToken }
+                `when` { it.lastErrorKind == AppUpdateCheckErrorKind.RATE_LIMITED }
                 thenValue(
                     AppUpdateUiDecision(
-                        cardState = AppUpdateCardState.TOKEN_MISSING,
-                        primaryAction = AppUpdatePrimaryAction.CONFIGURE_TOKEN,
-                        badgeTone = AppUpdateBadgeTone.NEUTRAL,
-                        isCardVisible = true,
+                        cardState = AppUpdateCardState.ERROR,
+                        primaryAction = AppUpdatePrimaryAction.CHECK_UPDATE,
+                        badgeTone = AppUpdateBadgeTone.WARNING,
                         primaryButtonEnabled = true,
+                        channelSelectorEnabled = true,
                         showProgressBar = false,
                         showSecondaryCheckButton = false,
-                        badgeText = "未連携",
-                        primaryButtonLabel = "トークンを設定"
+                        badgeText = "制限中",
+                        primaryButtonLabel = "更新を再確認"
+                    )
+                )
+            }
+            rule(
+                id = "APP_UPD_R6",
+                description = "Fail-safe when downloaded APK fails SHA-256 or archive header integrity verification"
+            ) {
+                `when` { it.lastErrorKind == AppUpdateCheckErrorKind.INTEGRITY_CHECK_FAILED }
+                thenValue(
+                    AppUpdateUiDecision(
+                        cardState = AppUpdateCardState.ERROR,
+                        primaryAction = AppUpdatePrimaryAction.CHECK_UPDATE,
+                        badgeTone = AppUpdateBadgeTone.WARNING,
+                        primaryButtonEnabled = true,
+                        channelSelectorEnabled = true,
+                        showProgressBar = false,
+                        showSecondaryCheckButton = false,
+                        badgeText = "検証失敗",
+                        primaryButtonLabel = "更新を再確認"
                     )
                 )
             }
             rule(
                 id = "APP_UPD_R7",
-                description = "Fail-safe on GitHub authentication or permission error (401/403)"
-            ) {
-                `when` {
-                    it.lastErrorKind == AppUpdateCheckErrorKind.AUTH_FAILED ||
-                        it.lastErrorKind == AppUpdateCheckErrorKind.TOKEN_REQUIRED
-                }
-                thenValue(
-                    AppUpdateUiDecision(
-                        cardState = AppUpdateCardState.AUTH_ERROR,
-                        primaryAction = AppUpdatePrimaryAction.CONFIGURE_TOKEN,
-                        badgeTone = AppUpdateBadgeTone.WARNING,
-                        isCardVisible = true,
-                        primaryButtonEnabled = true,
-                        showProgressBar = false,
-                        showSecondaryCheckButton = true,
-                        badgeText = "認証エラー",
-                        primaryButtonLabel = "トークンを再設定"
-                    )
-                )
-            }
-            rule(
-                id = "APP_UPD_R8",
                 description = "Fail-safe on network or download failure and allow retry"
             ) {
                 `when` {
@@ -332,11 +455,11 @@ object AppUpdateDecisionModel {
                 }
                 thenValue(
                     AppUpdateUiDecision(
-                        cardState = AppUpdateCardState.NETWORK_ERROR,
+                        cardState = AppUpdateCardState.ERROR,
                         primaryAction = AppUpdatePrimaryAction.CHECK_UPDATE,
                         badgeTone = AppUpdateBadgeTone.WARNING,
-                        isCardVisible = true,
                         primaryButtonEnabled = true,
+                        channelSelectorEnabled = true,
                         showProgressBar = false,
                         showSecondaryCheckButton = false,
                         badgeText = "接続不可",
@@ -345,8 +468,8 @@ object AppUpdateDecisionModel {
                 )
             }
             rule(
-                id = "APP_UPD_R9",
-                description = "Newer CI artifact available for background download"
+                id = "APP_UPD_R8",
+                description = "Newer APK available on the selected channel for background download"
             ) {
                 `when` { it.freshnessStatus == BuildFreshnessStatus.UPDATE_AVAILABLE }
                 thenValue(
@@ -354,8 +477,8 @@ object AppUpdateDecisionModel {
                         cardState = AppUpdateCardState.UPDATE_AVAILABLE,
                         primaryAction = AppUpdatePrimaryAction.DOWNLOAD_UPDATE,
                         badgeTone = AppUpdateBadgeTone.WARNING,
-                        isCardVisible = true,
                         primaryButtonEnabled = true,
+                        channelSelectorEnabled = true,
                         showProgressBar = false,
                         showSecondaryCheckButton = true,
                         badgeText = "更新あり",
@@ -364,8 +487,8 @@ object AppUpdateDecisionModel {
                 )
             }
             rule(
-                id = "APP_UPD_R10",
-                description = "Running build is already up to date with latest CI artifact"
+                id = "APP_UPD_R9",
+                description = "Running build is already up to date on the selected channel"
             ) {
                 `when` { it.freshnessStatus == BuildFreshnessStatus.UP_TO_DATE }
                 thenValue(
@@ -373,8 +496,8 @@ object AppUpdateDecisionModel {
                         cardState = AppUpdateCardState.UP_TO_DATE,
                         primaryAction = AppUpdatePrimaryAction.CHECK_UPDATE,
                         badgeTone = AppUpdateBadgeTone.SUCCESS,
-                        isCardVisible = true,
                         primaryButtonEnabled = true,
+                        channelSelectorEnabled = true,
                         showProgressBar = false,
                         showSecondaryCheckButton = false,
                         badgeText = "最新",
@@ -383,8 +506,8 @@ object AppUpdateDecisionModel {
                 )
             }
             rule(
-                id = "APP_UPD_R11",
-                description = "No valid non-expired artifact currently exists on GitHub"
+                id = "APP_UPD_R10",
+                description = "No valid APK currently published on the selected channel"
             ) {
                 `when` { it.freshnessStatus == BuildFreshnessStatus.NO_ARTIFACT }
                 thenValue(
@@ -392,24 +515,24 @@ object AppUpdateDecisionModel {
                         cardState = AppUpdateCardState.NO_ARTIFACT,
                         primaryAction = AppUpdatePrimaryAction.CHECK_UPDATE,
                         badgeTone = AppUpdateBadgeTone.NEUTRAL,
-                        isCardVisible = true,
                         primaryButtonEnabled = true,
+                        channelSelectorEnabled = true,
                         showProgressBar = false,
                         showSecondaryCheckButton = false,
-                        badgeText = "成果物なし",
+                        badgeText = "ビルドなし",
                         primaryButtonLabel = "更新を確認"
                     )
                 )
             }
             defaultValue(
                 id = "APP_UPD_DEFAULT",
-                description = "Token configured and awaiting user-triggered update check",
+                description = "Awaiting user-triggered update check on the selected channel (no token required)",
                 value = AppUpdateUiDecision(
                     cardState = AppUpdateCardState.IDLE,
                     primaryAction = AppUpdatePrimaryAction.CHECK_UPDATE,
                     badgeTone = AppUpdateBadgeTone.NEUTRAL,
-                    isCardVisible = true,
                     primaryButtonEnabled = true,
+                    channelSelectorEnabled = true,
                     showProgressBar = false,
                     showSecondaryCheckButton = false,
                     badgeText = "未確認",

@@ -127,12 +127,12 @@ IME ヘッダーバーのユーティリティアイコン表示裁定（[`ImeHe
 - **`OtaDeleteRestoresBundledLexicon`**: OTA 削除後に即座に内蔵辞書のみのクリーン状態へ復元されること。
 
 ### 3.15 [`github_app_update_lifecycle.als`](app/src/test/resources/alloy/github_app_update_lifecycle.als)
-Debug 限定 GitHub Actions ビルド更新チェック・バックグラウンドダウンロード・インストール導線（[`AppUpdateDecisionModel`](app/src/main/java/com/example/myasr/context/provisioning/domain/AppUpdateDecisionModel.kt)）をモデル化し、以下を検証する：
-- **`ReleaseBuildNeverShowsCard`**: 非 Debug ビルドでは更新カードが常に非表示であること。
-- **`NoTokenFailSafeNeverOffersDownload`**: GitHub トークン未設定時は（一致済ローカル APK 不在時）ダウンロードやインストールを提示せず Fail-Safe すること。
-- **`ErrorStateNeverOffersDownloadOrInstall`**: 認証・ネットワーク・ダウンロード失敗状態において誤ってダウンロードやインストールを提示しないこと。
-- **`DownloadOnlyWhenTokenAndUpdateAvailable`**: ダウンロード CTA は Debug かつトークン有効かつ更新検知時のみ提示されること。
-- **`InstallOnlyWhenMatchingApkExistsAndDebug`**: インストール CTA は Debug かつ整合 APK 保持時のみ提示されること。
+トークン不要・マルチチャネル（`RELEASE` / `REMOTE_HEAD`）対応 GitHub アプリ更新チェック・バックグラウンドダウンロード・インストール導線（[`AppUpdateDecisionModel`](app/src/main/java/com/example/myasr/context/provisioning/domain/AppUpdateDecisionModel.kt)）をモデル化し、以下を検証する：
+- **`BusyStateLocksChannelSelector`**: 更新確認中・ダウンロード待機中・ダウンロード実行中はチャネル切替が必ず無効化されること。
+- **`ChannelNeverChangesWhileBusy`**: 更新確認・待機・ダウンロード中に選択チャネルが切り替わらないこと。
+- **`ErrorStateNeverOffersDownloadOrInstall`**: レート制限・SHA-256検証失敗・ネットワーク・ダウンロード失敗状態において誤ってダウンロードやインストールを提示しないこと。
+- **`DownloadOnlyWhenUpdateAvailableAndNotBusy`**: ダウンロード CTA は更新検知時かつ非エラー・非ビジー時のみ提示されること。
+- **`InstallOnlyWhenChannelMatchingApkExists`**: インストール CTA は現在選択中のチャネルに一致する検証済み APK 保持時のみ提示されること（クロスチャネル隔離）。
 - **`UpToDateNeverOffersDownloadOrInstall`**: 最新判定時は再確認のみを提示すること。
 - **`ActiveDownloadAlwaysShowsProgressAndCancel`**: バックグラウンド DL/待機中は進捗バーとキャンセル CTA を必ず表示すること。
 

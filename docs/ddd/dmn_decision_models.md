@@ -64,8 +64,8 @@ JotInput では、DDD の `Judgement<in I, out O>` 契約によってドメイ�
 | **BC-7: IME Session & UI** | `OnboardingDecisionModel` | `OnboardingSlmProposalDecisionTable` | `FIRST` | オンボーディング Step 1 における Qwen3.5 モデル取得提案状態決定 |
 | **BC-1: Kana-Kanji & Sync** | `HistorySyncDecisionModel` | `SyncScheduleDecisionTable` | `FIRST` | 定期バックグラウンド同期ジョブの登録・停止方針決定 |
 | **BC-1: Kana-Kanji & Sync** | `HistorySyncDecisionModel` | `SettingsSyncCardDecisionTable` | `FIRST` | 設定タブ Google Drive 同期カードのUI状態・操作可否決定 |
-| **BC-6: Provisioning** | `AppUpdateDecisionModel` | `AppBuildFreshnessDecisionTable` | `FIRST` | 実行中ビルドと GitHub Actions 最新アーティファクト (`app-debug`) の新旧判定 |
-| **BC-6: Provisioning** | `AppUpdateDecisionModel` | `AppUpdateUiDecisionTable` | `FIRST` | Debug 限定 GitHub ビルド更新カードの Fail-Safe 状態・CTA・進捗表示決定 |
+| **BC-6: Provisioning** | `AppUpdateDecisionModel` | `AppBuildFreshnessDecisionTable` | `FIRST` | 実行中ビルドと公開 GitHub Releases (`RELEASE`: SemVer/versionCode) またはローリング `main-head` (`REMOTE_HEAD`: SHA/runId/時刻) の新旧判定 |
+| **BC-6: Provisioning** | `AppUpdateDecisionModel` | `AppUpdateUiDecisionTable` | `FIRST` | Debug/Release 両対応・トークン不要 GitHub 更新カードのチャネル切替ロック・Fail-Safe 状態・CTA・進捗表示決定 |
 | **BC-6: Provisioning** | `AppUpdateDecisionModel` | `ApkInstallCompatibilityDecisionTable` | `FIRST` | ダウンロード済みAPKのインストール前整合性（読込可否・パッケージID・ダウングレード・署名証明書SHA-256一致）判定 |
 | **BC-3: Speech Recognition** | `VoiceCorrectionDecisionModel` | `VoiceCorrectionEligibilityDecisionTable` | `FIRST` | 音声確定後編集の修正検知妥当性・意味的書き換え除外判定 |
 | **BC-3: Speech Recognition** | `VoiceCorrectionDecisionModel` | `VoiceCorrectionBoostPolicyDecisionTable` | `FIRST` | 学習済み音声修正の3段階昇格・SLM文脈整合性ゲート・自己修復抑制決定 |

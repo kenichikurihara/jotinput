@@ -52,13 +52,17 @@ class ProvisioningBackgroundServiceTest {
             ProvisioningTaskRequest(ProvisioningTaskKind.ALL_OR_OUTDATED_DICTIONARIES),
             ProvisioningTaskRequest(ProvisioningTaskKind.ENGLISH_SPELLING_MODEL),
             ProvisioningTaskRequest(ProvisioningTaskKind.ENGLISH_ASR_MODEL),
-            ProvisioningTaskRequest(ProvisioningTaskKind.APP_UPDATE_APK)
+            ProvisioningTaskRequest(ProvisioningTaskKind.APP_UPDATE_APK),
+            ProvisioningTaskRequest(ProvisioningTaskKind.APP_UPDATE_APK, "release"),
+            ProvisioningTaskRequest(ProvisioningTaskKind.APP_UPDATE_APK, "remote_head")
         )
         kinds.forEach { req ->
             assertTrue("Title should not be blank for $req", req.displayTitle().isNotBlank())
         }
         assertEquals(DictionaryType.MOZC_GENERAL.displayName, kinds[1].displayTitle())
-        assertEquals("アプリ最新ビルド", kinds.last().displayTitle())
+        assertEquals("アプリ最新ビルド", kinds[5].displayTitle())
+        assertEquals("リリース版アプリ更新", kinds[6].displayTitle())
+        assertEquals("リモートヘッド最新ビルド", kinds[7].displayTitle())
     }
 
     @Test

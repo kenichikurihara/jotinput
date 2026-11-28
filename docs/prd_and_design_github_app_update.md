@@ -1,14 +1,16 @@
-# PRD & System Design: GitHub Actions 開発ビルド更新チェック・バックグラウンドダウンロード機能
+# PRD & System Design: トークン不要アプリ内更新（リリース版 / リモートヘッド選択対応）
 
 ## Part 1: Product Requirements Document (PRD)
 
 ### 1. 概要 (Executive Summary)
-JotInput では GitHub Actions CI/CD ([`.github/workflows/android-ci.yml`](.github/workflows/android-ci.yml)) により、`main` ブランチのプッシュごとに debug APK アーティファクト (`app-debug` -> `app-debug.apk`) が自動ビルド・保存されている。しかし実機（Pixel 10 Pro や ARCVM 等）で開発版を試用する際、手元に PC/ADB がない状況では「実行中のアプリより新しいビルドが GitHub に存在するか」を確認して端末上だけで取得・更新する手段がなかった。
+`kenichikurihara/jotinput` がパブリックリポジトリとして公開され、署名済み Release APK (`v*` タグの GitHub Releases) および `main` ブランチの CI ビルドが公開配布可能となった。従来のアプリ内アップデーターはプライベートリポジトリ前提で Fine-Grained PAT (`GitHubTokenStore`) と `BuildConfig.DEBUG` 限定ガードに依存していたため、一般ユーザー向けの Release ビルドでは更新確認ができず、Debug ビルドでもトークン設定が必要だった。
 
-本機能は、**あくまで開発用機能 (`BuildConfig.DEBUG` 限定)** として以下を実現する：
-1. **ホームタブでの最新ビルド確認・ダウンロード導線**: `MainActivity` の **ホームタブ**（クイックアクション行の下）にコンパクトな **「開発ビルド更新 (GitHub)」** カードを配置し、ボタン 1 つで最新アーティファクトの有無を確認・ダウンロード・インストールできる。
-2. **完全なバックグラウンド実行**: アーティファクト（ZIP 約 37MB）のダウンロードおよび `app-debug.apk` の自動展開は既存の [`ProvisioningForegroundService`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/ProvisioningForegroundService.kt) (`foregroundServiceType="dataSync"`, WakeLock, 進捗通知, キャンセルアクション, 全タブ共通進捗バナー) 上で実行され、アプリを閉じたり他アプリへ移動しても中断しない。
-3. **非公開リポジトリ認証と徹底した Fail-Safe**: `kenichikurihara/jotinput` はプライベートリポジトリであり、GitHub Actions アーティファクトのダウンロード API は認証必須である。Fine-Grained PAT (`Actions: Read-only`) を端末内で Android Keystore (`AES/GCM/NoPadding`) 暗号化 + `noBackupFilesDir` に保持し、**PAT 未設定・ネットワーク不通・認証エラー・期限切れ・Release ビルド時は決してクラッシュせず、起動をブロックせず、不要なエラー通信も行わず安全に Fail-Safe する**。
+本機能は、**Debug ビルド・Release ビルドの両方において GitHub トークン一切不要（完全認証レス）** でアプリ内更新を提供し、さらにユーザーが取得元チャネルを選択できるようにする：
+1. **ホームタブでのチャネル切替・更新確認・ダウンロード導線**: `MainActivity` の **ホームタブ**（クイックアクション行の下）に **「アプリ更新 (GitHub)」** カードを配置し、セグメント切替（`リリース版` / `リモートヘッド`）とボタン 1 つで最新バージョンの確認・バックグラウンドダウンロード・インストールを行える。
+2. **2 チャネルの公開配布アーキテクチャ**:
+   - **リリース版 (`RELEASE`)**: `https://api.github.com/repos/kenichikurihara/jotinput/releases/latest` を参照し、公式安定版 (`v*`) の署名済み Release APK を取得する（Release ビルドのデフォルト）。
+   - **リモートヘッド (`REMOTE_HEAD`)**: `main` マージごとに `Android CI` (`publish-head`) が更新するローリング・プレリリース (`main-head`) の `head-metadata.json`（GitHub Releases 直接ダウンロードのため API レート制限非消費）を参照する（Debug ビルドのデフォルト）。実行中のビルド種別に応じて、Debug ビルドには `jotinput-main-head-debug.apk`（永続 Debug 鍵署名）、Release ビルドには `jotinput-main-head-release.apk`（正式 Release 鍵署名）を自動選択し、同一チャネル内での上書き更新互換性を保証する。
+3. **完全なバックグラウンド実行と整合性検証**: APK のダウンロードは [`ProvisioningForegroundService`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/ProvisioningForegroundService.kt) (`foregroundServiceType="dataSync"`, WakeLock, 進捗通知, キャンセルアクション, 全タブ共通進捗バナー) 上で実行され、ストリーミング中に `PK\x03\x04` ヘッダ検証と SHA-256 ダイジェスト検証を行う。
 
 ---
 
@@ -16,48 +18,49 @@ JotInput では GitHub Actions CI/CD ([`.github/workflows/android-ci.yml`](.gith
 
 | JTBD ID | Job Statement (状況・動機・期待する成果) |
 | :--- | :--- |
-| **JTBD-U1** | **新しい CI ビルドの有無を端末だけで知る**: 外出先や PC なしの実機検証時に、いま動いている JotInput より新しい `main` のビルドが GitHub Actions アーティファクトに上がっているかワンタップで確認したい。 |
-| **JTBD-U2** | **アプリから離れても止まらないバックグラウンド取得**: 数十 MB のビルド取得中でも他のアプリへ切り替えたり画面を閉じたりでき、完了通知から即座に結果へアクセスしたい。 |
-| **JTBD-U3** | **ZIP 解凍を意識せずワンタップで更新**: ダウンロードした GitHub アーティファクト（ZIP）の解凍を手作業で行わず、完了通知またはホームのボタンからワンタップで APK インストール画面を開きたい。 |
-| **JTBD-U4** | **GitHub アクセスがない環境での確実な Fail-Safe**: 開発トークン未設定時・オフライン時・権限エラー時・Release ビルド時でも、アプリの基本機能（IME / 音声入力 / 変換）に一切影響を与えず静かに安全側へフォールバックしたい。 |
+| **JTBD-U1** | **トークン設定なしで最新版の有無を知る**: PAT の発行や設定を行わずに、一般ユーザーも開発者もホームタブからワンタップで公開リリースや最新 `main` ビルドの有無を確認したい。 |
+| **JTBD-U2** | **リリース版とリモートヘッドを目的に応じて選ぶ**: 安定版を使いたいときは「リリース版」、最新の修正や機能をいち早く試したいときは「リモートヘッド」を UI 上で明示的に切り替えたい。 |
+| **JTBD-U3** | **アプリから離れても止まらないバックグラウンド取得**: 数十 MB の APK ダウンロード中でも他アプリへ切り替えたり画面を閉じたりでき、完了通知から即座にインストール画面を開きたい。 |
+| **JTBD-U4** | **改ざん・破損・鍵不一致の事前検知と確実な Fail-Safe**: ダウンロード破損（SHA-256 不一致）、レート制限、オフライン、Debug↔Release 切替時の署名鍵不一致を安全に検知し、クラッシュや意味不明な失敗（「アプリがインストールされていません」）を防ぎたい。 |
+| **JTBD-U5** | **署名鍵の一貫性によるシームレスな上書き更新**: Debug ビルドは Debug 署名版、Release ビルドは Release 署名版の成果物を自動選択することで、毎回のアンインストールやデータ消去なしに更新したい。 |
 
 ---
 
 ### 3. Critical User Journeys (CUJ)
 
-#### CUJ-U1: 初回（PAT 未設定・Fail-Safe）とトークン設定
-1. Debug ビルドを起動すると、ホームタブのクイックアクション行の下に **「開発ビルド更新 (GitHub)」** カードが表示される。
-2. 起動時には自動通信を行わず、トークン未設定のためカードは `未連携 (Fail-Safe)` 状態となり、**「トークンを設定」** CTA のみを安全に提示する（ダウンロードボタンは提示しない）。
-3. ユーザーが「トークンを設定」または右上の「トークン設定」をタップすると、Fine-Grained PAT (`Actions: Read-only`) の入力ダイアログが開く。
-4. トークンを保存すると Android Keystore で暗号化して `noBackupFilesDir` に保存され、そのまま最新ビルド確認を実行できる。空またはキャンセル時は安全に `未連携` のまま維持される。
+#### CUJ-U1: トークン不要での起動・チャネル選択
+1. アプリを起動すると（Debug / Release いずれでも）、ホームタブのクイックアクション行の下に **「アプリ更新 (GitHub)」** カードが表示される。
+2. トークン設定ボタンやトークン要求ダイアログは一切存在しない。初期チャネルは Release ビルドでは `リリース版`、Debug ビルドでは `リモートヘッド` が自動選択され、ユーザーによる切り替え内容は `SharedPreferences` に保存される。
+3. 起動時には自動通信を行わず（`IDLE` 状態）、ユーザーの操作でのみ更新チェックを開始する。
+4. 過去のバージョンで `noBackupFilesDir/github_actions_pat.dat` に保存されていたレガシー PAT ファイルが存在する場合は、初期化時に安全に自動削除する。
 
-#### CUJ-U2: 更新あり検知 → バックグラウンドダウンロード → ワンタップインストール
-1. ユーザーがホームタブで **「更新を確認」** をタップする。
-2. `GitHubArtifactUpdateClient` が GitHub Actions Artifacts API (`per_page=20&name=app-debug`) を取得し、`head_branch == "main"` かつ `!expired` の最新アーティファクトを抽出する。
-3. `AppBuildFreshnessDecisionTable` が実行中ビルドのメタデータ（`BUILD_GITHUB_RUN_ID`, `BUILD_GIT_SHA`, `BUILD_GIT_COMMIT_EPOCH_MS`）と最新アーティファクトを比較し、`UPDATE_AVAILABLE` と判定する。
-4. カードが `更新あり`（対象 Run ID / コミット短縮 SHA / サイズを表示）に変わり、プライマリボタンが **「バックグラウンドでダウンロード」** になる（横に「再確認」ボタンも表示）。
-5. ユーザーがダウンロードをタップすると、`ProvisioningForegroundService` に `ProvisioningTaskKind.APP_UPDATE_APK` がエンキューされる。
-6. タブ横断のグローバル進捗バナー・カード内プログレスバー・システム通知に進捗（0〜90%: ZIP 取得、90〜99%: APK 自動展開）が表示される。ユーザーは設定タブ・データタブ・別アプリへ自由に移動できる。
-7. ダウンロードと Zip-Slip 安全な APK 展開が完了すると、`完了通知`（「インストール」アクションおよびタップで即インストール起動）が発行され、ホームカードのボタンが **「インストール」** に変わる。
-8. ユーザーが「インストール」をタップすると、`AppUpdateInstaller` が `ApkInstallCompatibilityDecisionTable` により展開済み APK の事前整合性検証（読込可否・パッケージ ID 一致・ダウングレード有無・インストール済みアプリとの署名証明書 SHA-256 一致）を実行する。不整合（例：署名鍵が異なるビルド間の更新）時はインストーラ起動前に理由・証明書フィンガープリントと「キャッシュAPKを削除」導線をダイアログ表示し、整合かつ `REQUEST_INSTALL_PACKAGES` 許可済みなら `FileProvider` 経由で Android パッケージインストーラを起動する（未許可なら設定画面へ誘導して復帰後に自動再開）。
-9. インストール後の新ビルドでアプリを開くと、`AppUpdateRepository` が古い/導入済みキャッシュ APK を自動クリーンアップし、最新状態を保つ。
+#### CUJ-U2: チャネル選択 → 更新あり検知 → バックグラウンドダウンロード → インストール
+1. ユーザーがセグメントトグルで **「リリース版」** または **「リモートヘッド」** を選び、**「更新を確認」** をタップする。
+2. `AppUpdateRepository` が `GitHubAppUpdateClient` 経由で認証なし HTTPS リクエストを実行する：
+   - `リリース版`: `https://api.github.com/repos/kenichikurihara/jotinput/releases/latest` を取得し、非ドラフト・非プレリリースの `*-release.apk` アセットを抽出。
+   - `リモートヘッド`: `https://github.com/kenichikurihara/jotinput/releases/download/main-head/head-metadata.json` を取得し、実行中ビルドの `isDebugBuild` に一致するバリアント（`debugApk` または `releaseApk`）を抽出。
+3. `AppBuildFreshnessDecisionTable` がチャネルに応じた比較ルール（Release: SemVer / `versionCode`、Remote HEAD: `gitSha` / `runId` / `commitEpochMs`）で新旧判定し、`UPDATE_AVAILABLE` ならプライマリボタンが **「バックグラウンドでダウンロード」** へ遷移する。
+4. ユーザーがダウンロードをタップすると、`ProvisioningForegroundService` に `ProvisioningTaskKind.APP_UPDATE_APK`（`dictId = channel.id`）がエンキューされる。
+5. ダウンロード中は他タブへの移動やバックグラウンド遷移が可能で、チャネル切替トグルは誤操作防止のため自動的にロックされる（`channelSelectorEnabled = false`）。
+6. 直接 HTTPS ストリーミング中にサイズ上限、`PK\x03\x04` マジックバイト、期待 SHA-256 ダイジェストを検証し、検証成功後に原子的リネームして完了通知を発行する。
+7. ユーザーが **「インストール」**（または通知）をタップすると、`AppUpdateInstaller` が `ApkInstallCompatibilityDecisionTable` によりパッケージ ID・ダウングレード有無・署名証明書 SHA-256 一致を検査し、整合かつ `REQUEST_INSTALL_PACKAGES` 許可済みなら Android パッケージインストーラを起動する（未許可なら設定画面へ誘導し復帰後に自動再開）。
 
-#### CUJ-U3: すでに最新ビルドを実行中
-1. ローカル `./deploy.sh` ビルドや最新 CI ビルドと同一 Run ID / 同一 SHA / 新しいコミット時刻のビルドを実行している状態で「更新を確認」をタップする。
-2. `AppBuildFreshnessDecisionTable` が `UP_TO_DATE` を返し、カードは緑バッジ `最新` となり「再確認」のみを表示する（不要なダウンロード・インストールボタンは表示しない）。
+#### CUJ-U3: Debug ↔ Release チャネル跨ぎの署名鍵不一致ハンドリング
+1. Debug ビルド上で「リリース版」を選択し、取得・インストールを試みた場合など、実行中アプリと取得 APK の署名証明書が異なる場合は、UI サマリーで事前案内しつつ、インストール実行時にも `ApkInstallCompatibilityDecisionTable` が `SIGNATURE_MISMATCH` を事前検知する。
+2. 実行中・取得済みの証明書フィンガープリント、1 回限りのアンインストール再導入案内、および **「キャッシュAPKを削除」** アクションを提示する。
 
-#### CUJ-U4: オフライン / 認証エラー (401 / 403) / アーティファクト期限切れ・署名不一致時の Fail-Safe
-1. ネットワークエラーやタイムアウト時は `NETWORK_ERROR` 状態へ遷移し、クラッシュせず再試行用「更新を確認」ボタンを表示する。
-2. HTTP 401 / 403（トークン失効・権限不足）時は `AUTH_ERROR` 状態へ遷移し、トークン再設定 CTA と再確認ボタンを表示する。
-3. 有効な `app-debug` アーティファクトが存在しない（全て `expired=true` 等）場合は `NO_ARTIFACT` 状態となり、安全に待機・再確認可能にする。
-4. 異なる署名鍵のビルド（旧 CI 一時鍵ビルドや Release ビルド等）から更新しようとした場合、Android システムの「アプリがインストールされていません」のみで終わらせず、`ApkInstallCompatibilityDecisionTable` が `SIGNATURE_MISMATCH` を事前検知して原因（署名鍵の不一致・証明書フィンガープリント比較）、1回限りの再インストール案内、および「キャッシュAPKを削除」ボタンを提示する。
+#### CUJ-U4: チャネル切替時のキャッシュ隔離とダウンロード済み APK 管理
+1. 「リモートヘッド」で APK をダウンロード済み（`READY_TO_INSTALL`）の状態で、ユーザーが「リリース版」へ切り替えた場合、別チャネルのダウンロード済み APK は誤って「リリース版としてインストール」に提示されない（厳格なチャネル隔離）。
+2. 新しいバージョンの起動時に古いステージ済み APK が不要になった場合は、`AppUpdateRepository` が自動削除する。
 
-#### CUJ-U5: バックグラウンド中のタブ切替・タスク単位キャンセル
-1. ダウンロード中に他タブ（設定/データ）へ移動しても、`ProvisioningForegroundService` とグローバル進捗バナー（タップでホームタブへ遷移）により進捗が維持される。
-2. ホームカードまたは通知の「キャンセル」から `APP_UPDATE_APK` タスクのみを安全にキャンセルでき、同時にキューされている辞書・音声モデルダウンロードを巻き添えで破壊しない（`.zip.tmp` / `.apk.tmp` も即時削除）。
+#### CUJ-U5: レート制限・破損（SHA-256 不一致）・オフライン時の Fail-Safe
+1. GitHub API のレート制限（HTTP 403 `X-RateLimit-Remaining: 0` または HTTP 429）時は `RATE_LIMITED`（バッジ `制限中`）へ遷移し、クラッシュせず再確認を促す（`リモートヘッド` は Releases 直接ダウンロードにより API クォータを消費しない）。
+2. ダウンロードファイルの SHA-256 不一致や ZIP/APK ヘッダ異常時は一時ファイルを即時破棄し `INTEGRITY_CHECK_FAILED`（バッジ `検証失敗`）として安全に停止する。
+3. ネットワーク不通時は `NETWORK_ERROR` / `DOWNLOAD_FAILED`（バッジ `接続不可`）として再確認ボタンを提示し、IME / 音声入力の動作には一切影響を与えない。
 
-#### CUJ-U6: Release ビルドでの完全非表示
-1. `BuildConfig.DEBUG == false`（リリースビルド）では、`AppUpdateUiDecisionTable` の最優先ルール `APP_UPD_R1` によりカード自体が `View.GONE` となり、`app/src/debug/AndroidManifest.xml` のみに `REQUEST_INSTALL_PACKAGES` を閉じ込めるため Google Play ポリシーにも影響しない。
+#### CUJ-U6: ダウンロード中のタブ切替・タスク単位キャンセル
+1. ダウンロード中に他タブへ移動してもグローバル進捗バナー（タップでホームタブへ遷移）が進捗を表示する。
+2. ホームカードまたは通知の「キャンセル」で `APP_UPDATE_APK` タスクのみを安全にキャンセルでき、`.tmp` ファイルを即時削除し、他の辞書・モデルダウンロードを巻き添えにしない。
 
 ---
 
@@ -65,23 +68,26 @@ JotInput では GitHub Actions CI/CD ([`.github/workflows/android-ci.yml`](.gith
 
 ### 2.1 Bounded Context 配置 (`BC-6: Provisioning`)
 - **Domain (`context.provisioning.domain`)** — Android UI / インフラ非依存の純粋 Kotlin:
-  - [`AppUpdateModels.kt`](app/src/main/java/com/example/myasr/context/provisioning/domain/AppUpdateModels.kt)
-  - [`AppUpdateDecisionModel.kt`](app/src/main/java/com/example/myasr/context/provisioning/domain/AppUpdateDecisionModel.kt)
+  - [`AppUpdateModels.kt`](app/src/main/java/com/example/myasr/context/provisioning/domain/AppUpdateModels.kt) — `AppUpdateChannel` (`RELEASE`, `REMOTE_HEAD`), `RemoteBuildArtifact`, `DownloadedApkInfo`, `AppUpdateCheckErrorKind`, `AppUpdateCardState`, `AppUpdatePrimaryAction`
+  - [`AppUpdateDecisionModel.kt`](app/src/main/java/com/example/myasr/context/provisioning/domain/AppUpdateDecisionModel.kt) — SemVer 比較と 3 つの DMN `DecisionTable`
 - **Infrastructure (`context.provisioning.infrastructure`)**:
-  - [`GitHubTokenStore.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/GitHubTokenStore.kt) — Android Keystore (`AES/GCM/NoPadding`) + `noBackupFilesDir` 保存（Keystore 利用不可環境での Fail-Safe あり）
-  - [`GitHubArtifactUpdateClient.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/GitHubArtifactUpdateClient.kt) — API クライアント・リダイレクト時トークン剥離・Zip-Slip 防御解凍
-  - [`AppUpdateRepository.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/AppUpdateRepository.kt) — メタデータキャッシュ・APK 鮮度照合・クリーンアップ
-  - [`AppUpdateInstaller.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/AppUpdateInstaller.kt) — `FileProvider` + インストール許可判定 + 署名証明書 SHA-256 / パッケージ整合性検査
-  - [`ProvisioningForegroundService.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/ProvisioningForegroundService.kt) — `ProvisioningTaskKind.APP_UPDATE_APK` と `cancelKind(...)`
+  - [`GitHubAppUpdateClient.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/GitHubAppUpdateClient.kt) — 認証なし GitHub Releases / `head-metadata.json` クライアント、HTTPS 専用リダイレクト追従、ストリーミング SHA-256 / `PK\x03\x04` 検証
+  - [`AppUpdateRepository.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/AppUpdateRepository.kt) — チャネル設定永続化・チャネル別メタデータキャッシュ・レガシー PAT 自動削除・クロスチャネル隔離された APK ステージング
+  - [`AppUpdateInstaller.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/AppUpdateInstaller.kt) — `FileProvider` + `REQUEST_INSTALL_PACKAGES` 判定 + 署名証明書 SHA-256 / パッケージ整合性検査
+  - [`ProvisioningForegroundService.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/ProvisioningForegroundService.kt) — `ProvisioningTaskKind.APP_UPDATE_APK`（`dictId` にチャネル ID を保持）と `cancelKind(...)`
 
-### 2.2 永続 Debug 署名鍵と CI 署名一貫性（`INSTALL_FAILED_UPDATE_INCOMPATIBLE` 防止）
-- GitHub Actions ランナーはエフェメラル環境のため、署名鍵を固定しない場合ビルドごとにランダムな `debug.keystore` が自動生成され、ローカル `./deploy.sh` ビルドや過去の CI ビルドへの上書き更新がすべて「アプリがインストールされていません」で失敗する。
-- そのため公開リポジトリには keystore バイナリを含めず、メンテナンス環境では `~/.config/jotinput/debug.keystore`（フォールバック `~/.config/.android/debug.keystore`）を、CI (`main` push) では Repository Secret `DEBUG_KEYSTORE_BASE64`（`DEBUG_STORE_FILE` 経由）を参照し、`apksigner` で期待される SHA-256 証明書ダイジェスト一致を検証する（外部コントリビューターの環境では AGP 標準の debug keystore に安全フォールバックする）。
+### 2.2 CI/CD による `main-head` ローリング・プレリリース配信
+- [`.github/workflows/android-ci.yml`](.github/workflows/android-ci.yml):
+  - `build-and-test` (`Build & Test`): `main` 向け全 PR（`paths-ignore` なし）および `main` push で単体テスト・`assembleDebug`（永続 Debug 署名検証）・`assembleRelease`（R8 + 16KB ELF 検証）を実行。
+  - `publish-head` (`Publish Remote HEAD Prerelease`): `main` push / `workflow_dispatch` 時に `release` 環境で署名済み `jotinput-main-head-release.apk` をビルドし、`app-debug` から `jotinput-main-head-debug.apk` をパッケージング、両者の SHA-256 と `versionCode` / `versionName` / `gitSha` / `commitEpochMs` / `runId` を格納した `head-metadata.json` を生成する。
+  - タグ `main-head` を最新 `GITHUB_SHA` に更新し、`gh release ... --prerelease --latest=false` でプレリリースを更新する。`--latest=false` により `/releases/latest` は公式 `v*` リリースを指し続け、`main-head` タグは `v*` に一致しないため [`release.yml`](.github/workflows/release.yml) を誤発火させない。
+  - クライアントが半端な状態を読まないよう、APK 群と `SHA256SUMS.txt` を先にアップロードしたあと最後に `head-metadata.json` をアップロードする。
 
-### 2.3 リダイレクト時の Authorization 漏洩防止と Zip-Slip 防御
-- GitHub Actions の `/repos/{owner}/{repo}/actions/artifacts/{id}/zip` は HTTP 302 で Azure Blob Storage SAS URL へリダイレクトする。
-- `GitHubArtifactUpdateClient` は `instanceFollowRedirects = false` で手動追従し、`Authorization: Bearer <token>` は **`https://api.github.com` 宛てリクエストにのみ付与** し、別ホストへのリダイレクト時はヘッダを確実に剥離する（HTTP へのダウングレードも拒否）。
-- ZIP 解凍時はエントリ名をパス構築に一切使用せず固定の `destApkFile.tmp` へストリーミング展開し、`PK\x03\x04` マジックバイトとサイズ上下限を検証した上で原子的にリネームする。
+### 2.3 セキュリティ・権限・プライバシー設計
+- **認証ヘッダ非使用**: 公開エンドポイントのみを使用し、`Authorization` ヘッダやトークン保存機構 (`GitHubTokenStore`) を完全に撤廃。
+- **HTTPS ホスト許可リスト**: ダウンロード URL とリダイレクト先は `https://` かつ `github.com` / `api.github.com` / `*.githubusercontent.com` のみに制限し、HTTP ダウングレードや外部ドメインへの誘導を拒否。
+- **改ざん検知**: APK ダウンロードは一時ファイルへストリーミングし、`PK\x03\x04` マジックバイト、サイズ範囲（1 MB〜220 MB）、および期待 SHA-256 ダイジェスト一致を検証した上で原子的に配置する。
+- **インストール権限**: `app/src/main/AndroidManifest.xml` に `REQUEST_INSTALL_PACKAGES` を宣言し（`app/src/debug/AndroidManifest.xml` は削除）、ユーザーが明示的に「インストール」を押した際にのみシステム許可画面へ誘導する。
 
 ---
 
@@ -92,14 +98,21 @@ JotInput では GitHub Actions CI/CD ([`.github/workflows/android-ci.yml`](.gith
 1. **`AppBuildFreshnessDecisionTable` (`HitPolicy.FIRST`)**:
    - 入力: `InstalledAppBuildInfo` + `RemoteBuildArtifact?`
    - 判定順序:
-     1. リモート不在または期限切れ (`expired`) → `NO_ARTIFACT`
-     2. 双方の `runId > 0` なら `runId` 比較（CI ビルド間比較）
-     3. `gitSha` 一致なら `UP_TO_DATE`
-     4. 双方のエポック時刻 `> 0` なら `remote.createdAtMs > local.commitEpochMs` で新旧判定（ローカル `./deploy.sh` ビルド ↔ CI ビルド比較）
-     5. 時刻不明時は `NO_ARTIFACT` / フォールバック `UPDATE_AVAILABLE`
+     - `BUILD_FRESH_R1`: リモート不在・期限切れ・URL 空 → `NO_ARTIFACT`
+     - `BUILD_FRESH_R2`〜`R5` (`RELEASE` チャネル):
+       - `versionName` 欠落 → `NO_ARTIFACT`
+       - `compareSemVer(remote.versionName, installed.versionName) > 0` → `UPDATE_AVAILABLE`
+       - `remote.versionCode > installed.versionCode`（双方 `> 0`） → `UPDATE_AVAILABLE`
+       - それ以外 → `UP_TO_DATE`
+     - `BUILD_FRESH_R6`〜`R11` + `DEFAULT` (`REMOTE_HEAD` チャネル):
+       - `gitSha` 一致 → `UP_TO_DATE`
+       - 双方 `runId > 0` で `remote.runId > installed.githubRunId` → `UPDATE_AVAILABLE`、それ以外 → `UP_TO_DATE`
+       - 双方エポック時刻 `> 0` で `remote.effectiveTimestampMs > installed.commitEpochMs` → `UPDATE_AVAILABLE`、それ以外 → `UP_TO_DATE`
+       - リモート時刻欠落 → `NO_ARTIFACT`、ローカルメタ情報不明時フォールバック → `UPDATE_AVAILABLE`
 2. **`AppUpdateUiDecisionTable` (`HitPolicy.FIRST`)**:
-   - 入力: `isDebugBuild`, `hasGitHubToken`, `isChecking`, `isDownloadActive`, `isDownloadQueued`, `freshnessStatus`, `hasMatchingDownloadedApk`, `lastErrorKind`
-   - 出力: `AppUpdateCardState`, `AppUpdatePrimaryAction`, `AppUpdateBadgeTone`, `isCardVisible`, `primaryButtonEnabled`, `showProgressBar`, `showSecondaryCheckButton`
+   - 入力: `selectedChannel`, `isChecking`, `isDownloadActive`, `isDownloadQueued`, `freshnessStatus`, `hasMatchingDownloadedApk`, `lastErrorKind`
+   - 出力: `cardState`, `primaryAction`, `badgeTone`, `primaryButtonEnabled`, `channelSelectorEnabled`, `showProgressBar`, `showSecondaryCheckButton`, `badgeText`, `primaryButtonLabel`
+   - 特徴: ビルド種別によらず常にカードを表示し、ダウンロード中・待機中・確認中は `channelSelectorEnabled = false` としてチャネル切替をロックする。
 3. **`ApkInstallCompatibilityDecisionTable` (`HitPolicy.FIRST`)**:
    - 入力: `apkReadable`, `installedPackageName`, `archivePackageName`, `installedVersionCode`, `archiveVersionCode`, `installedSigningCertSha256s`, `archiveSigningCertSha256s`
    - 出力: `ApkInstallCompatibilityStatus` (`COMPATIBLE`, `UNREADABLE_ARCHIVE`, `PACKAGE_NAME_MISMATCH`, `VERSION_DOWNGRADE`, `SIGNATURE_MISMATCH`, `SIGNATURE_UNVERIFIABLE`), `canProceedToInstaller`, `reason`
@@ -109,10 +122,10 @@ JotInput では GitHub Actions CI/CD ([`.github/workflows/android-ci.yml`](.gith
 ## Part 4: Alloy による形式仕様 (Formal Verification)
 
 [`app/src/test/resources/alloy/github_app_update_lifecycle.als`](app/src/test/resources/alloy/github_app_update_lifecycle.als) により以下を網羅検査する：
-- **`ReleaseBuildNeverShowsCard`**: 非 Debug ビルドでは常にカード非表示。
-- **`NoTokenFailSafeNeverOffersDownload`**: トークン未設定（かつ一致済 APK 不在）時は決してダウンロードやインストールを提示しない。
-- **`ErrorStateNeverOffersDownloadOrInstall`**: 認証・通信・DL 失敗時はダウンロードやインストールに誤遷移しない。
-- **`DownloadOnlyWhenTokenAndUpdateAvailable`**: ダウンロード CTA は Debug・トークン有・更新あり時のみ表示。
-- **`InstallOnlyWhenMatchingApkExistsAndDebug`**: インストール CTA は Debug かつ整合 APK 保持時のみ表示。
-- **`UpToDateNeverOffersDownloadOrInstall`**: 最新判定時は更新ボタンのみを表示。
-- **`ActiveDownloadAlwaysShowsProgressAndCancel`**: バックグラウンド DL/待機中は進捗バーとキャンセル CTA を必ず表示。
+- **`BusyStateLocksChannelSelector`**: 確認中・ダウンロード待機中・ダウンロード実行中はチャネル切替が必ず無効化されること。
+- **`ChannelNeverChangesWhileBusy`**: 確認中・ダウンロード待機中・ダウンロード実行中に選択チャネルが切り替わらないこと。
+- **`ErrorStateNeverOffersDownloadOrInstall`**: レート制限・整合性検証失敗・通信/DL エラー時はダウンロードやインストールに誤遷移しないこと。
+- **`DownloadOnlyWhenUpdateAvailableAndNotBusy`**: ダウンロード CTA は更新ありかつエラー・確認・DL が非アクティブのときのみ提示されること。
+- **`InstallOnlyWhenChannelMatchingApkExists`**: インストール CTA は現在選択中チャネルと一致する検証済み APK が存在し、かつエラーがないときのみ提示されること。
+- **`UpToDateNeverOffersDownloadOrInstall`**: 最新判定時は更新確認ボタンのみを表示すること。
+- **`ActiveDownloadAlwaysShowsProgressAndCancel`**: バックグラウンド DL/待機中は進捗バーとキャンセル CTA を必ず表示すること。

@@ -19,7 +19,7 @@ import java.util.Locale
 /**
  * Helper for verifying APK compatibility (package ID, versionCode, signing certificate SHA-256),
  * checking `REQUEST_INSTALL_PACKAGES` permission, and launching Android's package installer
- * via [FileProvider] (debug builds only).
+ * via [FileProvider].
  */
 object AppUpdateInstaller {
 

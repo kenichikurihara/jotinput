@@ -93,7 +93,7 @@ See [System Architecture](docs/architecture.md) for details.
 4. Open **JotInput**, grant microphone permission, and follow the **Home** / **Data** tabs to download the speech model and dictionaries over HTTPS.
 5. Enable **JotInput** in Android Language & Keyboard settings and switch the active input method to **JotInput**.
 
-> **Note**: Release builds update manually from GitHub Releases (do not upgrade between Debug and Release builds without uninstalling, as they use different signing certificates).
+> **Note**: Both Release and Debug builds also include a tokenless in-app updater on the **Home** tab supporting **Release** (`リリース版`) and **Remote HEAD** (`リモートヘッド`) channels with SHA-256 and signing-key compatibility checks (do not upgrade between Debug and Release signing keys without uninstalling once).
 
 ---
 
