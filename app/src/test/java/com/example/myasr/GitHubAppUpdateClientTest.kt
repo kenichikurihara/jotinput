@@ -317,7 +317,23 @@ class GitHubAppUpdateClientTest {
             .apply()
 
         assertNull(repo.getMatchingDownloadedApk(channel = AppUpdateChannel.REMOTE_HEAD, latestRemote = null))
-        assertFalse("Stale APK matching installed build should be deleted", staleApk.exists())
+        assertTrue("Stale APK matching installed build should be deleted", !staleApk.exists())
+    }
+
+    @Test
+    fun `AppUpdateRepository loads non-empty gitSha and commitEpochMs from generated build metadata asset`() {
+        val context = RuntimeEnvironment.getApplication()
+        val repo = AppUpdateRepository(context, isDebugBuild = true)
+        val info = repo.getInstalledBuildInfo()
+        assertTrue(
+            "Expected hex gitSha from generated assets/build_metadata.properties, got '${info.gitSha}'",
+            Regex("^[0-9a-fA-F]{7,40}$").matches(info.gitSha)
+        )
+        assertTrue(
+            "Expected positive commitEpochMs from generated assets/build_metadata.properties, got ${info.commitEpochMs}",
+            info.commitEpochMs > 0L
+        )
+        assertTrue(info.githubRunId >= 0L)
     }
 
     @Test
@@ -367,6 +383,16 @@ class GitHubAppUpdateClientTest {
             "app/build.gradle.kts must expose GITHUB_HEAD_RELEASE_TAG and GITHUB_HEAD_METADATA_ASSET",
             gradleKts.contains("GITHUB_HEAD_RELEASE_TAG") && gradleKts.contains("GITHUB_HEAD_METADATA_ASSET")
         )
+        assertTrue(
+            "app/build.gradle.kts must generate build_metadata.properties via GenerateBuildMetadataTask and unify CMake RelWithDebInfo",
+            gradleKts.contains("GenerateBuildMetadataTask") &&
+                gradleKts.contains("build_metadata.properties") &&
+                gradleKts.contains("-DCMAKE_BUILD_TYPE=RelWithDebInfo")
+        )
+        assertFalse(
+            "app/build.gradle.kts must not bake volatile BUILD_GIT_SHA or BUILD_GITHUB_RUN_ID into BuildConfig",
+            gradleKts.contains("BUILD_GIT_SHA") || gradleKts.contains("BUILD_GITHUB_RUN_ID")
+        )
 
         val mainManifest = File(repoRoot, "app/src/main/AndroidManifest.xml").readText()
         assertTrue(
@@ -378,11 +404,26 @@ class GitHubAppUpdateClientTest {
             File(repoRoot, "app/src/debug/AndroidManifest.xml").exists()
         )
 
+        val setupAction = File(repoRoot, ".github/actions/setup-android-build/action.yml")
+        assertTrue("Composite setup action must exist", setupAction.isFile)
+        val setupActionYml = setupAction.readText()
+        assertTrue(
+            "Composite action must cache static ccache binary and ccache-v3",
+            setupActionYml.contains("ccache-bin-v4.14.3") && setupActionYml.contains("ccache-v3-")
+        )
+
         val ciYml = File(repoRoot, ".github/workflows/android-ci.yml").readText()
         val pullRequestBlock = ciYml.substringAfter("pull_request:").substringBefore("workflow_dispatch:")
         assertFalse(
             "pull_request trigger must NEVER use paths-ignore so every PR runs CI before merge",
             pullRequestBlock.contains("paths-ignore")
+        )
+        assertTrue(
+            "android-ci.yml must run parallel test-and-debug and verify-release jobs gated by build-and-test with if: always()",
+            ciYml.contains("test-and-debug:") &&
+                ciYml.contains("verify-release:") &&
+                ciYml.contains("needs: [detect-changes, test-and-debug, verify-release]") &&
+                ciYml.contains("if: always()")
         )
         assertTrue(
             "android-ci.yml must decode DEBUG_KEYSTORE_BASE64 and set DEBUG_STORE_FILE",
@@ -405,6 +446,25 @@ class GitHubAppUpdateClientTest {
                 ciYml.contains("head-metadata.json") &&
                 ciYml.contains("jotinput-main-head-release.apk") &&
                 ciYml.contains("jotinput-main-head-debug.apk")
+        )
+        val publishHeadBlock = ciYml.substringAfter("publish-head:")
+        assertTrue(
+            "publish-head must zipalign + sign the compiled release APK directly without invoking ./gradlew",
+            publishHeadBlock.contains("apksigner") &&
+                publishHeadBlock.contains("zipalign") &&
+                !publishHeadBlock.contains("./gradlew")
+        )
+
+        val preCommit = File(repoRoot, ".githooks/pre-commit").readText()
+        assertTrue(
+            ".githooks/pre-commit must use ../../app/src/ relative symlinks",
+            preCommit.contains("../../app/src/main/assets/mozc/connection_data.bin") &&
+                preCommit.contains("../../app/src/test/resources/mozc/system_dictionary.bin")
+        )
+        val prePush = File(repoRoot, ".githooks/pre-push").readText()
+        assertTrue(
+            ".githooks/pre-push must block direct pushes to refs/heads/main",
+            prePush.contains("refs/heads/main")
         )
 
         val agentsMd = File(repoRoot, "AGENTS.md").readText()

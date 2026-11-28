@@ -29,87 +29,130 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_NOHASHDIR: 'true'
+  CCACHE_COMPILERCHECK: content
+  CCACHE_COMPRESS: 'true'
+  CCACHE_COMPRESSLEVEL: '6'
+  CCACHE_MAXSIZE: '1G'
+  CI_GRADLE_JVMARGS: '-Xmx4g -XX:+UseParallelGC -Dfile.encoding=UTF-8'
+  CI_KOTLIN_JVMARGS: '-Xmx2g -XX:+UseParallelGC'
+
 jobs:
-  build-and-test:
-    name: Build & Test
+  detect-changes:
+    name: Detect Changed Scope
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: read
+    outputs:
+      code_changed: ${{ steps.scope.outputs.code_changed }}
+      doc_contract_changed: ${{ steps.scope.outputs.doc_contract_changed }}
 
-    env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_BASEDIR: ${{ github.workspace }}
-      CCACHE_NOHASHDIR: 'true'
-      CCACHE_COMPILERCHECK: content
-      CCACHE_MAXSIZE: '500M'
+    steps:
+      - name: Classify Changed Files
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "${EVENT_NAME}" != "pull_request" ]; then
+            echo "code_changed=true" >> "$GITHUB_OUTPUT"
+            echo "doc_contract_changed=true" >> "$GITHUB_OUTPUT"
+            echo "Non-PR event (${EVENT_NAME}): running full code + release checks."
+            exit 0
+          fi
+
+          gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files" --jq '.[].filename' > "${RUNNER_TEMP}/changed_files.txt"
+          python3 - "${RUNNER_TEMP}/changed_files.txt" "${GITHUB_OUTPUT}" << 'EOF'
+          import os, sys
+
+          files_path, out_path = sys.argv[1], sys.argv[2]
+          with open(files_path, encoding="utf-8") as f:
+              files = [line.strip() for line in f if line.strip()]
+
+          def is_doc_contract(p):
+              return p in ("AGENTS.md", "GEMINI.md") or p.startswith("docs/ddd/")
+
+          def is_pure_non_code(p):
+              if p.startswith("docs/") and not p.startswith("docs/ddd/"):
+                  return True
+              if "/" not in p and p.endswith(".md") and p not in ("AGENTS.md", "GEMINI.md"):
+                  return True
+              if p.startswith("LICENSES/") or p in ("LICENSE", "NOTICE"):
+                  return True
+              if any(p.startswith(prefix) for prefix in (".agents/", ".githooks/", "eval/", "scripts/", "tools/eval/")):
+                  return True
+              if p in ("deploy.sh", "download_model.sh", "tools/push_model_to_device.sh"):
+                  return True
+              if p.startswith("tools/") and "/" not in p[len("tools/"):] and p.endswith((".py", ".cc", ".tsv", ".jsonl")):
+                  return True
+              return False
+
+          code_changed = (len(files) == 0)
+          doc_contract_changed = False
+          for p in files:
+              if is_doc_contract(p):
+                  doc_contract_changed = True
+              elif not is_pure_non_code(p):
+                  code_changed = True
+
+          with open(out_path, "a", encoding="utf-8") as out:
+              out.write(f"code_changed={'true' if code_changed else 'false'}\n")
+              out.write(f"doc_contract_changed={'true' if doc_contract_changed else 'false'}\n")
+
+          print(f"Changed files ({len(files)}): code_changed={code_changed}, doc_contract_changed={doc_contract_changed}")
+          for p in files[:50]:
+              print(f"  - {p}")
+          EOF
+
+      - name: Checkout for Non-Code Syntax Checks
+        if: steps.scope.outputs.code_changed == 'false'
+        uses: actions/checkout@v4
+
+      - name: Validate Changed Scripts Syntax
+        if: steps.scope.outputs.code_changed == 'false'
+        run: |
+          while IFS= read -r f; do
+            [ -f "$f" ] || continue
+            case "$f" in
+              *.sh|.githooks/*)
+                echo "Checking bash syntax: $f"
+                bash -n "$f"
+                ;;
+              *.py)
+                echo "Checking Python syntax: $f"
+                python3 -m py_compile "$f"
+                ;;
+            esac
+          done < "${RUNNER_TEMP}/changed_files.txt"
+
+  test-and-debug:
+    name: Unit Tests & Debug APK
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code_changed == 'true' || needs.detect-changes.outputs.doc_contract_changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Cache Android NDK and CMake
-        id: ndk-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            /usr/local/lib/android/sdk/ndk/26.3.11579264
-            /usr/local/lib/android/sdk/cmake/3.22.1
-          key: ndk-26.3.11579264-cmake-3.22.1
-
-      - name: Set up Android NDK and CMake
-        if: steps.ndk-cache.outputs.cache-hit != 'true'
-        run: |
-          SDKMANAGER=$(command -v sdkmanager || echo "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager")
-          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          "$SDKMANAGER" "ndk;26.3.11579264" "cmake;3.22.1"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Set up Android Build Environment
+        uses: ./.github/actions/setup-android-build
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-          cache-cleanup: on-success
-
-      - name: Install ccache
-        run: which ccache >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ccache)
-
-      - name: Cache ccache
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/.ccache
-          key: ccache-v2-${{ runner.os }}-${{ hashFiles('app/src/main/cpp/**', 'tools/setup_native_deps.sh') }}
-          restore-keys: |
-            ccache-v2-${{ runner.os }}-
-
-      - name: Cache llama.cpp source
-        uses: actions/cache@v4
-        with:
-          path: tools/llama_cpp_src
-          key: llama-cpp-${{ hashFiles('tools/setup_native_deps.sh') }}
-
-      - name: Prepare Test Lexicon Assets
-        run: |
-          mkdir -p tools/mozc_dict
-          if [ -f app/src/main/assets/mozc/connection_data.bin ] && [ ! -f tools/mozc_dict/connection_data.bin ]; then
-            ln -sf ../../app/src/main/assets/mozc/connection_data.bin tools/mozc_dict/connection_data.bin
-          fi
-          if [ -f app/src/test/resources/mozc/system_dictionary.bin ] && [ ! -f tools/mozc_dict/system_dictionary.bin ]; then
-            ln -sf ../../app/src/test/resources/mozc/system_dictionary.bin tools/mozc_dict/system_dictionary.bin
-          fi
-
-      - name: Setup Native Dependencies
-        run: ./tools/setup_native_deps.sh
-
-      - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest --max-workers=2 --stacktrace
+          cache-cleanup: ${{ github.ref == 'refs/heads/main' && 'on-success' || 'never' }}
+          with-native: ${{ needs.detect-changes.outputs.code_changed }}
 
       - name: Decode Debug Keystore
+        if: needs.detect-changes.outputs.code_changed == 'true'
         env:
           DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         run: |
@@ -125,13 +168,24 @@ jobs:
             echo "Notice: DEBUG_KEYSTORE_BASE64 secret is unavailable (e.g. fork PR); falling back to AGP default debug keystore."
           fi
 
-      - name: Assemble Debug APK
+      - name: Run Unit Tests & Assemble Debug APK
+        if: needs.detect-changes.outputs.code_changed == 'true'
         run: |
           ccache -z
-          ./gradlew assembleDebug --max-workers=2 --stacktrace
+          ./gradlew testDebugUnitTest assembleDebug --max-workers=4 --stacktrace \
+            -Dorg.gradle.jvmargs="${CI_GRADLE_JVMARGS}" \
+            -Dkotlin.daemon.jvmargs="${CI_KOTLIN_JVMARGS}"
           ccache -s
 
+      - name: Run Contract & Architecture Unit Tests (Doc-Only PR)
+        if: needs.detect-changes.outputs.code_changed != 'true'
+        run: |
+          ./gradlew testDebugUnitTest --max-workers=4 --stacktrace \
+            -Dorg.gradle.jvmargs="${CI_GRADLE_JVMARGS}" \
+            -Dkotlin.daemon.jvmargs="${CI_KOTLIN_JVMARGS}"
+
       - name: Verify Debug APK Signature
+        if: needs.detect-changes.outputs.code_changed == 'true'
         run: |
           APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
           APKSIGNER=$(ls -1 "${ANDROID_HOME}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n 1)
@@ -156,8 +210,53 @@ jobs:
             echo "Verified debug APK signing certificate matches persistent debug keystore (${ACTUAL_SHA256})."
           fi
 
+      - name: Upload Test Reports on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: app/build/reports/tests/testDebugUnitTest/
+          retention-days: 3
+
+      - name: Upload Debug APK
+        if: success() && needs.detect-changes.outputs.code_changed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+          compression-level: 0
+
+      - name: Clean Up Debug Keystore
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/jotinput-debug.keystore"
+
+  verify-release:
+    name: Release Build (R8 & LintVital)
+    needs: detect-changes
+    if: needs.detect-changes.outputs.code_changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Android Build Environment
+        uses: ./.github/actions/setup-android-build
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cache-cleanup: ${{ github.ref == 'refs/heads/main' && 'on-success' || 'never' }}
+          with-native: 'true'
+
       - name: Verify Release Build (R8 & LintVital)
-        run: ./gradlew assembleRelease --max-workers=2 --stacktrace
+        run: |
+          ccache -z
+          ./gradlew assembleRelease --max-workers=4 --stacktrace \
+            -Dorg.gradle.jvmargs="${CI_GRADLE_JVMARGS}" \
+            -Dkotlin.daemon.jvmargs="${CI_KOTLIN_JVMARGS}"
+          ccache -s
 
       - name: Verify 16KB ELF Page Alignment (arm64-v8a)
         run: |
@@ -181,26 +280,50 @@ jobs:
               print(f"OK {lib}: alignments={loads}")
           '
 
-      - name: Upload Test Reports on Failure
-        if: failure()
+      - name: Upload Unsigned Release APK (main only)
+        if: success() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports
-          path: app/build/reports/tests/testDebugUnitTest/
-          retention-days: 3
-
-      - name: Upload Debug APK
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 14
+          name: app-release-unsigned
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 1
           compression-level: 0
 
-      - name: Clean Up Debug Keystore
-        if: always()
-        run: rm -f "${RUNNER_TEMP}/jotinput-debug.keystore"
+  build-and-test:
+    name: Build & Test
+    needs: [detect-changes, test-and-debug, verify-release]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Verify Required CI Gate Results
+        env:
+          DETECT_RESULT: ${{ needs.detect-changes.result }}
+          CODE_CHANGED: ${{ needs.detect-changes.outputs.code_changed }}
+          DOC_CONTRACT_CHANGED: ${{ needs.detect-changes.outputs.doc_contract_changed }}
+          TEST_RESULT: ${{ needs.test-and-debug.result }}
+          RELEASE_RESULT: ${{ needs.verify-release.result }}
+        run: |
+          echo "detect-changes=${DETECT_RESULT} code_changed=${CODE_CHANGED} doc_contract_changed=${DOC_CONTRACT_CHANGED}"
+          echo "test-and-debug=${TEST_RESULT} verify-release=${RELEASE_RESULT}"
+          if [ "${DETECT_RESULT}" != "success" ]; then
+            echo "ERROR: detect-changes did not succeed (${DETECT_RESULT})"
+            exit 1
+          fi
+          if [ "${CODE_CHANGED}" = "true" ]; then
+            if [ "${TEST_RESULT}" != "success" ] || [ "${RELEASE_RESULT}" != "success" ]; then
+              echo "ERROR: Required code checks failed (test-and-debug=${TEST_RESULT}, verify-release=${RELEASE_RESULT})"
+              exit 1
+            fi
+          elif [ "${DOC_CONTRACT_CHANGED}" = "true" ]; then
+            if [ "${TEST_RESULT}" != "success" ]; then
+              echo "ERROR: Contract unit tests failed (test-and-debug=${TEST_RESULT})"
+              exit 1
+            fi
+          fi
+          echo "All required Android CI checks passed."
 
   publish-head:
     name: Publish Remote HEAD Prerelease
@@ -211,23 +334,9 @@ jobs:
     permissions:
       contents: write
 
-    env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_BASEDIR: ${{ github.workspace }}
-      CCACHE_NOHASHDIR: 'true'
-      CCACHE_COMPILERCHECK: content
-      CCACHE_MAXSIZE: '500M'
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Download Built Debug APK Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: app-debug
-          path: ${{ runner.temp }}/head-debug-artifact
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -235,56 +344,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Cache Android NDK and CMake
-        id: ndk-cache
-        uses: actions/cache@v4
+      - name: Download Built APK Artifacts
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            /usr/local/lib/android/sdk/ndk/26.3.11579264
-            /usr/local/lib/android/sdk/cmake/3.22.1
-          key: ndk-26.3.11579264-cmake-3.22.1
-
-      - name: Set up Android NDK and CMake
-        if: steps.ndk-cache.outputs.cache-hit != 'true'
-        run: |
-          SDKMANAGER=$(command -v sdkmanager || echo "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager")
-          yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          "$SDKMANAGER" "ndk;26.3.11579264" "cmake;3.22.1"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: true
-
-      - name: Install ccache
-        run: which ccache >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ccache)
-
-      - name: Cache ccache
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/.ccache
-          key: ccache-v2-${{ runner.os }}-${{ hashFiles('app/src/main/cpp/**', 'tools/setup_native_deps.sh') }}
-          restore-keys: |
-            ccache-v2-${{ runner.os }}-
-
-      - name: Cache llama.cpp source
-        uses: actions/cache@v4
-        with:
-          path: tools/llama_cpp_src
-          key: llama-cpp-${{ hashFiles('tools/setup_native_deps.sh') }}
-
-      - name: Prepare Test Lexicon Assets
-        run: |
-          mkdir -p tools/mozc_dict
-          if [ -f app/src/main/assets/mozc/connection_data.bin ] && [ ! -f tools/mozc_dict/connection_data.bin ]; then
-            ln -sf ../../app/src/main/assets/mozc/connection_data.bin tools/mozc_dict/connection_data.bin
-          fi
-          if [ -f app/src/test/resources/mozc/system_dictionary.bin ] && [ ! -f tools/mozc_dict/system_dictionary.bin ]; then
-            ln -sf ../../app/src/test/resources/mozc/system_dictionary.bin tools/mozc_dict/system_dictionary.bin
-          fi
-
-      - name: Setup Native Dependencies
-        run: ./tools/setup_native_deps.sh
+          pattern: app-*
+          path: ${{ runner.temp }}/head-artifacts
 
       - name: Decode Release Keystore
         env:
@@ -297,27 +361,73 @@ jobs:
           printf '%s' "${RELEASE_KEYSTORE_BASE64}" | base64 -d > "${RUNNER_TEMP}/jotinput-release.jks"
           chmod 600 "${RUNNER_TEMP}/jotinput-release.jks"
 
-      - name: Assemble Signed Release APK
+      - name: Zipalign & Sign Release APK
         env:
-          RELEASE_STORE_FILE: ${{ runner.temp }}/jotinput-release.jks
           RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          ccache -z
-          ./gradlew assembleRelease --max-workers=2 --stacktrace
-          ccache -s
+          UNSIGNED_APK="${RUNNER_TEMP}/head-artifacts/app-release-unsigned/app-release-unsigned.apk"
+          if [ ! -f "${UNSIGNED_APK}" ]; then
+            echo "ERROR: Unsigned release APK not found at ${UNSIGNED_APK}"
+            exit 1
+          fi
+          BUILD_TOOLS_DIR=$(ls -1d "${ANDROID_HOME}"/build-tools/* 2>/dev/null | sort -V | tail -n 1)
+          ZIPALIGN="${BUILD_TOOLS_DIR}/zipalign"
+          APKSIGNER="${BUILD_TOOLS_DIR}/apksigner"
+          if [ ! -x "${ZIPALIGN}" ] || [ ! -x "${APKSIGNER}" ]; then
+            echo "ERROR: zipalign or apksigner not found under ${ANDROID_HOME}/build-tools"
+            exit 1
+          fi
+
+          ALIGNED_APK="${RUNNER_TEMP}/app-release-aligned.apk"
+          SIGNED_APK="${RUNNER_TEMP}/app-release.apk"
+          if "${ZIPALIGN}" --help 2>&1 | grep -q -- '-P'; then
+            "${ZIPALIGN}" -P 16 -f 4 "${UNSIGNED_APK}" "${ALIGNED_APK}"
+          else
+            "${ZIPALIGN}" -p -f 4 "${UNSIGNED_APK}" "${ALIGNED_APK}"
+          fi
+          "${ZIPALIGN}" -c 4 "${ALIGNED_APK}"
+
+          "${APKSIGNER}" sign \
+            --ks "${RUNNER_TEMP}/jotinput-release.jks" \
+            --ks-pass "env:RELEASE_STORE_PASSWORD" \
+            --ks-key-alias "${RELEASE_KEY_ALIAS}" \
+            --key-pass "env:RELEASE_KEY_PASSWORD" \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out "${SIGNED_APK}" \
+            "${ALIGNED_APK}"
+          rm -f "${ALIGNED_APK}"
 
       - name: Verify Signed Release & Debug APKs
+        env:
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         run: |
-          RELEASE_APK="app/build/outputs/apk/release/app-release.apk"
-          DEBUG_APK="${RUNNER_TEMP}/head-debug-artifact/app-debug.apk"
+          RELEASE_APK="${RUNNER_TEMP}/app-release.apk"
+          DEBUG_APK="${RUNNER_TEMP}/head-artifacts/app-debug/app-debug.apk"
           APKSIGNER=$(ls -1 "${ANDROID_HOME}"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -n 1)
           if [ -z "${APKSIGNER}" ]; then
             echo "ERROR: apksigner not found under ${ANDROID_HOME}/build-tools"
             exit 1
           fi
-          "${APKSIGNER}" verify --verbose --print-certs "${RELEASE_APK}"
+          VERIFY_REL=$("${APKSIGNER}" verify --verbose --print-certs "${RELEASE_APK}")
+          printf '%s\n' "${VERIFY_REL}"
+          EXPECTED_REL_SHA256=$(keytool -J-Duser.language=en -list -v \
+            -keystore "${RUNNER_TEMP}/jotinput-release.jks" \
+            -storepass "${RELEASE_STORE_PASSWORD}" \
+            -alias "${RELEASE_KEY_ALIAS}" | \
+            awk -F': ' '/^[[:space:]]*SHA256:/ {gsub(/[^0-9a-fA-F]/, "", $2); print tolower($2); exit}')
+          ACTUAL_REL_SHA256=$(printf '%s\n' "${VERIFY_REL}" | \
+            awk -F'certificate SHA-256 digest:' '/certificate SHA-256 digest:/ && !/public key/ {gsub(/[^0-9a-fA-F]/, "", $2); print tolower($2); exit}')
+          if [ -z "${EXPECTED_REL_SHA256}" ] || [ "${EXPECTED_REL_SHA256}" != "${ACTUAL_REL_SHA256}" ]; then
+            echo "ERROR: Release APK signing certificate mismatch (expected=${EXPECTED_REL_SHA256}, actual=${ACTUAL_REL_SHA256})"
+            exit 1
+          fi
+          echo "Verified release APK signing certificate matches release keystore (${ACTUAL_REL_SHA256})."
+
           "${APKSIGNER}" verify --verbose --print-certs "${DEBUG_APK}"
 
           TMP_SO_DIR=$(mktemp -d)
@@ -348,8 +458,8 @@ jobs:
         run: |
           OUT_DIR="${RUNNER_TEMP}/head-release-assets"
           mkdir -p "${OUT_DIR}"
-          cp app/build/outputs/apk/release/app-release.apk "${OUT_DIR}/jotinput-main-head-release.apk"
-          cp "${RUNNER_TEMP}/head-debug-artifact/app-debug.apk" "${OUT_DIR}/jotinput-main-head-debug.apk"
+          cp "${RUNNER_TEMP}/app-release.apk" "${OUT_DIR}/jotinput-main-head-release.apk"
+          cp "${RUNNER_TEMP}/head-artifacts/app-debug/app-debug.apk" "${OUT_DIR}/jotinput-main-head-debug.apk"
           (cd "${OUT_DIR}" && sha256sum jotinput-main-head-release.apk jotinput-main-head-debug.apk > SHA256SUMS.txt)
           OUT_DIR="${OUT_DIR}" python3 -c '
           import hashlib, json, os, re, subprocess, time

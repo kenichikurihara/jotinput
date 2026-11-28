@@ -2518,6 +2518,49 @@ Dataset: 38 dictionary entries, 68 positive utterances (`edge-tts` across 4 voic
 - **Local Debug & Release Builds**: `./gradlew assembleDebug assembleRelease` succeeded; `apksigner` verified Debug cert `542f5168...` and Release cert `a302f78d...`.
 - **ARCVM (`arc:5555`, Android API 33)**: Verified `./deploy.sh` deployment, `MainActivity` + `KanaKanjiEngine` + `AsrManager` (`Parakeet` & `ReazonSpeech` `READY`), and real `PackageManager` API 33 archive certificate inspection (`542f5168...` vs `c83e6c9c...`).
 
+---
+
+## Finding 63 & ADR-028: CI/CD Pipeline Acceleration & End-to-End Developer Workflow Optimization
+
+### 1. Measured Baselines & Root-Cause Bottlenecks
+Analysis of GitHub Actions (`Android CI`, `Release Build & GitHub Release`) and local developer workflows uncovered seven compounding bottlenecks:
+1. **0% Native `ccache` Reuse Across Debug/Release**:
+   - In `publish-head` (Run `46105396648`), `ccache` recorded `0 / 156 (0.00%)` hits on `CMAKE_BUILD_TYPE=RelWithDebInfo` because `Debug` (`-fno-limit-debug-info`) and `RelWithDebInfo` (`-O2 -g -DNDEBUG`) produced distinct compiler flags, and `CCACHE_MAXSIZE=500M` without compression had evicted/missed release objects.
+2. **Duplicate `assembleRelease` Build in `publish-head`**:
+   - `publish-head` provisioned full NDK/CMake/Gradle/`llama.cpp` and rebuilt `assembleRelease` from scratch (`151s` build, `229s` job total) purely to sign the exact same `GITHUB_SHA` already compiled in `Build & Test`.
+3. **Serial Gradle Execution & Missing PR Scope Routing**:
+   - `build-and-test` invoked three sequential `./gradlew` commands (`testDebugUnitTest`, `assembleDebug`, `assembleRelease`) with `--max-workers=2`, taking `562s` on PR #5 (Run `46105812182`) and `408s` on main push (Run `46105396648`), and compiled full C++/R8/LintVital even for pure documentation/script PRs.
+4. **Configuration-Time `BuildConfig` Cache Busting**:
+   - [`app/build.gradle.kts`](app/build.gradle.kts) evaluated `GITHUB_SHA`, `git show -s --format=%ct HEAD`, and `GITHUB_RUN_ID` eagerly during Gradle configuration and emitted them into `BuildConfig.java`, invalidating Configuration Cache and Kotlin/R8/LintVital outputs on every commit and CI run.
+5. **Repeated `apt-get` `ccache` Setup**:
+   - Every native CI job spent `10-27s` running `apt-get update && apt-get install ccache` and duplicated environment setup across workflows.
+6. **Artificial Sleeps, Duplicate Alloy Checks & Dirty Evaluation Files in Unit Tests**:
+   - [`ModelTimeoutAndFailSafeTest`](app/src/test/java/com/example/myasr/ModelTimeoutAndFailSafeTest.kt) spent `14.72s` on real wall-clock `delay(3000L)` / `delay(4000L)` sleeps instead of coroutine virtual time (`runTest`), [`AlloyVerificationTest`](app/src/test/java/com/example/myasr/formal/AlloyVerificationTest.kt) verified `history_sync_settings.als` twice, tests ran sequentially (`maxParallelForks=1`), and [`JotInputPredictionEvaluationRunnerTest`](app/src/test/java/com/example/myasr/JotInputPredictionEvaluationRunnerTest.kt) rewrote tracked `tools/eval/jotinput_prediction_evaluation_results*.json` files on every test run.
+7. **Local E2E Friction (`pre-commit`, `pre-push`, `deploy.sh`)**:
+   - `.githooks/pre-commit` ran two separate `./gradlew` calls even for docs/scripts commits and used broken relative symlink paths (`../app/src/...`); `.githooks/pre-push` re-ran `./gradlew testDebugUnitTest assembleDebug` on the exact tree just verified by `pre-commit`; [`deploy.sh`](deploy.sh) installed **twice** onto the same ARCVM (`arc:5555` + `emulator-5554` sharing `ro.boot.serialno=F9C6FF904B2AE49F085A` / `android_id`) sequentially with 10+ serial `adb shell` round-trips.
+
+### 2. Architectural & E2E Improvements Implemented
+1. **Configuration-Cache-Safe Build Metadata Asset ([`app/build.gradle.kts`](app/build.gradle.kts), [`AppUpdateRepository.kt`](app/src/main/java/com/example/myasr/context/provisioning/infrastructure/AppUpdateRepository.kt))**:
+   - Replaced volatile `BuildConfig` fields (`BUILD_GIT_SHA`, `BUILD_GIT_COMMIT_EPOCH_MS`, `BUILD_GITHUB_RUN_ID`) with a Configuration-Cache-compatible `GenerateBuildMetadataTask` wired into `androidComponents.onVariants` (`assets/build_metadata.properties`), parsed lazily by `AppUpdateRepository`.
+2. **Unified Native CMake `RelWithDebInfo` ([`app/build.gradle.kts`](app/build.gradle.kts))**:
+   - Added `-DCMAKE_BUILD_TYPE=RelWithDebInfo` to `defaultConfig.externalNativeBuild.cmake.arguments`, causing Debug and Release builds to share identical `configureCMakeRelWithDebInfo` / `buildCMakeRelWithDebInfo` tasks and 100% shared `.ccache` objects.
+3. **Parallel CI Pipeline & Artifact-Only Signing ([`.github/actions/setup-android-build/action.yml`](.github/actions/setup-android-build/action.yml), [`.github/workflows/android-ci.yml`](.github/workflows/android-ci.yml), [`.github/workflows/release.yml`](.github/workflows/release.yml))**:
+   - Extracted shared composite action caching NDK/CMake, static `ccache` v4.14.3 binary, compressed `ccache-v3` (`1G`), `llama.cpp`, and lexicon symlinks.
+   - Split CI into `detect-changes` -> parallel `test-and-debug` (`testDebugUnitTest assembleDebug`) + `verify-release` (`assembleRelease` + 16KB ELF check) -> strict `build-and-test` (`if: always()`) gate preserving Branch Protection.
+   - Rebuilt `publish-head` to download `app-debug` and `app-release-unsigned` artifacts, run `zipalign` + `apksigner sign` + `apksigner verify` + 16KB ELF check without NDK/Gradle/`./gradlew`, and cut `release.yml` to a single combined Gradle invocation (`testDebugUnitTest assembleRelease`).
+4. **Virtual-Time, Parallel, Non-Mutating Unit Tests**:
+   - Migrated [`ModelTimeoutAndFailSafeTest`](app/src/test/java/com/example/myasr/ModelTimeoutAndFailSafeTest.kt) to `kotlinx.coroutines.test.runTest`, enabled `maxParallelForks` in `app/build.gradle.kts`, deduplicated [`AlloyVerificationTest`](app/src/test/java/com/example/myasr/formal/AlloyVerificationTest.kt), and gated `tools/eval/*.json` file exports behind `-Djotinput.exportEvalResults=true`.
+5. **Local E2E Tooling (`.githooks/pre-commit`, `.githooks/pre-push`, [`deploy.sh`](deploy.sh), [`scripts/pr_ship.sh`](scripts/pr_ship.sh))**:
+   - Smart scope-aware hooks that check secrets/assets/shell/YAML hygiene, avoid duplicate Gradle execution via `.git/.last-verified-tree`, and fix lexicon symlinks (`../../app/src/...`).
+   - Parallel, transport-deduplicated [`deploy.sh`](deploy.sh) (`--release`, `--skip-build`, `--verify`) with batched `adb shell` probing and automated `logcat` verification (`45s` window with `FATAL EXCEPTION` fail-fast).
+   - Added [`scripts/pr_ship.sh`](scripts/pr_ship.sh) (`status` / `open` / `merge`) to streamline the mandatory topic-branch + pre-merge CI + post-merge `main` watch workflow.
+
+### 3. Local Verification
+- **Unit Tests**: `./gradlew testDebugUnitTest --stacktrace` passed 100% (`Suites=85, Tests=556, Failures=0, Errors=0, Skipped=0`); `ModelTimeoutAndFailSafeTest` dropped from `14.72s` to `0.10s`; second warm run reused Configuration Cache in `1.53s`; `git status` remained clean of `tools/eval/*.json` mutations.
+- **APK Parity & Signing**: Debug (`38M`) and Release (`29M`) APKs embedded `assets/build_metadata.properties`, maintained 16KB (`0x4000`) ELF alignment on all `arm64-v8a` `.so` libraries, and passed local `zipalign` + `apksigner sign` + SHA-256 certificate verification.
+- **Dual-Target Deploy (`./deploy.sh --skip-build --verify`)**: Deduplicated `emulator-5554`, deployed in parallel to **ARCVM (`arc:5555`, 6s)** and **Pixel 10 Pro (`Android_2P5TIXMS.local:34843`, 20s)** in **20.27s** total, with automated `logcat` verification confirming `AsrApp initialized=true` and `ReazonSpeech loaded=true` on both targets.
+
+
 
 
 

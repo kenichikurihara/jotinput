@@ -8,7 +8,7 @@ Whenever any code, resource, or configuration change is made to the Android app:
 1. **Deploy to BOTH connected targets**:
    - **ARCVM (ChromeOS Android container)**: e.g., `arc:5555`
    - **Physical Phone (Pixel 10 Pro via USB or Wi-Fi)**: e.g., `<device-serial>` or `<device-ip>:<port>`
-2. Run [`./deploy.sh`](deploy.sh) and confirm in `adb -s <device> logcat` that `MainActivity` launches and the ReazonSpeech model (`AsrManager`) loads cleanly on **both** devices.
+2. Run [`./deploy.sh`](deploy.sh) (or `./deploy.sh --verify` to run parallel deduplicated deployment plus automated logcat verification) and confirm in `adb -s <device> logcat` that `MainActivity` launches and the ReazonSpeech model (`AsrManager`) loads cleanly on **both** devices.
 3. For any UI or IME window change, verify visual behavior (`screencap`) and window/inset geometry (`dumpsys window windows`) on the physical phone. Never silently skip a target.
 
 ## ☁️ Mandatory APK Distribution Contract (GitHub CI/CD)
@@ -65,7 +65,7 @@ Whenever any code, resource, or configuration change is pushed or tested:
   - For every completed feature, bug fix, asset update, or documentation change:
     1. Create a topic branch from `main` (e.g., `git checkout -b feat/<topic>` or `fix/<topic>`).
     2. Commit verified changes and push the topic branch to `origin` (`git push -u origin <branch>`).
-    3. Open a Pull Request targeting `main` via `gh pr create --base main ...` following [`.github/pull_request_template.md`](.github/pull_request_template.md).
+    3. Open a Pull Request targeting `main` via `gh pr create --base main ...` following [`.github/pull_request_template.md`](.github/pull_request_template.md) (or use [`./scripts/pr_ship.sh`](scripts/pr_ship.sh) `open` / `merge`).
     4. **Pre-Merge CI/CD Gate**: Always wait for and verify that `Android CI` (`Build & Test`) passes 100% on the Pull Request **before merging** (`gh pr checks --watch` or `gh run watch <run_id>`). Never merge a PR while CI/CD is pending, failing, or skipped.
     5. Merge only after all required PR checks are green (`gh pr merge --admin --squash --delete-branch` when acting as the solo maintainer), then switch to `main` and `git pull --ff-only origin main`.
     6. Monitor the post-merge `Android CI` workflow run on `main` (including `Publish Remote HEAD Prerelease`) to 100% completion (`gh run watch <run_id>`).

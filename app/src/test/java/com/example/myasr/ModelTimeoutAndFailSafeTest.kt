@@ -5,7 +5,7 @@ import com.example.myasr.context.speech.infrastructure.AudioRecorder
 
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -19,7 +19,7 @@ import org.junit.Test
 class ModelTimeoutAndFailSafeTest {
 
     @Test
-    fun testAsrTranscriptionTimeoutTriggersFailSafeAndErrorMessage() = runBlocking {
+    fun testAsrTranscriptionTimeoutTriggersFailSafeAndErrorMessage() = runTest {
         var recognizedText = ""
         var errorMessage: String? = null
 
@@ -38,7 +38,7 @@ class ModelTimeoutAndFailSafeTest {
     }
 
     @Test
-    fun testAsrTranscriptionFastPathSucceedsWithinTimeout() = runBlocking {
+    fun testAsrTranscriptionFastPathSucceedsWithinTimeout() = runTest {
         var recognizedText = ""
         var errorMessage: String? = null
 
@@ -57,7 +57,7 @@ class ModelTimeoutAndFailSafeTest {
     }
 
     @Test
-    fun testSlmRerankTimeoutFailsSafeRetainingBaseCandidates() = runBlocking {
+    fun testSlmRerankTimeoutFailsSafeRetainingBaseCandidates() = runTest {
         val baseCandidates = listOf(
             ConversionCandidate(surface = "確認", reading = "かくにん"),
             ConversionCandidate(surface = "確信", reading = "かくにん")
@@ -81,7 +81,7 @@ class ModelTimeoutAndFailSafeTest {
     }
 
     @Test
-    fun testSlmNextPhrasePredictionTimeoutFailsSafeRetainingFastPredictions() = runBlocking {
+    fun testSlmNextPhrasePredictionTimeoutFailsSafeRetainingFastPredictions() = runTest {
         val fastPredictions = listOf(
             ConversionCandidate(surface = "しました", reading = "しました", source = "history_bigram"),
             ConversionCandidate(surface = "します", reading = "します", source = "canonical_next")
@@ -103,9 +103,9 @@ class ModelTimeoutAndFailSafeTest {
     }
 
     @Test
-    fun testKanaKanjiConversionTimeoutFailsSafeWithRawReading() = runBlocking {
+    fun testKanaKanjiConversionTimeoutFailsSafeWithRawReading() = runTest {
         val reading = "とうきょう"
-        var candidateList = emptyList<ConversionCandidate>()
+        var candidateList: List<ConversionCandidate>
 
         try {
             withTimeout(3000L) {
@@ -135,7 +135,7 @@ class ModelTimeoutAndFailSafeTest {
     }
 
     @Test
-    fun testSlmAsyncRerankTimeoutFailsSafeRetainingBaseCandidates() = runBlocking {
+    fun testSlmAsyncRerankTimeoutFailsSafeRetainingBaseCandidates() = runTest {
         val baseCandidates = listOf(
             ConversionCandidate(surface = "生みのまわりに", reading = "うみのまわりに"),
             ConversionCandidate(surface = "海のまわりに", reading = "うみのまわりに")
@@ -159,7 +159,7 @@ class ModelTimeoutAndFailSafeTest {
     }
 
     @Test
-    fun testSlmAsyncRerankSucceedsWithinTimeout() = runBlocking {
+    fun testSlmAsyncRerankSucceedsWithinTimeout() = runTest {
         val baseCandidates = listOf(
             ConversionCandidate(surface = "生みのまわりに", reading = "うみのまわりに"),
             ConversionCandidate(surface = "海のまわりに", reading = "うみのまわりに")

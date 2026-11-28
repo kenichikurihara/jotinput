@@ -102,12 +102,11 @@ PRs that appear to be unreviewed AI output violating project policies will be cl
 ## 6. Submitting a Pull Request
 
 1. Fork the repository and create a topic branch from `main`.
-2. Ensure local tests pass:
+2. Ensure local tests pass (running `./scripts/setup_git_hooks.sh` enables smart `pre-commit` / `pre-push` hooks that verify hygiene, skip Gradle on pure docs/scripts commits, and avoid duplicating checks across commit and push):
    ```bash
-   ./gradlew testDebugUnitTest
-   ./gradlew assembleDebug
+   ./gradlew testDebugUnitTest assembleDebug
    ```
-   *(Note: evaluation runner tests may touch `tools/eval/jotinput_prediction_evaluation_results*.json`; revert unrelated working-tree changes to those files before committing if you did not intend to update benchmark baselines.)*
+   *(Note: `JotInputPredictionEvaluationRunnerTest` validates prediction metrics without mutating `tools/eval/*.json`; pass `-Djotinput.exportEvalResults=true` only when intentionally refreshing benchmark reports. In CI, `Android CI` runs `test-and-debug` and `verify-release` in parallel under the required `Build & Test` gate, using scope detection on PRs so pure docs/scripts PRs skip redundant native/R8 rebuilds.)*
 3. Keep your PR focused on a single concern (no bundled formatting sweeps or unrelated refactors).
 4. Fill out every applicable section of [`.github/pull_request_template.md`](.github/pull_request_template.md).
 
