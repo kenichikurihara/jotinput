@@ -99,6 +99,25 @@ class AppUpdateDecisionModelTest {
         )
         assertEquals("BUILD_FRESH_R3", olderRemoteTrace.selectedRuleId)
         assertEquals(BuildFreshnessStatus.UP_TO_DATE, olderRemoteTrace.result.status)
+
+        // Realistic 11-digit GitHub Actions run IDs (regression guard against small synthetic run IDs)
+        val ciScaleNewerTrace = AppUpdateDecisionModel.evaluateBuildFreshnessWithTrace(
+            BuildFreshnessInput(
+                installed = installed(githubRunId = 46_090_445_392L),
+                remoteArtifact = artifact(runId = 46_090_445_392L + 1000L)
+            )
+        )
+        assertEquals("BUILD_FRESH_R2", ciScaleNewerTrace.selectedRuleId)
+        assertEquals(BuildFreshnessStatus.UPDATE_AVAILABLE, ciScaleNewerTrace.result.status)
+
+        val ciScaleSmallerRemoteTrace = AppUpdateDecisionModel.evaluateBuildFreshnessWithTrace(
+            BuildFreshnessInput(
+                installed = installed(githubRunId = 46_090_445_392L),
+                remoteArtifact = artifact(runId = 999_999L)
+            )
+        )
+        assertEquals("BUILD_FRESH_R3", ciScaleSmallerRemoteTrace.selectedRuleId)
+        assertEquals(BuildFreshnessStatus.UP_TO_DATE, ciScaleSmallerRemoteTrace.result.status)
     }
 
     @Test

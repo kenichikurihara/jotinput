@@ -392,6 +392,7 @@ class GitHubArtifactUpdateClientTest {
     fun `AppUpdateRepository clearStagedDownloadedApk deletes staged APK and metadata`() {
         val context = RuntimeEnvironment.getApplication()
         val repo = AppUpdateRepository(context)
+        val installed = repo.getInstalledBuildInfo()
         val updatesDir = repo.getUpdatesDir()
         val stagedApk = File(updatesDir, "jotinput-update-888.apk").apply {
             outputStream().use { out ->
@@ -400,12 +401,22 @@ class GitHubArtifactUpdateClientTest {
         }
         assertTrue(stagedApk.exists())
 
+        // Derive newer CI runId/timestamp relative to installed BuildConfig metadata so this test
+        // holds both locally (BUILD_GITHUB_RUN_ID=0) and on GitHub Actions (11-digit run IDs).
+        val newerRunId = installed.githubRunId.coerceAtLeast(0L) + 1000L
+        val newerCreatedAtMs = maxOf(System.currentTimeMillis(), installed.commitEpochMs) + 60_000L
+        val distinctSha = if (installed.gitSha.equals("deadbeefdeadbeef", ignoreCase = true)) {
+            "cafebabecafebabe"
+        } else {
+            "deadbeefdeadbeef"
+        }
+
         val prefs = context.getSharedPreferences("app_update_metadata", android.content.Context.MODE_PRIVATE)
         prefs.edit()
             .putLong("dl_artifact_id", 888L)
-            .putString("dl_head_sha", "deadbeefdeadbeef")
-            .putLong("dl_run_id", 999999L)
-            .putLong("dl_created_at_ms", System.currentTimeMillis() + 60_000L)
+            .putString("dl_head_sha", distinctSha)
+            .putLong("dl_run_id", newerRunId)
+            .putLong("dl_created_at_ms", newerCreatedAtMs)
             .putString("dl_file_path", stagedApk.absolutePath)
             .putLong("dl_size_bytes", stagedApk.length())
             .apply()
