@@ -161,7 +161,7 @@ JotInput provides a full-featured Android Input Method Editor (IME) that works s
 
 1. Open **JotInput** on your device.
 2. In the top (hero) card, tap **音声キーボードを有効にする**: this opens Android's *Manage Keyboards* settings page.
-3. Toggle on **JotInput Voice Keyboard**.
+3. Toggle on **JotInput**.
 4. Tap **入力方法をJotInputに切り替える** to select JotInput as the active keyboard.
 5. Tap the **キーボードテスト** field to try it (the IME status badge shows `IME: 有効` once enabled).
 
