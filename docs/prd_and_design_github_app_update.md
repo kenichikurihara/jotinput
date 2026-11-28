@@ -6,7 +6,7 @@
 `kenichikurihara/jotinput` がパブリックリポジトリとして公開され、署名済み Release APK (`v*` タグの GitHub Releases) および `main` ブランチの CI ビルドが公開配布可能となった。従来のアプリ内アップデーターはプライベートリポジトリ前提で Fine-Grained PAT (`GitHubTokenStore`) と `BuildConfig.DEBUG` 限定ガードに依存していたため、一般ユーザー向けの Release ビルドでは更新確認ができず、Debug ビルドでもトークン設定が必要だった。
 
 本機能は、**Debug ビルド・Release ビルドの両方において GitHub トークン一切不要（完全認証レス）** でアプリ内更新を提供し、さらにユーザーが取得元チャネルを選択できるようにする：
-1. **ホームタブでのチャネル切替・更新確認・ダウンロード導線**: `MainActivity` の **ホームタブ**（クイックアクション行の下）に **「アプリ更新 (GitHub)」** カードを配置し、セグメント切替（`リリース版` / `リモートヘッド`）とボタン 1 つで最新バージョンの確認・バックグラウンドダウンロード・インストールを行える。
+1. **ホームタブでのチャネル切替・更新確認・ダウンロード導線**: `MainActivity` の **ホームタブ**（クイックアクション（「単語登録」カード）の下）に **「アプリ更新 (GitHub)」** カードを配置し、セグメント切替（`リリース版` / `リモートヘッド`）とボタン 1 つで最新バージョンの確認・バックグラウンドダウンロード・インストールを行える。
 2. **2 チャネルの公開配布アーキテクチャ**:
    - **リリース版 (`RELEASE`)**: `https://api.github.com/repos/kenichikurihara/jotinput/releases/latest` を参照し、公式安定版 (`v*`) の署名済み Release APK を取得する（Release ビルドのデフォルト）。
    - **リモートヘッド (`REMOTE_HEAD`)**: `main` マージごとに `Android CI` (`publish-head`) が更新するローリング・プレリリース (`main-head`) の `head-metadata.json`（GitHub Releases 直接ダウンロードのため API レート制限非消費）を参照する（Debug ビルドのデフォルト）。実行中のビルド種別に応じて、Debug ビルドには `jotinput-main-head-debug.apk`（永続 Debug 鍵署名）、Release ビルドには `jotinput-main-head-release.apk`（正式 Release 鍵署名）を自動選択し、同一チャネル内での上書き更新互換性を保証する。
@@ -29,7 +29,7 @@
 ### 3. Critical User Journeys (CUJ)
 
 #### CUJ-U1: トークン不要での起動・チャネル選択
-1. アプリを起動すると（Debug / Release いずれでも）、ホームタブのクイックアクション行の下に **「アプリ更新 (GitHub)」** カードが表示される。
+1. アプリを起動すると（Debug / Release いずれでも）、ホームタブのクイックアクション（「単語登録」カード）の下に **「アプリ更新 (GitHub)」** カードが表示される。
 2. トークン設定ボタンやトークン要求ダイアログは一切存在しない。初期チャネルは Release ビルドでは `リリース版`、Debug ビルドでは `リモートヘッド` が自動選択され、ユーザーによる切り替え内容は `SharedPreferences` に保存される。
 3. 起動時には自動通信を行わず（`IDLE` 状態）、ユーザーの操作でのみ更新チェックを開始する。
 4. 過去のバージョンで `noBackupFilesDir/github_actions_pat.dat` に保存されていたレガシー PAT ファイルが存在する場合は、初期化時に安全に自動削除する。
